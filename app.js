@@ -1,3 +1,12 @@
+/* Añadir una clase que ya está o quitar una que no está no hace nada (el navegador lo contaba como un cambio
+   y despertaba a los componentes que vigilan la pantalla, que podían entrar en bucle entre ellos) */
+(function () {
+  const P = DOMTokenList.prototype, add = P.add, remove = P.remove, toggle = P.toggle;
+  P.add = function (...t) { if (t.every(x => this.contains(x))) return; return add.apply(this, t); };
+  P.remove = function (...t) { if (!t.some(x => this.contains(x))) return; return remove.apply(this, t); };
+  P.toggle = function (t, forzar) { if (forzar !== undefined && this.contains(t) === !!forzar) return !!forzar; return forzar === undefined ? toggle.call(this, t) : toggle.call(this, t, forzar); };
+})();
+
 /* ============================================================
    DLC OS 2.0 · Entrega 2: inicio, navegación y directorio
    ============================================================ */
@@ -13335,8 +13344,7 @@ pintarPerfil = (orig => function () {
     toast(error ? 'No se ha podido enviar: ' + error.message : 'Te hemos enviado el enlace a ' + PERFIL.email, !!error);
   });
   $('perfsalir').onclick = () => { const s = document.querySelector('[data-u="salir"]'); if (s) s.click(); };
-  // Nombre del módulo de contactos según lo configurado por la empresa
-  setTimeout(() => { const mp = $('miperfil'); if (!mp) return; const w = document.createTreeWalker(mp, NodeFilter.SHOW_TEXT); while (w.nextNode()) { const x = w.currentNode; if (x.nodeValue.trim() === 'Directorio') x.nodeValue = x.nodeValue.replace('Directorio', etiquetaContactos()); } }, 400);
+  // (el nombre configurado del módulo de contactos lo aplica el componente general, antes de pintar)
 })(pintarPerfil);
 
 /* ---------------- 9. Plan: «Cómo funciona» explicado paso a paso ---------------- */
@@ -13466,9 +13474,90 @@ new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) n
   .observe(document.body, { childList: true, subtree: true });
 nombreEnTextos(document.body);
 // Cuentas: sin ayudas dentro de la barra ni de la tabla
-function sinAyudaCuentas() { document.querySelectorAll('#v-directorio .panel .ai, #v-directorio #thead .ai, #dircab .ai').forEach(a => a.remove()); }
-new MutationObserver(sinAyudaCuentas).observe($('v-directorio'), { childList: true, subtree: true });
-sinAyudaCuentas();
+// (se ocultan con estilo: quitarlas hacía que otro componente las volviera a poner, en bucle)
+
+
+/* ============================================================
+   v2.60.0 · Revelado atómico: cada pantalla, pestaña y ventana se
+   muestra entera de una vez, cuando han llegado todos sus datos y ha
+   dejado de cambiar (sin estados intermedios a la vista)
+   ============================================================ */
+
+// 1. Todas las consultas a la base de datos, cuenten desde donde se hagan (también las que no pasan por los atajos)
+let RED_PEND = 0;
+const RED_EN_CURSO = new Set();   // momento de inicio de cada consulta en curso
+let RED_ULTIMO_FIN = 0;   // cuándo terminó la última consulta
+const pendientesDesde = t0 => { let n = 0; RED_EN_CURSO.forEach(t => { if (t >= t0) n++; }); return n; };
+(function () {
+  let p = Object.getPrototypeOf(db.from('perfiles').select('id'));
+  while (p && !Object.prototype.hasOwnProperty.call(p, 'then')) p = Object.getPrototypeOf(p);
+  if (!p) return;
+  const thenOrig = p.then;
+  // Cada consulta se ejecuta UNA sola vez, aunque varias partes esperen su resultado
+  // (la librería la volvía a enviar cada vez que alguien la esperaba: lecturas y escrituras duplicadas)
+  p.then = function (ok, ko) {
+    if (!this.__unaVez) {
+      RED_PEND++; const marca = Date.now() + Math.random() / 1000; RED_EN_CURSO.add(marca);
+      let hecho = false; const fin = () => { if (!hecho) { hecho = true; RED_PEND--; RED_EN_CURSO.delete(marca); RED_ULTIMO_FIN = Date.now(); } };
+      this.__unaVez = thenOrig.call(this, v => { fin(); return v; }, e => { fin(); throw e; });
+    }
+    return this.__unaVez.then(ok, ko);
+  };
+})();
+
+// 2. «Estable»: sin consultas pendientes y sin cambios en el elemento durante 120 ms (como mucho, el tiempo indicado)
+function estable(el, max = 4000, desde) {
+  return new Promise(res => {
+    const t0 = desde || Date.now() - 5; let ultimo = t0, fin = false;
+    // Cuentan los cambios dentro del elemento (no los de su propia clase, que son los del mecanismo de carga)
+    const mo = new MutationObserver(ms => { if (ms.some(m => m.target !== el)) ultimo = Date.now(); });
+    mo.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    const listo = () => { if (fin) return; fin = true; mo.disconnect(); res(); };
+    // Pantalla ya cargada: si al terminar la tarea actual no hay consultas ni cambios, se muestra al momento
+    setTimeout(() => { if (pendientesDesde(t0) === 0 && ultimo <= t0) listo(); }, 0);
+    const w = setInterval(() => {
+      if (fin) { clearInterval(w); return; }
+      // Solo las consultas lanzadas desde que empezó (las que ya estaban en curso, como la campana, no cuentan)
+      // …y con un respiro de 120 ms desde el último cambio y desde la última consulta terminada (las encadenadas no se toman por el final)
+      if ((pendientesDesde(t0) === 0 && Date.now() - Math.max(ultimo, RED_ULTIMO_FIN) >= 120) || Date.now() - t0 > max) { clearInterval(w); listo(); }
+    }, 30);
+  });
+}
+
+// 3. Pantallas: se preparan ocultas y se muestran de golpe
+let REVELADO = 0;
+function revelar(el, max, desde) {
+  if (!el) return; const turno = ++REVELADO;
+  el.classList.add('preparando');
+  estable(el, max, desde).then(() => { if (turno === REVELADO || !el.matches('main > section')) el.classList.remove('preparando'); });
+}
+ir = (orig => function (t) {
+  const t0 = Date.now() - 2;
+  const r = orig(t);
+  const sec = $('v-' + TAB); if (sec) { sec.classList.remove('cargando', 'cargando-pend'); revelar(sec, 4000, t0); }
+  document.querySelectorAll('main > section.preparando').forEach(x => { if (x !== sec) x.classList.remove('preparando'); });
+  return r;
+})(ir);
+
+// 4. Pestañas y cambios de vista dentro de una pantalla: la vista anterior se queda fija hasta que la nueva está entera
+congelar = function (sec) {
+  if (!sec || sec.classList.contains('hide') || document.querySelector('.congelada')) return;
+  const r = sec.getBoundingClientRect(); if (r.height < 40) return;
+  const t0 = Date.now() - 2;   // el momento del clic: cuentan todas las consultas que lance
+  const c = sec.cloneNode(true); c.removeAttribute('id'); c.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+  c.classList.add('congelada'); c.classList.remove('cargando', 'cargando-pend', 'preparando');
+  Object.assign(c.style, { position: 'absolute', left: (r.left + scrollX) + 'px', top: (r.top + scrollY) + 'px', width: r.width + 'px', margin: 0, pointerEvents: 'none', zIndex: 40, background: 'var(--bg, #F3F8FC)' });
+  document.body.appendChild(c); sec.style.minHeight = r.height + 'px';
+  // Se espera a que empiece el cambio (el clic lanza la carga justo después) y a que termine
+  setTimeout(() => estable(sec, 3000, t0).then(() => { c.remove(); requestAnimationFrame(() => { sec.style.minHeight = ''; }); }), 0);
+};
+
+// 5. Ventanas: su contenido aparece entero, no bloque a bloque
+['dlg', 'ficha', 'dlg2'].forEach(id => {
+  const d = $(id); if (!d) return;
+  new MutationObserver(() => { if (d.open) { const cont = d.firstElementChild; if (cont) revelar(cont, 1500, Date.now() - 50); } })
+    .observe(d, { attributes: true, attributeFilter: ['open'] });
+});
 
 
 // Barra inferior del móvil y barra de «Entrar como» desde el primer momento
