@@ -9122,7 +9122,7 @@ async function pintarLlamadas() {
   $('vcuerpo').innerHTML = `<div class="panel">
     <div class="filtros"><div id="llper"></div>
       <div><label for="llq">Buscar</label><input id="llq" type="search" placeholder="Nombre, teléfono o médico"></div>
-      <div><label for="llres">Resultado</label><select id="llres"><option value="">Todos</option>${(CAT.RESULTADO_LLAMADA || []).map(x => `<option>${esc(x.valor)}</option>`).join('')}</select></div></div>
+      <div><label for="llfres">Resultado</label><select id="llfres"><option value="">Todos</option>${(CAT.RESULTADO_LLAMADA || []).map(x => `<option>${esc(x.valor)}</option>`).join('')}</select></div></div>
     <div class="kpis vtot" id="lltot"></div>
     <div class="angrid" id="llres2" style="margin:0 0 14px"></div>
     <div id="lllista"></div></div>`;
@@ -9130,7 +9130,7 @@ async function pintarLlamadas() {
   const pinta = async () => {
     const r = $('llper').__rango();
     const [{ data: l }, { data: s }] = await Promise.all([
-      db.rpc('llamadas_lista', { p_desde: r.desde, p_hasta: r.hasta, q: $('llq').value.trim() || null, p_resultado: $('llres').value || null }),
+      db.rpc('llamadas_lista', { p_desde: r.desde, p_hasta: r.hasta, q: $('llq').value.trim() || null, p_resultado: $('llfres').value || null }),
       db.rpc('llamadas_resumen', { p_desde: r.desde, p_hasta: r.hasta })]);
     if (!$('lllista')) return;
     const res = s || {}, lista = l || [];
@@ -9157,7 +9157,7 @@ async function pintarLlamadas() {
   };
   montarPeriodo($('llper'), { id: 'llamadas', valor: 'mes', alCambiar: pinta });
   $('llq').oninput = () => { clearTimeout(tq); tq = setTimeout(pinta, 300); };
-  $('llres').onchange = pinta;
+  $('llfres').onchange = pinta;
   pinta();
 }
 
@@ -11410,7 +11410,8 @@ if (MAPA_I18N) traducir(document.body);
 /* ---------------- Configuración en el móvil: primero la lista, después el apartado ---------------- */
 
 document.addEventListener('click', e => {
-  const v = e.target.closest('.cfgvolver'); if (v) { const hub = v.closest('.cfghub'); hub.classList.remove('detalle'); scrollTo({ top: 0 }); return; }
+  // Solo el «Volver» de Configuración en el móvil (otros botones comparten el estilo)
+  const v = e.target.closest('.cfghub .cfgvolver'); if (v) { const hub = v.closest('.cfghub'); if (hub) hub.classList.remove('detalle'); scrollTo({ top: 0 }); return; }
   const b = e.target.closest('.cfghub.movil [data-cfg]');
   if (b) { const hub = b.closest('.cfghub'); hub.classList.add('detalle'); scrollTo({ top: 0 });
     setTimeout(() => { cfgMovil(); const t = $('cfgcuerpo') && $('cfgcuerpo').querySelector('.cfgvolver'); if (t) t.dataset.titulo = b.querySelector('b').textContent; }, 50); }
@@ -13228,10 +13229,15 @@ cargarSeguimiento = (orig => async function (...a) { await orig(...a); const v =
 
 const ES_IMPORTE = /imp|importe|total|base|precio|pvp|coste|cobro|con_iva|conIva|sin_iva/i;
 function esPorcentajeIva(i) {
-  const lab = (((i.id && document.querySelector(`label[for="${i.id}"]`)) || i.closest('label') || {}).textContent || '').trim();
+  // Una vez decidido, no cambia (evita que la comprobación y la conversión se contradigan en bucle)
+  if (i.dataset.ivaok) return i.dataset.ivaok === '1';
+  // La etiqueta puede apuntar ya a la lista de IVA (id + «_sel») si el campo se convirtió antes
+  const lab = (((i.id && (document.querySelector(`label[for="${i.id}"]`) || document.querySelector(`label[for="${i.id}_sel"]`))) || i.closest('label') || {}).textContent || '').trim();
   const clave = i.id + ' ' + (i.dataset.f || '') + ' ' + (i.name || '');
-  if (ES_IMPORTE.test(clave) || /importe|precio|total|base|coste/i.test(lab)) return false;
-  return i.dataset.f === 'iva' || /(^|[_-])iva$/i.test(i.id) || /^pr?iva$|^penvv$/i.test(i.id) || /^IVA(\s*\(%\)|\s+del servicio|\s+%)?$|tipo de iva/i.test(lab);
+  const r = !(ES_IMPORTE.test(clave) || /importe|precio|total|base|coste/i.test(lab))
+    && (i.dataset.f === 'iva' || /(^|[_-])iva$/i.test(i.id) || /^[a-z]{0,3}iva$|^penvv$/i.test(i.id) || /^IVA(\s*\(%\)|\s+del servicio(\s*\(%\))?|\s+%)?$|tipo de iva/i.test(lab));
+  i.dataset.ivaok = r ? '1' : '0';
+  return r;
 }
 // Se deshace cualquier conversión errónea (un importe convertido en lista de IVA)
 new MutationObserver(() => {
@@ -13430,6 +13436,21 @@ new MutationObserver(() => {
   if (V257_PEND) return; V257_PEND = true;
   queueMicrotask(() => { V257_PEND = false; const sec = $('v-' + TAB); if (sec) { barraTabla(sec); ordenarBotones(sec); } });
 }).observe(document.querySelector('main'), { childList: true, subtree: true });
+
+
+/* ---------------- v2.58.0 · la configuración de Facturación solo vive en su módulo ---------------- */
+
+// Configuración ya no repite Facturación (datos fiscales, series y VeriFactu): están en Facturación → Configuración.
+// Además, tenerlo en los dos sitios creaba dos contenedores con el mismo identificador.
+arbolConfig = (orig => function () { return orig().map(([g, l]) => [g, l.filter(x => x.k !== 'fact')]).filter(g => g[1].length); })(arbolConfig);
+const IR_V258 = ir;
+ir = function (t) {
+  const mapa = { fiscal: 'empresa', series: 'series', vf: 'verifactu', fact: FAC_ULTIMA || 'empresa' };
+  if (t === 'config' && (mapa[CFG_SEC] || (CFG_SEC === 'fact' && mapa[CFG_SUB]))) {
+    FSEC = mapa[CFG_SEC === 'fact' ? (CFG_SUB || 'fact') : CFG_SEC] || 'empresa'; CFG_SEC = 'rutas'; t = 'facturacion';
+  }
+  IR_V258(t);
+};
 
 
 // Barra inferior del móvil y barra de «Entrar como» desde el primer momento
