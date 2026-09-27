@@ -12894,7 +12894,7 @@ cargarAgenda = (orig => async function (...a) { await orig(...a); agendaDosColum
 
 cargarManual = (orig => async function (...a) {
   await orig(...a);
-  const v = $('v-manual'); if (!v || v.querySelector('.manindice') || innerWidth < 1300) return;
+  const v = $('v-manual'); return;   // el índice lateral se retiró
   const tit = [...v.querySelectorAll('h2.mantit')];
   if (tit.length < 2) return;
   tit.forEach((h, i) => { h.id = h.id || 'mant' + i; });
@@ -12991,7 +12991,7 @@ new MutationObserver(ms => ms.forEach(m => {
   if (!tiene && s.__cargaDesde) {
     const hecho = Date.now() - s.__cargaDesde; s.__cargaDesde = 0;
     // Si el indicador llegó a verse (más de 120 ms), se mantiene hasta completar 350 ms
-    if (hecho > 120 && hecho < 470) { s.classList.add('cargamin'); setTimeout(() => s.classList.remove('cargamin'), 470 - hecho); }
+    if (false) { s.classList.add('cargamin'); setTimeout(() => s.classList.remove('cargamin'), 470 - hecho); }
   }
 })).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
 ventanaCargando = async function (fn) { const d = $('dlg'); d.classList.add('cargando'); try { return await fn(); } finally { d.classList.remove('cargando'); } };
@@ -13451,6 +13451,24 @@ ir = function (t) {
   }
   IR_V258(t);
 };
+
+
+/* ---------------- v2.59.0 · nombre configurado en todos los textos; sin ayuda en la tabla de Cuentas ---------------- */
+
+// Todo texto que diga «Directorio» (ayudas, manual, avisos…) usa el nombre que ha elegido la empresa
+function nombreEnTextos(raiz) {
+  const et = etiquetaContactos(); if (!raiz || et === 'Directorio') return;
+  const w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && !n.parentElement.closest('script,style,textarea,input,[data-notr]') && /directorio/i.test(n.nodeValue) ? 1 : 2 });
+  const ns = []; while (w.nextNode()) ns.push(w.currentNode);
+  ns.forEach(n => { n.nodeValue = n.nodeValue.replace(/\bDirectorio\b/g, et).replace(/\bdirectorio\b/g, et.toLowerCase()); });
+}
+new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) nombreEnTextos(n.nodeType === 1 ? n : n.parentElement); })
+  .observe(document.body, { childList: true, subtree: true });
+nombreEnTextos(document.body);
+// Cuentas: sin ayudas dentro de la barra ni de la tabla
+function sinAyudaCuentas() { document.querySelectorAll('#v-directorio .panel .ai, #v-directorio #thead .ai, #dircab .ai').forEach(a => a.remove()); }
+new MutationObserver(sinAyudaCuentas).observe($('v-directorio'), { childList: true, subtree: true });
+sinAyudaCuentas();
 
 
 // Barra inferior del móvil y barra de «Entrar como» desde el primer momento

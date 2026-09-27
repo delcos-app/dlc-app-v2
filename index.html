@@ -1318,8 +1318,6 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
   .agdos{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(360px,1fr);gap:16px;align-items:start}
   .agder > *{margin-top:0!important}.agder{display:flex;flex-direction:column;gap:12px}
   /* Manual con índice */
-  #v-manual.conindice{display:grid;grid-template-columns:220px minmax(0,1fr);gap:0 28px;align-items:start}
-  #v-manual.conindice > :not(.manindice){grid-column:2}
   .manindice{grid-column:1;grid-row:1 / span 40;position:sticky;top:130px;display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:14px;background:#fff;border:1px solid var(--line)}
   .manindice b{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
   .manindice a{color:var(--navy);text-decoration:none;padding:6px 8px;border-radius:8px;font-size:13.5px}.manindice a:hover{background:var(--sky-soft)}
@@ -1371,9 +1369,6 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
 main > section.cargando{min-height:0;animation:cargaAlto 1ms linear 120ms forwards}
 main > section.cargando > *{visibility:visible;animation:cargaOculta 1ms linear 120ms forwards}
 main > section.cargando::after{opacity:0;animation:cargaAparece .15s ease 120ms forwards}
-main > section.cargamin{position:relative;min-height:40vh}
-main > section.cargamin > *{visibility:hidden}
-main > section.cargamin::after{content:"";position:absolute;left:50%;top:140px;width:40px;height:40px;margin-left:-20px;border-radius:50%;border:3px solid rgba(21,82,143,.18);border-top-color:var(--sky);animation:girobtn .8s linear infinite}
 .cargandolocal{position:relative}
 .cargandolocal::after{content:"";position:absolute;inset:0;z-index:5;border-radius:inherit;opacity:0;animation:cargaAparece .15s ease 120ms forwards;
   background:rgba(255,255,255,.65) radial-gradient(circle at center,transparent 0 16px,transparent 17px) center/40px 40px no-repeat}
@@ -1406,7 +1401,6 @@ textarea{min-height:96px;resize:vertical}
 #anper{flex:0 1 280px;max-width:320px}
 /* Manual sin índice */
 .manindice{display:none!important}
-#v-manual.conindice{display:block!important}
 .iniact span{margin-left:4px;font-weight:600}
 
 /* v2.57.0 · criterio único de pantallas, ventanas y componentes */
@@ -1603,6 +1597,6 @@ textarea{min-height:96px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.58.0"></script>
+<script src="./app.js?v=2.59.0"></script>
 </body>
 </html>
