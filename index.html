@@ -1283,6 +1283,19 @@ section.cargando-pend{}
 .planmat .act{background:rgba(46,134,201,.07)}.planmat .si{color:var(--ok);font-weight:800;font-size:17px}.planmat .no{color:#B7C4D1}
 
 @media (max-width:760px){.htbtn .htl{display:none}.htbtn{padding:0 12px!important}.htbtn .ico{margin:0}.saludo .acts{flex-wrap:wrap;max-width:100%}.htpanel{padding:12px}}
+
+/* v2.54.0 · sin saltos por la barra de desplazamiento, botón a la derecha, panel lateral, IVA */
+html{overflow-y:scroll;scrollbar-gutter:stable}
+.htacts{margin-left:auto}
+.saludo .acts .htbtn{order:99}
+.tools .htpropios.lat{display:flex;flex-direction:column;gap:10px;margin:6px 0 14px}
+.tools .htpropios.lat > *{min-width:0;width:100%}
+.tools .htpropios.lat .filtros,.tools .htpropios.lat > div{display:flex;flex-direction:column;gap:8px}
+.tools .htauto{display:flex;flex-direction:column;gap:14px}
+.tools .htfacetas{grid-template-columns:1fr}
+.tools .httexto{max-width:none}
+.congelada{overflow:hidden}
+.ivasel{width:100%}
 </style>
 </head>
 <body>
@@ -1417,6 +1430,6 @@ section.cargando-pend{}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.53.0"></script>
+<script src="./app.js?v=2.54.0"></script>
 </body>
 </html>
