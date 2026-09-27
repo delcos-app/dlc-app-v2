@@ -17,12 +17,26 @@ const CFG = window.DLC_CONFIG;
 // Enlace del correo de recuperación: se detecta antes de que se procese, para no arrancar la app con esa sesión
 const RECUPERACION_URL = /(^#|&)type=recovery(&|$)/.test(location.hash);
 const ENLACE_CADUCADO = /(^#|&)error_code=/.test(location.hash) || /(^#|&)error=access_denied/.test(location.hash);
+/* Sesión: si al entrar se desmarcó «Mantener la sesión iniciada», al cerrar el navegador hay que volver a entrar */
+try { if (localStorage.getItem('dlc-no-recordar') && !/(^|; )dlc-sesion-viva=1/.test(document.cookie)) localStorage.removeItem('dlc-os-sesion'); } catch (e) {}
+
 const db = window.supabase.createClient(CFG.url, CFG.anon, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: 'dlc-os-sesion',
     // Bloqueo dentro de la pestaña: evita esperas largas cuando hay otra pestaña de la app abierta.
+    // Nunca se espera más de 8 s a la operación anterior: si una renovación de sesión se cuelga (mala cobertura,
+    // volver del segundo plano en el móvil), las consultas siguientes no se quedan esperando para siempre
     lock: (() => { const colas = {}; return (nombre, t, fn) => {
-      const run = (colas[nombre] || Promise.resolve()).then(() => fn());
-      colas[nombre] = run.catch(() => {}); return run; }; })() }
+      const previa = colas[nombre] || Promise.resolve();
+      const run = Promise.race([previa, new Promise(r => setTimeout(r, 8000))]).then(() => fn());
+      colas[nombre] = run.catch(() => {}); return run; }; })() },
+  // Toda consulta tiene un tiempo máximo (20 s): si la red no responde, se da error en lugar de quedarse cargando
+  global: { fetch: (url, o = {}) => {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
+    if (o.signal) { if (o.signal.aborted) ctl.abort(); else o.signal.addEventListener('abort', () => ctl.abort()); }
+    // Aquí pasan TODAS las peticiones reales: es donde se cuentan las pendientes (para mostrar cada pantalla entera)
+    const marca = window.__redIni ? window.__redIni() : null;
+    return fetch(url, Object.assign({}, o, { signal: ctl.signal })).finally(() => { clearTimeout(t); if (marca && window.__redFin) window.__redFin(marca); });
+  } }
 });
 
 let PERFIL = null, TAB = 'inicio';
@@ -217,7 +231,7 @@ $('chips').addEventListener('click', e => {
 async function buscar(reiniciar) {
   if (typeof MODO_MAPA !== 'undefined' && MODO_MAPA && reiniciar) setTimeout(() => pintarMapa(), 10);
   if (reiniciar) F.pagina = 0;
-  cargando($('lista'), 'Buscando médicos…');
+  cargando($('lista'), 'Buscando ' + etiquetaContactos().toLowerCase() + '…');
   $('cuenta').textContent = 'Buscando…';
   const t0 = performance.now();
 
@@ -228,15 +242,20 @@ async function buscar(reiniciar) {
     orden: F.orden, lim: tamPagina(), desplaz: F.pagina * tamPagina()
   });
 
-  if (error) { $('cuenta').textContent = 'No se ha podido buscar: ' + error.message; return; }
+  if (error || !data) {
+    $('cuenta').textContent = '';
+    $('lista').innerHTML = `<div class="vacio">No se ha podido cargar la lista${error && /abort/i.test(error.message || '') ? ' (la conexión no responde)' : ''}.<br><button class="btn sec" type="button" id="dirreint" style="margin-top:10px">Reintentar</button></div>`;
+    $('dirreint').onclick = () => buscar(true);
+    return;
+  }
 
   F.total = data.total;
   const ms = Math.round(performance.now() - t0);
-  $('cuenta').innerHTML = `<b>${num(data.total)}</b> médicos <span class="sm">· ${ms} ms</span>`;
+  $('cuenta').innerHTML = `<b>${num(data.total)}</b> ${esc(etiquetaContactos().toLowerCase())} <span class="sm">· ${ms} ms</span>`;
   pintarChips();
 
   const filas = data.filas || [];
-  if (!filas.length) { $('lista').innerHTML = '<div class="vacio">Ningún médico cumple estos filtros.</div>'; $('thead').innerHTML = ''; }
+  if (!filas.length) { $('lista').innerHTML = `<div class="vacio">Ningún registro cumple estos filtros.</div>`; $('thead').innerHTML = ''; }
   else { cabeceraTabla(); $('lista').innerHTML = filas.map(filaTabla).join(''); }
 
   $('mas').classList.add('hide');
@@ -4401,7 +4420,13 @@ async function arrancar() {
   marca('sesión comprobada');
   if (!session) { localStorage.removeItem(PKEY); mostrarLogin(); return; }
 
-  const { data: perfil, error } = await db.from('perfiles').select('*').eq('id', session.user.id).single();
+  let { data: perfil, error } = await db.from('perfiles').select('*').eq('id', session.user.id).single();
+  // Un fallo de conexión no cierra la sesión: se reintenta y, si sigue fallando, se entra con el perfil guardado
+  for (let i = 0; i < 2 && error && error.code !== 'PGRST116'; i++) {
+    await new Promise(r => setTimeout(r, 1500));
+    ({ data: perfil, error } = await db.from('perfiles').select('*').eq('id', session.user.id).single());
+  }
+  if (error && error.code !== 'PGRST116' && guardado) { perfil = guardado; error = null; }
   marca('perfil recibido');
   if (error || !perfil || !perfil.activo) {
     localStorage.removeItem(PKEY);
@@ -13485,22 +13510,23 @@ nombreEnTextos(document.body);
 
 // 1. Todas las consultas a la base de datos, cuenten desde donde se hagan (también las que no pasan por los atajos)
 let RED_PEND = 0;
+// Contador en la salida a la red (lo llama el envío de peticiones del cliente de la base de datos)
+window.__redIni = () => { RED_PEND++; const m = Date.now() + Math.random() / 1000; RED_EN_CURSO.add(m); return m; };
+window.__redFin = m => { if (RED_EN_CURSO.delete(m)) { RED_PEND--; RED_ULTIMO_FIN = Date.now(); } };
 const RED_EN_CURSO = new Set();   // momento de inicio de cada consulta en curso
 let RED_ULTIMO_FIN = 0;   // cuándo terminó la última consulta
-const pendientesDesde = t0 => { let n = 0; RED_EN_CURSO.forEach(t => { if (t >= t0) n++; }); return n; };
+// Cuentan todas las consultas en curso, también las precargas lanzadas poco antes de entrar (Analítica las aprovecha);
+// solo se ignoran las que llevan más de 3 s en marcha (un refresco de fondo colgado no debe bloquear la pantalla)
+const pendientesDesde = t0 => { let n = 0; RED_EN_CURSO.forEach(t => { if (t >= t0 - 3000) n++; }); return n; };
 (function () {
   let p = Object.getPrototypeOf(db.from('perfiles').select('id'));
   while (p && !Object.prototype.hasOwnProperty.call(p, 'then')) p = Object.getPrototypeOf(p);
   if (!p) return;
   const thenOrig = p.then;
   // Cada consulta se ejecuta UNA sola vez, aunque varias partes esperen su resultado
-  // (la librería la volvía a enviar cada vez que alguien la esperaba: lecturas y escrituras duplicadas)
+  // (la librería la volvía a enviar cada vez que alguien la esperaba: lecturas duplicadas)
   p.then = function (ok, ko) {
-    if (!this.__unaVez) {
-      RED_PEND++; const marca = Date.now() + Math.random() / 1000; RED_EN_CURSO.add(marca);
-      let hecho = false; const fin = () => { if (!hecho) { hecho = true; RED_PEND--; RED_EN_CURSO.delete(marca); RED_ULTIMO_FIN = Date.now(); } };
-      this.__unaVez = thenOrig.call(this, v => { fin(); return v; }, e => { fin(); throw e; });
-    }
+    if (!this.__unaVez) this.__unaVez = thenOrig.call(this, v => v, e => { throw e; });
     return this.__unaVez.then(ok, ko);
   };
 })();
@@ -13514,12 +13540,14 @@ function estable(el, max = 4000, desde) {
     mo.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
     const listo = () => { if (fin) return; fin = true; mo.disconnect(); res(); };
     // Pantalla ya cargada: si al terminar la tarea actual no hay consultas ni cambios, se muestra al momento
-    setTimeout(() => { if (pendientesDesde(t0) === 0 && ultimo <= t0) listo(); }, 0);
+    // Una pantalla con esqueletos de carga (recuadros «Cargando…») todavía no está lista
+    const conEsqueletos = () => !!el.querySelector('.skel, .ksk, .cargandolocal');
+    setTimeout(() => { if (pendientesDesde(t0) === 0 && ultimo <= t0 && !conEsqueletos()) listo(); }, 0);
     const w = setInterval(() => {
       if (fin) { clearInterval(w); return; }
       // Solo las consultas lanzadas desde que empezó (las que ya estaban en curso, como la campana, no cuentan)
       // …y con un respiro de 120 ms desde el último cambio y desde la última consulta terminada (las encadenadas no se toman por el final)
-      if ((pendientesDesde(t0) === 0 && Date.now() - Math.max(ultimo, RED_ULTIMO_FIN) >= 120) || Date.now() - t0 > max) { clearInterval(w); listo(); }
+      if ((pendientesDesde(t0) === 0 && Date.now() - Math.max(ultimo, RED_ULTIMO_FIN) >= 120 && !conEsqueletos()) || Date.now() - t0 > max) { clearInterval(w); listo(); }
     }, 30);
   });
 }
@@ -13569,7 +13597,9 @@ congelar = function (sec) {
 /* ---------------- 1. Cambio de pestaña: respuesta inmediata y vista anterior atenuada ---------------- */
 
 let CLIC_PESTANA = null;
-document.addEventListener('click', e => { CLIC_PESTANA = e.target.closest('button, [data-ag]'); }, true);
+// Se registra al apoyar el dedo o el ratón (antes del clic), para que la vista fija sepa qué botón se ha pulsado
+document.addEventListener('pointerdown', e => { CLIC_PESTANA = e.target.closest('button, [data-ag]'); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') CLIC_PESTANA = e.target.closest && e.target.closest('button, [data-ag]'); }, true);
 congelar = function (sec) {
   if (!sec || sec.classList.contains('hide') || document.querySelector('.congelada')) return;
   const r = sec.getBoundingClientRect(); if (r.height < 40) return;
@@ -13588,6 +13618,8 @@ congelar = function (sec) {
     if (cb) { [...cb.parentElement.children].forEach(x => { x.setAttribute('aria-pressed', String(x === cb)); x.classList.toggle('on', x === cb); if (x !== cb && x.classList.contains('btn') && !x.classList.contains('sec')) x.classList.add('sec'); }); cb.classList.remove('sec'); }
   }
   c.insertAdjacentHTML('afterbegin', '<div class="barraprog"><i></i></div>');
+  // Se coloca justo debajo de la fila de botones que se ha pulsado (pestañas, modos de la agenda…)
+  if (b && sec.contains(b)) { const fila = b.closest('.subnav, .cfgsubs, .acts, .segs') || b.parentElement; const rb = fila.getBoundingClientRect(); c.querySelector('.barraprog').style.top = Math.round(rb.bottom - r.top + 4) + 'px'; }
   document.body.appendChild(c); sec.style.minHeight = r.height + 'px';
   setTimeout(() => estable(sec, 3000, t0).then(() => { c.remove(); requestAnimationFrame(() => { sec.style.minHeight = ''; }); }), 0);
 };
@@ -13829,6 +13861,22 @@ function botonDisenoPDF() {
   $('fpdfbtn').onclick = () => disenoPDF();
 }
 new MutationObserver(botonDisenoPDF).observe($('v-facturacion'), { childList: true, subtree: true });
+
+
+/* ---------------- v2.62.0 · acceso: recordar el correo y mantener la sesión ---------------- */
+
+(function () {
+  const lu = $('lu'), f = $('lform'); if (!lu || !f) return;
+  try { const c = localStorage.getItem('dlc-ultimo-correo'); if (c && !lu.value) { lu.value = c; setTimeout(() => { if ($('lp') && document.activeElement !== lu) $('lp').focus(); }, 50); } } catch (e) {}
+  if (!$('lrecordar')) $('lbtn').insertAdjacentHTML('beforebegin', `<label class="opt lrecordar"><input type="checkbox" id="lrecordar" ${localStorage.getItem('dlc-no-recordar') ? '' : 'checked'}> Mantener la sesión iniciada en este dispositivo</label>`);
+  f.addEventListener('submit', () => {
+    try {
+      localStorage.setItem('dlc-ultimo-correo', lu.value.trim());
+      if ($('lrecordar').checked) localStorage.removeItem('dlc-no-recordar'); else localStorage.setItem('dlc-no-recordar', '1');
+      document.cookie = 'dlc-sesion-viva=1; path=/; SameSite=Lax';   // cookie de sesión: dura hasta cerrar el navegador
+    } catch (e) {}
+  }, true);
+})();
 
 
 // Barra inferior del móvil y barra de «Entrar como» desde el primer momento
