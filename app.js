@@ -40,7 +40,74 @@ const db = window.supabase.createClient(CFG.url, CFG.anon, {
 });
 
 let PERFIL = null, TAB = 'inicio';
-const F = { q: '', prov: '', muni: '', esp: '', est: '', urg: false, orden: 'nombre', pagina: 0, total: 0 };
+
+/* v2.71.0 · Diccionario de términos. Los textos no escriben «médico», «paciente» ni «visita»: los piden a TT(),
+   que los saca del vocabulario de cada cliente (ajuste «terminos») con su plural, su género y el artículo que concuerda.
+   TT(término, 's'|'p', determinante, mayúsculas del determinante, mayúsculas del nombre[, adjetivo en masculino singular]) · 'l' minúscula, 'C' inicial, 'U' todo. */
+const TERM_DEF = { medico: { s: 'médico', p: 'médicos', g: 'm' }, paciente: { s: 'paciente', p: 'pacientes', g: 'm' }, visita: { s: 'visita', p: 'visitas', g: 'f' } };
+const TERM_DET = { el: ['el', 'los', 'la', 'las'], un: ['un', 'unos', 'una', 'unas'], del: ['del', 'de los', 'de la', 'de las'], al: ['al', 'a los', 'a la', 'a las'],
+  este: ['este', 'estos', 'esta', 'estas'], ningun: ['ningún', 'ningunos', 'ninguna', 'ningunas'], otro: ['otro', 'otros', 'otra', 'otras'],
+  nuevo: ['nuevo', 'nuevos', 'nueva', 'nuevas'], primer: ['primer', 'primeros', 'primera', 'primeras'], ultimo: ['último', 'últimos', 'última', 'últimas'],
+  proximo: ['próximo', 'próximos', 'próxima', 'próximas'] };
+const TERMKEY = 'dlc-terminos';
+let TERMINOS = {};
+try { TERMINOS = JSON.parse(localStorage.getItem(TERMKEY) || '{}') || {}; } catch (e) { TERMINOS = {}; }
+const terminoDe = k => { const d = TERM_DEF[k] || { s: k, p: k + 's', g: 'm' }, t = TERMINOS[k] || {};
+  return { s: String(t.s || '').trim() || d.s, p: String(t.p || '').trim() || d.p, g: t.g === 'f' || t.g === 'm' ? t.g : d.g }; };
+const casoTermino = (t, c) => c === 'U' ? t.toUpperCase() : c === 'C' ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+function TT(k, n, det, cd, cn, adj) {
+  const d = terminoDe(k), nom = casoTermino(n === 'p' ? d.p : d.s, cn);
+  // Adjetivo que acompaña al nombre (se escribe en masculino singular): concuerda en género y número
+  const ad = adj ? ' ' + (d.g === 'f' ? adj.replace(/o$/, 'a') : adj) + (n === 'p' ? 's' : '') : '';
+  if (!det || !TERM_DET[det]) return nom + ad;
+  return casoTermino(TERM_DET[det][(d.g === 'f' ? 2 : 0) + (n === 'p' ? 1 : 0)], cd) + ' ' + nom + ad;
+}
+
+/* v2.69.0 · Permisos por capacidad. El código pregunta qué puede hacer una persona (puede('administrar')),
+   nunca cómo se llama su rol: los roles y sus capacidades son datos de cada cliente (tablas roles y roles_capacidades). */
+const ROLKEY = 'dlc-roles';
+let ROLES_DEF = [];
+try { ROLES_DEF = JSON.parse(localStorage.getItem(ROLKEY) || '[]') || []; } catch (e) { ROLES_DEF = []; }
+const puede = c => !!(PERFIL && (PERFIL.capacidades || []).includes(c));
+const rolDef = r => ROLES_DEF.find(x => x.nombre === r) || null;
+const rolPuede = (r, c) => { const d = rolDef(r); return !!(d && (d.capacidades || []).includes(c)); };
+const rolesNombres = () => ROLES_DEF.map(x => x.nombre);
+const rolCon = c => (ROLES_DEF.find(x => (x.capacidades || []).includes(c)) || {}).nombre || '';
+const rolPorDefecto = () => (ROLES_DEF.find(x => x.por_defecto) || ROLES_DEF.find(x => !(x.capacidades || []).includes('administrar')) || {}).nombre || '';
+/* v2.70.0 · Estados comerciales como catálogo: el código conoce su papel (inicial, avance, interes, positivo, negativo), no su nombre */
+const ESTKEY = 'dlc-estados';
+let ESTADOS_DEF = [];
+try { ESTADOS_DEF = JSON.parse(localStorage.getItem(ESTKEY) || '[]') || []; } catch (e) { ESTADOS_DEF = []; }
+const estados = () => ESTADOS_DEF.map(x => x.valor);
+const estadoPapel = p => (ESTADOS_DEF.find(x => x.papel === p) || {}).valor || '';
+const papelEstado = v => (ESTADOS_DEF.find(x => x.valor === v) || {}).papel || '';
+const COL_PAPEL = { inicial: '#0E2F52', avance: '#2B6CB0', interes: '#B7791F', positivo: '#12805C', negativo: '#9B2C2C' };
+const colEstado = v => COL_PAPEL[papelEstado(v)] || '';
+async function cargarRoles() {
+  const [{ data, error }, { data: est, error: e2 }, voc] = await Promise.all([
+    db.from('roles').select('nombre,orden,color,plantilla,por_defecto,roles_capacidades(capacidad)').order('orden').order('nombre'),
+    db.rpc('catalogo_papel', { p_papel: 'estado_comercial' }),
+    db.from('ajustes').select('valor').eq('clave', 'terminos').maybeSingle()]);
+  // Vocabulario: si cambia respecto al guardado, se recarga una vez para que todos los textos lo usen
+  if (voc && !voc.error) {
+    const nuevo = JSON.stringify((voc.data && voc.data.valor) || {}), antes = JSON.stringify(TERMINOS || {});
+    if (nuevo !== antes) {
+      try { localStorage.setItem(TERMKEY, nuevo); } catch (e) {}
+      let ya = false; try { ya = sessionStorage.getItem('dlc-terminos-recarga') === nuevo; sessionStorage.setItem('dlc-terminos-recarga', nuevo); } catch (e) {}
+      if (!ya) { location.reload(); return false; }
+    }
+  }
+  if (!e2 && Array.isArray(est)) {
+    ESTADOS_DEF = est.map(x => ({ valor: x.valor, papel: x.papel || '' }));
+    try { localStorage.setItem(ESTKEY, JSON.stringify(ESTADOS_DEF)); } catch (e) {}
+  }
+  if (error || !data) return false;
+  ROLES_DEF = data.map(r => ({ nombre: r.nombre, orden: r.orden, color: r.color, plantilla: r.plantilla || {}, por_defecto: !!r.por_defecto,
+    capacidades: (r.roles_capacidades || []).map(x => x.capacidad) }));
+  try { localStorage.setItem(ROLKEY, JSON.stringify(ROLES_DEF)); } catch (e) {}
+  return !e2;
+}
+const F = { q: '', prov: '', muni: '', esp: '', est: '', urg: false, orden: 'nombre', pagina: 0, total: 0, campos: {} };
 const PASO = 50;
 
 // Fechas SIEMPRE en hora local (España): convertir a hora universal restaba un día de 00:00 a 02:00
@@ -163,8 +230,8 @@ $('v-inicio').addEventListener('click', e => {
     if (k.dataset.k === 'dups') { ir('duplicados'); return; }
     Object.assign(F, { q: '', prov: '', muni: '', esp: '', est: '', urg: false, orden: 'nombre' });
     if (k.dataset.k === 'urgentes') { F.urg = true; F.orden = 'urgentes'; }
-    if (k.dataset.k === 'interesados') F.est = 'Interesado';
-    if (k.dataset.k === 'sin_contactar') F.est = 'Sin contactar';
+    if (k.dataset.k === 'interesados') F.est = estadoPapel('interes');
+    if (k.dataset.k === 'sin_contactar') F.est = estadoPapel('inicial');
     $('q').value = ''; $('fest').value = F.est;
     ir('directorio'); buscar(true);
     return;
@@ -243,7 +310,8 @@ async function buscar(reiniciar) {
     q: F.q || null, f_provincia: F.prov || null, f_municipio: F.muni || null,
     f_estado: F.est || null, f_especialidad: F.esp || null, f_area: null,
     f_urgentes: F.urg, f_mios: false, f_sin_visitar: false, f_comercial: F.com || null, f_reporting: F.rep || null,
-    orden: F.orden, lim: tamPagina(), desplaz: F.pagina * tamPagina()
+    orden: F.orden, lim: tamPagina(), desplaz: F.pagina * tamPagina(),
+    ...(Object.keys(F.campos || {}).length ? { f_campos: F.campos } : {})
   };
   let { data, error } = await db.rpc('buscar_medicos', params);
   if (yo !== BUSQ_N) return;   // ya hay una búsqueda más reciente
@@ -279,7 +347,7 @@ async function buscar(reiniciar) {
 function fila(m) {
   const d = m.dias || {};
   return `<button class="fila" data-id="${m.id}">
-    <span><span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? '<span class="pill p-sr" title="Solo visita presencial: sin informes ni feedback">Sin reporting</span> ' : ''}${esc(m.nombre)}</span>
+    <span><span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? `<span class="pill p-sr" title="Solo ${TT('visita', 's', '', 'l', 'l')} presencial: sin informes ni feedback">Sin reporting</span> ` : ''}${esc(m.nombre)}</span>
       <span class="sm">${esc(m.especialidad || 'Sin especialidad')}</span></span>
     <span class="c2"><span class="nm" style="font-size:13.5px">${esc(m.centro_nombre || 'Consulta privada')}</span>
       <span class="sm">${esc([m.municipio, m.provincia].filter(Boolean).join(' · '))}</span></span>
@@ -312,7 +380,7 @@ async function abrirFicha(id, ...r) {
 // Ficha · Comercial asignado (administración) y pacientes que vienen de este prescriptor
 async function fichaComercialYPacientes(id) {
   if (FICHA_ID !== id || !$('fbody').querySelector('.fh')) return;
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   if (esAdmin) {
     $('fbody').insertAdjacentHTML('beforeend', `<div class="blk" id="fcomblk"><h3>Comercial asignado</h3>
       <div style="display:flex;gap:8px"><select id="fcomsel" style="flex:1"><option>Cargando…</option></select>
@@ -320,7 +388,7 @@ async function fichaComercialYPacientes(id) {
       <div class="sm" style="margin-top:6px">Las ventas nuevas se atribuyen al comercial asignado en ese momento. Las anteriores no cambian.</div></div>`);
     const [{ data: us }, { data: act }] = await Promise.all([db.rpc('usuarios_lista'), RPC_ORIG('comercial_de_medico', { p_medico: id })]);
     if (FICHA_ID !== id || !$('fcomsel')) return;
-    $('fcomsel').innerHTML = '<option value="">Sin comercial</option>' + (us || []).filter(u => u.activo && (u.rol === 'Comercial' || (act && act.id === u.id)))
+    $('fcomsel').innerHTML = '<option value="">Sin comercial</option>' + (us || []).filter(u => u.activo && (rolPuede(u.rol, 'cartera') || (act && act.id === u.id)))
       .map(u => `<option value="${u.id}" ${act && act.id === u.id ? 'selected' : ''}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join('');
     $('fcomok').onclick = async ev => {
       ev.target.disabled = true;
@@ -333,10 +401,10 @@ async function fichaComercialYPacientes(id) {
   if (esAdmin || ((PERFIL.areas || {}).V || 0) >= 1) {
     const { data } = await db.rpc('pacientes_lista', { q: null, p_medico: id, lim: 5, desplaz: 0 });
     if (FICHA_ID !== id || !data || !data.total) return;
-    $('fbody').insertAdjacentHTML('beforeend', `<div class="blk"><h3>Pacientes<span class="n" style="margin-left:6px">${num(data.total)}</span></h3>
+    $('fbody').insertAdjacentHTML('beforeend', `<div class="blk"><h3>${TT('paciente', 'p', '', 'l', 'C')}<span class="n" style="margin-left:6px">${num(data.total)}</span></h3>
       ${data.filas.map(x => `<button class="item" data-fmpac="${x.id}" style="padding:7px 4px"><span class="tx"><b>${esc(x.nombre)}</b>
         <span class="sm">${num(x.unidades)} uds. · ${num(x.pedidos)} pedidos${x.ultimo_pedido ? ' · último ' + fechaCorta(x.ultimo_pedido) : ''}</span></span></button>`).join('')}
-      ${data.total > 5 ? `<button class="verlo" id="fmpactodos" style="border-radius:8px;margin-top:6px">Ver los ${num(data.total)} pacientes</button>` : ''}</div>`);
+      ${data.total > 5 ? `<button class="verlo" id="fmpactodos" style="border-radius:8px;margin-top:6px">Ver los ${num(data.total)} ${TT('paciente', 'p', '', 'l', 'l')}</button>` : ''}</div>`);
     $('fbody').querySelectorAll('[data-fmpac]').forEach(b => b.onclick = () => fichaPaciente(b.dataset.fmpac));
     const nombre = ($('fbody').querySelector('.fh h2') || {}).textContent || '';
     if ($('fmpactodos')) $('fmpactodos').onclick = () => {
@@ -384,12 +452,12 @@ async function fichaUnidades(id) {
 
 // Ficha · Acceso del médico a la plataforma (administración)
 async function fichaAcceso(id) {
-  if (PERFIL.rol !== 'Administrador' || FICHA_ID !== id || !$('fbody') || $('facceso')) return;
+  if (!puede('administrar') || FICHA_ID !== id || !$('fbody') || $('facceso')) return;
   const { data: us } = await RPC_ORIG('usuarios_resumen', {});
   const ya = (us || []).find(u => u.medico_id === id);
   $('fbody').insertAdjacentHTML('beforeend', `<div class="blk" id="facceso"><h3>Acceso a la plataforma</h3>
     ${ya ? `<p class="sm">Tiene acceso como <b>${esc(ya.email || '')}</b>${ya.activo ? '' : ' (desactivado)'}: ve su informe y recibe un aviso con cada pauta.</p>`
-      : `<p class="sm">Puede tener acceso a su informe de prescripción y recibir un aviso con cada pauta a su nombre. No verá importes ni datos de pacientes.</p>
+      : `<p class="sm">Puede tener acceso a su informe de prescripción y recibir un aviso con cada pauta a su nombre. No verá importes ni datos de ${TT('paciente', 'p', '', 'l', 'l')}.</p>
          <button class="btn sec" id="fdaracc">Dar acceso</button>`}</div>`);
   if ($('fdaracc')) $('fdaracc').onclick = async () => {
     const { data: f } = await db.rpc('ficha_medico', { p_id: id });
@@ -411,22 +479,21 @@ async function pintarFichaBase(id) {
 
   $('fbody').innerHTML = `${rf.cache ? '<div class="cacheaviso">Sin conexión · ficha guardada en este dispositivo</div>' : ''}
     <div class="fh">
-      <div><h2>${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? '<span class="pill p-sr" title="Solo visita presencial: sin informes ni feedback">Sin reporting</span> ' : ''}${esc(m.nombre)}</h2>
+      <div><h2>${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? `<span class="pill p-sr" title="Solo ${TT('visita', 's', '', 'l', 'l')} presencial: sin informes ni feedback">Sin reporting</span> ` : ''}${esc(m.nombre)}</h2>
         <div class="sm">${esc(m.especialidad || '')}${m.area ? ' · ' + esc(m.area) : ''} · código ${esc(m.codigo)}</div></div>
       <button class="x" id="fx" aria-label="Cerrar">✕</button>
     </div>
     ${(puedeRegistrar() || puedeEditarTipo(m.tipo)) ? `<div class="acts">
-      ${puedeRegistrar() ? `<button class="btn" data-act="visita" data-id="${m.id}">Registrar visita</button>` : ''}
+      ${puedeRegistrar() ? `<button class="btn" data-act="visita" data-id="${m.id}">Registrar ${TT('visita', 's', '', 'l', 'l')}</button>` : ''}
       ${puedeEditarTipo(m.tipo) ? `<button class="btn sec" data-act="editar" data-id="${m.id}">Editar ficha</button>` : ''}
       ${puedeEditarTipo(m.tipo) ? `<button class="btn ${m.urgente ? 'sec' : 'warn'}" data-act="urgente" data-id="${m.id}" data-urg="${m.urgente ? 1 : 0}">${m.urgente ? 'Quitar urgente' : 'Marcar urgente'}</button>` : ''}
       <button class="btn sec" data-agendar="${m.id}">+ Añadir a mi agenda</button>
     </div>` : ''}
     <div class="blk"><h3>Estado</h3>
       <div>${puedeEditar()
-        ? `<select data-estado="${m.id}" style="max-width:240px">${ESTADOS.map(x => `<option ${x === m.estado_comercial ? 'selected' : ''}>${x}</option>`).join('')}</select>`
-        : `<span class="pill p-est">${esc(m.estado_comercial)}</span>`}${m.prioridad ? ' <span class="sm">· ' + esc(m.prioridad) + '</span>' : ''}</div>
+        ? `<select data-estado="${m.id}" style="max-width:240px">${estados().map(x => `<option ${x === m.estado_comercial ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
+        : `<span class="pill p-est">${esc(m.estado_comercial)}</span>`}</div>
       ${m.urgente && m.urgente_motivo ? `<div class="sm" style="margin-top:6px">Urgente: ${esc(m.urgente_motivo)}</div>` : ''}
-      ${m.cuando_visitar ? `<div class="sm" style="margin-top:6px">Cuándo visitar: ${esc(m.cuando_visitar)}</div>` : ''}
       ${com.length ? `<div class="sm" style="margin-top:6px">Comercial: ${com.map(esc).join(', ')}</div>` : ''}
       ${m.telefono ? `<div class="sm" style="margin-top:6px">Teléfono: ${esc(m.telefono)}</div>` : ''}
     </div>
@@ -437,14 +504,14 @@ async function pintarFichaBase(id) {
       ${dias.filter(k => (c.dias || {})[k]).map(k => `<div class="sm">${k}: ${esc(c.dias[k])}</div>`).join('')}
       ${c.lat ? `<div class="sm" style="margin-top:6px"><button class="lnk" type="button" data-nav="${navAttr([c.lat, c.lon])}">Cómo llegar</button></div>` : ''}
     </div>`).join('')}
-    <div class="blk"><h3>Visitas</h3>
+    <div class="blk"><h3>${TT('visita', 'p', '', 'l', 'C')}</h3>
       ${vis.length ? vis.slice(0, 10).map(v => `<div style="padding:7px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <span><b>${fechaCorta(v.fecha)}</b> · ${esc((v.resultados || []).join(' + ') || 'Sin resultado')}
           ${v.muestras ? ` · ${v.muestras} muestras` : ''}
           ${v.nota ? `<div class="sm">${esc(v.nota)}</div>` : ''}
           ${v.proxima_fecha ? `<div class="sm">Próxima: ${fechaCorta(v.proxima_fecha)} · ${esc(v.proxima_accion || '')}</div>` : ''}</span>
         ${puedeRegistrar() ? `<button class="btn sec" data-editv='${esc(JSON.stringify(v))}' style="min-height:30px;padding:5px 9px;font-size:12.5px">Editar</button>` : ''}
-      </div>`).join('') : '<div class="sm">Todavía no hay visitas registradas.</div>'}</div>
+      </div>`).join('') : `<div class="sm">Todavía no hay ${TT('visita', 'p', '', 'l', 'l', 'registrado')}.</div>`}</div>
     ${m.nota ? `<div class="blk"><h3>Nota</h3><div>${esc(m.nota)}</div></div>` : ''}
     ${m.contacto ? `<div class="blk"><h3>Contacto</h3><div>${esc(m.contacto)}</div></div>` : ''}`;
   $('fx').onclick = () => $('ficha').close();
@@ -463,19 +530,19 @@ if ('serviceWorker' in navigator) {
    DLC OS 2.0 · Entrega 3: registrar visitas, editar fichas y altas
    ============================================================ */
 
-const CAT = { RESULTADO: [], ESPECIALIDAD: [], AREA: [], MOTIVO_URGENCIA: [], FORMA_PAGO: [] };
-const ESTADOS = ['Sin contactar', 'Presentado', 'Interesado', 'Prescribe', 'No interesado'];
+// Catálogos por su papel en la plataforma (clasificadores.papel), nunca por la clave que les ponga cada cliente
+const CAT = { resultado_visita: [], especialidad: [], area: [], motivo_urgencia: [], forma_pago: [] };
 const DIAS = ['L', 'M', 'X', 'J', 'V'];
 const DIAN = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes' };
 const HM = ['09:00-13:00', '09:30-13:30', '10:00-14:00', '08:00-15:00'];
 const HT = ['15:00-19:00', '16:00-19:00', '16:00-20:00', '17:00-20:00'];
 let FICHA_ID = null;
 
-const puedeEditar = () => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).M || 0) >= 2);
-const puedeEditarTipo = t => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {})[t === 'Centro' ? 'C' : 'M'] || 0) >= 2);
-const puedeCrearTipo = t => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {})[t === 'Centro' ? 'C' : 'M'] || 0) >= 3);
+const puedeEditar = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).M || 0) >= 2);
+const puedeEditarTipo = t => PERFIL && (puede('administrar') || ((PERFIL.areas || {})[t === 'Centro' ? 'C' : 'M'] || 0) >= 2);
+const puedeCrearTipo = t => PERFIL && (puede('administrar') || ((PERFIL.areas || {})[t === 'Centro' ? 'C' : 'M'] || 0) >= 3);
 const puedeCrear = () => puedeCrearTipo('Persona') || puedeCrearTipo('Centro');
-const puedeRegistrar = () => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).S || 0) >= 2);
+const puedeRegistrar = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).S || 0) >= 2);
 
 let tToast;
 function toast(msg, err) {
@@ -486,8 +553,9 @@ function toast(msg, err) {
 
 async function cargarCatalogos() {
   const claves = Object.keys(CAT);
-  const res = await Promise.all(claves.map(k => db.rpc('catalogo', { p_clave: k })));
+  const res = await Promise.all(claves.map(k => db.rpc('catalogo_papel', { p_papel: k })));
   claves.forEach((k, i) => { CAT[k] = res[i].data || []; });
+  cargarCampos().catch(() => {});
 }
 
 /* ---------------- selector de días ---------------- */
@@ -597,12 +665,12 @@ function consHTML(c, i) {
     <div class="g2" style="margin-top:10px">
       <div><label>Teléfono de la consulta</label><input data-cf="${i}|telefono" value="${esc(c.telefono || '')}" inputmode="tel" placeholder="Si es distinto del del centro"></div><div></div>
     </div>
-    <label>Días y horario de visita</label>${dpHTML(c.dias || {}, i)}
+    <label>Días y horario de ${TT('visita', 's', '', 'l', 'l')}</label>${dpHTML(c.dias || {}, i)}
   </div>`;
 }
 
 async function abrirEditor(id, tipo) {
-  let m = { tipo: tipo || 'Persona', estado_comercial: 'Sin contactar' }, cons = [{}];
+  let m = { tipo: tipo || 'Persona', estado_comercial: estadoPapel('inicial') }, cons = [{}];
   if (id) {
     const { data, error } = await db.rpc('ficha_medico', { p_id: id });
     if (error) { toast('No se ha podido abrir: ' + error.message, true); return; }
@@ -613,22 +681,22 @@ async function abrirEditor(id, tipo) {
     `<option ${v === x.valor ? 'selected' : ''}>${esc(x.valor)}</option>`).join('');
 
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>${id ? 'Editar ficha' : esCentro ? 'Nuevo centro' : 'Nuevo médico'}</h2>
+    <div class="fh"><div><h2>${id ? 'Editar ficha' : esCentro ? 'Nuevo centro' : `${TT('medico', 's', 'nuevo', 'C', 'l')}`}</h2>
       <div class="sm">${id ? esc(m.nombre) : esCentro ? 'Clínica, hospital o centro médico' : 'Profesional con sus consultas'}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <label for="en">${esCentro ? 'Nombre del centro' : 'Apellidos, Nombre'}</label>
     <input id="en" value="${esc(m.nombre || '')}" placeholder="${esCentro ? 'CLÍNICA SANT JORDI' : 'GARCIA LOPEZ, ANA'}" autocapitalize="characters">
     ${esCentro ? '' : `<div class="g2">
-      <div><label for="ee">Especialidad</label><select id="ee">${opts(CAT.ESPECIALIDAD, m.especialidad)}</select></div>
-      <div><label for="ea">Área</label><select id="ea">${opts(CAT.AREA, m.area)}</select></div></div>`}
+      <div><label for="ee">Especialidad</label><select id="ee">${opts(CAT.especialidad, m.especialidad)}</select></div>
+      <div><label for="ea">Área</label><select id="ea">${opts(CAT.area, m.area)}</select></div></div>`}
     <div class="g2">
       <div><label for="et">Teléfono</label><input id="et" value="${esc(m.telefono || '')}" inputmode="tel"></div>
       <div><label for="em">Email</label><input id="em" type="email" value="${esc(m.email || '')}"></div>
     </div>
     <label for="ect">Contacto (secretaría, teléfono, email)</label><input id="ect" value="${esc(m.contacto || '')}">
-    <label for="ecv">Cuándo visitar</label><input id="ecv" value="${esc(m.cuando_visitar || '')}" placeholder="p. ej. martes por la mañana">
-    ${esCentro ? '' : `<label class="chksr"><input type="checkbox" id="esr" ${m.sin_reporting ? 'checked' : ''}><span><b>Sin reporting</b><span class="sm">Solo visita presencial: no quiere informes ni feedback. Se puede filtrar en ${esc(etiquetaContactos())} y en Analítica.</span></span></label>`}
+    ${esCentro ? '' : `<label class="chksr"><input type="checkbox" id="esr" ${m.sin_reporting ? 'checked' : ''}><span><b>Sin reporting</b><span class="sm">Solo ${TT('visita', 's', '', 'l', 'l')} presencial: no quiere informes ni feedback. Se puede filtrar en ${esc(etiquetaContactos())} y en Analítica.</span></span></label>`}
     <label for="eno">Nota</label><textarea id="eno" rows="3">${esc(m.nota || '')}</textarea>
+    ${camposHTML('medico', m.clasificadores)}
     <div id="econs">${cons.map(consHTML).join('')}</div>
     <div class="acts"><button type="button" class="btn sec" id="eadd">+ Añadir consulta</button></div>
     <div id="edup"></div>
@@ -663,7 +731,7 @@ async function abrirEditor(id, tipo) {
       especialidad: esCentro ? '' : ($('ee') || {}).value || '',
       area: esCentro ? '' : ($('ea') || {}).value || '',
       telefono: $('et').value.trim(), email: $('em').value.trim(),
-      contacto: $('ect').value.trim(), cuando_visitar: $('ecv').value.trim(),
+      contacto: $('ect').value.trim(),
       nota: $('eno').value.trim(), estado_comercial: m.estado_comercial, consultas,
       sin_reporting: $('esr') ? $('esr').checked : !!m.sin_reporting
     };
@@ -673,6 +741,8 @@ async function abrirEditor(id, tipo) {
   $('eguardar').onclick = async ev => {
     const p = recoger();
     if (!p.nombre || p.nombre.length < 3) { toast('Escribe el nombre', true); return; }
+    const cps = camposLeer($('dbody'));
+    if (cps && cps.falta.length) { toast(`Rellena «${cps.falta[0]}»`, true); return; }
     if (!id && !esCentro && p.nombre.indexOf(',') < 0) { toast('Escribe el nombre como APELLIDOS, NOMBRE', true); return; }
 
     if (!id && !avisado) {
@@ -695,6 +765,7 @@ async function abrirEditor(id, tipo) {
     const { data, error } = await db.rpc('guardar_medico', { p });
     ev.target.disabled = false; ev.target.textContent = id ? 'Guardar cambios' : 'Crear';
     if (error) { toast('No se ha podido guardar: ' + error.message, true); return; }
+    if (cps && !(await camposGuardar(cps, (data && data.medico && data.medico.id) || id))) return;
     $('dlg').close();
     toast(id ? 'Ficha guardada' : 'Creado correctamente');
     buscar(true); cargarInicio();
@@ -716,7 +787,7 @@ async function alternarUrgente(id, esUrgente, nombre) {
   let motivo = null;
   if (!esUrgente) {
     motivo = await pedirTexto('Motivo (opcional). Puedes escribirlo o elegir uno:', '',
-      { titulo: 'Marcar como urgente', ok: 'Marcar urgente', opciones: CAT.MOTIVO_URGENCIA.map(x => x.valor) });
+      { titulo: 'Marcar como urgente', ok: 'Marcar urgente', opciones: CAT.motivo_urgencia.map(x => x.valor) });
     if (motivo === null) return;
   }
   const { error } = await db.from('medicos')
@@ -757,7 +828,7 @@ $('nuevoBtn').addEventListener('click', () => {
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <div class="opciones" style="margin-top:10px">
       <button class="opt ${puedeCrearTipo('Persona') ? '' : 'hide'}" data-crear="Persona" style="flex-direction:column;align-items:flex-start;gap:4px;padding:16px">
-        <b style="font-size:16px;color:var(--navy)">Médico</b><span class="sm">Profesional con sus consultas y horarios</span></button>
+        <b style="font-size:16px;color:var(--navy)">${TT('medico', 's', '', 'l', 'C')}</b><span class="sm">Profesional con sus consultas y horarios</span></button>
       <button class="opt ${puedeCrearTipo('Centro') ? '' : 'hide'}" data-crear="Centro" style="flex-direction:column;align-items:flex-start;gap:4px;padding:16px">
         <b style="font-size:16px;color:var(--navy)">Centro</b><span class="sm">Clínica, hospital o centro médico</span></button>
     </div>`;
@@ -964,7 +1035,7 @@ async function pintarAgendaBase() {
         <div class="item" style="cursor:default">
           <span class="ic" style="background:${EST_COL[c.estado]}20;color:${EST_COL[c.estado]}">${c.hora ? esc(c.hora).slice(0, 5) : '·'}</span>
           <span class="tx"><b>${c.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${esc(c.nombre)}</b>
-            <span class="sm">${esc(c.centro_nombre || '')} · <b style="color:${EST_COL[c.estado]}">${esc(c.estado)}</b>${PERFIL.rol === 'Administrador' && c.usuario ? ' · ' + esc(c.usuario) : ''}</span></span>
+            <span class="sm">${esc(c.centro_nombre || '')} · <b style="color:${EST_COL[c.estado]}">${esc(c.estado)}</b>${puede('administrar') && c.usuario ? ' · ' + esc(c.usuario) : ''}</span></span>
           <span class="acts" style="margin:0">
             <button class="btn sec" data-cita="ficha|${c.medico_id}">Ficha</button>
             ${c.estado !== 'Visitada' ? `<button class="btn sec" data-cita="visita|${c.medico_id}">Registrar</button>
@@ -1016,7 +1087,7 @@ document.addEventListener('click', async e => {
     if (!await preguntar('La cita desaparece de la agenda.', { titulo: '¿Borrar la cita?', ok: 'Borrar', peligro: true })) return;
     const { data: r } = await db.rpc('borrar_cita', { p_id: id });
     if (r && r.ok === false) {
-      toast(r.error === 'visitada' ? 'No se puede borrar una visita ya realizada'
+      toast(r.error === 'visitada' ? `No se puede borrar ${TT('visita', 's', 'un', 'l', 'l')} ya realizada`
         : r.error === 'pasada' ? 'Solo se pueden borrar citas futuras' : 'No se ha podido borrar', true);
       return;
     }
@@ -1060,7 +1131,7 @@ async function planificar(rutaId, btn) {
   btn.disabled = false; btn.textContent = orig;
   if (error) { toast('No se ha podido planificar: ' + error.message, true); return; }
   const conXY = (data || []).filter(m => m.lat && m.lon);
-  if (!conXY.length) { toast('Esta ruta no tiene médicos con ubicación', true); return; }
+  if (!conXY.length) { toast(`Esta ruta no tiene ${TT('medico', 'p', '', 'l', 'l')} con ubicación`, true); return; }
   construirPlan(conXY, rutaId, btn);
 }
 
@@ -1141,7 +1212,7 @@ function planVisitadosRecientes() {
   });
   const card = $('rplan').querySelector('.card');
   if (card && !$('planrec')) {
-    card.querySelector('h2').insertAdjacentHTML('afterend', `<div class="avisoh" id="planrec"><span>⚠ ${ids.length} ${ids.length === 1 ? 'médico del plan ya se ha' : 'médicos del plan ya se han'} visitado o tienen cita en los últimos ${avisoRevisita().dias} días.</span>
+    card.querySelector('h2').insertAdjacentHTML('afterend', `<div class="avisoh" id="planrec"><span>⚠ ${ids.length} ${ids.length === 1 ? `${TT('medico', 's', '', 'l', 'l')} del plan ya se ha` : `${TT('medico', 'p', '', 'l', 'l')} del plan ya se han`} visitado o tienen cita en los últimos ${avisoRevisita().dias} días.</span>
       <button class="btn sec" id="planquitar">Quitarlos del plan</button></div>`);
     $('planquitar').onclick = () => {
       const u = ULTIMO_PLAN; if (!u) return;
@@ -1169,7 +1240,7 @@ function planFichasYNotas() {
   $('rplan').querySelectorAll('[data-pfm]').forEach(b => b.onclick = () => abrirFicha(b.dataset.pfm));
   $('rplan').querySelectorAll('[data-pnota]').forEach(b => b.onclick = async () => {
     const p = PLAN.paradas[+b.dataset.pnota];
-    const t = await pedirTexto('Se guardará en la cita de cada médico de esta parada al pasar el plan a tu agenda.', p.nota || '', { titulo: 'Nota para ' + p.centro, ok: 'Guardar nota', tipo: 'area' });
+    const t = await pedirTexto(`Se guardará en la cita de cada ${TT('medico', 's', '', 'l', 'l')} de esta parada al pasar el plan a tu agenda.`, p.nota || '', { titulo: 'Nota para ' + p.centro, ok: 'Guardar nota', tipo: 'area' });
     if (t === null) return; p.nota = t.trim(); pintarPlan();
   });
 }
@@ -1249,10 +1320,9 @@ document.addEventListener('click', async e => {
    ============================================================ */
 
 let CFG_SEC = 'prefs', ADM_SEC = 'usuarios', USUARIOS = [], CATS = [];
-const AREAS = [['H', 'Inicio'], ['G', 'Agenda'], ['R', 'Rutas'], ['M', 'Médicos'], ['C', 'Centros'], ['S', 'Visitas'], ['V', 'Ventas y pacientes'], ['K', 'Configuración']];
+const AREAS = [['H', 'Inicio'], ['G', 'Agenda'], ['R', 'Rutas'], ['M', `${TT('medico', 'p', '', 'l', 'C')}`], ['C', 'Centros'], ['S', `${TT('visita', 'p', '', 'l', 'C')}`], ['V', `Ventas y ${TT('paciente', 'p', '', 'l', 'l')}`], ['K', 'Configuración']];
 const NIVELES = ['Sin acceso', 'Ver', 'Editar', 'Completo'];
-const ROLES = ['Administrador', 'Dirección', 'Comercial', 'Televenta', 'Solo consulta', 'Medico'];
-const puedeCatalogos = () => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).K || 0) >= 2);
+const puedeCatalogos = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).K || 0) >= 2);
 
 /* ---------------- configuración ---------------- */
 
@@ -1279,7 +1349,7 @@ function pintarPrefsPaso1() {
   const a = avisoRevisita();
   acts.insertAdjacentHTML('beforebegin', `<div class="blk" id="pfaviso"><h3>Avisos</h3>
     <label class="opt"><input type="checkbox" id="pfrev" ${a.on ? 'checked' : ''}>
-      <span><b>Avisarme si un médico ya se ha visitado hace poco</b><br><span class="sm">Al añadir una cita, al planificar una ruta o la semana. Cuenta visitas y citas de cualquier persona.</span></span></label>
+      <span><b>Avisarme si ${TT('medico', 's', 'un', 'l', 'l')} ya se ha visitado hace poco</b><br><span class="sm">Al añadir una cita, al planificar una ruta o la semana. Cuenta ${TT('visita', 'p', '', 'l', 'l')} y citas de cualquier persona.</span></span></label>
     <div class="g2"><div><label for="pfrevd">Cuántos días cuentan como «hace poco»</label><input id="pfrevd" type="number" min="1" max="60" value="${a.dias}"></div></div></div>`);
   const guardar = () => guardarAvisoRevisita({ on: $('pfrev').checked, dias: Math.max(1, +$('pfrevd').value || 7) }).then(ok => ok && toast('Aviso guardado'));
   $('pfrev').onchange = guardar; $('pfrevd').onchange = guardar;
@@ -1305,8 +1375,8 @@ async function pintarPrefsPaso2() {
   if (!$('mpextra')) return;
   const kk = (k && (k.kpis || k)) || {}, esq = (h || []).find(x => !x.hasta);
   $('mpextra').innerHTML = `<b>Tu actividad</b><ul class="mplist">
-    ${kk.medicos != null ? `<li>🩺 <b>${num(kk.medicos)}</b> médicos en tu cartera</li>` : ''}
-    ${kk.visitas_mes != null ? `<li>📝 <b>${num(kk.visitas_mes)}</b> visitas este mes</li>` : ''}
+    ${kk.medicos != null ? `<li>🩺 <b>${num(kk.medicos)}</b> ${TT('medico', 'p', '', 'l', 'l')} en tu cartera</li>` : ''}
+    ${kk.visitas_mes != null ? `<li>📝 <b>${num(kk.visitas_mes)}</b> ${TT('visita', 'p', '', 'l', 'l')} este mes</li>` : ''}
     ${yo && yo.zonas && yo.zonas.length ? `<li>📍 Zona: ${esc(yo.zonas.map(z => z.charAt(0) + z.slice(1).toLowerCase()).join(', '))}</li>` : ''}
     ${esq ? `<li>€ Comisión: ${esc(esq.esquema)}</li>` : ''}</ul>`;
 }
@@ -1428,13 +1498,13 @@ async function cargarAdmin() {
     <div class="lista">${USUARIOS.map(u => `<div class="item" style="cursor:default">
       <span class="ic">${esc(iniciales(u.nombre))}</span>
       <span class="tx"><b>${esc(u.nombre)}${u.activo ? '' : ' <span class="sm">· desactivado</span>'}</b>
-        <span class="sm">${esc(u.rol)} · ${esc(u.email || '')} · ${num(u.medicos)} médicos · ${num(u.visitas)} visitas</span></span>
+        <span class="sm">${esc(u.rol)} · ${esc(u.email || '')} · ${num(u.medicos)} ${TT('medico', 'p', '', 'l', 'l')} · ${num(u.visitas)} ${TT('visita', 'p', '', 'l', 'l')}</span></span>
       <span class="acts" style="margin:0">
         <button class="btn sec" data-uedit="${u.id}">Editar</button>
         <button class="btn sec" data-uver="${u.id}">Ver cartera</button>
         <button class="btn sec" data-ucart="${u.id}">Asignar</button>
         <button class="btn sec" data-upass="${u.id}">Contraseña</button>
-        ${puedeSuplantar() && u.id !== PERFIL.id && u.rol !== 'Administrador' && u.activo ? `<button class="btn sec" data-ucomo="${u.id}" title="Ver la plataforma exactamente como esta persona">👤 Entrar como</button>` : ''}</span></div>`).join('')}</div>`;
+        ${puedeSuplantar() && u.id !== PERFIL.id && !rolPuede(u.rol, 'administrar') && u.activo ? `<button class="btn sec" data-ucomo="${u.id}" title="Ver la plataforma exactamente como esta persona">👤 Entrar como</button>` : ''}</span></div>`).join('')}</div>`;
 
   ($('admcuerpo') || document.createElement('div')).querySelectorAll('[data-uedit]').forEach(b => b.onclick = () => editarUsuario(b.dataset.uedit));
   ($('admcuerpo') || document.createElement('div')).querySelectorAll('[data-ucart]').forEach(b => b.onclick = () => asignarCartera(b.dataset.ucart));
@@ -1475,7 +1545,7 @@ async function usuarioComisionYZona(id) {
     if ((h || []).length && $('uchist')) $('uchist').innerHTML = 'Historial: ' + h.map(x => `${esc(x.esquema)} desde ${fechaCorta(x.desde)}${x.hasta ? ' hasta ' + fechaCorta(x.hasta) : ''}`).join(' · ');
   }
   // Zona, solo para comerciales
-  if (u.rol === 'Comercial' && !$('uzonas')) {
+  if (rolPuede(u.rol, 'cartera') && !$('uzonas')) {
     const html = await bloqueZonas(u);
     const ref = $('ucomzona') || $('dbody').querySelector('.acts:last-of-type');
     if (ref && $('dlg').open) ref.insertAdjacentHTML('beforebegin', html);
@@ -1487,7 +1557,7 @@ async function usuarioComisionYZona(id) {
       const { data: r, error } = await db.rpc('asignar_zona', { p_usuario: id, p_zonas: zonas });
       ev.target.disabled = false;
       if (error || (r && r.ok === false)) { toast('No se ha podido guardar la zona', true); return; }
-      toast(`Zona guardada · ${num(r.asignados)} médicos nuevos en su cartera${r.en_otra_cartera ? ` · ${num(r.en_otra_cartera)} de su zona están en otra cartera` : ''}`);
+      toast(`Zona guardada · ${num(r.asignados)} ${TT('medico', 'p', '', 'l', 'l', 'nuevo')} en su cartera${r.en_otra_cartera ? ` · ${num(r.en_otra_cartera)} de su zona están en otra cartera` : ''}`);
     };
   }
 }
@@ -1495,13 +1565,13 @@ async function usuarioComisionYZona(id) {
 // Editar usuario · Ficha de médico vinculada (usuarios con rol Medico)
 async function usuarioFichaMedico(id) {
   const u = (USUARIOS || []).find(x => x.id === id);
-  if (!u || u.rol !== 'Medico' || !$('dlg').open || $('umedw')) return;
+  if (!u || !rolPuede(u.rol, 'portal_prescriptor') || !$('dlg').open || $('umedw')) return;
   const { data: pf } = await db.from('perfiles').select('medico_id').eq('id', id).single();
   let medico = null;
   if (pf && pf.medico_id) { const { data: fm } = await db.rpc('ficha_medico', { p_id: pf.medico_id }); if (fm && fm.medico) medico = { id: fm.medico.id, nombre: fm.medico.nombre }; }
   const ref = $('dbody').querySelector('.acts:last-of-type');
-  ref.insertAdjacentHTML('beforebegin', `<div class="blk" id="umedw"><h3>Ficha de médico vinculada</h3>
-    <p class="sm">Este usuario verá solo el informe de este médico y recibirá un aviso con cada pauta a su nombre. Sin importes ni datos de pacientes.</p>
+  ref.insertAdjacentHTML('beforebegin', `<div class="blk" id="umedw"><h3>Ficha de ${TT('medico', 's', '', 'l', 'l')} vinculada</h3>
+    <p class="sm">Este usuario verá solo el informe de ${TT('medico', 's', 'este', 'l', 'l')} y recibirá un aviso con cada pauta a su nombre. Sin importes ni datos de ${TT('paciente', 'p', '', 'l', 'l')}.</p>
     <div id="umedsel"></div><div class="acts" style="margin-top:8px"><button class="btn sec" id="umedok">Guardar vínculo</button>
     ${medico ? `<button class="btn sec" id="umedver">Ver su informe</button>` : ''}</div></div>`);
   selectorMedico($('umedsel'), { valor: medico, placeholder: 'Busca su ficha', alElegir: m => { medico = m; } });
@@ -1538,7 +1608,7 @@ function pintarUsuarioBase(id) {
       <div><label for="uu">Usuario</label><input id="uu" value="${esc(u.usuario)}"></div>
     </div>
     <div class="g2">
-      <div><label for="ur">Rol</label><select id="ur">${ROLES.map(r => `<option ${r === u.rol ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+      <div><label for="ur">Rol</label><select id="ur">${rolesNombres().map(r => `<option ${r === u.rol ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></div>
       <div><label for="ua">Estado</label><select id="ua">
         <option value="1" ${u.activo ? 'selected' : ''}>Activo</option>
         <option value="0" ${u.activo ? '' : 'selected'}>Desactivado</option></select></div>
@@ -1553,15 +1623,7 @@ function pintarUsuarioBase(id) {
     </div>`;
 
   $('ur').onchange = () => {
-    const presetBase = {
-      'Administrador': { H: 3, G: 3, R: 3, M: 3, C: 3, S: 3, V: 3, L: 3, P: 3, F: 3, A: 3, E: 1, Q: 3, K: 3, U: 3 },
-      'Comercial': { H: 2, G: 2, R: 2, M: 2, C: 2, S: 2, V: 0, L: 0, P: 0, F: 0, A: 0, E: 0, Q: 0, K: 0, U: 0 },
-      'Televenta': { H: 2, G: 1, R: 1, M: 2, C: 2, S: 1, V: 3, L: 3, P: 1, F: 2, A: 1, E: 1, Q: 1, K: 0, U: 0 },
-      'Dirección': { H: 2, G: 2, R: 1, M: 1, C: 1, S: 1, V: 1, L: 1, P: 1, F: 1, A: 1, E: 1, Q: 1, K: 1, U: 0 },
-      'Solo consulta': { H: 1, G: 1, R: 1, M: 1, C: 1, S: 1, V: 1, L: 1, P: 1, F: 0, A: 1, E: 0, Q: 1, K: 0, U: 0 },
-      'Medico': { H: 1, G: 0, R: 0, M: 0, C: 0, S: 0, V: 0, L: 0, P: 0, F: 0, A: 0, E: 0, Q: 0, K: 0, U: 0 }
-    };
-    const preset = Object.assign({}, presetBase[$('ur').value] || {}, (AJUSTES.roles || {})[$('ur').value] || {});
+    const preset = Object.assign({}, (rolDef($('ur').value) || {}).plantilla || {}, (AJUSTES.roles || {})[$('ur').value] || {});
     AREAS.forEach(([k]) => { const s = $('dbody').querySelector(`[data-area="${k}"]`); if (s) s.value = String(preset[k] || 0); });
   };
 
@@ -1594,7 +1656,7 @@ function pintarUsuarioBase(id) {
 /* Nuevo usuario: la ventana base, el límite del plan y el alta de médicos, y el resumen al crear (antes eran 3 capas). */
 function nuevoUsuario(pre) {
   const act = planDe(PLAN_ACTUAL.plan), maxU = act.incluidos + (+PLAN_ACTUAL.bloques_extra || 0) * act.bloque[0];
-  const activos = (USUARIOS || []).filter(u => u.activo && u.rol !== 'Medico').length;
+  const activos = (USUARIOS || []).filter(u => u.activo && !rolPuede(u.rol, 'portal_prescriptor')).length;
   nuevoUsuarioBase();
   nuevoUsuarioPlanYMedico(pre, act, maxU, activos);
   nuevoUsuarioResumen(pre);
@@ -1606,23 +1668,23 @@ function nuevoUsuarioPlanYMedico(pre, act, maxU, activos) {
   $('np').value = 'Tmp-' + Math.random().toString(36).slice(2, 8);
   // Rol «Medico»: se elige un médico del directorio, no se crea uno nuevo
   $('nr').insertAdjacentHTML('afterend', '');
-  $('nr').closest('.g2').insertAdjacentHTML('afterend', `<div id="nmedw" class="hide"><label>Médico del directorio</label><div id="nmed"></div>
+  $('nr').closest('.g2').insertAdjacentHTML('afterend', `<div id="nmedw" class="hide"><label>${TT('medico', 's', '', 'l', 'C')} del directorio</label><div id="nmed"></div>
     <div class="sm" style="margin-top:4px">Tendrá acceso solo a su informe y a sus avisos. No cuenta como usuario del plan.</div></div>`);
   let medico = pre && pre.medico ? pre.medico : null;
-  selectorMedico($('nmed'), { valor: medico, placeholder: 'Busca al médico', alElegir: async m => {
+  selectorMedico($('nmed'), { valor: medico, placeholder: `Busca ${TT('medico', 's', 'al', 'l', 'l')}`, alElegir: async m => {
     medico = m;
     const { data: f } = await db.rpc('ficha_medico', { p_id: m.id });
     if (f && f.medico) { if (!$('nn').value) $('nn').value = f.medico.nombre; if (!$('ne').value && f.medico.email) $('ne').value = f.medico.email; }
   } });
-  const ver = () => $('nmedw').classList.toggle('hide', $('nr').value !== 'Medico');
+  const ver = () => $('nmedw').classList.toggle('hide', !rolPuede($('nr').value, 'portal_prescriptor'));
   $('nr').addEventListener('change', ver);
-  if (pre && pre.medico) { $('nr').value = 'Medico'; $('nn').value = pre.nombre || ''; $('ne').value = pre.email || ''; ver(); }
+  if (pre && pre.medico) { $('nr').value = rolCon('portal_prescriptor'); $('nn').value = pre.nombre || ''; $('ne').value = pre.email || ''; ver(); }
   const crear = $('ncrear').onclick;
   $('ncrear').onclick = async ev => {
-    if ($('nr').value !== 'Medico' && activos >= maxU) { toast(`Tu plan ${act.nombre} permite ${maxU} usuarios. Añade un bloque en Configuración → Plan.`, true); return; }
-    if ($('nr').value === 'Medico' && !medico) { toast('Elige el médico del directorio', true); return; }
+    if (!rolPuede($('nr').value, 'portal_prescriptor') && activos >= maxU) { toast(`Tu plan ${act.nombre} permite ${maxU} usuarios. Añade un bloque en Configuración → Plan.`, true); return; }
+    if (rolPuede($('nr').value, 'portal_prescriptor') && !medico) { toast(`Elige ${TT('medico', 's', 'el', 'l', 'l')} del directorio`, true); return; }
     await crear(ev);
-    if ($('nr').value === 'Medico' && medico && /Usuario creado/.test($('nmsg').textContent)) {
+    if (rolPuede($('nr').value, 'portal_prescriptor') && medico && /Usuario creado/.test($('nmsg').textContent)) {
       const { data: u } = await db.from('perfiles').select('id').eq('email', $('ne').value.trim()).single();
       if (u) { await db.rpc('vincular_medico', { p_usuario: u.id, p_medico: medico.id }); $('nmsg').insertAdjacentHTML('beforeend', ` Vinculado a <b>${esc(medico.nombre)}</b>.`); }
     }
@@ -1645,7 +1707,7 @@ function nuevoUsuarioResumen(pre) {
     $('dbody').innerHTML = `<div class="fh"><div><h2>✓ Usuario creado</h2><div class="sm">Pásale estos datos para que entre</div></div><button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <div class="usrok"><div><span>Nombre</span><b>${esc(datos.nombre)}</b></div><div><span>Rol</span><b>${esc(datos.rol)}</b></div>
         <div><span>Usuario</span><b>${esc(datos.email)}</b></div><div><span>Contraseña temporal</span><b class="mono">${esc(datos.pass)}</b></div>
-        ${vinc ? `<div><span>Médico vinculado</span><b>${esc(vinc)}</b></div>` : ''}<div><span>Dirección</span><b>${esc(url)}</b></div></div>
+        ${vinc ? `<div><span>${TT('medico', 's', '', 'l', 'C', 'vinculado')}</span><b>${esc(vinc)}</b></div>` : ''}<div><span>Dirección</span><b>${esc(url)}</b></div></div>
       <p class="sm">Si la confirmación por correo está activada, primero deberá confirmar su email.</p>
       <div class="acts" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn sec" id="usrcop">Copiar los datos</button><button class="btn" data-cerrar>Hecho</button></div>`;
     delete $('dlg').dataset.sucio;
@@ -1663,7 +1725,7 @@ function nuevoUsuarioBase() {
       <div><label for="ne">Correo</label><input id="ne" type="email" placeholder="nombre@empresa.com"></div>
     </div>
     <div class="g2">
-      <div><label for="nr">Rol</label><select id="nr">${ROLES.map(r => `<option ${r === 'Comercial' ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+      <div><label for="nr">Rol</label><select id="nr">${rolesNombres().map(r => `<option ${r === rolPorDefecto() ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></div>
       <div><label for="np">Contraseña temporal</label><input id="np" value="Tmp-${Math.random().toString(36).slice(2, 8)}"></div>
     </div>
     <div class="acts" style="justify-content:flex-end">
@@ -1715,36 +1777,36 @@ async function cargarSeguimiento() {
 async function cargarSeguimientoPaso1() {
   const v = $('v-seguimiento');
   v.querySelector('.saludo h1').firstChild.textContent = 'Calidad del dato';
-  v.querySelector('.saludo .fecha').textContent = 'Fichas completas, datos que faltan y avance de cada médico';
+  v.querySelector('.saludo .fecha').textContent = `Fichas completas, datos que faltan y avance de cada ${TT('medico', 's', '', 'l', 'l')}`;
   const { data: q } = await RPC_ORIG('calidad_datos', {});
   if (!q || $('calidad')) return;
   const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
   const item = (n, t, h) => `<div class="kpi ${n ? 'warn' : 'ok'}"><button class="ai" data-ayuda-txt="${esc(h)}" data-ayuda-tit="${esc(t)}" aria-label="Qué es">i</button><b>${num(n)}</b><span>${esc(t)}</span></div>`;
   v.querySelector('.saludo').insertAdjacentHTML('afterend', `<div class="card" id="calidad" style="padding-bottom:6px">
-    <div class="manh" style="padding:14px 16px 0"><h2 style="padding:0">Fichas completas: ${pct(q.completas, q.total)}%</h2><span class="sm">${num(q.completas)} de ${num(q.total)} médicos</span></div>
+    <div class="manh" style="padding:14px 16px 0"><h2 style="padding:0">Fichas completas: ${pct(q.completas, q.total)}%</h2><span class="sm">${num(q.completas)} de ${num(q.total)} ${TT('medico', 'p', '', 'l', 'l')}</span></div>
     <div class="barra" style="margin:8px 16px 10px"><i style="width:${pct(q.completas, q.total)}%"></i></div>
     <div class="kpis" style="padding:0 16px 10px">
       ${item(q.sin_ubicacion, 'sin ubicación', 'Sin coordenadas en ninguna consulta: no entran en rutas ni en el mapa.')}
       ${item(q.sin_horario, 'sin horario de consulta', 'Sin días ni horas de consulta: las rutas no pueden ajustarse a su horario.')}
       ${item(q.sin_especialidad, 'sin especialidad', 'Sin especialidad en la ficha: no se pueden filtrar ni analizar por especialidad.')}
-      ${item(q.sin_contacto, 'sin teléfono ni email', 'No hay forma de contactar con ellos fuera de la visita.')}
+      ${item(q.sin_contacto, 'sin teléfono ni email', `No hay forma de contactar con ellos fuera ${TT('visita', 's', 'del', 'l', 'l')}.`)}
       ${item(q.sin_provincia, 'sin provincia', 'Sin provincia no se pueden asignar por zona a un comercial.')}
-      ${item(q.sin_comercial, 'sin comercial', 'Médicos que no están en ninguna cartera.')}
+      ${item(q.sin_comercial, 'sin comercial', `${TT('medico', 'p', '', 'l', 'C')} que no están en ninguna cartera.`)}
       ${item(q.duplicados, 'pendientes de unificar', 'Fichas marcadas como posibles duplicados.')}
     </div>
-    <p class="sm" style="padding:0 16px 10px">Una ficha completa tiene ubicación, horario, especialidad y teléfono o email. Debajo, el avance de cada médico.</p></div>`);
+    <p class="sm" style="padding:0 16px 10px">Una ficha completa tiene ubicación, horario, especialidad y teléfono o email. Debajo, el avance de cada ${TT('medico', 's', '', 'l', 'l')}.</p></div>`);
 }
 
 async function cargarSeguimientoPaso2() {
   const s = document.querySelector('#v-seguimiento .saludo');
-  if (s && !$('calvolver')) s.insertAdjacentHTML('beforebegin', '<button class="cfgvolver visible" id="calvolver" type="button">‹ Médicos</button>');
+  if (s && !$('calvolver')) s.insertAdjacentHTML('beforebegin', `<button class="cfgvolver visible" id="calvolver" type="button">‹ ${TT('medico', 'p', '', 'l', 'C')}</button>`);
   if ($('calvolver')) $('calvolver').onclick = () => ir('directorio');
   document.querySelectorAll('nav.main [data-t]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === 'directorio')));
 }
 
 async function cargarSeguimientoBase() {
   $('v-seguimiento').innerHTML = `
-    <div class="saludo"><div><h1>Seguimiento</h1><div class="fecha">Cómo avanza cada médico</div></div>
+    <div class="saludo"><div><h1>Seguimiento</h1><div class="fecha">Cómo avanza cada ${TT('medico', 's', '', 'l', 'l')}</div></div>
       <div class="acts" style="margin:0">
 </div></div>
     <div class="kpis" id="segkpis"><div class="skel"></div></div>
@@ -1789,8 +1851,8 @@ async function cargarSeguimientoBase() {
     const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '0%';
     const emb = (r.embudo || []).map(e => `<div class="kpi"><b>${num(e.n)}</b><span>${esc(e.estado)}</span></div>`).join('');
     $('segkpis').innerHTML = emb +
-      `<div class="kpi ok"><b>${num(r.visitados)}</b><span>médicos visitados</span></div>
-       <div class="kpi"><b>${num(r.visitas_total)}</b><span>visitas registradas</span></div>
+      `<div class="kpi ok"><b>${num(r.visitados)}</b><span>${TT('medico', 'p', '', 'l', 'l', 'visitado')}</span></div>
+       <div class="kpi"><b>${num(r.visitas_total)}</b><span>${TT('visita', 'p', '', 'l', 'l', 'registrado')}</span></div>
        <div class="kpi"><b>${num(r.muestras_total)}</b><span>muestras entregadas</span></div>
        <div class="kpi"><b>${pct(r.con_direccion, r.total)}</b><span>fichas con dirección</span></div>
        <div class="kpi"><b>${pct(r.con_dias, r.total)}</b><span>con días de consulta</span></div>`;
@@ -1807,17 +1869,17 @@ async function listaSeguimiento(reinicia) {
     f_modo: SEG.modo, lim: tamPagina(), desplaz: SEG.pagina * tamPagina()
   });
   if (error) { $('scuenta').textContent = 'No se ha podido cargar: ' + error.message; return; }
-  $('scuenta').innerHTML = `<b>${num(data.total)}</b> médicos`;
+  $('scuenta').innerHTML = `<b>${num(data.total)}</b> ${TT('medico', 'p', '', 'l', 'l')}`;
   const filas = data.filas || [];
   if (!filas.length) { $('slista').innerHTML = '<div class="vacio">Nada que mostrar con estos filtros.</div>'; }
   else {
     $('slista').innerHTML = '';
     $('slista').insertAdjacentHTML('beforeend', filas.map(m => `
     <button class="fila" data-id="${m.id}">
-      <span><span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? '<span class="pill p-sr" title="Solo visita presencial: sin informes ni feedback">Sin reporting</span> ' : ''}${esc(m.nombre)}</span>
+      <span><span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? `<span class="pill p-sr" title="Solo ${TT('visita', 's', '', 'l', 'l')} presencial: sin informes ni feedback">Sin reporting</span> ` : ''}${esc(m.nombre)}</span>
         <span class="sm">${esc(m.especialidad || '')} · ${esc(m.centro_nombre || '')} ${esc(m.municipio || '')}</span></span>
       <span class="c2"><span class="sm">${m.ultima_visita ? 'Última: <b>' + fechaCorta(m.ultima_visita) + '</b> · ' + esc(m.ultimo_resultado || '') : 'Sin visitar'}</span>
-        <span class="sm">${m.n_visitas} visitas${m.muestras ? ' · ' + m.muestras + ' muestras' : ''}</span></span>
+        <span class="sm">${m.n_visitas} ${TT('visita', 'p', '', 'l', 'l')}${m.muestras ? ' · ' + m.muestras + ' muestras' : ''}</span></span>
       <span class="c3"><span class="sm">${m.proxima_fecha
         ? `<b style="color:${m.proxima_fecha < hoyISO() ? 'var(--warn)' : 'var(--navy)'}">${fechaCorta(m.proxima_fecha)}</b><br>${esc(m.proxima_accion || '')}
            <br><span class="acts" style="margin:4px 0 0"><button class="btn sec" data-acc="hecha|${m.id}" style="min-height:26px;padding:3px 8px;font-size:12px">Hecha</button>
@@ -1916,7 +1978,7 @@ async function compararFichas(idA, idB) {
     const dif = CAMPOS_UNI.filter(([k]) => (a[k] || '') !== (b[k] || ''));
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>Unificar fichas</h2>
-        <div class="sm">Elige cuál se conserva y con qué datos. Consultas, visitas, citas y cartera se juntan en la que quede.</div></div>
+        <div class="sm">Elige cuál se conserva y con qué datos. Consultas, ${TT('visita', 'p', '', 'l', 'l')}, citas y cartera se juntan en la que quede.</div></div>
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <div class="opciones">
         ${[a, b].map(m => `<button class="opt" data-queda="${m.id}" aria-pressed="${queda === m.id}">
@@ -2004,10 +2066,6 @@ document.addEventListener('click', async e => {
    ============================================================ */
 
 let MAPA = null, CAPA = null, MODO_MAPA = false, CAPA_RUTA = null;
-const COL_ESTADO = {
-  'Sin contactar': '#0E2F52', 'Presentado': '#2B6CB0', 'Interesado': '#B7791F',
-  'Prescribe': '#12805C', 'No interesado': '#9B2C2C'
-};
 
 /* ---------------- barra inferior en móvil ---------------- */
 
@@ -2051,7 +2109,7 @@ async function pintarMapa() {
 
   const puntos = data || [];
   puntos.forEach(m => {
-    const col = m.urgente && !m.ultima_visita ? '#D97706' : (COL_ESTADO[m.estado] || '#0E2F52');
+    const col = m.urgente && !m.ultima_visita ? '#D97706' : (colEstado(m.estado) || '#0E2F52');
     L.circleMarker([m.lat, m.lon], {
       radius: m.urgente ? 7 : 5, color: '#fff', weight: 1.5, fillColor: col, fillOpacity: .92
     }).addTo(CAPA).bindPopup(
@@ -2065,7 +2123,7 @@ async function pintarMapa() {
 
   $('mapleg').innerHTML =
     `<span><i style="background:#D97706"></i>Urgente sin visitar</span>` +
-    Object.entries(COL_ESTADO).map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join('') +
+    ESTADOS_DEF.map(x => `<span><i style="background:${colEstado(x.valor) || '#0E2F52'}"></i>${esc(x.valor)}</span>`).join('') +
     `<span style="margin-left:auto"><b>${num(puntos.length)}</b> con ubicación de ${num(F.total)} encontrados</span>`;
 }
 
@@ -2119,11 +2177,11 @@ if ('serviceWorker' in navigator) {
 const KPI_CAT = [
   { id: 'citas',        t: 'citas de hoy visitadas',   v: k => `${k.citas_hechas}/${k.citas_hoy}` },
   { id: 'urgentes',     t: 'urgentes sin visitar',     v: k => k.urgentes, cls: k => k.urgentes ? 'warn' : 'ok', h: 'urgentes' },
-  { id: 'visitas_sem',  t: 'visitas esta semana',      v: k => k.visitas_semana },
-  { id: 'visitas_mes',  t: 'visitas este mes',         v: k => k.visitas_mes },
-  { id: 'interesados',  t: 'médicos interesados',      v: k => k.interesados, cls: () => 'ok', h: 'interesados' },
+  { id: 'visitas_sem',  t: `${TT('visita', 'p', '', 'l', 'l')} esta semana`,      v: k => k.visitas_semana },
+  { id: 'visitas_mes',  t: `${TT('visita', 'p', '', 'l', 'l')} este mes`,         v: k => k.visitas_mes },
+  { id: 'interesados',  t: `${TT('medico', 'p', '', 'l', 'l', 'interesado')}`,      v: k => k.interesados, cls: () => 'ok', h: 'interesados' },
   { id: 'sin_contactar', t: 'sin contactar',           v: k => k.sin_contactar, h: 'sin_contactar' },
-  { id: 'cartera',      t: 'médicos en tu cartera',    v: k => k.medicos, h: 'todos' },
+  { id: 'cartera',      t: `${TT('medico', 'p', '', 'l', 'l')} en tu cartera`,    v: k => k.medicos, h: 'todos' },
   { id: 'dups',         t: 'pendientes de unificar',   v: k => k.pendientes_unificar, cls: () => 'warn', admin: true, h: 'dups' }
 ];
 const KPI_DEF = ['citas', 'urgentes', 'visitas_sem', 'visitas_mes', 'interesados', 'sin_contactar', 'cartera', 'dups'];
@@ -2220,14 +2278,14 @@ const pedirFecha = (msg, valor, o = {}) => appVentana({ msg, titulo: o.titulo ||
 /* ---------------- tabla del directorio con columnas ---------------- */
 
 const COLS = [
-  { k: 'nombre', t: 'Médico', w: 250, fijo: true },
+  { k: 'nombre', t: `${TT('medico', 's', '', 'l', 'C')}`, w: 250, fijo: true },
   { k: 'especialidad', t: 'Especialidad', w: 170 },
   { k: 'centro_nombre', t: 'Centro', w: 200 },
   { k: 'municipio', t: 'Municipio', w: 140 },
   { k: 'direccion', t: 'Dirección', w: 200 },
   { k: 'telefono', t: 'Teléfono', w: 130 },
   { k: 'dias', t: 'Días', w: 150 },
-  { k: 'ultima_visita', t: 'Última visita', w: 130 },
+  { k: 'ultima_visita', t: `${TT('visita', 's', 'ultimo', 'C', 'l')}`, w: 130 },
   { k: 'estado_comercial', t: 'Estado', w: 150 }
 ];
 const COLS_DEF = ['nombre', 'especialidad', 'centro_nombre', 'municipio', 'dias', 'estado_comercial'];
@@ -2294,8 +2352,8 @@ $('compartirBtn').addEventListener('click', compartirSemana);
 let PRODUCTOS = [], PEDIDOS = [], SIN_ATRIB = [];
 const AN = { dim: 'medico', desde: '', hasta: '', canal: '', producto: '' };
 // Crear o cambiar pedidos y pacientes: administración y televenta (el comercial solo consulta lo suyo)
-const puedeVentas = () => PERFIL && (PERFIL.rol === 'Administrador' || (((PERFIL.areas || {}).V || 0) >= 2 && PERFIL.rol === 'Televenta'));
-const veVentas = () => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).V || 0) >= 1 || PERFIL.rol === 'Comercial');
+const puedeVentas = () => PERFIL && (puede('administrar') || (((PERFIL.areas || {}).V || 0) >= 2 && puede('televenta')));
+const veVentas = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).V || 0) >= 1 || puede('cartera'));
 
 
 /* ---------------- pedidos ---------------- */
@@ -2309,7 +2367,7 @@ async function pintarSinAtribuir() {
   SIN_ATRIB = data || [];
   if (!SIN_ATRIB.length) { $('cardsinatr').innerHTML = ''; return; }
   $('cardsinatr').innerHTML = `<h2><span style="color:var(--warn)">Pedidos sin atribuir</span><span class="n">${SIN_ATRIB.length}</span></h2>
-    <p class="sm">No hemos podido identificar al médico. Asígnalo y las métricas se corrigen solas.</p>
+    <p class="sm">No hemos podido identificar ${TT('medico', 's', 'al', 'l', 'l')}. Asígnalo y las métricas se corrigen solas.</p>
     <div class="lista">${SIN_ATRIB.map(l => `<div class="item" style="cursor:default">
       <span class="ic w">?</span>
       <span class="tx"><b>${esc(l.medico_texto || 'Sin indicar')}</b>
@@ -2325,9 +2383,9 @@ async function atribuir(lineaId, texto) {
   const { data } = await db.rpc('resolver_medico', { p_texto: texto || '' });
   const cand = data || [];
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>Atribuir a un médico</h2><div class="sm">Texto del pedido: ${esc(texto || '(vacío)')}</div></div>
+    <div class="fh"><div><h2>Atribuir a ${TT('medico', 's', 'un', 'l', 'l')}</h2><div class="sm">Texto del pedido: ${esc(texto || '(vacío)')}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
-    <label for="abusca">Buscar médico</label><input id="abusca" value="${esc(texto || '')}" placeholder="Código o nombre">
+    <label for="abusca">Buscar ${TT('medico', 's', '', 'l', 'l')}</label><input id="abusca" value="${esc(texto || '')}" placeholder="Código o nombre">
     <div id="acand" class="lista">${cand.map(c => `<button class="item" data-am="${c.id}">
       <span class="ic">${c.pct}%</span><span class="tx"><b>${esc(c.nombre)}</b><span class="sm">Código ${esc(c.codigo)}</span></span></button>`).join('')
       || '<div class="vacio">Sin coincidencias. Escribe otro nombre o código.</div>'}</div>`;
@@ -2733,12 +2791,12 @@ async function cargarRutasPaso1() {
 async function cargarRutasPaso2() {
   const acts = $('v-rutas').querySelector('.saludo .acts');
   if (acts && !$('rhorario')) {
-    acts.insertAdjacentHTML('afterbegin', '<button class="btn sec" id="rhorario" title="Hora de salida, hora tope y minutos por visita">⚙ Horario de rutas</button>');
+    acts.insertAdjacentHTML('afterbegin', `<button class="btn sec" id="rhorario" title="Hora de salida, hora tope y minutos por ${TT('visita', 's', '', 'l', 'l')}">⚙ Horario de rutas</button>`);
     $('rhorario').onclick = abrirHorarioPlan;
   }
   const c = PLANCFG();
   const sub = $('v-rutas').querySelector('.saludo .fecha');
-  if (sub) sub.textContent = `Crea, edita y planifica tus rutas · Horario ${c.salida}–${c.tope}, ${c.visita} min por médico`;
+  if (sub) sub.textContent = `Crea, edita y planifica tus rutas · Horario ${c.salida}–${c.tope}, ${c.visita} min por ${TT('medico', 's', '', 'l', 'l')}`;
 }
 
 async function cargarRutasBase() {
@@ -2766,7 +2824,7 @@ async function listaRutas() {
   RUTAS = data || [];
   if (!RUTAS.length) {
     $('rcuerpo').innerHTML = `<div class="card"><div class="vacio">
-      Todavía no tienes rutas. Créala con <b>+ Nueva ruta</b>, con una lista de médicos concretos
+      Todavía no tienes rutas. Créala con <b>+ Nueva ruta</b>, con una lista de ${TT('medico', 'p', '', 'l', 'l', 'concreto')}
       o por criterios que se recalculan solos.<br><br>
       También puedes usar las <b>propuestas automáticas</b> de la pestaña de al lado.</div></div>`;
     return;
@@ -2775,12 +2833,12 @@ async function listaRutas() {
     <div class="lista">${RUTAS.map(r => `<div class="item" style="cursor:default">
       <span class="ic ${r.tipo === 'Urgente' ? 'w' : ''}">${r.tipo === 'Urgente' ? '★' : '◉'}</span>
       <span class="tx"><b>${esc(r.nombre)}</b><span class="sm">
-        ${r.dinamica ? 'Por criterios' : r.n_fijos + ' médicos'} · ${r.visitados} visitados${r.desde ? ' desde ' + fechaCorta(r.desde) : ''}
+        ${r.dinamica ? 'Por criterios' : r.n_fijos + ` ${TT('medico', 'p', '', 'l', 'l')}`} · ${r.visitados} visitados${r.desde ? ' desde ' + fechaCorta(r.desde) : ''}
         ${r.mia ? '' : ' · de ' + esc(r.duenyo)}</span></span>
       <span class="acts" style="margin:0">
         <button class="btn" data-ruta="${r.id}">Planificar</button>
-        <button class="btn sec" data-rver="${r.id}">Ver médicos</button>
-        ${r.mia || PERFIL.rol === 'Administrador' ? `<button class="btn sec" data-redit="${r.id}">Editar</button>
+        <button class="btn sec" data-rver="${r.id}">Ver ${TT('medico', 'p', '', 'l', 'l')}</button>
+        ${r.mia || puede('administrar') ? `<button class="btn sec" data-redit="${r.id}">Editar</button>
           <button class="btn sec" data-rdup="${r.id}">Duplicar</button>
           <button class="btn sec" data-rdel="${r.id}">Eliminar</button>` : ''}</span></div>`).join('')}</div></div>`;
 
@@ -2789,7 +2847,7 @@ async function listaRutas() {
   $('rcuerpo').querySelectorAll('[data-rdup]').forEach(b => b.onclick = () => duplicarRuta(b.dataset.rdup));
   $('rcuerpo').querySelectorAll('[data-rdel]').forEach(b => b.onclick = async () => {
     const r = RUTAS.find(x => x.id === b.dataset.rdel);
-    if (!await preguntar(`Se elimina "${r.nombre}".\nLos médicos y sus visitas no se borran.`,
+    if (!await preguntar(`Se elimina "${r.nombre}".\nLos ${TT('medico', 'p', '', 'l', 'l')} y sus ${TT('visita', 'p', '', 'l', 'l')} no se borran.`,
       { titulo: '¿Eliminar la ruta?', ok: 'Eliminar', peligro: true })) return;
     await db.rpc('guardar_ruta', { p: { id: r.id, activa: false } });
     toast('Ruta eliminada'); cargarRutas();
@@ -2816,12 +2874,12 @@ async function verMedicosRuta(id) {
   const lista = data || [];
   $('dbody').innerHTML = `
     <div class="fh"><div><h2>${esc(r.nombre)}</h2>
-      <div class="sm">${lista.length} médicos · ${r.dinamica ? 'por criterios, se recalcula cada día' : 'lista fija'}</div></div>
+      <div class="sm">${lista.length} ${TT('medico', 'p', '', 'l', 'l')} · ${r.dinamica ? 'por criterios, se recalcula cada día' : 'lista fija'}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <div class="lista">${lista.map(m => `<button class="item" data-mficha="${m.id}">
       <span class="ic ${m.urgente ? 'w' : ''}">${m.urgente ? '!' : '·'}</span>
       <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${esc(m.especialidad || '')} · ${esc(m.centro_nombre || '')} ${esc(m.municipio || '')}</span></span>
-    </button>`).join('') || '<div class="vacio">Ningún médico cumple ahora mismo los criterios.</div>'}</div>
+    </button>`).join('') || `<div class="vacio">${TT('medico', 's', 'ningun', 'C', 'l')} cumple ahora mismo los criterios.</div>`}</div>
     <div class="acts" style="justify-content:flex-end"><button class="btn" data-ruta="${id}">Planificar hoy</button></div>`;
   $('dbody').querySelectorAll('[data-mficha]').forEach(b => b.onclick = () => { $('dlg').close(); abrirFicha(b.dataset.mficha); });
 }
@@ -2834,18 +2892,18 @@ async function listaPropuestas() {
   PROPUESTAS = data;
   const dn = { L: 'lunes', M: 'martes', X: 'miércoles', J: 'jueves', V: 'viernes' }[data.dia] || 'hoy';
   const bloques = [
-    ['hoy', '📅', `Pasan consulta ${dn}`, 'Con día de consulta conocido y sin visita reciente'],
+    ['hoy', '📅', `Pasan consulta ${dn}`, `Con día de consulta conocido y sin ${TT('visita', 's', '', 'l', 'l')} reciente`],
     ['pendientes', '⏳', 'Pendientes de rutas anteriores', 'Planificados y no visitados'],
     ['urgentes', '❗', 'Urgentes sin visitar', 'Marcados como urgentes'],
-    ['interesados', '🔥', 'Interesados sin visita en 20 días', 'Para no perder el interés'],
-    ['sin_visitar', '🆕', 'Sin visitar nunca', 'Primeras visitas, agrupados por zona']
+    ['interesados', '🔥', `Interesados sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`, 'Para no perder el interés'],
+    ['sin_visitar', '🆕', 'Sin visitar nunca', `${TT('visita', 'p', 'primer', 'C', 'l')}, agrupados por zona`]
   ].filter(([k]) => (data[k] || []).length);
 
   $('rcuerpo').innerHTML = bloques.length ? `<div class="card">
     <h2>Propuestas de hoy</h2><p class="sm">Calculadas con tus datos. Planifícalas o guárdalas como ruta.</p>
     <div class="lista">${bloques.map(([k, ic, t, s]) => `<div class="item" style="cursor:default">
       <span class="ic">${ic}</span>
-      <span class="tx"><b>${t}</b><span class="sm">${s} · <b>${num(data[k].length)}</b> médicos</span></span>
+      <span class="tx"><b>${t}</b><span class="sm">${s} · <b>${num(data[k].length)}</b> ${TT('medico', 'p', '', 'l', 'l')}</span></span>
       <span class="acts" style="margin:0">
         <button class="btn" data-prop="${k}">Planificar</button>
         <button class="btn sec" data-propg="${k}|${esc(t)}">Guardar como ruta</button></span></div>`).join('')}</div></div>`
@@ -2893,25 +2951,25 @@ async function editorRuta(id) {
     leerCab();
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>${id ? 'Editar ruta' : 'Nueva ruta'}</h2>
-        <div class="sm">Una lista fija de médicos, o criterios que se recalculan cada día</div></div>
+        <div class="sm">Una lista fija de ${TT('medico', 'p', '', 'l', 'l')}, o criterios que se recalculan cada día</div></div>
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <label for="rn">Nombre</label><input id="rn" value="${esc(cab.nombre)}" placeholder="p. ej. Urgentes zona alta">
       <div class="g2">
         <div><label for="rt">Tipo</label><select id="rt">
           <option ${cab.tipo !== 'Urgente' ? 'selected' : ''}>Normal</option>
           <option ${cab.tipo === 'Urgente' ? 'selected' : ''}>Urgente</option></select></div>
-        <div><label for="rd">Contar visitas desde</label><input id="rd" type="date" value="${esc(cab.desde)}"></div>
+        <div><label for="rd">Contar ${TT('visita', 'p', '', 'l', 'l')} desde</label><input id="rd" type="date" value="${esc(cab.desde)}"></div>
       </div>
-      <label>Cómo se eligen los médicos</label>
+      <label>Cómo se eligen ${TT('medico', 'p', 'el', 'l', 'l')}</label>
       <div class="subnav" style="margin:6px 0 10px">
-        <button type="button" data-rm="lista" aria-pressed="${modo === 'lista'}">Lista de médicos</button>
+        <button type="button" data-rm="lista" aria-pressed="${modo === 'lista'}">Lista de ${TT('medico', 'p', '', 'l', 'l')}</button>
         <button type="button" data-rm="crit" aria-pressed="${modo === 'crit'}">Por criterios</button></div>
 
       ${modo === 'lista' ? `
         <div class="chips">${medicos.map(m => `<span class="chip">${esc(m.nombre)}
           <button type="button" data-rq="${m.id}" style="border:0;background:none;color:var(--dang);cursor:pointer;font-weight:700">✕</button></span>`).join('')
-          || '<span class="sm">Todavía no has añadido médicos.</span>'}</div>
-        <label for="rbusca">Añadir médicos</label>
+          || `<span class="sm">Todavía no has añadido ${TT('medico', 'p', '', 'l', 'l')}.</span>`}</div>
+        <label for="rbusca">Añadir ${TT('medico', 'p', '', 'l', 'l')}</label>
         <input id="rbusca" value="${esc(busca)}" placeholder="Busca por nombre, centro o municipio" autocomplete="off">
         <div id="rres" class="lista"></div>`
       : `
@@ -2985,7 +3043,7 @@ async function editorRuta(id) {
           f_provincia: rg.provincia || null, f_municipio: rg.municipio || null,
           f_estado: rg.estado || null, f_especialidad: rg.especialidad || null, f_urgentes: !!rg.urgentes });
         ev.target.disabled = false;
-        $('rprev').innerHTML = `<b>${num((data || []).length)}</b> médicos cumplen ahora estos criterios${rg.sinVisita ? ', antes de aplicar los días sin visitar' : ''}.`;
+        $('rprev').innerHTML = `<b>${num((data || []).length)}</b> ${TT('medico', 'p', '', 'l', 'l')} cumplen ahora estos criterios${rg.sinVisita ? ', antes de aplicar los días sin visitar' : ''}.`;
       };
       $('dbody').__reglas = reglas;
       if ($('navsel')) $('navsel').onchange = e => cambiarNavegador(e.target.value);
@@ -2993,11 +3051,11 @@ async function editorRuta(id) {
 
     $('rguardar').onclick = async ev => {
       if (!$('rn').value.trim()) { toast('Ponle un nombre a la ruta', true); return; }
-      if (modo === 'lista' && !codigos.length) { toast('Añade al menos un médico', true); return; }
+      if (modo === 'lista' && !codigos.length) { toast(`Añade al menos ${TT('medico', 's', 'un', 'l', 'l')}`, true); return; }
       ev.target.disabled = true; ev.target.textContent = 'Guardando…';
       const { error } = await db.rpc('guardar_ruta', { p: {
         id: id || null, nombre: $('rn').value.trim(), tipo: $('rt').value, desde: $('rd').value,
-        visible_para: PERFIL.rol === 'Administrador' ? '*' : '',
+        visible_para: puede('administrar') ? '*' : '',
         codigos: modo === 'lista' ? codigos : [],
         reglas: modo === 'crit' ? ($('dbody').__reglas ? $('dbody').__reglas() : {}) : null
       }});
@@ -3013,7 +3071,7 @@ async function editorRuta(id) {
 
 async function planDesdeLista(lista, nombre, btn) {
   const conXY = (lista || []).filter(m => m.lat && m.lon);
-  if (!conXY.length) { toast('Ninguno de esos médicos tiene ubicación', true); return; }
+  if (!conXY.length) { toast(`Ninguno de esos ${TT('medico', 'p', '', 'l', 'l')} tiene ubicación`, true); return; }
   construirPlan(conXY, nombre, btn);
 }
 
@@ -3028,7 +3086,7 @@ function abrirHorarioPlan() {
       <div><label for="htop">Vuelta como tarde</label><input id="htop" type="time" value="${c.tope}"></div>
     </div>
     <div class="g2">
-      <div><label for="hvis">Minutos por médico</label><input id="hvis" type="number" min="5" max="60" value="${c.visita}"></div>
+      <div><label for="hvis">Minutos por ${TT('medico', 's', '', 'l', 'l')}</label><input id="hvis" type="number" min="5" max="60" value="${c.visita}"></div>
       <div><label for="hpar">Minutos fijos por parada</label><input id="hpar" type="number" min="0" max="40" value="${c.parada}"></div>
     </div>
     <div class="acts" style="justify-content:flex-end">
@@ -3061,10 +3119,10 @@ let CERCA = null;
 /* ---------------- editar y borrar visitas ---------------- */
 
 async function editarVisita(v, medicoId) {
-  const pos = CAT.RESULTADO.filter(r => r.extra !== 'neg'), neg = CAT.RESULTADO.filter(r => r.extra === 'neg');
+  const pos = CAT.resultado_visita.filter(r => r.extra !== 'neg'), neg = CAT.resultado_visita.filter(r => r.extra === 'neg');
   const marcados = v.resultados || [];
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>Editar visita</h2><div class="sm">Registrada el ${fechaCorta(v.fecha)}</div></div>
+    <div class="fh"><div><h2>Editar ${TT('visita', 's', '', 'l', 'l')}</h2><div class="sm">Registrada el ${fechaCorta(v.fecha)}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <div class="g2">
       <div><label for="evf">Fecha</label><input id="evf" type="date" value="${esc(v.fecha)}"></div>
@@ -3081,7 +3139,7 @@ async function editarVisita(v, medicoId) {
     </div>
     <label for="evn">Nota</label><textarea id="evn" rows="3">${esc(v.nota || '')}</textarea>
     <div class="acts" style="justify-content:space-between">
-      <button class="btn sec dang" id="evborrar">Borrar visita</button>
+      <button class="btn sec dang" id="evborrar">Borrar ${TT('visita', 's', '', 'l', 'l')}</button>
       <span class="acts" style="margin:0"><button class="btn sec" data-cerrar>Cancelar</button>
         <button class="btn" id="evok">Guardar</button></span></div>`;
 
@@ -3100,15 +3158,15 @@ async function editarVisita(v, medicoId) {
     }});
     ev.target.disabled = false; ev.target.textContent = 'Guardar';
     if (error || (r && r.ok === false)) { toast('No se ha podido guardar', true); return; }
-    $('dlg').close(); toast('Visita actualizada'); abrirFicha(medicoId); cargarInicio();
+    $('dlg').close(); toast(`${TT('visita', 's', '', 'l', 'C', 'actualizado')}`); abrirFicha(medicoId); cargarInicio();
   };
 
   $('evborrar').onclick = async () => {
-    if (!await preguntar('La visita desaparece del historial del médico.\nQueda constancia en la auditoría.',
-      { titulo: '¿Borrar la visita?', ok: 'Borrar', peligro: true })) return;
+    if (!await preguntar(`${TT('visita', 's', 'el', 'C', 'l')} desaparece del historial ${TT('medico', 's', 'del', 'l', 'l')}.\nQueda constancia en la auditoría.`,
+      { titulo: `¿Borrar ${TT('visita', 's', 'el', 'l', 'l')}?`, ok: 'Borrar', peligro: true })) return;
     const { data: r, error } = await db.rpc('borrar_visita', { p_id: v.id });
     if (error || (r && r.ok === false)) { toast('No se ha podido borrar', true); return; }
-    $('dlg').close(); toast('Visita borrada'); abrirFicha(medicoId); cargarInicio();
+    $('dlg').close(); toast(`${TT('visita', 's', '', 'l', 'C', 'borrado')}`); abrirFicha(medicoId); cargarInicio();
   };
   $('dlg').showModal();
 }
@@ -3219,10 +3277,10 @@ $('q').addEventListener('input', e => {
     if (!m.length && !c.length && !me.length) { $('gsug').innerHTML = `<div class="gload">Sin resultados para «${esc(q)}».</div>`; return; }
     $('gsug').innerHTML =
       (m.length ? `<div class="gsh">Municipios</div>` + m.map(x => `<button data-gm="${esc(x.valor)}">
-        <span class="gic">📍</span><span><b>${esc(x.valor)}</b><span class="sm">${num(x.n)} médicos</span></span></button>`).join('') : '') +
+        <span class="gic">📍</span><span><b>${esc(x.valor)}</b><span class="sm">${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')}</span></span></button>`).join('') : '') +
       (c.length ? `<div class="gsh">Centros</div>` + c.map(x => `<button data-gc="${esc(x.valor)}">
-        <span class="gic">🏥</span><span><b>${esc(x.valor)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} médicos</span></span></button>`).join('') : '') +
-      (me.length ? `<div class="gsh">Médicos${m.length || c.length ? ' que pasan consulta allí o coinciden' : ''}</div>` + me.map(x => `<button data-gme="${x.id}">
+        <span class="gic">🏥</span><span><b>${esc(x.valor)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')}</span></span></button>`).join('') : '') +
+      (me.length ? `<div class="gsh">${TT('medico', 'p', '', 'l', 'C')}${m.length || c.length ? ' que pasan consulta allí o coinciden' : ''}</div>` + me.map(x => `<button data-gme="${x.id}">
         <span class="gic">${x.urgente ? '❗' : '👤'}</span><span><b>${esc(x.nombre)}</b>
         <span class="sm">${esc(x.especialidad || '')} · ${esc(x.centro_nombre || '')} ${esc(x.municipio || '')}</span></span></button>`).join('') : '');
     $('gsug').classList.remove('hide');
@@ -3308,7 +3366,7 @@ function abrirHerramientas(contexto) {
     <label>Ordenar por</label><select data-tf="orden">
       <option value="nombre" ${F.orden === 'nombre' ? 'selected' : ''}>Nombre</option>
       <option value="urgentes" ${F.orden === 'urgentes' ? 'selected' : ''}>Urgentes primero</option>
-      <option value="reciente" ${F.orden === 'reciente' ? 'selected' : ''}>Visita más reciente</option></select>
+      <option value="reciente" ${F.orden === 'reciente' ? 'selected' : ''}>${TT('visita', 's', '', 'l', 'C')} más reciente</option></select>
     <div class="acts"><button class="btn sec" id="tlimpiar">Limpiar filtros</button></div>
     <h3 style="margin-top:18px">Columnas</h3>
     <p class="sm">Arrastra el borde de cada cabecera para cambiar su ancho.</p>
@@ -3357,14 +3415,14 @@ async function pintarCatalogos() {
   cargando($('cfgcuerpo'), 'Cargando los clasificadores…');
   const { data } = await db.rpc('catalogos_todos');
   CATS = data || [];
-  const puedeEditar = PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).K || 0) >= 2;
-  const completo = PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).K || 0) >= 3;
+  const puedeEditar = puede('administrar') || ((PERFIL.areas || {}).K || 0) >= 2;
+  const completo = puede('administrar') || ((PERFIL.areas || {}).K || 0) >= 3;
 
   const grupos = {};
   CATS.forEach(c => (grupos[c.grupo || 'General'] = grupos[c.grupo || 'General'] || []).push(c));
 
   $('cfgcuerpo').innerHTML = `
-    <div class="dayhead2"><p class="sm">Listas que usan todos los usuarios en fichas, visitas, pedidos y filtros.
+    <div class="dayhead2"><p class="sm">Listas que usan todos los usuarios en fichas, ${TT('visita', 'p', '', 'l', 'l')}, pedidos y filtros.
       ${puedeEditar ? '' : '<b>Tienes permiso de solo lectura.</b>'}</p>
       ${completo ? '<button class="btn" id="cnuevo">+ Nuevo clasificador</button>' : ''}</div>
     ${Object.entries(grupos).map(([g, lista]) => `
@@ -3392,32 +3450,50 @@ async function pintarCatalogos() {
   if ($('cnuevo')) $('cnuevo').onclick = () => nuevoClasificador();
 }
 
+/* v2.72.0 · Un clasificador de ficha, cliente o producto sin papel es un campo personalizado: tipo y dónde se ve */
+function cajaCampo(c, completo) {
+  if (c.papel || !CAMPO_TABLA[c.ambito]) return '';
+  const t = c.tipo_campo || 'lista', chk = (k, txt) => `<label class="chk"><input type="checkbox" id="cfc_${k}" ${c[k] ? 'checked' : ''} ${completo ? '' : 'disabled'}> ${txt}</label>`;
+  return `<div class="cfcampo"><h3>Campo personalizado</h3>
+    <div class="g2"><div><label for="cfctipo">Tipo</label><select id="cfctipo" ${completo ? '' : 'disabled'}>${TIPOS_CAMPO.map(([k, n]) => `<option value="${k}" ${k === t ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="cfchks">${chk('obligatorio', 'Obligatorio')}${chk('solo_lectura', 'Solo lectura')}${chk('en_ficha', 'En la ficha')}${chk('en_tabla', 'Columna en la tabla')}${chk('en_filtro', 'Filtro (listas y sí/no)')}</div></div>
+    ${completo ? '<div class="acts" style="justify-content:flex-end"><button class="btn sec" id="cfcok">Guardar campo</button></div>' : ''}</div>`;
+}
 function abrirClasificador(id) {
   const c = CATS.find(x => x.id === id); if (!c) return;
-  const puedeEditar = PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).K || 0) >= 2;
-  const completo = PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).K || 0) >= 3;
+  const puedeEditar = puede('administrar') || ((PERFIL.areas || {}).K || 0) >= 2;
+  const completo = puede('administrar') || ((PERFIL.areas || {}).K || 0) >= 3;
 
   const pinta = () => {
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>${esc(c.nombre)}</h2>
-        <div class="sm">Grupo ${esc(c.grupo || 'General')} · se usa en ${esc(c.ambito === 'pedido' ? 'pedidos' : c.ambito === 'visita' ? 'visitas' : 'fichas de médico')}
+        <div class="sm">Grupo ${esc(c.grupo || 'General')} · se usa en ${esc(c.ambito === 'pedido' ? 'pedidos' : c.ambito === 'visita' ? 'visitas' : `fichas de ${TT('medico', 's', '', 'l', 'l')}`)}
         ${puedeEditar ? '' : ' · <b>solo lectura</b>'}</div></div>
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
-      <div class="lista">${(c.valores || []).map(v => `<div class="item" style="cursor:default">
+      ${cajaCampo(c, completo)}
+      <div class="lista ${!c.papel && CAMPO_TABLA[c.ambito] && (c.tipo_campo || 'lista') !== 'lista' ? 'hide' : ''}">${(c.valores || []).map(v => `<div class="item" style="cursor:default">
         <span class="ic">${v.activo ? '●' : '○'}</span>
         <span class="tx"><b style="${v.activo ? '' : 'opacity:.5;text-decoration:line-through'}">${esc(v.valor)}</b>
-          ${v.extra ? `<span class="sm">${v.extra === 'neg' ? 'sin visita' : 'visita realizada'}</span>` : ''}</span>
+          ${v.extra ? `<span class="sm">${v.extra === 'neg' ? `sin ${TT('visita', 's', '', 'l', 'l')}` : `${TT('visita', 's', '', 'l', 'l', 'realizado')}`}${v.destino ? ' · pasa a ' + esc(v.destino) : ''}</span>` : ''}</span>
         ${puedeEditar ? `<span class="acts" style="margin:0">
           <button class="btn sec" data-vren="${v.id}|${esc(v.valor)}">Renombrar</button>
           <button class="btn sec" data-vtog="${v.id}|${v.activo ? 0 : 1}">${v.activo ? 'Desactivar' : 'Activar'}</button>
           ${completo ? `<button class="btn sec dang" data-vdel="${v.id}">Eliminar</button>` : ''}</span>` : ''}
       </div>`).join('') || '<div class="vacio">Sin valores todavía.</div>'}</div>
       ${puedeEditar ? `<div class="acts"><input id="cvnew" placeholder="Nuevo valor" style="flex:1;min-width:160px">
-        ${c.clave === 'RESULTADO' ? `<select id="cvextra" style="max-width:170px"><option value="pos">Visita realizada</option><option value="neg">Sin visita</option></select>` : ''}
+        ${c.papel === 'resultado_visita' ? `<select id="cvextra" style="max-width:170px"><option value="pos">${TT('visita', 's', '', 'l', 'C', 'realizado')}</option><option value="neg">Sin ${TT('visita', 's', '', 'l', 'l')}</option></select>
+          <select id="cvdest" style="max-width:190px" title="Estado al que pasa la ficha con este resultado"><option value="">No cambia el estado</option>${estados().map(x => `<option value="${esc(x)}">Pasa a ${esc(x)}</option>`).join('')}</select>` : ''}
         <button class="btn" id="cvadd">Añadir</button></div>` : ''}
       ${completo && !c.sistema ? `<div class="acts" style="justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px">
         <button class="btn sec dang" id="cdel">Eliminar clasificador</button></div>` : ''}`;
 
+    if ($('cfcok')) $('cfcok').onclick = async () => {
+      const v = { tipo: $('cfctipo').value };
+      ['obligatorio', 'solo_lectura', 'en_ficha', 'en_tabla', 'en_filtro'].forEach(k => { v[k] = $('cfc_' + k).checked; });
+      const { data: r, error } = await db.rpc('configurar_campo', { p_id: id, p: v });
+      if (error || !r || !r.ok) { toast('No se ha podido guardar el campo', true); return; }
+      toast('Campo guardado'); recarga(); cargarCampos().catch(() => {});
+    };
     const recarga = async () => {
       const { data } = await db.rpc('catalogos_todos');
       CATS = data || [];
@@ -3428,7 +3504,7 @@ function abrirClasificador(id) {
     if ($('cvadd')) $('cvadd').onclick = async () => {
       const v = $('cvnew').value.trim(); if (!v) return;
       const { error } = await db.rpc('guardar_valor', { p: { clasificador_id: id, valor: v,
-        extra: $('cvextra') ? $('cvextra').value : null } });
+        extra: $('cvextra') ? $('cvextra').value : null, destino: $('cvdest') ? $('cvdest').value : null } });
       if (error) { toast('No se ha podido añadir', true); return; }
       toast('Valor añadido'); recarga();
     };
@@ -3445,7 +3521,7 @@ function abrirClasificador(id) {
       toast('Renombrado'); recarga();
     });
     $('dbody').querySelectorAll('[data-vdel]').forEach(b => b.onclick = async () => {
-      if (!await preguntar('Las fichas y visitas que ya lo usan lo conservan, pero dejará de aparecer.',
+      if (!await preguntar(`Las fichas y ${TT('visita', 'p', '', 'l', 'l')} que ya lo usan lo conservan, pero dejará de aparecer.`,
         { titulo: '¿Eliminar el valor?', ok: 'Eliminar', peligro: true })) return;
       const { data: r } = await db.rpc('borrar_valor', { p_id: b.dataset.vdel });
       if (r && r.ok === false) { toast('No tienes permiso', true); return; }
@@ -3465,12 +3541,12 @@ function abrirClasificador(id) {
 
 function nuevoClasificador() {
   let valores = [''];
-  const grupos = [...new Set(CATS.map(c => c.grupo || 'General').concat(['Médicos', 'Visitas', 'Ventas', 'General']))];
+  const grupos = [...new Set(CATS.map(c => c.grupo || 'General').concat([`${TT('medico', 'p', '', 'l', 'C')}`, `${TT('visita', 'p', '', 'l', 'C')}`, 'Ventas', 'General']))];
 
   const pinta = () => {
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>Nuevo clasificador</h2>
-        <div class="sm">Una lista propia que podrás usar en fichas, visitas o pedidos</div></div>
+        <div class="sm">Una lista propia que podrás usar en fichas, ${TT('visita', 'p', '', 'l', 'l')} o pedidos</div></div>
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <div class="g2">
         <div><label for="ncn2">Nombre</label><input id="ncn2" placeholder="p. ej. Tipo de centro"></div>
@@ -3478,9 +3554,11 @@ function nuevoClasificador() {
       </div>
       <div class="g2">
         <div><label for="nca">¿Dónde se usa?</label><select id="nca">
-          <option value="medico">En la ficha del médico</option>
-          <option value="visita">Al registrar una visita</option>
-          <option value="pedido">En los pedidos</option></select></div>
+          <option value="medico">En la ficha ${TT('medico', 's', 'del', 'l', 'l')}</option>
+          <option value="visita">Al registrar ${TT('visita', 's', 'un', 'l', 'l')}</option>
+          <option value="pedido">En los pedidos</option>
+          <option value="cliente">En la ficha ${TT('paciente', 's', 'del', 'l', 'l')}</option>
+          <option value="producto">En la ficha del producto</option></select></div>
         <div><label for="ncd">Descripción</label><input id="ncd" placeholder="Para qué sirve"></div>
       </div>
       <label>Valores</label>
@@ -3551,7 +3629,7 @@ async function revisarPendientes() {
 const TPL_DEF = {
   wa: `*Resumen de la semana* ({semana})
 
-✅ Visitas: *{visitas}* a {medicos} médicos
+✅ ${TT('visita', 'p', '', 'l', 'C')}: *{visitas}* a {medicos} ${TT('medico', 'p', '', 'l', 'l')}
 {resultados}
 📦 Muestras entregadas: *{muestras}*
 📈 Unidades atribuidas: *{unidades}*
@@ -3566,7 +3644,7 @@ const TPL_DEF = {
 
 Te paso el resumen de la semana ({semana}):
 
-- Visitas realizadas: {visitas}, a {medicos} médicos
+- ${TT('visita', 'p', '', 'l', 'C', 'realizado')}: {visitas}, a {medicos} ${TT('medico', 'p', '', 'l', 'l')}
 {resultados}
 - Muestras entregadas: {muestras}
 - Unidades atribuidas: {unidades}
@@ -3590,7 +3668,7 @@ async function variablesSemana() {
     semana: 'del ' + fechaCorta(data.desde) + ' al ' + fechaCorta(data.hasta),
     visitas: num(data.visitas), medicos: num(data.medicos), muestras: num(data.muestras),
     unidades: num(data.unidades), nombre: PERFIL.nombre,
-    resultados: (data.resultados || []).map(r => `· ${r.resultado}: ${r.n}`).join('\n') || '· Sin visitas registradas',
+    resultados: (data.resultados || []).map(r => `· ${r.resultado}: ${r.n}`).join('\n') || `· Sin ${TT('visita', 'p', '', 'l', 'l', 'registrado')}`,
     interesados: (data.interesados || []).map(i => `· ${i.nombre}${i.especialidad ? ' (' + i.especialidad + ')' : ''}`).join('\n') || '· Ninguno esta semana',
     proximas: (data.proximas || []).map(p => `· ${fechaCorta(p.proxima_fecha)} ${p.nombre}: ${p.proxima_accion || 'seguimiento'}`).join('\n') || '· Sin acciones programadas'
   };
@@ -3651,7 +3729,7 @@ async function tarjetasRuta() {
   const bloques = [
     ['hoy', '📅', `Pasan consulta ${dn}`],
     ['urgentes', '❗', 'Urgentes sin visitar'],
-    ['interesados', '🔥', 'Interesados sin visita en 20 días'],
+    ['interesados', '🔥', `Interesados sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`],
     ['sin_visitar', '🆕', 'Sin visitar nunca']
   ].filter(([k]) => (data[k] || []).length);
 
@@ -3659,7 +3737,7 @@ async function tarjetasRuta() {
     <p class="sm">Calculadas con tus datos de hoy. Al pulsar, se planifica la ruta.</p>
     <div class="lista">${bloques.map(([k, ic, t]) => `<button class="item" data-recruta="${k}">
       <span class="ic">${ic}</span><span class="tx"><b>${t}</b>
-        <span class="sm">${num(data[k].length)} médicos con ubicación</span></span>
+        <span class="sm">${num(data[k].length)} ${TT('medico', 'p', '', 'l', 'l')} con ubicación</span></span>
       <span class="rn">${num(data[k].length)}</span></button>`).join('')}</div>
     <button class="verlo" data-ir-rutas>Ver todas las rutas</button>` : '';
 
@@ -3768,24 +3846,24 @@ async function verCartera(id) {
     const l = data || [];
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>Cartera de ${esc(u.nombre || '')}</h2>
-        <div class="sm">${num(l.length)} médicos asignados</div></div>
+        <div class="sm">${num(l.length)} ${TT('medico', 'p', '', 'l', 'l', 'asignado')}</div></div>
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <input id="cbusca" value="${esc(q || '')}" placeholder="Buscar dentro de la cartera">
       <div class="lista" style="max-height:52vh;overflow:auto">${l.map(m => `<div class="item" style="cursor:default">
         <span class="ic ${m.urgente ? 'w' : ''}">${m.urgente ? '!' : '·'}</span>
         <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${esc(m.especialidad || '')} · ${esc(m.centro || '')} ${esc(m.municipio || '')}
-          ${m.ultima_visita ? ' · última visita ' + fechaCorta(m.ultima_visita) : ' · sin visitar'}</span></span>
+          ${m.ultima_visita ? ` · ${TT('visita', 's', 'ultimo', 'l', 'l')} ` + fechaCorta(m.ultima_visita) : ' · sin visitar'}</span></span>
         <span class="acts" style="margin:0">
           <button class="btn sec" data-cficha="${m.id}">Ficha</button>
           <button class="btn sec dang" data-cquita="${m.id}">Quitar</button></span></div>`).join('')
-        || '<div class="vacio">Sin médicos asignados.</div>'}</div>
-      <div class="acts" style="justify-content:flex-end"><button class="btn sec" id="cmas">Asignar más médicos</button></div>`;
+        || `<div class="vacio">Sin ${TT('medico', 'p', '', 'l', 'l', 'asignado')}.</div>`}</div>
+      <div class="acts" style="justify-content:flex-end"><button class="btn sec" id="cmas">Asignar más ${TT('medico', 'p', '', 'l', 'l')}</button></div>`;
 
     let t;
     $('cbusca').oninput = e => { clearTimeout(t); t = setTimeout(() => pinta(e.target.value.trim()), 300); };
     $('dbody').querySelectorAll('[data-cficha]').forEach(b => b.onclick = () => { $('dlg').close(); abrirFicha(b.dataset.cficha); });
     $('dbody').querySelectorAll('[data-cquita]').forEach(b => b.onclick = async () => {
-      if (!await preguntar('Dejará de verlo en su cartera. El histórico de visitas no cambia.',
+      if (!await preguntar(`Dejará de verlo en su cartera. El histórico de ${TT('visita', 'p', '', 'l', 'l')} no cambia.`,
         { titulo: '¿Quitar de la cartera?', ok: 'Quitar', peligro: true })) return;
       const { data: r } = await db.rpc('quitar_de_cartera', { p_usuario: id, p_medico: b.dataset.cquita });
       if (r && r.ok === false) { toast('No tienes permiso', true); return; }
@@ -4040,20 +4118,20 @@ let DUP_PEND = [], DUP_PARES = [], DUP_ACTUAL = null;
 
 async function cargarDuplicados() {
   const v = $('v-duplicados');
-  const puede = PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).M || 0) >= 3;
+  const permitido = puede('administrar') || ((PERFIL.areas || {}).M || 0) >= 3;
   v.innerHTML = `
     <div class="saludo"><div><h1>Duplicados</h1>
       <div class="fecha">Revisa fichas repetidas y unifícalas sin perder la lista</div></div>
       <div class="acts" style="margin:0">
         <button class="btn sec" id="dvolver">← Volver</button>
         <button class="btn sec" id="dbuscar">Volver a buscar parecidos</button></div></div>
-    ${puede ? `<div class="dupgrid">
+    ${permitido ? `<div class="dupgrid">
       <div><div class="card" id="dpendc"></div><div class="card" id="dparc"></div></div>
       <div class="card dupcmp" id="dcmp"><div class="vacio">Pulsa <b>Comparar</b> en una pareja para revisarla aquí.
         La lista sigue a la izquierda: al terminar, pasas a la siguiente.</div></div>
     </div>` : '<div class="card"><div class="vacio">Solo administración puede unificar fichas.</div></div>'}`;
   $('dvolver').onclick = () => ir(TAB_ANTERIOR && TAB_ANTERIOR !== 'duplicados' ? TAB_ANTERIOR : 'directorio');
-  if (!puede) { $('dbuscar').classList.add('hide'); return; }
+  if (!permitido) { $('dbuscar').classList.add('hide'); return; }
   $('dbuscar').onclick = () => { invalidarCache(); listasDuplicados(); };
   listasDuplicados();
 }
@@ -4133,14 +4211,14 @@ async function compararEn(el, idA, idB) {
   let queda = b.id;
   const eleccion = {};
   CAMPOS_UNI.forEach(([k]) => eleccion[k] = b[k] ? 'queda' : (a[k] ? 'va' : 'queda'));
-  const resumen = (m, x) => `${num((x.consultas || []).length)} consultas · ${num((x.visitas || []).length)} visitas`;
+  const resumen = (m, x) => `${num((x.consultas || []).length)} consultas · ${num((x.visitas || []).length)} ${TT('visita', 'p', '', 'l', 'l')}`;
 
   const pinta = () => {
     const va = queda === a.id ? b : a, qu = queda === a.id ? a : b;
     const dif = CAMPOS_UNI.filter(([k]) => (a[k] || '') !== (b[k] || ''));
     el.innerHTML = `<div class="fbox">
       <div class="fh"><div><h2>Comparar fichas</h2>
-        <div class="sm">Elige cuál se conserva y con qué datos. Consultas, visitas, citas y cartera se juntan en la que quede.</div></div>
+        <div class="sm">Elige cuál se conserva y con qué datos. Consultas, ${TT('visita', 'p', '', 'l', 'l')}, citas y cartera se juntan en la que quede.</div></div>
         <button class="x" id="dcx" aria-label="Cerrar">✕</button></div>
       <div class="opciones">
         ${[[a, ctx.A], [b, ctx.B]].map(([m, x]) => `<button class="opt" data-queda="${m.id}" aria-pressed="${queda === m.id}">
@@ -4189,82 +4267,82 @@ async function compararEn(el, idA, idB) {
 
 const AYUDA_KPI = {
   citas: 'Citas de hoy que ya están marcadas como visitadas, sobre el total de citas del día. Las descartadas no cuentan.',
-  urgentes: 'Médicos marcados como urgentes que todavía no tienen ninguna visita. Pulsa para verlos en el Directorio.',
-  visitas_sem: 'Visitas registradas desde el lunes de esta semana.',
-  visitas_mes: 'Visitas registradas desde el día 1 de este mes.',
-  interesados: 'Médicos en estado «Interesado». El siguiente paso es conseguir la primera pauta. Pulsa para verlos.',
-  sin_contactar: 'Médicos a los que todavía no se ha presentado el producto. Pulsa para verlos.',
-  cartera: 'Médicos que puedes ver: tu cartera asignada o, si eres de administración o televenta, toda la base.',
+  urgentes: `${TT('medico', 'p', '', 'l', 'C', 'marcado')} como urgentes que todavía no tienen ${TT('visita', 's', 'ningun', 'l', 'l')}. Pulsa para verlos en el Directorio.`,
+  visitas_sem: `${TT('visita', 'p', '', 'l', 'C', 'registrado')} desde el lunes de esta semana.`,
+  visitas_mes: `${TT('visita', 'p', '', 'l', 'C', 'registrado')} desde el día 1 de este mes.`,
+  interesados: `${TT('medico', 'p', '', 'l', 'C')} en estado «Interesado». El siguiente paso es conseguir la primera pauta. Pulsa para verlos.`,
+  sin_contactar: `${TT('medico', 'p', '', 'l', 'C')} a los que todavía no se ha presentado el producto. Pulsa para verlos.`,
+  cartera: `${TT('medico', 'p', '', 'l', 'C')} que puedes ver: tu cartera asignada o, si eres de administración o televenta, toda la base.`,
   dups: 'Fichas marcadas como posible duplicado al darlas de alta. Pulsa para revisarlas y unificarlas.',
-  filtro: 'Indicador creado con «Guardar filtro» en el Directorio. Cuenta ahora mismo los médicos que cumplen ese filtro. Pulsa para ver la lista.'
+  filtro: `Indicador creado con «Guardar filtro» en el Directorio. Cuenta ahora mismo ${TT('medico', 'p', 'el', 'l', 'l')} que cumplen ese filtro. Pulsa para ver la lista.`
 };
 
 const AYUDA = {
-  inicio: ['Tu inicio', 'El resumen de tu día.', ['Pulsa un indicador para ver la lista de médicos que cuenta.',
+  inicio: ['Tu inicio', 'El resumen de tu día.', [`Pulsa un indicador para ver la lista de ${TT('medico', 'p', '', 'l', 'l')} que cuenta.`,
     'Con «⚙ Personalizar indicadores» eliges cuáles ver y en qué orden, y añades filtros guardados.',
     '«Compartir la semana» prepara un resumen para WhatsApp o email con tus plantillas.']],
   ini_agenda: ['Tu agenda de hoy', 'Citas de hoy ordenadas por hora. En verde, las ya visitadas.',
-    ['Para añadir citas, ve a Agenda o planifica una ruta.', 'Pulsa un médico para abrir su ficha y registrar la visita.']],
-  ini_acciones: ['Próximas acciones', 'La próxima acción que quedó apuntada en la última visita de cada médico, para los próximos 7 días.',
+    ['Para añadir citas, ve a Agenda o planifica una ruta.', `Pulsa ${TT('medico', 's', 'un', 'l', 'l')} para abrir su ficha y registrar ${TT('visita', 's', 'el', 'l', 'l')}.`]],
+  ini_acciones: ['Próximas acciones', `La próxima acción que quedó apuntada en la ${TT('visita', 's', 'ultimo', 'l', 'l')} de cada ${TT('medico', 's', '', 'l', 'l')}, para los próximos 7 días.`,
     ['En naranja, las que ya han pasado de fecha.', 'Márcalas como hechas o aplázalas desde Seguimiento.']],
-  ini_urgentes: ['Urgentes sin visitar', 'Médicos marcados como urgentes que aún no tienen ninguna visita.',
+  ini_urgentes: ['Urgentes sin visitar', `${TT('medico', 'p', '', 'l', 'C', 'marcado')} como urgentes que aún no tienen ${TT('visita', 's', 'ningun', 'l', 'l')}.`,
     ['El motivo de urgencia se ve en su ficha.', 'Desde Rutas puedes planificar una ruta solo con urgentes.']],
-  ini_ultimas: ['Últimas visitas', 'Las visitas registradas más recientes, con su resultado.', []],
+  ini_ultimas: [`${TT('visita', 'p', 'ultimo', 'C', 'l')}`, `${TT('visita', 'p', 'el', 'C', 'l', 'registrado')} más recientes, con su resultado.`, []],
   ini_recom: ['Recomendaciones de rutas', 'Listas calculadas cada día con tus datos. Al pulsar una, se planifica la ruta del día.',
     ['«Pasan consulta hoy»: tienen consulta este día de la semana y no se visitan desde hace más de 14 días.',
-     '«Interesados»: en estado Interesado y sin visita en 20 días.',
-     'Solo entran médicos con ubicación: completar direcciones mejora las propuestas.']],
+     `«Interesados»: en estado Interesado y sin ${TT('visita', 's', '', 'l', 'l')} en 20 días.`,
+     `Solo entran ${TT('medico', 'p', '', 'l', 'l')} con ubicación: completar direcciones mejora las propuestas.`]],
   ini_pend: ['Pendientes de rutas anteriores', 'Citas que planificaste y quedaron sin visitar.',
     ['Desde Agenda puedes moverlas a hoy, cambiarlas de fecha o descartarlas.']],
-  ini_comision: ['Tu actividad del mes', 'Unidades atribuidas a tus médicos en el periodo.',
+  ini_comision: ['Tu actividad del mes', `Unidades atribuidas a tus ${TT('medico', 'p', '', 'l', 'l')} en el periodo.`,
     ['El tramo alcanzado se aplica a todas las unidades del periodo, no solo a las que superan el tramo.',
      'Lo que se ve (unidades o importe) lo decide administración.']],
-  agenda: ['Agenda', 'Tus citas por día, semana o mes.', ['«+ Nueva cita» crea una cita con un médico.',
+  agenda: ['Agenda', 'Tus citas por día, semana o mes.', [`«+ Nueva cita» crea una cita con ${TT('medico', 's', 'un', 'l', 'l')}.`,
     'En cada cita puedes cambiar la hora, moverla o descartarla.',
-    'Al registrar la visita desde la ficha, la cita pasa a «Visitada».',
+    `Al registrar ${TT('visita', 's', 'el', 'l', 'l')} desde la ficha, la cita pasa a «Visitada».`,
     'Abajo verás los pendientes de rutas anteriores para recolocarlos.']],
   rutas: ['Rutas', 'Crea rutas y conviértelas en el plan del día.', [
-    '<b>Lista fija</b>: tú eliges los médicos. <b>Por criterios</b>: se rellena sola con los filtros (municipio, estado, días de consulta…).',
+    `<b>Lista fija</b>: tú eliges ${TT('medico', 'p', 'el', 'l', 'l')}. <b>Por criterios</b>: se rellena sola con los filtros (municipio, estado, días de consulta…).`,
     '<b>Propuestas automáticas</b>: las mismas listas que ves en Inicio.',
-    'El plan ordena las paradas por cercanía y calcula horas con tu horario: salida, minutos por visita, hora tope y minutos entre paradas.',
+    `El plan ordena las paradas por cercanía y calcula horas con tu horario: salida, minutos por ${TT('visita', 's', '', 'l', 'l')}, hora tope y minutos entre paradas.`,
     'El navegador (Google Maps, Apple Maps o Waze) se elige en el plan o en Configuración.',
     'Al empezar la ruta aparece la barra verde con el tiempo en curso.',
-    'Solo entran médicos con ubicación. Completar la dirección y los días de consulta mejora mucho las rutas.']],
-  directorio: ['Directorio', 'Todos los médicos que puedes ver.', [
+    `Solo entran ${TT('medico', 'p', '', 'l', 'l')} con ubicación. Completar la dirección y los días de consulta mejora mucho las rutas.`]],
+  directorio: ['Directorio', `Todos ${TT('medico', 'p', 'el', 'l', 'l')} que puedes ver.`, [
     'El buscador de arriba filtra por nombre, centro o municipio.',
-    'El municipio y la provincia cuentan todas las consultas del médico, no solo la principal.',
+    `El municipio y la provincia cuentan todas las consultas ${TT('medico', 's', 'del', 'l', 'l')}, no solo la principal.`,
     '«⋮» abre los filtros, las columnas y las descargas.',
     '«★ Guardar filtro» convierte los filtros actuales en un indicador de Inicio.',
     '«Cerca de mí» usa la ubicación del dispositivo.',
-    'Al crear un médico o centro, la app avisa si ya existe uno parecido.']],
-  seguimiento: ['Seguimiento', 'Cómo avanza cada médico.', [
+    `Al crear ${TT('medico', 's', 'un', 'l', 'l')} o centro, la app avisa si ya existe uno parecido.`]],
+  seguimiento: ['Seguimiento', `Cómo avanza cada ${TT('medico', 's', '', 'l', 'l')}.`, [
     'Los indicadores de arriba muestran el embudo por estado comercial y la calidad de los datos.',
     '«Mostrar» filtra por visitados, sin visitar, con próxima acción o atrasados.',
     '«Hecha» cierra la próxima acción; «Aplazar» le pone otra fecha.',
     'Las descargas están en «⋮».']],
   ventas: ['Ventas', 'Pedidos y unidades atribuidas.', [
-    'La venta a paciente se atribuye al médico indicado y al comercial que lo tenía asignado en ese momento.',
-    'La venta a centro con descuento no cuenta como prescripción de ningún médico.',
-    'Si un pedido no tiene médico reconocido, queda en la bandeja «sin atribuir» para asignarlo a mano.',
+    `La venta a ${TT('paciente', 's', '', 'l', 'l')} se atribuye ${TT('medico', 's', 'al', 'l', 'l', 'indicado')} y al comercial que lo tenía asignado en ese momento.`,
+    `La venta a centro con descuento no cuenta como prescripción de ${TT('medico', 's', 'ningun', 'l', 'l')}.`,
+    `Si un pedido no tiene ${TT('medico', 's', '', 'l', 'l', 'reconocido')}, queda en la bandeja «sin atribuir» para asignarlo a mano.`,
     'Solo televenta y administración crean o cambian pedidos.']],
   analitica: ['Analítica', 'Unidades o importe agrupados como elijas.', [
-    'Elige la dimensión: médico, comercial, producto, municipio, mes o canal.',
+    `Elige la dimensión: ${TT('medico', 's', '', 'l', 'l')}, comercial, producto, municipio, mes o canal.`,
     'La tabla por meses sirve para ver tendencias.',
     'Las descargas están en «⋮».']],
   config: ['Configuración', 'Ajustes de tu cuenta y de la plataforma.', [
     'Preferencias de salida y llegada: se usan para calcular las rutas.',
     'Al pulsar «Cómo llegar» o abrir una ruta, eliges en ese momento con qué app navegar (Google Maps, Waze o Apple Maps).',
     'Plantillas del resumen semanal.',
-    'Clasificadores: las opciones que aparecen al registrar visitas y en las fichas.']],
+    `Clasificadores: las opciones que aparecen al registrar ${TT('visita', 'p', '', 'l', 'l')} y en las fichas.`]],
   admin: ['Administración', 'Usuarios, permisos y control.', [
     'Permisos por área: <b>Ver</b>, <b>Editar</b> o <b>Completo</b>. Se aplican en la base de datos, no solo en la pantalla.',
-    'La cartera decide qué médicos ve cada comercial.',
+    `La cartera decide qué ${TT('medico', 'p', '', 'l', 'l')} ve cada comercial.`,
     'Las comisiones se configuran por esquema y se asignan por persona.',
     'Accesos y auditoría registran entradas y cambios.']],
   duplicados: ['Duplicados', 'Fichas que pueden ser la misma persona.', [
     '<b>Pendientes</b>: marcadas al darlas de alta. <b>Nombres parecidos</b>: coincidencia del 80% o más.',
     'Al comparar eliges qué ficha queda y qué dato conservar de cada campo.',
-    'Consultas, visitas, citas y cartera se juntan en la ficha que queda. No se puede deshacer desde la app.',
+    `Consultas, ${TT('visita', 'p', '', 'l', 'l')}, citas y cartera se juntan en la ficha que queda. No se puede deshacer desde la app.`,
     '«No son duplicados» guarda la pareja como distinta y no vuelve a salir.']]
 };
 
@@ -4366,7 +4444,7 @@ function mostrarApp(perfil) {
   $('hola').textContent = (h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches') + ', ' + String(p.nombre).split(' ')[0];
   $('hoyfecha').textContent = fechaLarga(new Date()).replace(/^./, c => c.toUpperCase());
   $('nuevoBtn').classList.toggle('hide', !puedeCrear());
-  $('dupBtn').classList.toggle('hide', p.rol !== 'Administrador');
+  $('dupBtn').classList.toggle('hide', !puede('administrar'));
   document.querySelectorAll('#nav [data-t="ventas"], #nav [data-t="pacientes"], #nav [data-t="productos"]').forEach(b => b.classList.toggle('hide', !veVentas()));
   if (!APP_VISIBLE) {
     APP_VISIBLE = true;
@@ -4391,8 +4469,8 @@ function mostrarApp(perfil) {
   aplicarPermisosMenu();
 
   // 6. Médicos con acceso: solo ven su informe
-  document.body.classList.toggle('modo-medico', p.rol === 'Medico');
-  if (p.rol === 'Medico') {
+  document.body.classList.toggle('modo-medico', puede('portal_prescriptor'));
+  if (puede('portal_prescriptor')) {
     document.querySelectorAll('nav.main [data-t]').forEach(b => b.classList.add('hide'));
     let bi = document.querySelector('nav.main [data-t="informe"]');
     if (!bi) { document.querySelector('nav.main .in').insertAdjacentHTML('afterbegin', '<button data-t="informe" aria-selected="true">Mi informe</button>'); bi = document.querySelector('nav.main [data-t="informe"]'); }
@@ -4406,14 +4484,14 @@ function mostrarApp(perfil) {
   // 7. Menú de usuario y marca de la empresa
   document.querySelectorAll('[data-u="adm"]').forEach(b => b.classList.add('hide'));
   aplicarMarca();
-  const admin = p.rol === 'Administrador';
+  const admin = puede('administrar');
   const pl = document.querySelector('[data-u="plan"]'); if (pl) pl.classList.toggle('hide', !admin);
   const em = document.querySelector('[data-u="empresa"]'); if (em) em.classList.toggle('hide', !admin);
 
   // 8. Notificaciones, módulo de inicio preferido y resumen del día
   setTimeout(refrescarCampana, 800);
   if (primera && pref.inicio && pref.inicio !== 'inicio' && puedeModulo(pref.inicio)) setTimeout(() => ir(pref.inicio), 50);
-  if (p.rol !== 'Medico') setTimeout(() => Promise.resolve(RPC_ORIG('avisos_del_dia', {})).then(r => { if (r && r.data && r.data.nuevo) refrescarCampana(); }, () => {}), 1500);
+  if (!puede('portal_prescriptor')) setTimeout(() => Promise.resolve(RPC_ORIG('avisos_del_dia', {})).then(r => { if (r && r.data && r.data.nuevo) refrescarCampana(); }, () => {}), 1500);
 
   // 9. Traducción, iconos y orden del menú
   if (MAPA_I18N) traducir(document.body);
@@ -4434,7 +4512,9 @@ async function arrancar() {
   marca('inicio del arranque');
   let guardado = null;
   try { guardado = JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch (e) {}
-  if (guardado && localStorage.getItem('dlc-os-sesion') && !APP_VISIBLE) {
+  // v2.69.0: el perfil guardado solo sirve si ya trae sus capacidades y están los roles (si no, se espera al de la red)
+  if (guardado && !Array.isArray(guardado.capacidades)) guardado = null;
+  if (guardado && ROLES_DEF.length && ESTADOS_DEF.length && localStorage.getItem('dlc-os-sesion') && !APP_VISIBLE) {
     mostrarApp(guardado);
     marca('app visible con el perfil guardado');
   }
@@ -4443,11 +4523,12 @@ async function arrancar() {
   marca('sesión comprobada');
   if (!session) { localStorage.removeItem(PKEY); mostrarLogin(); return; }
 
-  let { data: perfil, error } = await db.from('perfiles').select('*').eq('id', session.user.id).single();
+  const rolesListos = cargarRoles().catch(() => false);
+  let { data: perfil, error } = await db.from('perfiles').select('*,capacidades').eq('id', session.user.id).single();
   // Un fallo de conexión no cierra la sesión: se reintenta y, si sigue fallando, se entra con el perfil guardado
   for (let i = 0; i < 2 && error && error.code !== 'PGRST116'; i++) {
     await new Promise(r => setTimeout(r, 1500));
-    ({ data: perfil, error } = await db.from('perfiles').select('*').eq('id', session.user.id).single());
+    ({ data: perfil, error } = await db.from('perfiles').select('*,capacidades').eq('id', session.user.id).single());
   }
   if (error && error.code !== 'PGRST116' && guardado) { perfil = guardado; error = null; }
   marca('perfil recibido');
@@ -4459,6 +4540,7 @@ async function arrancar() {
     return;
   }
   try { localStorage.setItem(PKEY, JSON.stringify(perfil)); } catch (e) {}
+  if (!(await rolesListos) && !(ROLES_DEF.length && ESTADOS_DEF.length)) await cargarRoles().catch(() => false);
   const cambio = !guardado || JSON.stringify(guardado) !== JSON.stringify(perfil);
   if (!APP_VISIBLE) mostrarApp(perfil);
   else if (cambio) { mostrarApp(perfil); if (TAB === 'inicio') cargarInicio(); }
@@ -4512,12 +4594,12 @@ async function inicioResumenSemanaYVentas() {
     <div class="card"><h2>Mi semana</h2>
       <div class="minis"><div><b>${num(semVis)}</b><span>visitadas</span></div><div><b>${num(semPend)}</b><span>por hacer</span></div>
         <div><b style="${cumple != null && cumple < 60 ? 'color:var(--warn)' : ''}">${cumple == null ? '—' : cumple + '%'}</b><span>cumplimiento</span></div>
-        <div><b style="${toca ? 'color:var(--warn)' : ''}">${num(toca)}</b><span>les toca visita</span></div></div>
+        <div><b style="${toca ? 'color:var(--warn)' : ''}">${num(toca)}</b><span>les toca ${TT('visita', 's', '', 'l', 'l')}</span></div></div>
       <div class="acts" style="padding:0 16px 14px"><button class="btn sec" data-inisem="semana">Ver mi semana</button>${toca ? '<button class="btn sec" data-inisem="plan">Planificarlos</button>' : ''}</div></div>
     <div class="card"><h2>Ventas del mes</h2>
       <div class="minis"><div><b>${num(v1.unidades || 0)}</b><span>unidades ${delta(+v1.unidades || 0, +v0.unidades || 0)}</span></div>
         ${verImportes() ? `<div><b>${eurI(v1.importe || 0)}</b><span>sin IVA ${delta(+v1.importe || 0, +v0.importe || 0)}</span></div>` : ''}
-        <div><b>${num(v1.medicos || 0)}</b><span>médicos que prescriben</span></div></div>
+        <div><b>${num(v1.medicos || 0)}</b><span>${TT('medico', 'p', '', 'l', 'l')} que prescriben</span></div></div>
       <p class="sm" style="padding:0 16px 14px">Comparado con los mismos días del mes anterior (${num(v0.unidades || 0)} unidades).</p></div>
     <div class="card"><h2>Alertas<span class="n">${alertas.reduce((n, a) => n + a.n, 0)}</span></h2>
       ${alertas.length ? `<div class="lista">${alertas.map((a, i) => `<details class="alerta2 ${a.gravedad || ''}">
@@ -4584,7 +4666,7 @@ async function pintarInicioBase() {
   const sec = $('v-inicio');
   sec.classList.remove('ini-cargando');
   if (!$('inialerta')) sec.querySelector('.saludo').insertAdjacentHTML('afterend', '<div id="inialerta"></div>');
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   const cfg = kpiConfig().filter(x => x.on);
 
   // Cada bloque se pinta en cuanto llegan sus datos; mientras, se ve su esqueleto.
@@ -4644,10 +4726,10 @@ async function pintarInicioBase() {
       `${esc(u.especialidad || '')} · ${esc(u.centro_nombre || u.municipio || '')}`)),
     k.urgentes > 6 ? `<button class="verlo" data-k="urgentes">Ver los ${num(k.urgentes)} urgentes</button>` : '',
     'Todos los urgentes están visitados.');
-  tarjeta($('c-ultimas'), 'Últimas visitas', null,
+  tarjeta($('c-ultimas'), `${TT('visita', 'p', 'ultimo', 'C', 'l')}`, null,
     data.ultimas_visitas.map(v => itemHTML(v.medico_id, '✓', 'o', v.nombre,
       `${fechaCorta(v.fecha)} · ${esc((v.resultados || []).join(' + ') || 'Sin resultado')}`)),
-    '', 'Todavía no hay visitas registradas.');
+    '', `Todavía no hay ${TT('visita', 'p', '', 'l', 'l', 'registrado')}.`);
   ponerAyudas();
   await Promise.all([pComision, pRutas]);
   marca('Inicio completo');
@@ -4690,7 +4772,7 @@ async function editorPedido(pedido) {
   let medico = pedido && pedido.medico ? pedido.medico
     : (pedido && pedido.lineas && pedido.lineas[0] && pedido.lineas[0].medico_id ? { id: pedido.lineas[0].medico_id, nombre: pedido.lineas[0].medico } : null);
   let contacto = pedido && pedido.contacto ? pedido.contacto : null;
-  if (!medico && contacto && contacto.medico_id) medico = { id: contacto.medico_id, nombre: contacto.medico || 'Médico del paciente', codigo: contacto.medico_codigo || '' };
+  if (!medico && contacto && contacto.medico_id) medico = { id: contacto.medico_id, nombre: contacto.medico || `${TT('medico', 's', '', 'l', 'C')} ${TT('paciente', 's', 'del', 'l', 'l')}`, codigo: contacto.medico_codigo || '' };
   const autoImporte = l => { const p = prod(l.producto_id); if (!l.manual && p.precio != null) l.importe = r2(p.precio * (+l.unidades || 0)); if (l.iva == null || !l.manualIva) l.iva = p.iva != null ? +p.iva : l.iva; };
   lineas.forEach(l => { if (l.importe == null) autoImporte(l); if (l.iva == null) l.iva = prod(l.producto_id).iva || 0; });
   // Datos del formulario que se conservan al repintar
@@ -4718,12 +4800,12 @@ async function editorPedido(pedido) {
       <div class="g2">
         <div><label for="pfecha">Fecha</label><input id="pfecha" type="date" value="${esc(form.fecha)}"></div>
         <div><label for="pcan">Canal</label><select id="pcan">
-          <option value="paciente" ${form.canal !== 'centro' ? 'selected' : ''}>Recomendación a paciente</option>
+          <option value="paciente" ${form.canal !== 'centro' ? 'selected' : ''}>Recomendación a ${TT('paciente', 's', '', 'l', 'l')}</option>
           <option value="centro" ${form.canal === 'centro' ? 'selected' : ''}>Venta a centro (con descuento)</option></select></div>
       </div>
       <div id="zonapac" class="${form.canal === 'centro' ? 'hide' : ''}">
-        <label>Paciente</label><div id="pselpac"></div>
-        <label>Médico que lo recomienda</label><div id="pselmed"></div>
+        <label>${TT('paciente', 's', '', 'l', 'C')}</label><div id="pselpac"></div>
+        <label>${TT('medico', 's', '', 'l', 'C')} que lo recomienda</label><div id="pselmed"></div>
         <div class="sm" style="margin-top:4px">Si no lo encuentras, deja el nombre escrito: el pedido quedará pendiente de atribuir.</div>
       </div>
       <label>Líneas</label>
@@ -4739,7 +4821,7 @@ async function editorPedido(pedido) {
       <div class="acts" style="margin-top:0"><button type="button" class="btn sec" id="plmas">+ Añadir línea</button></div>
       <div class="g2">
         <div><label for="ppago">Forma de pago</label><select id="ppago"><option value=""></option>
-          ${(CAT.FORMA_PAGO || []).map(x => `<option ${form.forma_pago === x.valor ? 'selected' : ''}>${esc(x.valor)}</option>`).join('')}</select></div>
+          ${(CAT.forma_pago || []).map(x => `<option ${form.forma_pago === x.valor ? 'selected' : ''}>${esc(x.valor)}</option>`).join('')}</select></div>
         <div><label for="pdto">Descuento general</label>
           <div style="display:flex;gap:6px"><input id="pdto" type="number" min="0" step="0.01" value="${esc(form.descuento)}">
             <select id="pdtot" style="max-width:110px"><option value="porcentaje">%</option>
@@ -4810,6 +4892,8 @@ async function editorPedido(pedido) {
 
     const guardar = async (estado, btn) => {
       if (!lineas.some(l => l.producto_id)) { toast('Añade al menos un producto', true); return; }
+      const cps = camposLeer($('dbody'));
+      if (cps && cps.falta.length) { toast(`Rellena «${cps.falta[0]}»`, true); return; }
       if (estado === 'Confirmado' && !await preguntar('Una vez validado, el pedido cuenta en métricas y comisiones y ya no se puede editar ni eliminar: solo anular.',
         { titulo: '¿Validar el pedido?', ok: 'Validar' })) return;
       btn.disabled = true; const txt = btn.textContent; btn.textContent = 'Guardando…';
@@ -4831,6 +4915,7 @@ async function editorPedido(pedido) {
           : 'No se ha podido guardar: ' + ((error && error.message) || 'sin permiso'), true);
         return;
       }
+      if (cps && !(await camposGuardar(cps, (r && r.id) || (ped && ped.id)))) return;
       $('dlg').close();
       toast(estado === 'Borrador' ? 'Borrador guardado' : (medico ? 'Pedido validado y atribuido' : 'Pedido validado · pendiente de atribuir'));
       if (TAB === 'ventas') cargarVentas();
@@ -4839,7 +4924,18 @@ async function editorPedido(pedido) {
     };
     $('pborr').onclick = e => guardar('Borrador', e.target);
     $('pvalid').onclick = e => guardar('Confirmado', e.target);
+    // Campos personalizados del pedido: se conservan al repintar
+    if ((CAMPOS.pedido || []).some(c => c.en_ficha) && $('pnota')) {
+      const poner = () => { if ($('dbody').querySelector('.cpersform')) return;
+        $('pnota').insertAdjacentHTML('afterend', camposHTML('pedido', cpPed));
+        $('dbody').querySelector('.cpersform').addEventListener('input', e => { const i = e.target.closest('[data-cpk]'); if (i) cpPed[i.dataset.cpk] = i.value; });
+        $('dbody').querySelector('.cpersform').addEventListener('change', e => { const i = e.target.closest('[data-cpk]'); if (i) cpPed[i.dataset.cpk] = i.value; }); };
+      if (cpPed) poner();
+      else if (ped && ped.id) db.from('pedidos').select('clasificadores').eq('id', ped.id).maybeSingle().then(({ data }) => { cpPed = Object.assign({}, (data && data.clasificadores) || {}); poner(); });
+      else { cpPed = {}; poner(); }
+    }
   };
+  let cpPed = null;
   pinta();
   $('dlg').showModal();
 }
@@ -4880,15 +4976,15 @@ async function pedidoFacturas(id) {
 
 // Ver pedido · Operativa: pago, paquete, emails
 async function pedidoOperativa(id) {
-  if (!$('dlg').open || !(VE_TODO() || PERFIL.rol === 'Administrador')) return;
+  if (!$('dlg').open || !(VE_TODO() || puede('administrar'))) return;
   const { data } = await RPC_ORIG('pedido_detalle', { p_id: id });
   const p = data && data.pedido; if (!p || p.estado !== 'Confirmado' || $('pdops')) return;
   await cargarAjustes();
   const cli = data.contacto || {}, total = +((data.totales || {}).total || 0);
-  const puede = VE_TODO() && nivelDe2('V') >= 2;
+  const permitido = VE_TODO() && nivelDe2('V') >= 2;
   const acts = $('dbody').querySelector('.acts:last-of-type');
   acts.insertAdjacentHTML('beforebegin', `<div class="blk" id="pdops"><h3>Operativa</h3>
-    ${OPS.map(([k, t]) => `<label class="opchk ${opHecho(p, k) ? 'on' : ''}"><input type="checkbox" data-op="${k}" ${opHecho(p, k) ? 'checked' : ''} ${puede ? '' : 'disabled'}>
+    ${OPS.map(([k, t]) => `<label class="opchk ${opHecho(p, k) ? 'on' : ''}"><input type="checkbox" data-op="${k}" ${opHecho(p, k) ? 'checked' : ''} ${permitido ? '' : 'disabled'}>
       <span>${esc(t)}${k === 'pago' && p.forma_pago ? ` <span class="sm">· ${esc(p.forma_pago)}${/reembolso/i.test(p.forma_pago) ? ' (se cobra al entregar)' : ''}</span>` : ''}</span></label>`).join('')}
     <div class="acts" style="margin:6px 0 0">
       ${cli.email ? `<a class="btn sec" id="pdmailpago" data-ped="${id}" href="mailto:${esc(cli.email)}?subject=${encodeURIComponent('Datos para el pago de tu pedido ' + (p.numero || ''))}&body=${encodeURIComponent(textoEmailPago(p, total, cli.nombre))}">✉️ Preparar email con los datos de pago</a>` : '<span class="sm">El cliente no tiene email en su ficha.</span>'}
@@ -4921,13 +5017,13 @@ async function verPedidoBase(id) {
 
   $('dbody').innerHTML = `
     <div class="fh"><div><h2>Pedido ${esc(p.numero || '')} ${pillEstado(p.estado)}</h2>
-      <div class="sm">${fechaCorta(p.fecha)} · ${p.canal === 'centro' ? 'Venta a centro' : 'Recomendación a paciente'}${p.forma_pago ? ' · ' + esc(p.forma_pago) : ''}</div></div>
+      <div class="sm">${fechaCorta(p.fecha)} · ${p.canal === 'centro' ? 'Venta a centro' : `Recomendación a ${TT('paciente', 's', '', 'l', 'l')}`}${p.forma_pago ? ' · ' + esc(p.forma_pago) : ''}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     ${bor ? '<div class="cacheaviso" style="margin-top:10px">Borrador: todavía no cuenta en métricas ni en comisiones.</div>' : ''}
-    ${c ? `<div class="blk"><h3>Paciente</h3><div><b>${esc(c.nombre)}</b></div>
+    ${c ? `<div class="blk"><h3>${TT('paciente', 's', '', 'l', 'C')}</h3><div><b>${esc(c.nombre)}</b></div>
       <div class="sm">${esc(c.telefono || c.movil || '')} ${esc(c.email || '')}</div>
-      <div class="acts"><button class="btn sec" data-vpac="${c.id}">Ver ficha del paciente</button></div></div>` : ''}
-    ${data.medico ? `<div class="blk"><h3>Médico</h3><div><b>${esc(data.medico.nombre)}</b> <span class="sm">· código ${esc(data.medico.codigo)}</span></div>
+      <div class="acts"><button class="btn sec" data-vpac="${c.id}">Ver ficha ${TT('paciente', 's', 'del', 'l', 'l')}</button></div></div>` : ''}
+    ${data.medico ? `<div class="blk"><h3>${TT('medico', 's', '', 'l', 'C')}</h3><div><b>${esc(data.medico.nombre)}</b> <span class="sm">· código ${esc(data.medico.codigo)}</span></div>
       ${l[0] && l[0].comercial ? `<div class="sm">Comercial: ${esc(l[0].comercial)}</div>` : ''}</div>` : ''}
     <div class="blk"><h3>Líneas</h3>
       ${l.map(x => { const d = lineaDesglose(x); return `<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)">
@@ -4988,27 +5084,27 @@ async function fichaPaciente(id) {
   if (!$('ficha').open) $('ficha').showModal();
   const { data } = await RPC_ORIG('contacto_detalle', { p_id: id });
   if (FICHA_PAC !== id) return;
-  if (!data || !data.contacto) { $('fbody').innerHTML = '<div class="vacio">No se ha encontrado el paciente.</div>'; return; }
+  if (!data || !data.contacto) { $('fbody').innerHTML = `<div class="vacio">No se ha encontrado ${TT('paciente', 's', 'el', 'l', 'l')}.</div>`; return; }
   const c = data.contacto, m = data.medico, ped = data.pedidos || [];
   const validos = ped.filter(p => p.estado !== 'Anulado' && p.estado !== 'Borrador');
-  const puede = puedeVentas();
+  const permitido = puedeVentas();
 
   $('fbody').innerHTML = `
-    <div class="fh"><div><h2>${esc(c.nombre)}</h2><div class="sm">Paciente${c.nif ? ' · NIF ' + esc(c.nif) : ''}</div></div>
+    <div class="fh"><div><h2>${esc(c.nombre)}</h2><div class="sm">${TT('paciente', 's', '', 'l', 'C')}${c.nif ? ' · NIF ' + esc(c.nif) : ''}</div></div>
       <button class="x" id="fpx" aria-label="Cerrar">✕</button></div>
-    ${puede ? `<div class="acts"><button class="btn" id="fpnped">+ Nuevo pedido</button>
+    ${permitido ? `<div class="acts"><button class="btn" id="fpnped">+ Nuevo pedido</button>
       <button class="btn sec" id="fpedit">Editar datos</button></div>` : ''}
     <div class="kpis" style="margin:10px 0 0;grid-template-columns:repeat(3,1fr)">
       <div class="kpi"><b>${num(validos.length)}</b><span>pedidos</span></div>
       <div class="kpi"><b>${num(data.total_unidades)}</b><span>unidades</span></div>
       <div class="kpi"><b>${eurI(validos.reduce((n, p) => n + (+p.total || 0), 0))}</b><span>con IVA</span></div></div>
-    <div class="blk"><h3>Médico que lo trata</h3>
+    <div class="blk"><h3>${TT('medico', 's', '', 'l', 'C')} que lo trata</h3>
       ${m ? `<div><button class="kcfg" data-fpmed="${m.id}" style="font-size:15px">${esc(m.nombre)}</button>
           <span class="sm"> · código ${esc(m.codigo)}${m.especialidad ? ' · ' + esc(m.especialidad) : ''}</span></div>
         <div class="sm">${m.comercial ? 'Comercial: ' + esc(m.comercial) : 'Sin comercial asignado'}</div>`
-        : '<div class="sm">Sin médico asignado. Las unidades de este paciente no se atribuyen a nadie hasta que lo asignes.</div>'}
-      ${puede ? `<label>${m ? 'Cambiar de médico' : 'Asignar médico'}</label><div id="fpsel"></div>
-        ${m ? '<div class="acts"><button class="btn sec" id="fpmedquitar">Quitar médico</button></div>' : ''}` : ''}
+        : `<div class="sm">Sin ${TT('medico', 's', '', 'l', 'l', 'asignado')}. Las unidades de ${TT('paciente', 's', 'este', 'l', 'l')} no se atribuyen a nadie hasta que lo asignes.</div>`}
+      ${permitido ? `<label>${m ? `Cambiar de ${TT('medico', 's', '', 'l', 'l')}` : `Asignar ${TT('medico', 's', '', 'l', 'l')}`}</label><div id="fpsel"></div>
+        ${m ? `<div class="acts"><button class="btn sec" id="fpmedquitar">Quitar ${TT('medico', 's', '', 'l', 'l')}</button></div>` : ''}` : ''}
     </div>
     <div class="blk"><h3>Contacto</h3>
       ${[['Teléfono', c.telefono], ['Móvil', c.movil], ['Email', c.email],
@@ -5030,18 +5126,18 @@ async function fichaPaciente(id) {
   const asignar = async medicoId => {
     const { data: r, error } = await db.rpc('asignar_medico_paciente', { p_contacto: id, p_medico: medicoId });
     if (error || (r && r.ok === false)) { toast('No se ha podido guardar', true); return; }
-    toast(medicoId ? 'Médico asignado' : 'Médico quitado'); fichaPaciente(id);
+    toast(medicoId ? `${TT('medico', 's', '', 'l', 'C', 'asignado')}` : `${TT('medico', 's', '', 'l', 'C', 'quitado')}`); fichaPaciente(id);
     if (TAB === 'pacientes') listaPacientes();
   };
   if ($('fpmedquitar')) $('fpmedquitar').onclick = () => asignar(null);
-  if ($('fpsel')) selectorMedico($('fpsel'), { valor: null, placeholder: 'Busca el médico por nombre, centro o municipio', alElegir: x => { if (x) asignar(x.id); } });
+  if ($('fpsel')) selectorMedico($('fpsel'), { valor: null, placeholder: `Busca ${TT('medico', 's', 'el', 'l', 'l')} por nombre, centro o municipio`, alElegir: x => { if (x) asignar(x.id); } });
 }
 
 /* ---------------- productos ---------------- */
 
 
 function editorProducto(p) {
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   p = p || { iva: 10, activo: true, unidades_envase: 1 };
   const ro = esAdmin ? '' : 'disabled';
   $('dbody').innerHTML = `
@@ -5079,8 +5175,11 @@ function editorProducto(p) {
     const f = e.target.files[0]; if (!f) return;
     $('prfprev').style.backgroundImage = `url('${URL.createObjectURL(f)}')`; $('prfprev').textContent = '';
   };
+  camposInsertar($('dbody'), 'producto', p.id, $('prok') && $('prok').closest('.acts'));
   $('prok').onclick = async ev => {
     if (!$('prn').value.trim()) { toast('Escribe el nombre', true); return; }
+    const cps = camposLeer($('dbody'));
+    if (cps && cps.falta.length) { toast(`Rellena «${cps.falta[0]}»`, true); return; }
     ev.target.disabled = true; ev.target.textContent = 'Guardando…';
     let foto_url;
     const f = $('prfoto').files && $('prfoto').files[0];
@@ -5097,6 +5196,7 @@ function editorProducto(p) {
       ...(foto_url ? { foto_url } : {}), ...($('pract') ? { activo: $('pract').checked } : {}) } });
     ev.target.disabled = false; ev.target.textContent = p.id ? 'Guardar' : 'Crear producto';
     if (error || (r && r.ok === false)) { toast('No se ha podido guardar: ' + ((error && error.message) || (r && r.error) || ''), true); return; }
+    if (cps && !(await camposGuardar(cps, (r && r.id) || p.id))) return;
     $('dlg').close(); toast(p.id ? 'Producto guardado' : 'Producto creado');
     await cargarProductos(); if (TAB === 'productos') pintarProductos();
   };
@@ -5128,18 +5228,18 @@ async function sugerenciasAgenda() {
   const grupos = [
     esHoy ? ['hoy', 'Pasan consulta hoy y hace más de 14 días que no se visitan', libre(pr && pr.hoy)] : null,
     ['acciones', 'Acciones pendientes para este día o atrasadas', acciones.map(a => ({ id: a.medico_id, nombre: a.nombre, especialidad: a.especialidad, extra: (a.proxima_accion || 'Seguimiento') + ' · ' + fechaCorta(a.proxima_fecha) }))],
-    ['toca', 'Les toca visita según su frecuencia objetivo', libre(toca).map(m => Object.assign({}, m, { extra: [m.estado_comercial, m.dias_sin_visita != null ? m.dias_sin_visita + ' días sin visita' : 'nunca visitado', m.municipio].filter(Boolean).join(' · ') }))],
+    ['toca', `Les toca ${TT('visita', 's', '', 'l', 'l')} según su frecuencia objetivo`, libre(toca).map(m => Object.assign({}, m, { extra: [m.estado_comercial, m.dias_sin_visita != null ? m.dias_sin_visita + ` días sin ${TT('visita', 's', '', 'l', 'l')}` : 'nunca visitado', m.municipio].filter(Boolean).join(' · ') }))],
     ['urgentes', 'Urgentes sin visitar', libre(pr && pr.urgentes)],
-    ['interesados', 'Interesados sin visita en 20 días', libre(pr && pr.interesados)]
+    ['interesados', `Interesados sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`, libre(pr && pr.interesados)]
   ].filter(g => g && g[2].length);
 
   const centros = cen || [];
   $('agsug').innerHTML = `<h2>${esHoy ? 'Sugerencias para hoy' : 'Sugerencias para ' + fechaCorta(fecha)}</h2>
-    <p class="sm">Médicos que conviene ver. Añádelos a la agenda o planifica una ruta con ellos.</p>
+    <p class="sm">${TT('medico', 'p', '', 'l', 'C')} que conviene ver. Añádelos a la agenda o planifica una ruta con ellos.</p>
     ${centros.length ? `<h3>En tus centros de este día</h3>
-      <p class="sm">Aprovecha que estás allí: médicos del mismo centro o a menos de 200 m. Visítalos o pregunta en recepción los datos que faltan.</p>
+      <p class="sm">Aprovecha que estás allí: ${TT('medico', 'p', '', 'l', 'l')} del mismo centro o a menos de 200 m. Visítalos o pregunta en recepción los datos que faltan.</p>
       ${centros.map(g => `<div class="sgcen"><div class="sgcencab">📍 <b>${esc(g.centro_nombre || 'Centro')}</b>${g.municipio ? ` <span class="sm">${esc(g.municipio)}</span>` : ''}
-          ${g.centro_sin_horario ? '<span class="pill p-warn" title="Pregunta el horario en recepción y añádelo desde la ficha de un médico del centro">Falta el horario del centro</span>' : ''}</div>
+          ${g.centro_sin_horario ? `<span class="pill p-warn" title="Pregunta el horario en recepción y añádelo desde la ficha de ${TT('medico', 's', 'un', 'l', 'l')} del centro">Falta el horario del centro</span>` : ''}</div>
         <div class="lista">${(g.medicos || []).map((m, i) => `<div class="item ${i >= 4 ? 'extra' : ''}" style="cursor:default">
           <span class="ic ${m.visitar ? 'w' : ''}" title="${m.visitar ? 'Conviene visitarlo' : 'Faltan datos en su ficha'}">${m.visitar ? '★' : '✎'}</span>
           <span class="tx"><b>${m.sin_reporting ? '<span class="pill p-sr">Sin reporting</span> ' : ''}${esc(m.nombre)}</b>
@@ -5172,23 +5272,23 @@ async function sugerenciasAgenda() {
 /* ---------------- ayudas nuevas ---------------- */
 
 Object.assign(AYUDA, {
-  ventas: ['Ventas', 'Pedidos, pacientes y productos.', [
+  ventas: ['Ventas', `Pedidos, ${TT('paciente', 'p', '', 'l', 'l')} y productos.`, [
     'Los pedidos se guardan como <b>borrador</b> (editable y se puede eliminar; no cuenta en métricas) o se <b>validan</b> (cuenta en métricas y comisiones; solo se puede anular).',
     'Los importes van sin IVA; el IVA de cada producto se suma aparte y se ve el total.',
-    'La venta a paciente se atribuye al médico indicado y al comercial que lo tenía asignado en ese momento.',
-    'La venta a centro con descuento no cuenta como prescripción de ningún médico.',
-    'Si un pedido no tiene médico reconocido, queda en «sin atribuir» para asignarlo a mano.']],
-  pacientes: ['Pacientes', 'Las personas que compran por recomendación de un médico.', [
-    'Cada paciente puede tener un <b>médico que lo trata</b>: se asigna solo con su primer pedido o a mano desde su ficha.',
-    'Desde la ficha ves sus pedidos, unidades e importe, y creas un pedido nuevo con el médico ya puesto.',
-    'En la ficha de un médico verás sus pacientes.']],
+    `La venta a ${TT('paciente', 's', '', 'l', 'l')} se atribuye ${TT('medico', 's', 'al', 'l', 'l', 'indicado')} y al comercial que lo tenía asignado en ese momento.`,
+    `La venta a centro con descuento no cuenta como prescripción de ${TT('medico', 's', 'ningun', 'l', 'l')}.`,
+    `Si un pedido no tiene ${TT('medico', 's', '', 'l', 'l', 'reconocido')}, queda en «sin atribuir» para asignarlo a mano.`]],
+  pacientes: [`${TT('paciente', 'p', '', 'l', 'C')}`, `Las personas que compran por recomendación de ${TT('medico', 's', 'un', 'l', 'l')}.`, [
+    `Cada ${TT('paciente', 's', '', 'l', 'l')} puede tener un <b>${TT('medico', 's', '', 'l', 'l')} que lo trata</b>: se asigna solo con su primer pedido o a mano desde su ficha.`,
+    `Desde la ficha ves sus pedidos, unidades e importe, y creas un pedido nuevo con ${TT('medico', 's', 'el', 'l', 'l')} ya puesto.`,
+    `En la ficha de ${TT('medico', 's', 'un', 'l', 'l')} verás sus ${TT('paciente', 'p', '', 'l', 'l')}.`]],
   productos: ['Productos', 'El catálogo que se usa en pedidos, muestras y analítica.', [
     'Escribe el precio sin IVA o con IVA: el otro se calcula con el IVA del producto.',
     'Un producto inactivo no aparece al crear pedidos, pero se conserva en el histórico.']],
   agenda: ['Agenda', 'Tus citas por día, semana o mes.', [
-    '«+ Nueva cita» crea una cita con un médico.',
+    `«+ Nueva cita» crea una cita con ${TT('medico', 's', 'un', 'l', 'l')}.`,
     'En cada cita puedes cambiar la hora, moverla o descartarla.',
-    'Al registrar la visita desde la ficha, la cita pasa a «Visitada».',
+    `Al registrar ${TT('visita', 's', 'el', 'l', 'l')} desde la ficha, la cita pasa a «Visitada».`,
     'En la vista de día verás <b>sugerencias</b>: quién pasa consulta ese día, acciones pendientes, urgentes e interesados.']]
 });
 ANCLAS_AYUDA.push(['#agsug > h2', 'agenda']);
@@ -5200,7 +5300,7 @@ ANCLAS_AYUDA.push(['#agsug > h2', 'agenda']);
    cambios sin guardar y protección de datos
    ============================================================ */
 
-const VE_TODO = () => PERFIL && ['Administrador', 'Dirección', 'Televenta'].includes(PERFIL.rol);
+const VE_TODO = () => puede('ver_todo');
 
 /* ---------------- fechas y horas: todo el campo abre el selector ---------------- */
 
@@ -5273,16 +5373,16 @@ function selectorMedico(el, o) {
     const elegir = m => { valor = m; el.__texto = ''; pinta(); o.alElegir && o.alElegir(m); };
     const listaMedicos = async (titulo, params) => {
       caja.classList.add('buscando');
-      sug.innerHTML = '<div class="gload"><span class="spin"></span>Buscando médicos…</div>'; sug.classList.remove('hide');
+      sug.innerHTML = `<div class="gload"><span class="spin"></span>Buscando ${TT('medico', 'p', '', 'l', 'l')}…</div>`; sug.classList.remove('hide');
       const { data } = await db.rpc('buscar_medicos', Object.assign({ q: null, f_provincia: null, f_municipio: null, f_estado: null,
         f_especialidad: null, f_area: null, f_urgentes: false, f_mios: false, f_sin_visitar: false, orden: 'nombre', lim: 30, desplaz: 0 }, params));
       caja.classList.remove('buscando');
       const f = (data && data.filas) || [];
       sug.innerHTML = `<button type="button" class="gback" data-back>← Volver a los resultados</button>
-        <div class="gsh">${esc(titulo)} · ${num(data ? data.total : 0)} médicos${data && data.total > 30 ? ' (se muestran 30)' : ''}</div>` +
+        <div class="gsh">${esc(titulo)} · ${num(data ? data.total : 0)} ${TT('medico', 'p', '', 'l', 'l')}${data && data.total > 30 ? ' (se muestran 30)' : ''}</div>` +
         (f.map((m, i) => `<button type="button" data-pm="${i}"><span class="gic">${m.urgente ? '❗' : '👤'}</span>
           <span><b>${esc(m.nombre)}</b><span class="sm">${esc([m.especialidad, m.centro_nombre, m.municipio].filter(Boolean).join(' · '))}</span></span></button>`).join('')
-          || '<div class="gload">Sin médicos.</div>');
+          || `<div class="gload">Sin ${TT('medico', 'p', '', 'l', 'l')}.</div>`);
       sug.querySelector('[data-back]').onclick = () => buscarTexto();
       sug.querySelectorAll('[data-pm]').forEach(b => b.onclick = () => elegir(f[+b.dataset.pm]));
     };
@@ -5302,10 +5402,10 @@ function selectorMedico(el, o) {
         if (!mu.length && !ce.length && !me.length) { sug.innerHTML = `<div class="gload">Sin resultados para «${esc(q)}».</div>`; return; }
         sug.innerHTML =
           (mu.length ? '<div class="gsh">Municipios</div>' + mu.map((x, i) => `<button type="button" data-pmu="${i}"><span class="gic">📍</span>
-            <span><b>${esc(x.valor)}</b><span class="sm">${num(x.n)} médicos · ver la lista</span></span></button>`).join('') : '') +
+            <span><b>${esc(x.valor)}</b><span class="sm">${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')} · ver la lista</span></span></button>`).join('') : '') +
           (ce.length ? '<div class="gsh">Centros</div>' + ce.map((x, i) => `<button type="button" data-pce="${i}"><span class="gic">🏥</span>
-            <span><b>${esc(x.valor)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} médicos · ver la lista</span></span></button>`).join('') : '') +
-          (me.length ? '<div class="gsh">Médicos</div>' + me.map((x, i) => `<button type="button" data-pme="${i}"><span class="gic">${x.urgente ? '❗' : '👤'}</span>
+            <span><b>${esc(x.valor)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')} · ver la lista</span></span></button>`).join('') : '') +
+          (me.length ? `<div class="gsh">${TT('medico', 'p', '', 'l', 'C')}</div>` + me.map((x, i) => `<button type="button" data-pme="${i}"><span class="gic">${x.urgente ? '❗' : '👤'}</span>
             <span><b>${esc(x.nombre)}</b><span class="sm">${esc([x.especialidad, x.centro_nombre, x.municipio].filter(Boolean).join(' · '))}</span></span></button>`).join('') : '');
         sug.querySelectorAll('[data-pmu]').forEach(b => b.onclick = () => listaMedicos(mu[+b.dataset.pmu].valor, { f_municipio: mu[+b.dataset.pmu].valor }));
         sug.querySelectorAll('[data-pce]').forEach(b => b.onclick = () => listaMedicos(ce[+b.dataset.pce].valor, { q: ce[+b.dataset.pce].valor }));
@@ -5328,7 +5428,7 @@ const tarjetaPaciente = c => `<div class="selcard"><span class="ic">🧑</span>
       ? `<span class="sm">📦 ${esc([c.direccion, [c.cp, c.municipio].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '))}</span>`
       : '<span class="sm" style="color:var(--warn)">Sin dirección de entrega</span>'}
     <span class="sm">${esc([c.nif ? (c.tipo === 'Empresa' ? 'CIF ' : 'DNI ') + c.nif : 'Sin DNI', c.email, c.telefono || c.movil].filter(Boolean).join(' · '))}</span>
-    ${c.medico ? `<span class="sm">Médico: ${esc(c.medico)}</span>` : ''}</span>
+    ${c.medico ? `<span class="sm">${TT('medico', 's', '', 'l', 'C')}: ${esc(c.medico)}</span>` : ''}</span>
   <button type="button" class="sx" aria-label="Quitar">✕</button></div>`;
 
 function selectorPaciente(el, o) {
@@ -5349,14 +5449,14 @@ function selectorPaciente(el, o) {
       clearTimeout(t);
       if (q.length < 2) { sug.classList.add('hide'); caja.classList.remove('buscando'); return; }
       caja.classList.add('buscando');
-      sug.innerHTML = '<div class="gload"><span class="spin"></span>Buscando pacientes…</div>'; sug.classList.remove('hide');
+      sug.innerHTML = `<div class="gload"><span class="spin"></span>Buscando ${TT('paciente', 'p', '', 'l', 'l')}…</div>`; sug.classList.remove('hide');
       const n = ++pide;
       t = setTimeout(async () => {
         const { data } = await db.rpc('contactos_lista', { q, lim: 8 });
         if (n !== pide) return;
         caja.classList.remove('buscando');
         const l = data || [];
-        sug.innerHTML = '<div class="gsh">Pacientes</div>' + (l.map((x, i) => `<button type="button" data-pc="${i}"><span class="gic">🧑</span>
+        sug.innerHTML = `<div class="gsh">${TT('paciente', 'p', '', 'l', 'C')}</div>` + (l.map((x, i) => `<button type="button" data-pc="${i}"><span class="gic">🧑</span>
           <span><b>${esc(x.nombre)}</b><span class="sm">${esc([x.telefono || x.movil, x.nif, x.municipio, x.medico].filter(Boolean).join(' · '))}</span></span></button>`).join('')
           || `<div class="gload">Sin coincidencias. Créalo con «+ Nuevo».</div>`);
         sug.querySelectorAll('[data-pc]').forEach(b => b.onclick = () => { valor = l[+b.dataset.pc]; pinta(); o.alElegir && o.alElegir(valor); });
@@ -5381,7 +5481,7 @@ async function nuevaCita(medicoId, fecha) {
   $('dbody').innerHTML = `
     <div class="fh"><div><h2>Nueva cita</h2><div class="sm">Se añade a tu agenda</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
-    <label>Médico</label><div id="ncsel"></div>
+    <label>${TT('medico', 's', '', 'l', 'C')}</label><div id="ncsel"></div>
     <div class="g2">
       <div><label for="ncf">Día</label><input id="ncf" type="date" value="${esc(fecha || hoyISO())}"></div>
       <div><label for="nch">Hora</label><input id="nch" type="time"></div>
@@ -5392,7 +5492,7 @@ async function nuevaCita(medicoId, fecha) {
       <button class="btn" id="ncok">Añadir a la agenda</button></div>`;
   selectorMedico($('ncsel'), { valor: elegido, alElegir: m => { elegido = m; } });
   $('ncok').onclick = async ev => {
-    if (!elegido) { toast('Elige un médico', true); return; }
+    if (!elegido) { toast(`Elige ${TT('medico', 's', 'un', 'l', 'l')}`, true); return; }
     const decision = await citaRepetida(elegido.id, $('ncf').value);
     if (!decision) return;
     ev.target.disabled = true;
@@ -5434,9 +5534,9 @@ function validarDoc(v, tipo) {
 function editorContacto(c, alGuardar) {
   c = c || {};
   let tipo = c.tipo || 'Persona';
-  let medico = c.medico_id ? { id: c.medico_id, nombre: c.medico || 'Médico asignado', codigo: c.medico_codigo || '' } : null;
+  let medico = c.medico_id ? { id: c.medico_id, nombre: c.medico || `${TT('medico', 's', '', 'l', 'C', 'asignado')}`, codigo: c.medico_codigo || '' } : null;
   $('dlg2body').innerHTML = `
-    <div class="fh"><div><h2>${c.id ? 'Editar paciente' : 'Nuevo paciente'}</h2>
+    <div class="fh"><div><h2>${c.id ? `Editar ${TT('paciente', 's', '', 'l', 'l')}` : `${TT('paciente', 's', 'nuevo', 'C', 'l')}`}</h2>
       <div class="sm">Datos de entrega y facturación</div></div>
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
     <div class="subnav" style="margin:6px 0 4px"><button type="button" data-ktipo="Persona" aria-pressed="${tipo === 'Persona'}">Persona</button>
@@ -5447,8 +5547,8 @@ function editorContacto(c, alGuardar) {
         <input id="konif" value="${esc(c.nif || '')}" placeholder="${tipo === 'Empresa' ? 'B12345678' : '12345678Z'}" autocapitalize="characters">
         <div class="sm" id="konifm" style="margin-top:4px"></div></div>
     </div>
-    <label>Médico que lo trata</label><div id="kosel"></div>
-    <div class="sm" style="margin-top:4px">Las unidades de sus pedidos se atribuyen a este médico y a su comercial.</div>
+    <label>${TT('medico', 's', '', 'l', 'C')} que lo trata</label><div id="kosel"></div>
+    <div class="sm" style="margin-top:4px">Las unidades de sus pedidos se atribuyen a ${TT('medico', 's', 'este', 'l', 'l')} y a su comercial.</div>
     <div class="g2">
       <div><label for="kodir">Dirección de entrega</label><input id="kodir" value="${esc(c.direccion || '')}"></div>
       <div><label for="kocp">Código postal</label><input id="kocp" value="${esc(c.cp || '')}" inputmode="numeric"></div>
@@ -5468,7 +5568,7 @@ function editorContacto(c, alGuardar) {
     <label for="konota">Nota</label><input id="konota" value="${esc(c.nota || '')}">
     <div class="acts" style="justify-content:flex-end">
       <button class="btn sec" id="kocancel">Cancelar</button>
-      <button class="btn" id="kook">${c.id ? 'Guardar' : 'Crear paciente'}</button></div>`;
+      <button class="btn" id="kook">${c.id ? 'Guardar' : `Crear ${TT('paciente', 's', '', 'l', 'l')}`}</button></div>`;
 
   selectorMedico($('kosel'), { valor: medico, alElegir: m => { medico = m; } });
   const revisaDoc = () => {
@@ -5487,8 +5587,11 @@ function editorContacto(c, alGuardar) {
     if ($('konif').value) revisaDoc();
   });
   $('kocancel').onclick = () => $('dlg2').close();
+  camposInsertar($('dlg2body'), 'cliente', c.id, $('kook') && $('kook').closest('.acts'));
   $('kook').onclick = async ev => {
     if (!$('konom').value.trim()) { toast('Escribe el nombre', true); return; }
+    const cps = camposLeer($('dlg2'));
+    if (cps && cps.falta.length) { toast(`Rellena «${cps.falta[0]}»`, true); return; }
     const doc = revisaDoc();
     if (!doc.ok) { toast(tipo === 'Empresa' ? 'Revisa el CIF' : 'Revisa el DNI o NIE', true); return; }
     ev.target.disabled = true; ev.target.textContent = 'Guardando…';
@@ -5499,9 +5602,10 @@ function editorContacto(c, alGuardar) {
       email: $('komail').value.trim(), empresa: tipo === 'Empresa' ? '' : $('koemp').value.trim(), nota: $('konota').value.trim(),
       medico_id: medico ? medico.id : null
     }});
-    ev.target.disabled = false; ev.target.textContent = c.id ? 'Guardar' : 'Crear paciente';
+    ev.target.disabled = false; ev.target.textContent = c.id ? 'Guardar' : `Crear ${TT('paciente', 's', '', 'l', 'l')}`;
     if (error || (r && r.ok === false)) { toast('No se ha podido guardar', true); return; }
-    $('dlg2').close(); toast(c.id ? 'Paciente guardado' : 'Paciente creado');
+    if (cps && !(await camposGuardar(cps, (r && r.contacto && r.contacto.id) || c.id))) return;
+    $('dlg2').close(); toast(c.id ? `${TT('paciente', 's', '', 'l', 'C', 'guardado')}` : `${TT('paciente', 's', '', 'l', 'C', 'creado')}`);
     const res = Object.assign({}, r.contacto, medico ? { medico: medico.nombre, medico_codigo: medico.codigo } : {});
     if (alGuardar) alGuardar(res);
     if (TAB === 'pacientes') listaPacientes();
@@ -5525,7 +5629,7 @@ let COMS = [];
 async function cargarComerciales() {
   const { data } = await db.from('perfiles').select('id,nombre,rol,activo').order('nombre');
   // Solo quien lleva cartera o agenda comercial (no Dirección, Solo consulta ni médicos)
-  COMS = (data || []).filter(u => u.activo && !['Medico', 'Dirección', 'Solo consulta'].includes(u.rol));
+  COMS = (data || []).filter(u => u.activo && rolPuede(u.rol, 'equipo_comercial'));
   $('fcom').innerHTML = '<option value="">Todos</option><option value="ninguno">Sin comercial</option>' +
     COMS.map(u => `<option value="${u.id}" ${F.com === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('');
 }
@@ -5540,12 +5644,13 @@ function colsConfig() {
   return g.filter(x => x.k !== 'comerciales' || VE_TODO());
 }
 function celda(m, k) {
-  if (k === 'nombre') return `<span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? '<span class="pill p-sr" title="Solo visita presencial: sin informes ni feedback">Sin reporting</span> ' : ''}${esc(m.nombre)}</span>`;
+  if (k === 'nombre') return `<span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? `<span class="pill p-sr" title="Solo ${TT('visita', 's', '', 'l', 'l')} presencial: sin informes ni feedback">Sin reporting</span> ` : ''}${esc(m.nombre)}</span>`;
   if (k === 'dias') return `<span class="dias">${['L', 'M', 'X', 'J', 'V'].map(d =>
     `<span class="${(m.dias || {})[d] ? 'on' : ''}" title="${esc((m.dias || {})[d] || '')}">${d}</span>`).join('')}</span>`;
   if (k === 'estado_comercial') return `<span class="pill p-est">${esc(m.estado_comercial)}</span>`;
   if (k === 'ultima_visita') return `<span class="sm">${m.ultima_visita ? fechaCorta(m.ultima_visita) : '—'}</span>`;
   if (k === 'telefono') return `<span class="sm">${esc(m.telefono || m.consulta_telefono || '')}</span>`;
+  if (k.startsWith('cp:')) { const cl = k.slice(3); return `<span class="sm">${esc(campoTexto((CAMPOS.medico || []).find(x => x.clave === cl), (m.clasificadores || {})[cl]))}</span>`; }
   if (k === 'comerciales') {
     const c = m.comerciales || [];
     return `<span class="comchips">${c.length ? c.map(x => `<span>${esc(String(x.nombre).split(' ')[0])}</span>`).join('') : '<span class="sin">Sin asignar</span>'}</span>`;
@@ -5568,7 +5673,7 @@ function textoFiltro(f) {
   if (f.muni) p.push(f.muni); else if (f.prov) p.push(f.prov);
   if (f.com) p.push(f.com === 'ninguno' ? 'sin comercial' : 'de ' + ((COMS.find(u => u.id === f.com) || {}).nombre || 'un comercial'));
   if (f.q) p.push('“' + f.q + '”');
-  return p.length ? p.join(' · ') : 'Todos los médicos';
+  return p.length ? p.join(' · ') : `Todos ${TT('medico', 'p', 'el', 'l', 'l')}`;
 }
 function aplicarFiltroGuardado(f) {
   Object.assign(F, { q: '', prov: '', muni: '', esp: '', est: '', com: '', urg: false, orden: 'nombre', pagina: 0 });
@@ -5582,7 +5687,7 @@ function aplicarFiltroGuardado(f) {
 
 abrirEditor = (orig => async function (id, tipo) {
   await orig(id, tipo);
-  if (!id || PERFIL.rol !== 'Administrador' || !$('eguardar')) return;
+  if (!id || !puede('administrar') || !$('eguardar')) return;
   const acts = $('eguardar').closest('.acts');
   acts.insertAdjacentHTML('beforebegin', `<label for="ecom">Comercial asignado</label>
     <select id="ecom"><option>Cargando…</option></select>
@@ -5590,7 +5695,7 @@ abrirEditor = (orig => async function (id, tipo) {
   if (!COMS.length) await cargarComerciales();
   const { data: act } = await RPC_ORIG('comercial_de_medico', { p_medico: id });
   const antes = act ? act.id : '';
-  $('ecom').innerHTML = '<option value="">Sin comercial</option>' + COMS.filter(u => u.rol === 'Comercial' || u.id === antes).map(u =>
+  $('ecom').innerHTML = '<option value="">Sin comercial</option>' + COMS.filter(u => rolPuede(u.rol, 'cartera') || u.id === antes).map(u =>
     `<option value="${u.id}" ${u.id === antes ? 'selected' : ''}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join('');
   $('eguardar').addEventListener('click', async () => {
     const ahora = $('ecom') ? $('ecom').value : antes;
@@ -5610,7 +5715,7 @@ async function asignarCartera(id) {
   let total = 0, pagina = 0;
   $('dbody').innerHTML = `<div data-nosucio>
     <div class="fh"><div><h2>Cartera de ${esc(u.nombre)}</h2>
-      <div class="sm">Ahora tiene ${num(u.medicos)} médicos asignados</div></div>
+      <div class="sm">Ahora tiene ${num(u.medicos)} ${TT('medico', 'p', '', 'l', 'l', 'asignado')}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <p class="sm">Elige los filtros, revisa la lista y desmarca los que no quieras.</p>
     <div class="g2">
@@ -5634,7 +5739,7 @@ async function asignarCartera(id) {
     if ($('atodos')) $('atodos').onclick = () => { fuera.clear(); pinta(); };
   };
   const pinta = async () => {
-    cargando($('alista'), 'Buscando médicos…');
+    cargando($('alista'), `Buscando ${TT('medico', 'p', '', 'l', 'l')}…`);
     const { data } = await db.rpc('buscar_medicos', Object.assign({ q: null, f_area: null, f_mios: false, f_sin_visitar: false,
       orden: 'nombre', lim: 50, desplaz: pagina * 50 }, filtros()));
     total = data ? data.total : 0;
@@ -5643,7 +5748,7 @@ async function asignarCartera(id) {
         <input type="checkbox" data-am="${m.id}" ${fuera.has(m.id) ? '' : 'checked'}>
         <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${esc([m.especialidad, m.centro_nombre, m.municipio].filter(Boolean).join(' · '))}</span></span>
         <span class="comchips">${(m.comerciales || []).map(x => `<span>${esc(String(x.nombre).split(' ')[0])}</span>`).join('') || '<span class="sin">Sin asignar</span>'}</span>
-      </label>`).join('') || '<div class="vacio">Ningún médico con estos filtros.</div>'}</div><div id="apag"></div>`;
+      </label>`).join('') || `<div class="vacio">${TT('medico', 's', 'ningun', 'C', 'l')} con estos filtros.</div>`}</div><div id="apag"></div>`;
     $('alista').querySelectorAll('[data-am]').forEach(c => c.onchange = () => { if (c.checked) fuera.delete(c.dataset.am); else fuera.add(c.dataset.am); cuenta(); });
     $('apag').innerHTML = total > 50 ? pagHTML(total, pagina, 50).replace(/<span class="ptam">[\s\S]*?<\/span><\/div>$/, '</div>') : '';
     $('apag').querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { pagina = +b.dataset.pg; pinta(); });
@@ -5653,14 +5758,14 @@ async function asignarCartera(id) {
 
   const aplicar = async (quitar, ev) => {
     const ids = ((await db.rpc('ids_filtrados', filtros())).data || []).filter(x => !fuera.has(x));
-    if (!ids.length) { toast('No hay ningún médico seleccionado', true); return; }
-    if (!await preguntar(`Se van a ${quitar ? 'quitar' : 'asignar'} ${num(ids.length)} médicos ${quitar ? 'de' : 'a'} ${u.nombre}.`,
+    if (!ids.length) { toast(`No hay ${TT('medico', 's', 'ningun', 'l', 'l', 'seleccionado')}`, true); return; }
+    if (!await preguntar(`Se van a ${quitar ? 'quitar' : 'asignar'} ${num(ids.length)} ${TT('medico', 'p', '', 'l', 'l')} ${quitar ? 'de' : 'a'} ${u.nombre}.`,
       { titulo: quitar ? 'Quitar cartera' : 'Asignar cartera', ok: quitar ? 'Quitar' : 'Asignar', peligro: quitar })) return;
     ev.target.disabled = true;
     const { data: r, error } = await db.rpc('asignar_cartera', { p: { usuario_id: id, medicos: ids, quitar } });
     ev.target.disabled = false;
     if (error || (r && r.ok === false)) { toast('No se ha podido: ' + ((error && error.message) || 'sin permiso'), true); return; }
-    toast(`${num(r.filas)} médicos ${quitar ? 'retirados' : 'asignados'}${r.movidos ? ` · ${num(r.movidos)} salieron de otra cartera (cartera exclusiva)` : ''}`);
+    toast(`${num(r.filas)} ${TT('medico', 'p', '', 'l', 'l')} ${quitar ? 'retirados' : 'asignados'}${r.movidos ? ` · ${num(r.movidos)} salieron de otra cartera (cartera exclusiva)` : ''}`);
     $('dlg').close(); cargarAdmin();
   };
   $('aasignar').onclick = ev => aplicar(false, ev);
@@ -5706,39 +5811,39 @@ $('dlg').addEventListener('close', () => {
 /* ---------------- ayudas actualizadas ---------------- */
 
 Object.assign(AYUDA, {
-  directorio: ['Directorio', 'Todos los médicos que puedes ver.', [
+  directorio: ['Directorio', `Todos ${TT('medico', 'p', 'el', 'l', 'l')} que puedes ver.`, [
     'El buscador de arriba filtra por nombre, centro o municipio.',
-    'El municipio y la provincia cuentan todas las consultas del médico, no solo la principal.',
-    'Administración y televenta ven los comerciales de cada médico y pueden filtrar por comercial.',
+    `El municipio y la provincia cuentan todas las consultas ${TT('medico', 's', 'del', 'l', 'l')}, no solo la principal.`,
+    `Administración y televenta ven los comerciales de cada ${TT('medico', 's', '', 'l', 'l')} y pueden filtrar por comercial.`,
     '«⋮» abre los filtros y las columnas.',
     '«★ Guardar filtro» convierte los filtros actuales en un indicador de Inicio.',
     '«Cerca de mí» usa la ubicación del dispositivo.']],
-  seguimiento: ['Seguimiento', 'Cómo avanza cada médico.', [
+  seguimiento: ['Seguimiento', `Cómo avanza cada ${TT('medico', 's', '', 'l', 'l')}.`, [
     'Los indicadores de arriba muestran el embudo por estado comercial y la calidad de los datos.',
     '«Mostrar» filtra por visitados, sin visitar, con próxima acción o atrasados.',
     '«Hecha» cierra la próxima acción; «Aplazar» le pone otra fecha.']],
   analitica: ['Analítica', 'Unidades o importe agrupados como elijas.', [
-    'Elige la dimensión: médico, comercial, producto, municipio, mes o canal.',
+    `Elige la dimensión: ${TT('medico', 's', '', 'l', 'l')}, comercial, producto, municipio, mes o canal.`,
     'La tabla por meses sirve para ver tendencias.',
     'Los datos no se pueden descargar: se consultan solo dentro de la plataforma.']],
   rutas: ['Rutas', 'Crea rutas y conviértelas en el plan del día.', [
-    '<b>Lista fija</b>: tú eliges los médicos. <b>Por criterios</b>: se rellena sola con los filtros.',
+    `<b>Lista fija</b>: tú eliges ${TT('medico', 'p', 'el', 'l', 'l')}. <b>Por criterios</b>: se rellena sola con los filtros.`,
     'El plan ordena las paradas por cercanía y calcula las horas con tu horario. Si ya ha pasado tu hora de salida, empieza a contar desde ahora.',
-    'Al pulsar <b>Empezar ruta</b> verás la lista de paradas con el botón <b>Registrar visita</b> en cada médico. «Cómo llegar» abre el navegador solo cuando tú lo pides.',
+    `Al pulsar <b>Empezar ruta</b> verás la lista de paradas con el botón <b>Registrar ${TT('visita', 's', '', 'l', 'l')}</b> en cada ${TT('medico', 's', '', 'l', 'l')}. «Cómo llegar» abre el navegador solo cuando tú lo pides.`,
     '<b>Pausar</b> guarda los pendientes para seguir otro día; al reanudar se recalculan orden y horas.',
-    'Solo entran médicos con ubicación. Completar la dirección y los días de consulta mejora mucho las rutas.']],
-  pacientes: ['Pacientes', 'Las personas que compran por recomendación de un médico.', [
-    'Cada paciente tiene un <b>médico que lo trata</b>: se elige al darlo de alta o se asigna solo con su primer pedido.',
+    `Solo entran ${TT('medico', 'p', '', 'l', 'l')} con ubicación. Completar la dirección y los días de consulta mejora mucho las rutas.`]],
+  pacientes: [`${TT('paciente', 'p', '', 'l', 'C')}`, `Las personas que compran por recomendación de ${TT('medico', 's', 'un', 'l', 'l')}.`, [
+    `Cada ${TT('paciente', 's', '', 'l', 'l')} tiene un <b>${TT('medico', 's', '', 'l', 'l')} que lo trata</b>: se elige al darlo de alta o se asigna solo con su primer pedido.`,
     'Para una persona se pide el DNI o NIE; para una empresa, el CIF. La app comprueba que la letra o el control sean correctos.',
-    'Desde la ficha ves sus pedidos y creas uno nuevo con el médico ya puesto.']],
+    `Desde la ficha ves sus pedidos y creas uno nuevo con ${TT('medico', 's', 'el', 'l', 'l')} ya puesto.`]],
   productos: ['Productos', 'El catálogo que se usa en pedidos, muestras y analítica.', [
     'Escribe el precio sin IVA o con IVA: el otro se calcula con el IVA del producto.',
     'Un producto inactivo no aparece al crear pedidos, pero se conserva en el histórico.']],
   ventas: ['Ventas', 'Pedidos y unidades atribuidas.', [
     'Los pedidos se guardan como <b>borrador</b> (editable y se puede eliminar; no cuenta en métricas) o se <b>validan</b> (cuenta en métricas y comisiones; solo se puede anular).',
     'Importes sin IVA; el IVA de cada producto se suma aparte.',
-    'La venta a paciente se atribuye al médico indicado y al comercial que lo tenía asignado en ese momento.',
-    'La venta a centro con descuento no cuenta como prescripción de ningún médico.']]
+    `La venta a ${TT('paciente', 's', '', 'l', 'l')} se atribuye ${TT('medico', 's', 'al', 'l', 'l', 'indicado')} y al comercial que lo tenía asignado en ese momento.`,
+    `La venta a centro con descuento no cuenta como prescripción de ${TT('medico', 's', 'ningun', 'l', 'l')}.`]]
 });
 ANCLAS_AYUDA.push(['#v-pacientes .saludo h1', 'pacientes'], ['#v-productos .saludo h1', 'productos'], ['#renc .card > h2', 'rutas']);
 
@@ -5812,7 +5917,7 @@ const siguienteLaborable = () => {
 
 AYUDA.rutas[2].splice(1, 1,
   'El plan ordena las paradas por cercanía y calcula las horas con tu horario. Si ya ha pasado tu hora de salida, empieza a contar desde ahora; si ya ha pasado tu hora tope, te propone planificar para mañana.',
-  '<b>⚙ Horario de rutas</b> (arriba a la derecha) cambia la hora de salida, la hora tope y los minutos por médico y por parada.');
+  `<b>⚙ Horario de rutas</b> (arriba a la derecha) cambia la hora de salida, la hora tope y los minutos por ${TT('medico', 's', '', 'l', 'l')} y por parada.`);
 AYUDA.productos[2].push('<b>⚙ Envío</b> fija el importe del envío que se propone en los pedidos y si se marca por defecto.');
 AYUDA.ventas[2].push('Si marcas <b>Incluir envío</b>, el importe (con IVA) se suma al total con su propio IVA. No lleva descuento ni cuenta como unidades.');
 
@@ -5957,12 +6062,12 @@ async function cargarVentasBase() {
         <div class="filtros">
           <div id="pper"></div>
           <div><label for="pcanal">Canal</label><select id="pcanal">
-            <option value="">Todos</option><option value="paciente">Recomendación a paciente</option>
+            <option value="">Todos</option><option value="paciente">Recomendación a ${TT('paciente', 's', '', 'l', 'l')}</option>
             <option value="centro">Venta a centro</option></select></div>
           <div><label for="pestado">Estado</label><select id="pestado">
             <option value="">Todos</option><option value="Confirmado">Validados</option>
             <option value="Borrador">Borradores</option><option value="Anulado">Anulados</option></select></div>
-          <div><label for="pq">Buscar</label><input id="pq" type="search" placeholder="Médico, paciente o nº de pedido"></div>
+          <div><label for="pq">Buscar</label><input id="pq" type="search" placeholder="Médico, ${TT('paciente', 's', '', 'l', 'l')} o nº de pedido"></div>
         </div>
         <div class="kpis vtot" id="ptotales"></div>
         <div id="pedlista"></div>
@@ -5985,12 +6090,12 @@ async function cargarAnalitica() {
   if (!COMS.length && VE_TODO()) await cargarComerciales();
   await cargarProductos();
   $('v-analitica').innerHTML = `
-    <div class="saludo"><div><h1>Analítica</h1><div class="fecha">Unidades e importes por médico, comercial, producto o zona</div></div></div>
+    <div class="saludo"><div><h1>Analítica</h1><div class="fecha">Unidades e importes por ${TT('medico', 's', '', 'l', 'l')}, comercial, producto o zona</div></div></div>
     <div class="panel">
       <div class="filtros">
         <div id="aper"></div>
         <div><label for="adim">Ver por</label><select id="adim">
-          <option value="medico">Médico</option><option value="comercial">Comercial</option>
+          <option value="medico">${TT('medico', 's', '', 'l', 'C')}</option><option value="comercial">Comercial</option>
           <option value="producto">Producto</option><option value="municipio">Municipio</option>
           <option value="mes">Mes</option><option value="canal">Canal</option></select></div>
         <div><label for="amedida">Ordenar por</label><select id="amedida">
@@ -6000,11 +6105,11 @@ async function cargarAnalitica() {
           <option value="centro">Venta a centro</option></select></div>
         <div><label for="aprod">Producto</label><select id="aprod"><option value="">Todos</option>
           ${PRODUCTOS.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select></div>
-        <div><label for="arep">Reporting</label><select id="arep"><option value="">Todos los médicos</option>
+        <div><label for="arep">Reporting</label><select id="arep"><option value="">Todos ${TT('medico', 'p', 'el', 'l', 'l')}</option>
           <option value="con">Con reporting</option><option value="sin">Sin reporting</option></select></div>
         ${VE_TODO() ? `<div><label for="acom">Comercial</label><select id="acom"><option value="">Todos</option>
           ${COMS.map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div>` : ''}
-        <div style="grid-column:span 2"><label>Médico</label><div id="amed"></div></div>
+        <div style="grid-column:span 2"><label>${TT('medico', 's', '', 'l', 'C')}</label><div id="amed"></div></div>
         <input type="hidden" id="adesde"><input type="hidden" id="ahasta">
       </div>
       <div class="kpis vtot" id="atot"></div>
@@ -6018,7 +6123,7 @@ async function cargarAnalitica() {
   const sinc = () => { const r = $('aper').__rango(); $('adesde').value = r.desde || ''; $('ahasta').value = r.hasta || ''; };
   montarPeriodo($('aper'), { id: 'analitica', valor: 'anio', alCambiar: () => { sinc(); refrescarAnalitica(); } });
   sinc();
-  selectorMedico($('amed'), { valor: AN_MED, placeholder: 'Todos · busca un médico para ver sus ventas', alElegir: m => { AN_MED = m; refrescarAnalitica(); } });
+  selectorMedico($('amed'), { valor: AN_MED, placeholder: `Todos · busca ${TT('medico', 's', 'un', 'l', 'l')} para ver sus ventas`, alElegir: m => { AN_MED = m; refrescarAnalitica(); } });
   ['adim', 'acanal', 'amedida', 'aprod', 'acom', 'arep'].forEach(id => { if ($(id)) $(id).onchange = refrescarAnalitica; });
   $('v-analitica').querySelectorAll('[data-avista]').forEach(b => b.onclick = () => {
     const tabla = b.dataset.avista === 'tabla';
@@ -6051,7 +6156,7 @@ async function pintarAnalitica() {
     <div class="kpi"><b>${num(t.unidades)}</b><span>Unidades${quien ? ' · ' + esc(quien) : ''}</span></div>
     <div class="kpi ok"><b>${eurI(t.importe)}</b><span>Importe sin IVA</span></div>
     <div class="kpi"><b>${num(t.pedidos)}</b><span>Pedidos</span></div>
-    <div class="kpi"><b>${num(t.medicos)}</b><span>Médicos que prescriben</span></div>`;
+    <div class="kpi"><b>${num(t.medicos)}</b><span>${TT('medico', 'p', '', 'l', 'C')} que prescriben</span></div>`;
   const pp = data.por_producto || [];
   $('aprods').innerHTML = pp.length > 1 || (pp.length === 1 && dim !== 'producto') ? `<div class="dgrid-wrap"><div class="dgrid aprod">
     <div class="dh"><span>Por producto</span><span class="num">Unidades</span><span class="num">% uds.</span><span class="num">Importe</span></div>
@@ -6085,8 +6190,8 @@ async function pintarAnalitica() {
 
 async function pintarAuditoria() {
   cargando($('admcuerpo'), 'Cargando la auditoría…');
-  const nombreEnt = { medicos: 'Médico', consultas: 'Consulta', visitas: 'Visita', agenda: 'Cita', rutas: 'Ruta',
-    asignaciones: 'Cartera', pedidos: 'Pedido', perfiles: 'Usuario', productos: 'Producto', contactos: 'Paciente' };
+  const nombreEnt = { medicos: `${TT('medico', 's', '', 'l', 'C')}`, consultas: 'Consulta', visitas: `${TT('visita', 's', '', 'l', 'C')}`, agenda: 'Cita', rutas: 'Ruta',
+    asignaciones: 'Cartera', pedidos: 'Pedido', perfiles: 'Usuario', productos: 'Producto', contactos: `${TT('paciente', 's', '', 'l', 'C')}` };
   const { data: us } = await db.rpc('usuarios_lista');
   const usuarios = (us || []).slice().sort((x, y) => String(x.nombre).localeCompare(String(y.nombre), 'es'));
   ($('admcuerpo') || document.createElement('div')).innerHTML = `<h2>Auditoría<span class="n" id="audn">…</span></h2>
@@ -6122,7 +6227,7 @@ async function pintarAuditoria() {
 function abrirKpis() {
   let D = kpiConfig().slice();
   KPI_CAT.forEach(k => { if (!D.some(x => x.id === k.id)) D.push({ id: k.id, on: false, t: '' }); });
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   const pinta = () => {
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>Indicadores de Inicio</h2>
@@ -6174,8 +6279,8 @@ function abrirKpis() {
 
 Object.assign(AYUDA, {
   analitica: ['Analítica', 'Unidades e importes de los pedidos validados.', [
-    'Elige el <b>periodo</b> y la dimensión: médico, comercial, producto, municipio, mes o canal.',
-    'Filtra por un <b>médico</b>, un <b>comercial</b> o un <b>producto</b> para ver sus totales y su reparto por producto.',
+    `Elige el <b>periodo</b> y la dimensión: ${TT('medico', 's', '', 'l', 'l')}, comercial, producto, municipio, mes o canal.`,
+    `Filtra por un <b>${TT('medico', 's', '', 'l', 'l')}</b>, un <b>comercial</b> o un <b>producto</b> para ver sus totales y su reparto por producto.`,
     'El importe es sin IVA y con el descuento de cada línea.',
     'Los datos no se pueden descargar: se consultan solo dentro de la plataforma.']]
 });
@@ -6243,7 +6348,7 @@ async function pintarRutaBarra() {
 
 const minHora = h => h ? (+String(h).slice(0, 2) * 60 + +String(h).slice(3, 5)) : null;
 const xyCita = c => c.lat != null && c.lon != null ? [+c.lat, +c.lon] : null;
-const salidaUsuario = () => prefsActivas().salida || { nombre: 'la primera visita', lat: null, lon: null, falta: true };
+const salidaUsuario = () => prefsActivas().salida || { nombre: `la ${TT('visita', 's', 'primer', 'l', 'l')}`, lat: null, lon: null, falta: true };
 
 /** Calcula la hora estimada de cada cita abierta siguiendo el orden actual. */
 
@@ -6304,7 +6409,7 @@ async function pintarTuDia() {
         ${pasado && abiertas ? '<button class="btn" id="tdrepro">Reprogramar pendientes</button>' : ''}
       </div>
     </div>
-    ${esHoy && j ? `<div class="tdjornada">● Jornada en curso desde hace ${durTxt(Date.now() - j.inicio)}. Registra cada visita al terminarla.</div>` : ''}
+    ${esHoy && j ? `<div class="tdjornada">● Jornada en curso desde hace ${durTxt(Date.now() - j.inicio)}. Registra cada ${TT('visita', 's', '', 'l', 'l')} al terminarla.</div>` : ''}
     ${mias.length ? `<div class="lista tdlista">${mias.map((c, i) => {
       const abierta = CITA_ABIERTA.includes(c.estado);
       const hora = c.hora ? esc(String(c.hora).slice(0, 5)) : (abierta && est[c.id] != null && !pasado ? '~' + hm(est[c.id]) : '·');
@@ -6322,7 +6427,7 @@ async function pintarTuDia() {
             <span class="tdord">
               <button class="kmv" data-td="sube|${c.id}" aria-label="Subir" ${idxAb <= 0 ? 'disabled' : ''}>${ICO.arriba}</button>
               <button class="kmv" data-td="baja|${c.id}" aria-label="Bajar" ${idxAb >= abiertas - 1 ? 'disabled' : ''}>${ICO.abajo}</button></span>` : ''}
-          ${abierta ? `<button class="btn tdreg" data-td="visita|${c.id}" aria-label="Registrar visita" title="Registrar visita"><span class="tdreg-t">Registrar visita</span><span class="tdreg-i">+</span></button>` : ''}
+          ${abierta ? `<button class="btn tdreg" data-td="visita|${c.id}" aria-label="Registrar ${TT('visita', 's', '', 'l', 'l')}" title="Registrar ${TT('visita', 's', '', 'l', 'l')}"><span class="tdreg-t">Registrar ${TT('visita', 's', '', 'l', 'l')}</span><span class="tdreg-i">+</span></button>` : ''}
           ${c.estado === 'No estaba' && !pasado ? `<button class="btn sec" data-td="nueva|${c.id}">Nueva cita</button>` : ''}
           <button class="btn sec tdmas" data-td="mas|${c.id}" aria-label="Más acciones">⋯</button>
         </span></div>`;
@@ -6401,7 +6506,7 @@ async function accionCita(k, c) {
     toast('Aplazada al ' + fechaCorta(f)); refrescar(); return;
   }
   if (k === 'noestaba') {
-    const neg = (CAT.RESULTADO || []).filter(x => x.extra === 'neg');
+    const neg = (CAT.resultado_visita || []).filter(x => x.extra === 'neg');
     if (!neg.length) { toast('Falta un resultado negativo en Configuración → Clasificadores', true); return; }
     let res = neg[0].valor;
     if (neg.length > 1) {
@@ -6514,7 +6619,7 @@ async function pintarRutaEnCurso() {
   if (!$('renc')) $('v-rutas').querySelector('.saludo').insertAdjacentHTML('afterend', '<div id="renc"></div>');
   const j = jornadaActiva();
   $('renc').innerHTML = j ? `<div class="card renc"><h2>Jornada en curso</h2>
-    <p class="sm">Empezaste hace ${durTxt(Date.now() - j.inicio)}. El orden, las horas y el registro de visitas están en tu agenda de hoy.</p>
+    <p class="sm">Empezaste hace ${durTxt(Date.now() - j.inicio)}. El orden, las horas y el registro de ${TT('visita', 'p', '', 'l', 'l')} están en tu agenda de hoy.</p>
     <div class="acts" style="padding:0 16px 16px"><button class="btn" id="rencver">Ver mi día</button>
       <button class="btn sec dang" id="rencfin">Terminar jornada</button></div></div>` : '';
   if (j) { $('rencver').onclick = () => { AG_MODO = 'dia'; AG_FECHA = hoyISO(); ir('agenda'); }; $('rencfin').onclick = terminarJornada; }
@@ -6526,17 +6631,17 @@ Object.assign(AYUDA, {
   agenda: ['Agenda y «Tu día»', 'Tus citas por día, semana o mes. La vista de día es tu ruta.', [
     'Las citas se ordenan como vas a visitarlas. <b>Ordenar por cercanía</b> calcula el recorrido más corto; las citas con hora fija se respetan. Las flechas cambian el orden a mano.',
     'La hora con «~» es una estimación según el orden, tu horario y los desplazamientos. Una hora sin «~» es una hora fijada.',
-    '<b>Empezar jornada</b> activa la barra verde. Registra cada visita al terminarla: la cita pasa a <b>Visitada</b>.',
+    `<b>Empezar jornada</b> activa la barra verde. Registra cada ${TT('visita', 's', '', 'l', 'l')} al terminarla: la cita pasa a <b>Visitada</b>.`,
     'Estados: <b>Planificada</b> y <b>Confirmada</b> (abiertas); <b>Visitada</b>, <b>No estaba</b>, <b>Aplazada</b> y <b>Descartada</b> (cerradas).',
     '<b>No estaba</b> lo anota en su historial y te propone el próximo día que pasa consulta.',
     '<b>Aplazar</b> deja la cita como aplazada y crea la nueva, así se ve el cumplimiento real.',
     'Las citas abiertas de días anteriores aparecen abajo para moverlas a hoy.']],
   rutas: ['Rutas', 'Plantillas para llenar tu agenda.', [
-    '<b>Lista fija</b>: tú eliges los médicos. <b>Por criterios</b>: se rellena sola con los filtros.',
+    `<b>Lista fija</b>: tú eliges ${TT('medico', 'p', 'el', 'l', 'l')}. <b>Por criterios</b>: se rellena sola con los filtros.`,
     'Al planificar ves el orden y las horas estimadas. <b>Guardar en mi agenda</b> crea las citas de ese día; <b>Pasar a mi agenda y empezar</b> además inicia la jornada.',
     'Durante la jornada todo se hace desde <b>Agenda → Tu día</b>.',
-    '<b>⚙ Horario de rutas</b> cambia la salida, la hora tope y los minutos por médico y por parada.',
-    'Solo entran médicos con ubicación. Completar la dirección y los días de consulta mejora mucho las rutas.']]
+    `<b>⚙ Horario de rutas</b> cambia la salida, la hora tope y los minutos por ${TT('medico', 's', '', 'l', 'l')} y por parada.`,
+    `Solo entran ${TT('medico', 'p', '', 'l', 'l')} con ubicación. Completar la dirección y los días de consulta mejora mucho las rutas.`]]
 });
 
 
@@ -6561,7 +6666,7 @@ function pintarFranjaPruebas() {
     f.innerHTML = '<b>ENTORNO DE PRUEBAS SIN CONFIGURAR</b> · Falta pegar la Project URL y la clave anon de pruebas en config.js';
     return;
   }
-  const admin = PERFIL && PERFIL.rol === 'Administrador';
+  const admin = PERFIL && puede('administrar');
   f.innerHTML = `<span><b>ENTORNO DE PRUEBAS</b> · Nada de lo que hagas aquí afecta a los datos reales
       <button class="ai" data-ayuda="pruebas" aria-label="Qué es el entorno de pruebas">i</button>
       <span class="prpunto" id="prpunto"></span></span>
@@ -6577,7 +6682,7 @@ function pintarFranjaPruebas() {
   });
   if (!admin) return;
   $('prreset').onclick = async () => {
-    const txt = await pedirTexto('Se borrará todo lo que se haya creado o cambiado en pruebas (visitas, citas, pedidos, pacientes, cambios en fichas…) y los datos quedarán exactamente como se copiaron de producción.\n\nNo afecta a producción. Escribe VOLVER para confirmar.', '',
+    const txt = await pedirTexto(`Se borrará todo lo que se haya creado o cambiado en pruebas (${TT('visita', 'p', '', 'l', 'l')}, citas, pedidos, ${TT('paciente', 'p', '', 'l', 'l')}, cambios en fichas…) y los datos quedarán exactamente como se copiaron de producción.\n\nNo afecta a producción. Escribe VOLVER para confirmar.`, '',
       { titulo: '¿Volver a los datos de partida?', ok: 'Volver a los datos de partida' });
     if (txt === null) return;
     if (txt.trim().toUpperCase() !== 'VOLVER') { toast('No se ha hecho nada: no coincide la palabra', true); return; }
@@ -6593,7 +6698,7 @@ function pintarFranjaPruebas() {
 }
 
 AYUDA.pruebas = ['Entorno de pruebas', 'Una copia completa de la plataforma con su propia base de datos, para probar sin miedo.', [
-  'Todo lo que hagas aquí (visitas, citas, pedidos, cambios en fichas…) se queda aquí: <b>producción no se toca</b>.',
+  `Todo lo que hagas aquí (${TT('visita', 'p', '', 'l', 'l')}, citas, pedidos, cambios en fichas…) se queda aquí: <b>producción no se toca</b>.`,
   'Los <b>datos de partida</b> son una copia de producción. Son fijos: desde la app no se pueden cambiar, así que siempre se puede volver a ellos.',
   '<b>↺ Volver a los datos de partida</b> deshace todo lo hecho en pruebas y deja los datos exactamente como se copiaron. Úsalo al terminar una tanda de pruebas.',
   'Los usuarios son los mismos que en producción, con la contraseña común de pruebas.',
@@ -6731,16 +6836,16 @@ async function construirPlan(conXY, rutaId, btn, opts) {
   // Todos los médicos de la ruta ya tienen cita: se dice así y se ofrece ir a la agenda
   if (!meds.length && citados.length) {
     const op = await elegirOpcion('Ya están todos citados',
-      `${citados.length === 1 ? 'El médico de esta ruta ya tiene' : `Los ${citados.length} médicos de esta ruta ya tienen`} una cita planificada en tu agenda.`,
+      `${citados.length === 1 ? `${TT('medico', 's', 'el', 'C', 'l')} de esta ruta ya tiene` : `Los ${citados.length} ${TT('medico', 'p', '', 'l', 'l')} de esta ruta ya tienen`} una cita planificada en tu agenda.`,
       [{ k: 'no', t: 'Cerrar', cls: 'sec' }, { k: 'agenda', t: 'Ver mi agenda' }]);
     if (op === 'agenda') { AG_MODO = 'semana'; AG_FECHA = citados.map(x => x.fecha).sort()[0]; ir('agenda'); }
     return;
   }
   if (!seq.length) {
     const noDia = fuera.filter(f => f.motivo === 'no pasa consulta este día').length;
-    const op = await elegirOpcion('No cabe ninguna visita',
-      (noDia === fuera.length ? `Ninguno de estos ${fuera.length} médicos pasa consulta el ${fechaLarga(new Date(fecha + 'T00:00:00'))}.`
-        : `Con tu horario (${cfg.salida}–${cfg.tope}) y las horas de consulta no da tiempo a ninguna visita.`)
+    const op = await elegirOpcion(`No cabe ${TT('visita', 's', 'ningun', 'l', 'l')}`,
+      (noDia === fuera.length ? `Ninguno de estos ${fuera.length} ${TT('medico', 'p', '', 'l', 'l')} pasa consulta el ${fechaLarga(new Date(fecha + 'T00:00:00'))}.`
+        : `Con tu horario (${cfg.salida}–${cfg.tope}) y las horas de consulta no da tiempo a ${TT('visita', 's', 'ningun', 'l', 'l')}.`)
         + (citados.length ? `\n\nAdemás, ${citados.length} ${citados.length === 1 ? 'ya tiene' : 'ya tienen'} una cita planificada y no se proponen.` : ''),
       [{ k: 'no', t: 'Cancelar', cls: 'sec' }, { k: 'horario', t: '⚙ Cambiar horario', cls: 'sec' }].concat(opts.manana ? [] : [{ k: 'manana', t: 'Probar para mañana' }]));
     if (op === 'horario') abrirHorarioPlan();
@@ -6825,7 +6930,7 @@ async function reprogramarCitas(citas, titulo, texto) {
     $('dbody').innerHTML = `
       <div class="fh"><div><h2>${esc(titulo)}</h2><div class="sm">${esc(texto)}</div></div>
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
-      <p class="sm">Te propongo el próximo día que cada médico pasa consulta. Cambia la fecha si quieres o desmarca los que no quieras mover.</p>
+      <p class="sm">Te propongo el próximo día que cada ${TT('medico', 's', '', 'l', 'l')} pasa consulta. Cambia la fecha si quieres o desmarca los que no quieras mover.</p>
       <div class="lista reprog" data-nosucio>${filas.map((f, i) => `<div class="item" style="cursor:default">
         <input type="checkbox" data-rpi="${i}" checked aria-label="Mover">
         <span class="tx"><b>${esc(f.c.nombre)}</b>
@@ -6881,12 +6986,12 @@ async function terminarJornada() {
 /* ---------------- ayudas ---------------- */
 
 AYUDA.agenda[2].splice(1, 1,
-  'La hora con «~» es una estimación según el orden, tu horario, los desplazamientos y el <b>horario de consulta</b> de cada médico: si llegas antes de que abra, cuenta la espera. Una hora sin «~» es una hora fijada.',
-  'Si una cita queda fuera del horario de consulta del médico, se marca en naranja. <b>Ordenar por cercanía</b> tiene en cuenta esos horarios.');
-AYUDA.agenda[2].push('Al <b>terminar la jornada</b>, lo no visitado se puede mover de golpe al próximo día que cada médico pasa consulta. Lo mismo con los pendientes de días anteriores.',
-  'La vista de <b>semana</b> muestra los siete días en cuadrícula: pulsa un día para verlo, un médico para abrir su ficha o «+» para añadir una cita.');
+  `La hora con «~» es una estimación según el orden, tu horario, los desplazamientos y el <b>horario de consulta</b> de cada ${TT('medico', 's', '', 'l', 'l')}: si llegas antes de que abra, cuenta la espera. Una hora sin «~» es una hora fijada.`,
+  `Si una cita queda fuera del horario de consulta ${TT('medico', 's', 'del', 'l', 'l')}, se marca en naranja. <b>Ordenar por cercanía</b> tiene en cuenta esos horarios.`);
+AYUDA.agenda[2].push(`Al <b>terminar la jornada</b>, lo no visitado se puede mover de golpe al próximo día que cada ${TT('medico', 's', '', 'l', 'l')} pasa consulta. Lo mismo con los pendientes de días anteriores.`,
+  `La vista de <b>semana</b> muestra los siete días en cuadrícula: pulsa un día para verlo, ${TT('medico', 's', 'un', 'l', 'l')} para abrir su ficha o «+» para añadir una cita.`);
 AYUDA.rutas[2].splice(1, 1,
-  'El plan respeta los <b>días y horas de consulta</b> de cada médico (los de su ficha): no te lo propone un día que no pasa consulta ni fuera de su horario. Los que no caben aparecen en «Se quedan fuera» con el motivo.');
+  `El plan respeta los <b>días y horas de consulta</b> de cada ${TT('medico', 's', '', 'l', 'l')} (los de su ficha): no te lo propone un día que no pasa consulta ni fuera de su horario. Los que no caben aparecen en «Se quedan fuera» con el motivo.`);
 
 
 /* ============================================================
@@ -6902,7 +7007,7 @@ function prefsActivas() { return (TAB === 'agenda' && AG_VISTA && AG_VISTA.prefe
 function agUid() { return AG_VISTA ? AG_VISTA.id : PERFIL.id; }
 function agUsuarioFiltro() {
   if (TAB === 'agenda' && AG_VISTA) return AG_VISTA.id;
-  return PERFIL.rol === 'Administrador' ? null : PERFIL.id;
+  return puede('administrar') ? null : PERFIL.id;
 }
 
 async function verAgendaDe(id) {
@@ -6926,7 +7031,7 @@ async function menuDiaSemana(boton, fecha, bloqueado) {
   const m = document.createElement('div');
   m.className = 'tdmenu'; m.__t = Date.now();
   m.innerHTML = [
-    fecha >= hoyISO() ? ['nueva', 'Nueva cita', 'Añadir un médico a este día'] : null,
+    fecha >= hoyISO() ? ['nueva', 'Nueva cita', `Añadir ${TT('medico', 's', 'un', 'l', 'l')} a este día`] : null,
     ['ver', 'Ver el día', 'Abrirlo en «Tu día»'],
     fecha >= hoyISO() ? (bloqueado ? ['desbloquear', 'Desbloquear el día', 'Vuelve a estar disponible para planificar']
       : ['bloquear', 'Bloquear el día', 'Vacaciones, formación, congreso… El planificador no lo usará']) : null
@@ -6974,7 +7079,7 @@ async function pintarSemanaAgenda() {
     <div class="semhead"><h2 style="padding:0">Semana del ${fechaCorta(desde)} al ${fechaCorta(hasta)}${AG_VISTA ? ` · ${esc(AG_VISTA.nombre)}` : ''}</h2>
       ${hayFuturo && !borr ? '<button class="btn" id="semplan">Planificar la semana</button>' : ''}</div>
     ${borr ? `<div class="semborr">
-      <span><b>Propuesta sin guardar</b> · ${num(borr.total)} visitas nuevas en ${Object.keys(borr.dias).filter(f => borr.dias[f].length).length} días${borr.sinDia.length ? ` · ${borr.sinDia.length} sin día` : ''}</span>
+      <span><b>Propuesta sin guardar</b> · ${num(borr.total)} ${TT('visita', 'p', '', 'l', 'l', 'nuevo')} en ${Object.keys(borr.dias).filter(f => borr.dias[f].length).length} días${borr.sinDia.length ? ` · ${borr.sinDia.length} sin día` : ''}</span>
       <span class="acts" style="margin:0"><button class="btn sec" id="semdescartar">Descartar</button><button class="btn" id="semguardar">Guardar en la agenda</button></span></div>` : ''}
     <div class="semwrap"><div class="mes sem">
       ${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span class="mesdow">${d}</span>`).join('')}
@@ -7056,13 +7161,13 @@ async function planificarSemana(desde, dias, bloq, porDia) {
   const misRutas = (rutas || []).filter(x => !AG_VISTA || x.usuario_id === agUid() || x.visible_para === '*');
   $('dbody').innerHTML = `
     <div class="fh"><div><h2>Planificar la semana${AG_VISTA ? ' de ' + esc(AG_VISTA.nombre) : ''}</h2>
-      <div class="sm">Reparte los médicos entre los días, cada uno un día que pase consulta y agrupados por zona</div></div>
+      <div class="sm">Reparte ${TT('medico', 'p', 'el', 'l', 'l')} entre los días, cada uno un día que pase consulta y agrupados por zona</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <label for="spfuente">¿A quién?</label>
     <select id="spfuente">
-      <option value="toca">A quien le toca visita (según su frecuencia objetivo)</option>
+      <option value="toca">A quien le toca ${TT('visita', 's', '', 'l', 'l')} (según su frecuencia objetivo)</option>
       <option value="urgentes">Urgentes sin visitar</option>
-      <option value="interesados">Interesados sin visita en 20 días</option>
+      <option value="interesados">Interesados sin ${TT('visita', 's', '', 'l', 'l')} en 20 días</option>
       <option value="sin_visitar">Nunca visitados</option>
       ${misRutas.map(x => `<option value="ruta:${x.id}">Ruta: ${esc(x.nombre)}</option>`).join('')}
     </select>
@@ -7073,10 +7178,10 @@ async function planificarSemana(desde, dias, bloq, porDia) {
         ${DIAN[LETRA_DIA(f)].slice(0, 3)} ${new Date(f + 'T12:00:00').getDate()}${bloq[f] ? ' · bloqueado' : f < hoyISO() ? ' · pasado' : ''}</label>`;
     }).join('')}</div>
     <div class="g2">
-      <div><label for="spmax">Máximo de visitas nuevas por día</label><input id="spmax" type="number" min="1" max="30" placeholder="Hasta la hora tope"></div>
-      <div><label>Horario</label><div class="sm" style="padding-top:12px">${esc(PLANCFG().salida)}–${esc(PLANCFG().tope)} · ${PLANCFG().visita} min por médico</div></div>
+      <div><label for="spmax">Máximo de ${TT('visita', 'p', '', 'l', 'l', 'nuevo')} por día</label><input id="spmax" type="number" min="1" max="30" placeholder="Hasta la hora tope"></div>
+      <div><label>Horario</label><div class="sm" style="padding-top:12px">${esc(PLANCFG().salida)}–${esc(PLANCFG().tope)} · ${PLANCFG().visita} min por ${TT('medico', 's', '', 'l', 'l')}</div></div>
     </div>
-    <p class="sm">Las citas que ya hay en la agenda se respetan y cuentan para el tiempo de cada día. No se proponen médicos que ya tienen una cita abierta.</p>
+    <p class="sm">Las citas que ya hay en la agenda se respetan y cuentan para el tiempo de cada día. No se proponen ${TT('medico', 'p', '', 'l', 'l')} que ya tienen una cita abierta.</p>
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button>
       <button class="btn" id="spok">Proponer reparto</button></div>`;
   $('dlg').showModal();
@@ -7106,7 +7211,7 @@ async function planificarSemana(desde, dias, bloq, porDia) {
     SEM_BORRADOR.sinDia = SEM_BORRADOR.sinDia.concat(recientes);
     ev.target.disabled = false; ev.target.textContent = 'Proponer reparto';
     $('dlg').close();
-    if (!SEM_BORRADOR.total) toast('No cabe ninguna visita nueva con estos datos', true);
+    if (!SEM_BORRADOR.total) toast(`No cabe ${TT('visita', 's', 'ningun', 'l', 'l', 'nuevo')} con estos datos`, true);
     pintarSemanaAgenda();
   };
 }
@@ -7173,7 +7278,7 @@ async function guardarBorradorSemana(btn) {
 
 async function pintarEquipo() {
   $('agcuerpo').innerHTML = `<div class="semhead"><h2 style="padding:0">Equipo y cumplimiento</h2>
-      ${PERFIL.rol === 'Administrador' ? '<button class="btn sec" id="eqfrec">⚙ Frecuencia objetivo</button>' : ''}</div>
+      ${puede('administrar') ? '<button class="btn sec" id="eqfrec">⚙ Frecuencia objetivo</button>' : ''}</div>
     <div class="filtros" style="border:0;padding:4px 16px 10px"><div id="eqper"></div></div>
     <div id="eqtabla"></div>`;
   if ($('agpend')) $('agpend').innerHTML = '';
@@ -7189,7 +7294,7 @@ async function pintarEquipo() {
     $('eqtabla').innerHTML = l.length ? `<div class="dgrid-wrap"><div class="dgrid eq">
       <div class="dh"><span>Persona</span><span class="num">Cartera</span><span class="num">Citas</span><span class="num">Visitadas</span>
         <span class="num">No estaba</span><span class="num">Aplazadas</span><span class="num">Sin hacer</span><span>Cumplimiento</span>
-        <span class="num">Visitas</span><span class="num">Les toca</span></div>
+        <span class="num">${TT('visita', 'p', '', 'l', 'C')}</span><span class="num">Les toca</span></div>
       ${l.map(x => { const p = pct(x); return `<button class="dr" data-eqver="${x.id}" title="Ver su agenda">
         <span><b>${esc(x.nombre)}</b><span class="sm">${esc(x.rol)}</span></span>
         <span class="num">${num(x.cartera)}</span><span class="num">${num(x.citas)}</span>
@@ -7200,7 +7305,7 @@ async function pintarEquipo() {
         <span class="num" style="${x.atrasados ? 'color:var(--warn);font-weight:700' : ''}">${num(x.atrasados)}</span></button>`; }).join('')}
     </div></div>
     <p class="sm" style="padding:10px 16px 14px"><b>Cumplimiento</b> = visitadas sobre las citas de días ya pasados (visitadas, no estaba, aplazadas y sin hacer).
-      <b>Les toca</b> = médicos de su cartera que llevan más tiempo sin visita que su frecuencia objetivo. Pulsa una persona para ver su agenda.</p>`
+      <b>Les toca</b> = ${TT('medico', 'p', '', 'l', 'l')} de su cartera que llevan más tiempo sin ${TT('visita', 's', '', 'l', 'l')} que su frecuencia objetivo. Pulsa una persona para ver su agenda.</p>`
       : '<div class="vacio">Sin actividad en este periodo.</div>';
     $('eqtabla').querySelectorAll('[data-eqver]').forEach(b => b.onclick = () => { AG_MODO = 'semana'; AG_FECHA = hoyISO(); verAgendaDe(b.dataset.eqver); });
   };
@@ -7210,14 +7315,15 @@ async function pintarEquipo() {
 
 async function editorFrecuencia() {
   await cargarAjustes();
-  const f = Object.assign({ 'Sin contactar': 60, 'Presentado': 30, 'Interesado': 15, 'Prescribe': 30, 'No interesado': 0 }, AJUSTES.frecuencia || {});
+  const REC = { inicial: 60, avance: 30, interes: 15, positivo: 30, negativo: 0 };
+  const f = Object.assign(Object.fromEntries(ESTADOS_DEF.map(x => [x.valor, REC[x.papel] || 0])), AJUSTES.frecuencia || {});
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>Frecuencia objetivo de visita</h2>
-      <div class="sm">Cada cuántos días hay que visitar a un médico según su estado. 0 = no se exige.</div></div>
+    <div class="fh"><div><h2>Frecuencia objetivo de ${TT('visita', 's', '', 'l', 'l')}</h2>
+      <div class="sm">Cada cuántos días hay que visitar a ${TT('medico', 's', 'un', 'l', 'l')} según su estado. 0 = no se exige.</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     ${Object.keys(f).map(k => `<div class="g2" style="align-items:center"><div><b>${esc(k)}</b></div>
       <div><input type="number" min="0" max="365" data-frec="${esc(k)}" value="${+f[k] || 0}" aria-label="Días para ${esc(k)}"></div></div>`).join('')}
-    <p class="sm">Se usa en «A quien le toca visita» (planificador y sugerencias) y en la columna «Les toca» del equipo.</p>
+    <p class="sm">Se usa en «A quien le toca ${TT('visita', 's', '', 'l', 'l')}» (planificador y sugerencias) y en la columna «Les toca» del equipo.</p>
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="frok">Guardar</button></div>`;
   $('dlg').showModal();
   $('frok').onclick = async () => {
@@ -7255,7 +7361,7 @@ async function faltaHorario(id) {
 
 AYUDA.agenda[2].push(
   'En la <b>semana</b>: la hora con «~» junto al día es el fin estimado (en naranja si pasa de tu hora tope). Arrastra una cita a otro día para moverla. El menú «⋯» de cada día permite añadir una cita o <b>bloquear el día</b> (vacaciones, formación…).',
-  '<b>Planificar la semana</b> reparte médicos entre los días libres: a quien le toca visita, urgentes, interesados, nunca visitados o una de tus rutas. Cada uno cae un día que pasa consulta y agrupado por zona. Revisa la propuesta y pulsa <b>Guardar en la agenda</b>.',
+  `<b>Planificar la semana</b> reparte ${TT('medico', 'p', '', 'l', 'l')} entre los días libres: a quien le toca ${TT('visita', 's', '', 'l', 'l')}, urgentes, interesados, nunca visitados o una de tus rutas. Cada uno cae un día que pasa consulta y agrupado por zona. Revisa la propuesta y pulsa <b>Guardar en la agenda</b>.`,
   'Administración y televenta pueden ver la agenda de otra persona con el selector de arriba, planificarle la semana y ver el <b>cumplimiento del equipo</b> con el botón «Equipo».');
 
 
@@ -7269,7 +7375,8 @@ Object.assign(RPC_TTL, { clasificadores_visita: 300, municipios_clientes: 300 })
 
 /* ---------------- registrar visita con datos ---------------- */
 
-const detTxt = v => (v.detalles || []).filter(d => !(d.clasificador === 'RESULTADO' && /muestra/i.test(d.valor)))
+const esMuestras = d => (CAT.resultado_visita || []).some(x => x.valor === d.valor && x.papel === 'muestras');
+const detTxt = v => (v.detalles || []).filter(d => !esMuestras(d))
   .map(d => d.valor + (d.dato ? ' (' + d.dato + ')' : '')).join(', ');
 
 function campoDato(v, k, valor) {
@@ -7292,7 +7399,7 @@ async function abrirVisita(id) {
 async function visitaAvisoHorario(id) {
   if (!$('vguardar') || !await faltaHorario(id) || $('vhorario')) return;
   const fh = $('dbody').querySelector('.fh');
-  if (fh) fh.insertAdjacentHTML('afterend', `<div class="avisoh" id="vhorario"><span>⚠ Falta su horario de consulta. Aprovecha la visita para preguntarlo
+  if (fh) fh.insertAdjacentHTML('afterend', `<div class="avisoh" id="vhorario"><span>⚠ Falta su horario de consulta. Aprovecha ${TT('visita', 's', 'el', 'l', 'l')} para preguntarlo
     y complétalo después en <b>Editar ficha</b>.</span></div>`);
 }
 
@@ -7302,26 +7409,26 @@ async function abrirVisitaBase(id) {
   if (error) { toast('No se ha podido abrir: ' + error.message, true); return; }
   const m = data.medico, cons = data.consultas || [];
   const grupos = (clas || []).filter(c => (c.valores || []).length);
-  const res = grupos.find(c => c.clave === 'RESULTADO') || { clave: 'RESULTADO', nombre: 'Resultado', valores: CAT.RESULTADO || [] };
-  const otros = grupos.filter(c => c.clave !== 'RESULTADO');
+  const res = grupos.find(c => c.papel === 'resultado_visita') || { clave: '', papel: 'resultado_visita', nombre: 'Resultado', valores: CAT.resultado_visita || [] };
+  const otros = grupos.filter(c => c !== res);
   const idx = {};   // clave del botón → { clasificador, valor }
   const boton = (c, v, neg) => {
     const k = c.clave + '::' + v.valor; idx[k] = { c: c.clave, v };
-    return `<span class="optw"><button type="button" class="opt ${neg ? 'neg' : ''}" data-vk="${esc(k)}" ${c.clave === 'RESULTADO' ? `data-res="${esc(v.valor)}"` : ''} ${neg ? 'data-neg="1"' : ''} aria-pressed="false">
+    return `<span class="optw"><button type="button" class="opt ${neg ? 'neg' : ''}" data-vk="${esc(k)}" ${c === res ? `data-res="${esc(v.valor)}"` : ''} ${neg ? 'data-neg="1"' : ''} aria-pressed="false">
       <span class="mk"></span>${esc(v.valor)}${v.dato_tipo ? ' <span class="datom">+ dato</span>' : ''}</button>
       ${v.dato_tipo ? `<span class="datobox hide" data-box="${esc(k)}">${campoDato(v, k)}</span>` : ''}</span>`;
   };
 
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>Registrar visita</h2><div class="sm">${esc(m.nombre)}</div></div>
+    <div class="fh"><div><h2>Registrar ${TT('visita', 's', '', 'l', 'l')}</h2><div class="sm">${esc(m.nombre)}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <div class="g2">
       <div><label for="vf">Fecha</label><input id="vf" type="date" value="${hoyISO()}"></div>
-      <div><label for="vc">Centro de la visita</label><select id="vc">
+      <div><label for="vc">Centro ${TT('visita', 's', 'del', 'l', 'l')}</label><select id="vc">
         ${cons.map(c => `<option value="${c.id}">${esc(c.centro_nombre || 'Consulta privada')}${c.municipio ? ' · ' + esc(c.municipio) : ''}</option>`).join('')}
       </select></div>
     </div>
-    <label>Resultado <span class="sm">· puedes marcar varios de «visita realizada»</span></label>
+    <label>Resultado <span class="sm">· puedes marcar varios de «${TT('visita', 's', '', 'l', 'l', 'realizado')}»</span></label>
     <div class="opciones">${res.valores.filter(v => v.extra !== 'neg').map(v => boton(res, v, false)).join('')}</div>
     <div class="opciones" style="margin-top:8px">${res.valores.filter(v => v.extra === 'neg').map(v => boton(res, v, true)).join('')}</div>
     ${otros.map(c => `<label>${esc(c.nombre)}${c.descripcion ? ` <span class="sm">· ${esc(c.descripcion)}</span>` : ''}</label>
@@ -7333,12 +7440,12 @@ async function abrirVisitaBase(id) {
     <label for="vn">Nota</label><textarea id="vn" rows="3"></textarea>
     <div class="acts" style="justify-content:flex-end">
       <button class="btn sec" data-cerrar>Cancelar</button>
-      <button class="btn" id="vguardar">Guardar visita</button>
+      <button class="btn" id="vguardar">Guardar ${TT('visita', 's', '', 'l', 'l')}</button>
     </div>`;
 
   $('dbody').querySelectorAll('[data-vk]').forEach(b => b.onclick = () => {
     const k = b.dataset.vk, info = idx[k], on = b.getAttribute('aria-pressed') === 'true';
-    if (info.c === 'RESULTADO') {
+    if (info.c === res.clave) {
       const esNeg = b.dataset.neg === '1';
       $('dbody').querySelectorAll('[data-res]').forEach(x => {
         if ((esNeg || x.dataset.neg === '1') && x !== b) {
@@ -7354,7 +7461,7 @@ async function abrirVisitaBase(id) {
 
   $('vguardar').onclick = async ev => {
     const marcados = [...$('dbody').querySelectorAll('[data-vk][aria-pressed=true]')].map(b => b.dataset.vk);
-    const resultados = marcados.filter(k => idx[k].c === 'RESULTADO').map(k => idx[k].v.valor);
+    const resultados = marcados.filter(k => idx[k].c === res.clave).map(k => idx[k].v.valor);
     if (!resultados.length) { toast('Elige al menos un resultado', true); return; }
     const detalles = marcados.map(k => {
       const el = $('dbody').querySelector(`[data-dato="${CSS.escape(k)}"]`);
@@ -7368,10 +7475,10 @@ async function abrirVisitaBase(id) {
       proxima_accion: $('vpa').value.trim(), proxima_fecha: $('vpf').value || null,
       op_id: 'v-' + id + '-' + Date.now()
     }});
-    ev.target.disabled = false; ev.target.textContent = 'Guardar visita';
+    ev.target.disabled = false; ev.target.textContent = `Guardar ${TT('visita', 's', '', 'l', 'l')}`;
     if (err) { toast('No se ha podido guardar: ' + err.message, true); return; }
     $('dlg').close();
-    toast('Visita registrada' + (r && r.estado ? ' · estado: ' + r.estado : ''));
+    toast(`${TT('visita', 's', '', 'l', 'C', 'registrado')}` + (r && r.estado ? ' · estado: ' + r.estado : ''));
     cargarInicio();
     if (FICHA_ID === id) abrirFicha(id);
   };
@@ -7383,7 +7490,7 @@ async function abrirVisitaBase(id) {
 function editorDato(v, alGuardar) {
   $('dlg2body').innerHTML = `
     <div class="fh"><div><h2>Dato de «${esc(v.valor)}»</h2>
-      <div class="sm">Al marcar este valor en una visita, se pedirá además este dato</div></div>
+      <div class="sm">Al marcar este valor en ${TT('visita', 's', 'un', 'l', 'l')}, se pedirá además este dato</div></div>
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
     <label for="dtt">Qué dato pide</label>
     <select id="dtt"><option value="">Ninguno (solo se marca)</option>
@@ -7413,8 +7520,8 @@ function editorDato(v, alGuardar) {
 abrirClasificador = (orig => function (id) {
   orig(id);
   const c = CATS.find(x => x.id === id);
-  const puede = PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).K || 0) >= 2;
-  if (!c || !puede || !['visita'].includes(c.ambito) && c.clave !== 'RESULTADO') return;
+  const permitido = puede('administrar') || ((PERFIL.areas || {}).K || 0) >= 2;
+  if (!c || !permitido || !['visita'].includes(c.ambito) && c.papel !== 'resultado_visita') return;
   // Cada vez que se repinta la ventana, se añaden los botones de dato
   const decorar = () => {
     const items = $('dbody').querySelectorAll('.lista > .item');
@@ -7433,7 +7540,7 @@ abrirClasificador = (orig => function (id) {
       });
     });
     if (!$('dbody').querySelector('.datoinfo')) $('dbody').querySelector('.fh').insertAdjacentHTML('afterend',
-      '<p class="sm datoinfo">Con <b>+ Dato</b>, al marcar ese valor en una visita se pedirá también una cantidad, un texto o una opción de una lista.</p>');
+      `<p class="sm datoinfo">Con <b>+ Dato</b>, al marcar ese valor en ${TT('visita', 's', 'un', 'l', 'l')} se pedirá también una cantidad, un texto o una opción de una lista.</p>`);
   };
   decorar();
   new MutationObserver((_, obs) => { if (!$('dlg').open) { obs.disconnect(); return; } decorar(); })
@@ -7493,7 +7600,7 @@ Object.assign(PAC, { tipo: '', pedidos: '', municipio: '' });
 async function cargarPacientes() {
   vaciarModulos('v-pacientes');
   $('v-pacientes').innerHTML = `
-    <div class="saludo"><div><h1>Clientes</h1><div class="fecha">Pacientes y empresas que compran: con qué médico y su historial</div></div>
+    <div class="saludo"><div><h1>Clientes</h1><div class="fecha">${TT('paciente', 'p', '', 'l', 'C')} y empresas que compran: con qué ${TT('medico', 's', '', 'l', 'l')} y su historial</div></div>
       <div class="acts" style="margin:0">${puedeVentas() ? '<button class="btn" id="pacnuevo">+ Nuevo cliente</button>' : ''}</div></div>
     <div id="vcuerpo"></div>`;
   if ($('pacnuevo')) $('pacnuevo').onclick = () => editorContacto({}, c => fichaPaciente(c.id));
@@ -7507,14 +7614,15 @@ async function pintarPacientes() {
       <div class="filtros">
         <div><label for="pacq">Buscar</label><input id="pacq" type="search" value="${esc(PAC.q)}" placeholder="Nombre, teléfono, email, DNI o CIF"></div>
         <div><label for="pactipo">Tipo</label><select id="pactipo">
-          <option value="">Todos</option><option value="Persona" ${PAC.tipo === 'Persona' ? 'selected' : ''}>Personas (pacientes)</option>
+          <option value="">Todos</option><option value="Persona" ${PAC.tipo === 'Persona' ? 'selected' : ''}>Personas (${TT('paciente', 'p', '', 'l', 'l')})</option>
           <option value="Empresa" ${PAC.tipo === 'Empresa' ? 'selected' : ''}>Empresas</option></select></div>
         <div><label for="pacped">Pedidos</label><select id="pacped">
           <option value="">Todos</option><option value="con" ${PAC.pedidos === 'con' ? 'selected' : ''}>Con pedidos</option>
           <option value="sin" ${PAC.pedidos === 'sin' ? 'selected' : ''}>Sin pedidos</option></select></div>
         <div><label for="pacmun">Población</label><select id="pacmun"><option value="">Todas</option>
           ${(munis || []).map(x => `<option value="${esc(x.v)}" ${PAC.municipio === x.v ? 'selected' : ''}>${esc(x.v)} (${x.n})</option>`).join('')}</select></div>
-        ${PAC.medico ? `<div><label>Médico</label><div style="min-height:44px;display:flex;align-items:center"><button class="chip" id="pacmedx">${esc(PAC.medicoNombre)} ✕</button></div></div>` : ''}
+        ${camposFiltros('cliente', PAC.campos = PAC.campos || {}, 'pfcp')}
+        ${PAC.medico ? `<div><label>${TT('medico', 's', '', 'l', 'C')}</label><div style="min-height:44px;display:flex;align-items:center"><button class="chip" id="pacmedx">${esc(PAC.medicoNombre)} ✕</button></div></div>` : ''}
       </div>
       <div class="cuenta" id="paccuenta">Cargando…</div>
       <div id="paclista"></div>
@@ -7525,6 +7633,7 @@ async function pintarPacientes() {
   $('pactipo').onchange = e => { PAC.tipo = e.target.value; PAC.pagina = 0; listaPacientes(); };
   $('pacped').onchange = e => { PAC.pedidos = e.target.value; PAC.pagina = 0; listaPacientes(); };
   $('pacmun').onchange = e => { PAC.municipio = e.target.value; PAC.pagina = 0; listaPacientes(); };
+  camposFiltrosActivar($('vcuerpo'), PAC.campos, () => { PAC.pagina = 0; listaPacientes(); });
   if ($('pacmedx')) $('pacmedx').onclick = () => { PAC.medico = null; PAC.medicoNombre = ''; PAC.pagina = 0; pintarPacientes(); };
   listaPacientes();
 }
@@ -7533,22 +7642,26 @@ async function listaPacientes() {
   cargando($('paclista'), 'Buscando clientes…');
   const { data, error } = await db.rpc('pacientes_lista', { q: PAC.q || null, p_medico: PAC.medico,
     lim: tamPagina(), desplaz: PAC.pagina * tamPagina(), p_tipo: PAC.tipo || null, p_pedidos: PAC.pedidos || null,
-    p_municipio: PAC.municipio || null });
+    p_municipio: PAC.municipio || null, ...(Object.keys(PAC.campos || {}).length ? { f_campos: PAC.campos } : {}) });
   if (error) { $('paccuenta').textContent = 'No se ha podido cargar: ' + error.message; $('paclista').innerHTML = ''; return; }
   $('paccuenta').innerHTML = `<b>${num(data.total)}</b> ${data.total === 1 ? 'cliente' : 'clientes'}`;
   const f = data.filas || [];
   const v = x => x ? esc(x) : '<span class="vac">—</span>';
+  const cpCols = (CAMPOS.cliente || []).filter(c => c.en_tabla);
   $('paclista').innerHTML = f.length ? `<div class="dgrid-wrap"><div class="dgrid pacs">
     <div class="dh"><span>Cliente</span><span>Tipo</span><span>DNI / CIF</span><span>Teléfono</span><span>Email</span><span>Población</span>
-      <span>Médico</span><span>Comercial</span><span class="num">Pedidos</span><span class="num">Uds.</span><span>Último pedido</span></div>
+      <span>${TT('medico', 's', '', 'l', 'C')}</span><span>Comercial</span><span class="num">Pedidos</span><span class="num">Uds.</span><span>Último pedido</span>${cpCols.map(c => `<span>${esc(c.nombre)}</span>`).join('')}</div>
     ${f.map(x => `<button class="dr" data-pac="${x.id}">
       <span><b>${esc(x.nombre)}</b></span>
-      <span><span class="pill ${x.tipo === 'Empresa' ? 'p-emp' : 'p-per'}">${x.tipo === 'Empresa' ? 'Empresa' : 'Paciente'}</span></span>
+      <span><span class="pill ${x.tipo === 'Empresa' ? 'p-emp' : 'p-per'}">${x.tipo === 'Empresa' ? 'Empresa' : `${TT('paciente', 's', '', 'l', 'C')}`}</span></span>
       <span>${v(x.nif)}</span><span>${v(x.telefono || x.movil)}</span><span class="corta">${v(x.email)}</span><span>${v(x.municipio)}</span>
       <span class="corta">${x.medico ? esc(x.medico) : '<span class="vac">Sin asignar</span>'}</span><span>${v(x.comercial)}</span>
       <span class="num">${num(x.pedidos)}</span><span class="num"><b>${num(x.unidades)}</b></span>
-      <span>${x.ultimo_pedido ? fechaCorta(x.ultimo_pedido) : '<span class="vac">—</span>'}</span>
+      <span>${x.ultimo_pedido ? fechaCorta(x.ultimo_pedido) : '<span class="vac">—</span>'}</span>${cpCols.map(c => `<span>${v(campoTexto(c, (x.clasificadores || {})[c.clave]))}</span>`).join('')}
     </button>`).join('')}</div></div>` : '<div class="vacio">Ningún cliente con estos filtros.</div>';
+  // Columnas de campos personalizados: se añaden a la rejilla
+  const rej = $('paclista').querySelector('.dgrid.pacs');
+  if (rej && cpCols.length) { const cs = getComputedStyle(rej); rej.style.setProperty('--cols', cs.getPropertyValue('--cols').trim() + ' 130px'.repeat(cpCols.length)); rej.style.minWidth = (parseInt(cs.minWidth) || 1080) + 140 * cpCols.length + 'px'; }
   $('paclista').querySelectorAll('[data-pac]').forEach(b => b.onclick = () => fichaPaciente(b.dataset.pac));
   paginador($('pacpag'), data.total, PAC.pagina, p => { PAC.pagina = p; listaPacientes(); }, () => { PAC.pagina = 0; listaPacientes(); });
 }
@@ -7576,14 +7689,14 @@ async function citaRepetida(medicoId, fecha) {
 /* ---------------- ayudas ---------------- */
 
 Object.assign(AYUDA, {
-  pacientes: ['Clientes', 'Pacientes (personas) y empresas que compran por recomendación de un médico.', [
-    'La columna <b>Tipo</b> distingue pacientes y empresas. Filtra por tipo, si tienen pedidos o por población.',
-    'Cada cliente tiene un <b>médico que lo trata</b>: se elige al darlo de alta o se asigna solo con su primer pedido.',
+  pacientes: ['Clientes', `${TT('paciente', 'p', '', 'l', 'C')} (personas) y empresas que compran por recomendación de ${TT('medico', 's', 'un', 'l', 'l')}.`, [
+    `La columna <b>Tipo</b> distingue ${TT('paciente', 'p', '', 'l', 'l')} y empresas. Filtra por tipo, si tienen pedidos o por población.`,
+    `Cada cliente tiene un <b>${TT('medico', 's', '', 'l', 'l')} que lo trata</b>: se elige al darlo de alta o se asigna solo con su primer pedido.`,
     'A una persona se le pide DNI o NIE; a una empresa, el CIF.']]
 });
 AYUDA.config = AYUDA.config || ['Configuración', '', []];
-AYUDA.config[2].push('En <b>Clasificadores</b>, los de visitas (resultados, material comercial…) pueden pedir un <b>dato</b> al marcarse: una cantidad, un texto o una opción de una lista. Usa «+ Dato» en cada valor.');
-AYUDA.agenda[2].push('Si añades una cita a un médico que ya tiene otra ese día, te avisa y eliges: mantener las dos o quedarte solo con la nueva.');
+AYUDA.config[2].push(`En <b>Clasificadores</b>, los de ${TT('visita', 'p', '', 'l', 'l')} (resultados, material comercial…) pueden pedir un <b>dato</b> al marcarse: una cantidad, un texto o una opción de una lista. Usa «+ Dato» en cada valor.`);
+AYUDA.agenda[2].push(`Si añades una cita a ${TT('medico', 's', 'un', 'l', 'l')} que ya tiene otra ese día, te avisa y eliges: mantener las dos o quedarte solo con la nueva.`);
 
 
 /* ============================================================
@@ -7619,7 +7732,7 @@ function pintarBnav() {
 
 const SKEY = 'dlc-suplantador';
 const suplantando = () => { try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch (e) { return null; } };
-const puedeSuplantar = () => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).U || 0) >= 3) && !suplantando();
+const puedeSuplantar = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).U || 0) >= 3) && !suplantando();
 
 function limpiarDatosLocales() {
   try { Object.keys(localStorage).filter(k => /^dlc-(rc-|perfil|jornada-)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
@@ -7682,44 +7795,44 @@ AREAS.push(['U', 'Entrar como otro usuario']);
 /* ---------------- manual de uso ---------------- */
 
 const NIVEL_TXT = ['Sin acceso', 'Ver', 'Editar', 'Completo'];
-const nivelDe = a => PERFIL.rol === 'Administrador' ? 3 : ((PERFIL.areas || {})[a] || 0);
+const nivelDe = a => puede('administrar') ? 3 : ((PERFIL.areas || {})[a] || 0);
 
 const MANUAL = [
   { id: 'inicio', t: 'Inicio', a: 'H', para: 'El resumen de tu día y de tu semana: indicadores, alertas, tu agenda de hoy y lo que conviene hacer.',
     hacer: [[1, 'Ver tus indicadores, tu semana, tus ventas del mes y las alertas'], [1, 'Personalizar qué indicadores ves (icono ⚙)'], [1, 'Compartir el resumen de la semana por WhatsApp o email']],
     config: ['Indicadores visibles y su orden (⚙ junto a «Compartir la semana»)'] },
-  { id: 'agenda', t: 'Agenda y «Tu día»', a: 'G', para: 'Tus citas por día, semana o mes. La vista de día es tu ruta: orden, horas estimadas y registro de visitas.',
+  { id: 'agenda', t: 'Agenda y «Tu día»', a: 'G', para: `Tus citas por día, semana o mes. La vista de día es tu ruta: orden, horas estimadas y registro de ${TT('visita', 'p', '', 'l', 'l')}.`,
     hacer: [[1, 'Ver tu agenda'], [2, 'Crear, mover, aplazar, confirmar o descartar citas'], [2, 'Ordenar tu día por cercanía y empezar la jornada'], [2, 'Planificar la semana y bloquear días'],
       [3, 'Ver la agenda de otra persona y el cumplimiento del equipo (administración y televenta)']],
-    config: ['Horario de rutas: salida, hora tope y minutos por visita (Rutas → ⚙ Horario de rutas)', 'Aviso de visita reciente (Configuración → Preferencias)', 'Frecuencia objetivo por estado (Agenda → Equipo, administración)'] },
-  { id: 'rutas', t: 'Rutas', a: 'R', para: 'Plantillas de médicos para llenar tu agenda: listas fijas o por criterios, y propuestas automáticas.',
+    config: [`Horario de rutas: salida, hora tope y minutos por ${TT('visita', 's', '', 'l', 'l')} (Rutas → ⚙ Horario de rutas)`, `Aviso de ${TT('visita', 's', '', 'l', 'l')} reciente (Configuración → Preferencias)`, 'Frecuencia objetivo por estado (Agenda → Equipo, administración)'] },
+  { id: 'rutas', t: 'Rutas', a: 'R', para: `Plantillas de ${TT('medico', 'p', '', 'l', 'l')} para llenar tu agenda: listas fijas o por criterios, y propuestas automáticas.`,
     hacer: [[1, 'Ver tus rutas y las propuestas'], [2, 'Crear y editar rutas, planificarlas y pasarlas a tu agenda']],
     config: ['Punto de salida y llegada (Configuración → Preferencias)', 'Horario de rutas (⚙ Horario de rutas)'] },
-  { id: 'directorio', t: 'Médicos', a: 'M', para: 'Todos los médicos que puedes ver: tu cartera o toda la base si eres de administración o televenta.',
-    hacer: [[1, 'Buscar, filtrar y ver fichas'], [2, 'Editar fichas y horarios de consulta'], [3, 'Dar de alta médicos nuevos'], [3, 'Unificar duplicados (administración)']],
+  { id: 'directorio', t: `${TT('medico', 'p', '', 'l', 'C')}`, a: 'M', para: `Todos ${TT('medico', 'p', 'el', 'l', 'l')} que puedes ver: tu cartera o toda la base si eres de administración o televenta.`,
+    hacer: [[1, 'Buscar, filtrar y ver fichas'], [2, 'Editar fichas y horarios de consulta'], [3, `Dar de alta ${TT('medico', 'p', '', 'l', 'l', 'nuevo')}`], [3, 'Unificar duplicados (administración)']],
     config: ['Columnas visibles (⋯ → Elegir columnas)', 'Filtros guardados como indicadores de Inicio'] },
   { id: 'centros', t: 'Centros', a: 'C', para: 'Las fichas de clínicas, hospitales y centros.',
     hacer: [[1, 'Ver fichas de centros'], [2, 'Editarlas'], [3, 'Darlas de alta']], config: [] },
-  { id: 'visitas', t: 'Visitas', a: 'S', para: 'El registro de cada visita: resultado, muestras, material entregado y próxima acción.',
-    hacer: [[1, 'Ver el historial de visitas'], [2, 'Registrar y editar visitas']],
+  { id: 'visitas', t: `${TT('visita', 'p', '', 'l', 'C')}`, a: 'S', para: `El registro de cada ${TT('visita', 's', '', 'l', 'l')}: resultado, muestras, material entregado y próxima acción.`,
+    hacer: [[1, `Ver el historial de ${TT('visita', 'p', '', 'l', 'l')}`], [2, `Registrar y editar ${TT('visita', 'p', '', 'l', 'l')}`]],
     config: ['Resultados y material comercial con su dato (Configuración → Clasificadores, «+ Dato»)'] },
-  { id: 'ventas', t: 'Ventas, Clientes y Productos', a: 'V', para: 'Pedidos con IVA y servicios, clientes (pacientes y empresas) y el catálogo de productos y servicios.',
-    hacer: [[1, 'Ver los pedidos y clientes de tus médicos'], [2, 'Crear, validar y anular pedidos; dar de alta clientes (televenta)'], [3, 'Todo lo anterior sobre toda la base']],
+  { id: 'ventas', t: 'Ventas, Clientes y Productos', a: 'V', para: `Pedidos con IVA y servicios, clientes (${TT('paciente', 'p', '', 'l', 'l')} y empresas) y el catálogo de productos y servicios.`,
+    hacer: [[1, `Ver los pedidos y clientes de tus ${TT('medico', 'p', '', 'l', 'l')}`], [2, 'Crear, validar y anular pedidos; dar de alta clientes (televenta)'], [3, 'Todo lo anterior sobre toda la base']],
     config: ['Productos y servicios (solo administración)', 'Servicio propuesto por defecto en pedidos nuevos'] },
   { id: 'config', t: 'Configuración', a: 'K', para: 'Tus preferencias y las listas que usa toda la plataforma.',
     hacer: [[0, 'Cambiar tus preferencias de salida, llegada, navegador y avisos'], [1, 'Ver clasificadores'], [2, 'Añadir y editar valores de clasificadores'], [3, 'Crear clasificadores nuevos']], config: [] },
   { id: 'admin', t: 'Administración', a: null, para: 'Usuarios, permisos, carteras, comisiones, accesos y auditoría. Solo administración.',
     hacer: [[3, 'Crear y editar usuarios y sus permisos'], [3, 'Asignar carteras (exclusivas o no)'], [3, 'Configurar comisiones y liquidar'], [3, 'Entrar como otro usuario para ver lo que ve']],
-    config: ['Cartera exclusiva: un médico en una sola cartera (Agenda → Equipo → ⚙ Reglas de cartera)'] }
+    config: [`Cartera exclusiva: ${TT('medico', 's', 'un', 'l', 'l')} en una sola cartera (Agenda → Equipo → ⚙ Reglas de cartera)`] }
 ];
 
 const FAQ = [
   ['No veo un módulo', 'Depende de tus permisos. En la ficha de cada módulo de este manual ves tu nivel de acceso; si necesitas más, pídelo a administración.'],
-  ['He registrado una visita por error', 'Abre la ficha del médico, busca la visita en el historial y pulsa «Editar»: puedes corregirla o borrarla.'],
-  ['La hora estimada de una cita no cuadra', 'Revisa tu horario de rutas y el horario de consulta del médico en su ficha. La estimación cuenta desplazamientos, esperas y minutos por visita.'],
-  ['Un médico no aparece en mis rutas', 'Solo entran médicos con ubicación y, si tiene horario de consulta, en sus días y horas. Revisa su ficha.'],
-  ['¿Puedo usar la app sin conexión?', 'Sí: consulta lo último que viste y registra visitas; se envían solas al recuperar la conexión.'],
-  ['¿Por qué no puedo descargar datos?', 'Por seguridad: los datos de médicos y ventas solo se consultan dentro de la plataforma.']
+  [`He registrado ${TT('visita', 's', 'un', 'l', 'l')} por error`, `Abre la ficha ${TT('medico', 's', 'del', 'l', 'l')}, busca ${TT('visita', 's', 'el', 'l', 'l')} en el historial y pulsa «Editar»: puedes corregirla o borrarla.`],
+  ['La hora estimada de una cita no cuadra', `Revisa tu horario de rutas y el horario de consulta ${TT('medico', 's', 'del', 'l', 'l')} en su ficha. La estimación cuenta desplazamientos, esperas y minutos por ${TT('visita', 's', '', 'l', 'l')}.`],
+  [`${TT('medico', 's', 'un', 'C', 'l')} no aparece en mis rutas`, `Solo entran ${TT('medico', 'p', '', 'l', 'l')} con ubicación y, si tiene horario de consulta, en sus días y horas. Revisa su ficha.`],
+  ['¿Puedo usar la app sin conexión?', `Sí: consulta lo último que viste y registra ${TT('visita', 'p', '', 'l', 'l')}; se envían solas al recuperar la conexión.`],
+  ['¿Por qué no puedo descargar datos?', `Por seguridad: los datos de ${TT('medico', 'p', '', 'l', 'l')} y ventas solo se consultan dentro de la plataforma.`]
 ];
 
 
@@ -7736,11 +7849,11 @@ async function editorReglasCartera() {
   await cargarAjustes();
   const excl = !AJUSTES.cartera || AJUSTES.cartera.exclusiva !== false;
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>Reglas de cartera</h2><div class="sm">Cómo se reparten los médicos entre el equipo</div></div>
+    <div class="fh"><div><h2>Reglas de cartera</h2><div class="sm">Cómo se reparten ${TT('medico', 'p', 'el', 'l', 'l')} entre el equipo</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <label class="opt" style="margin-top:10px"><input type="checkbox" id="rcexcl" ${excl ? 'checked' : ''}>
-      <span><b>Cartera exclusiva</b><br><span class="sm">Un médico solo puede estar en la cartera de una persona. Al asignarlo a alguien, sale de la cartera de quien lo tuviera.</span></span></label>
-    <p class="sm">Si la desactivas, un médico podrá estar en varias carteras y administración verá una alerta «Médicos en más de una cartera» en Inicio.</p>
+      <span><b>Cartera exclusiva</b><br><span class="sm">${TT('medico', 's', 'un', 'C', 'l')} solo puede estar en la cartera de una persona. Al asignarlo a alguien, sale de la cartera de quien lo tuviera.</span></span></label>
+    <p class="sm">Si la desactivas, ${TT('medico', 's', 'un', 'l', 'l')} podrá estar en varias carteras y administración verá una alerta «${TT('medico', 'p', '', 'l', 'C')} en más de una cartera» en Inicio.</p>
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="rcok">Guardar</button></div>`;
   $('dlg').showModal();
   $('rcok').onclick = async () => {
@@ -7753,7 +7866,7 @@ async function editorReglasCartera() {
 pintarEquipo = (orig => async function () {
   await orig();
   const h = $('agcuerpo').querySelector('.semhead');
-  if (h && PERFIL.rol === 'Administrador' && !$('eqcart')) {
+  if (h && puede('administrar') && !$('eqcart')) {
     h.insertAdjacentHTML('beforeend', '<button class="btn sec" id="eqcart">⚙ Reglas de cartera</button>');
     $('eqcart').onclick = editorReglasCartera;
   }
@@ -7803,7 +7916,7 @@ citaRepetida = (orig => async function (medicoId, fecha) {
 
 let PSEC = 'productos';
 async function cargarProductosModulo() {
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   vaciarModulos('v-productos');
   $('v-productos').innerHTML = `
     <div class="saludo"><div><h1>Productos</h1><div class="fecha">Catálogo de productos y servicios, con precios sin IVA y con IVA</div></div>
@@ -7817,7 +7930,7 @@ async function cargarProductosModulo() {
 }
 
 async function pintarProductos() {
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   cargando($('vcuerpo'), 'Cargando productos…');
   const { data } = await RPC_ORIG('productos_lista', { p_todos: esAdmin });
   const l = (data || []).filter(p => (p.tipo || 'producto') === 'producto');
@@ -7836,7 +7949,7 @@ async function pintarProductos() {
 }
 
 async function pintarServicios() {
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   cargando($('vcuerpo'), 'Cargando servicios…');
   const { data } = await RPC_ORIG('productos_lista', { p_todos: esAdmin });
   const l = (data || []).filter(p => p.tipo === 'servicio');
@@ -7854,7 +7967,7 @@ async function pintarServicios() {
 }
 
 function editorServicio(s) {
-  const esAdmin = PERFIL.rol === 'Administrador';
+  const esAdmin = puede('administrar');
   s = s || { iva: 21, activo: true };
   const ro = esAdmin ? '' : 'disabled';
   $('dbody').innerHTML = `
@@ -7898,7 +8011,7 @@ async function resumenRutas() {
   const abiertas = citasHoy.filter(c => CITA_ABIERTA.includes(c.estado)).length;
   const hechas = citasHoy.filter(c => c.estado === 'Visitada').length;
   const grupos = [['hoy', '📅', 'Pasan consulta hoy', 'y no se visitan desde hace 14 días'], ['urgentes', '❗', 'Urgentes sin visitar', ''],
-    ['interesados', '🔥', 'Interesados sin visita en 20 días', ''], ['sin_visitar', '🆕', 'Nunca visitados', 'con ubicación']];
+    ['interesados', '🔥', `Interesados sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`, ''], ['sin_visitar', '🆕', 'Nunca visitados', 'con ubicación']];
   PROPUESTAS = pr || {};
   $('rcuerpo').innerHTML = `
     <div class="rgrid">
@@ -7909,13 +8022,13 @@ async function resumenRutas() {
         <div class="acts"><button class="btn" id="rrdia">Ver mi día</button><button class="btn sec" id="rrsem">Planificar la semana</button></div></div>
       <div class="card"><h2>Propuestas para hoy</h2><p class="sm">Calculadas con tus datos. Al pulsar se prepara el plan.</p>
         <div class="lista">${grupos.map(([k, ic, t, s]) => { const n = ((pr || {})[k] || []).filter(m => m.lat).length; return `<button class="item" data-rrprop="${k}" ${n ? '' : 'disabled style="opacity:.5"'}>
-          <span class="ic">${ic}</span><span class="tx"><b>${t}</b><span class="sm">${n} médicos${s ? ' ' + s : ''}</span></span><span class="n">${n}</span></button>`; }).join('')}</div></div>
+          <span class="ic">${ic}</span><span class="tx"><b>${t}</b><span class="sm">${n} ${TT('medico', 'p', '', 'l', 'l')}${s ? ' ' + s : ''}</span></span><span class="n">${n}</span></button>`; }).join('')}</div></div>
       <div class="card"><h2>Mis rutas<span class="n">${RUTAS.length}</span></h2>
         ${RUTAS.length ? `<div class="lista">${RUTAS.slice(0, 6).map(r => `<button class="item" data-ruta="${r.id}"><span class="ic">➤</span>
-          <span class="tx"><b>${esc(r.nombre)}</b><span class="sm">${r.tipo === 'criterios' ? 'Por criterios' : 'Lista fija'}${r.n != null ? ' · ' + num(r.n) + ' médicos' : ''}</span></span></button>`).join('')}</div>
+          <span class="tx"><b>${esc(r.nombre)}</b><span class="sm">${r.tipo === 'criterios' ? 'Por criterios' : 'Lista fija'}${r.n != null ? ' · ' + num(r.n) + ` ${TT('medico', 'p', '', 'l', 'l')}` : ''}</span></span></button>`).join('')}</div>
           ${RUTAS.length > 6 ? '<button class="verlo" data-rs="mis">Ver todas</button>' : ''}`
-        : `<div class="rguia"><p><b>Aún no tienes rutas.</b> Una ruta es una lista de médicos que visitas a menudo. Tres pasos:</p>
-            <ol><li><b>+ Nueva ruta</b>: elige médicos concretos o unos criterios (municipio, estado, días de consulta).</li>
+        : `<div class="rguia"><p><b>Aún no tienes rutas.</b> Una ruta es una lista de ${TT('medico', 'p', '', 'l', 'l')} que visitas a menudo. Tres pasos:</p>
+            <ol><li><b>+ Nueva ruta</b>: elige ${TT('medico', 'p', '', 'l', 'l', 'concreto')} o unos criterios (municipio, estado, días de consulta).</li>
               <li><b>Planificar</b>: la app ordena las paradas y calcula las horas con tu horario.</li>
               <li><b>Guardar en mi agenda</b> o <b>Empezar</b>: el plan pasa a «Tu día».</li></ol>
             <div class="acts"><button class="btn" id="rrnueva">+ Crear mi primera ruta</button></div></div>`}</div>
@@ -7940,7 +8053,7 @@ Object.assign(AYUDA, {
     'Marca un servicio como «por defecto» para que se proponga en los pedidos nuevos.',
     'Un producto o servicio inactivo no aparece al crear pedidos, pero se conserva en el histórico.']]
 });
-AYUDA.inicio[2].push('<b>Mi semana</b>, <b>Ventas del mes</b> y <b>Alertas</b> resumen lo importante. Administración y televenta ven además los cruces del equipo (médicos en dos carteras, visitas a médicos de otra cartera…) y el cumplimiento del equipo.');
+AYUDA.inicio[2].push(`<b>Mi semana</b>, <b>Ventas del mes</b> y <b>Alertas</b> resumen lo importante. Administración y televenta ven además los cruces del equipo (${TT('medico', 'p', '', 'l', 'l')} en dos carteras, ${TT('visita', 'p', '', 'l', 'l')} a ${TT('medico', 'p', '', 'l', 'l')} de otra cartera…) y el cumplimiento del equipo.`);
 AYUDA.rutas[2].unshift('La pestaña <b>Resumen</b> muestra tu día, las propuestas para hoy y tus rutas, con accesos directos a planificar.');
 
 
@@ -7994,31 +8107,31 @@ const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 KPI_CAT.push(
   { id: 'uds_mes', t: 'unidades vendidas este mes', v: k => k.uds_mes, cls: k => k.uds_mes >= k.uds_mes_ant ? 'ok' : 'warn', h: 'x-analitica' },
   { id: 'importe_mes', t: 'ventas del mes sin IVA', v: k => eurI(k.importe_mes || 0).replace(',00', ''), h: 'x-analitica' },
-  { id: 'prescriptores', t: 'médicos que han vendido este mes', v: k => k.prescriptores_mes, h: 'x-analitica' },
+  { id: 'prescriptores', t: `${TT('medico', 'p', '', 'l', 'l')} que han vendido este mes`, v: k => k.prescriptores_mes, h: 'x-analitica' },
   { id: 'nuevos_presc', t: 'nuevos prescriptores este mes', v: k => k.nuevos_prescriptores, cls: k => k.nuevos_prescriptores ? 'ok' : '' },
-  { id: 'activos_90', t: 'médicos con ventas en 90 días', v: k => k.activos_90 },
+  { id: 'activos_90', t: `${TT('medico', 'p', '', 'l', 'l')} con ventas en 90 días`, v: k => k.activos_90 },
   { id: 'conversion', t: 'del embudo ya prescribe', v: k => pct(k.prescriben, k.en_embudo) + '%' },
-  { id: 'visitas_7d', t: 'visitas en los últimos 7 días', v: k => k.visitas_7d },
+  { id: 'visitas_7d', t: `${TT('visita', 'p', '', 'l', 'l')} en los últimos 7 días`, v: k => k.visitas_7d },
   { id: 'citas_7d', t: 'citas tuyas en los próximos 7 días', v: k => k.citas_7d, h: 'x-semana' },
   { id: 'muestras_mes', t: 'muestras entregadas este mes', v: k => k.muestras_mes },
   { id: 'material_mes', t: 'entregas de material este mes', v: k => k.material_mes },
-  { id: 'sin_visita_60', t: 'médicos sin visita en 60 días', v: k => k.sin_visita_60, cls: k => k.sin_visita_60 ? 'warn' : 'ok' },
+  { id: 'sin_visita_60', t: `${TT('medico', 'p', '', 'l', 'l')} sin ${TT('visita', 's', '', 'l', 'l')} en 60 días`, v: k => k.sin_visita_60, cls: k => k.sin_visita_60 ? 'warn' : 'ok' },
   { id: 'sin_horario', t: 'fichas sin horario de consulta', v: k => k.sin_horario, cls: k => k.sin_horario ? 'warn' : 'ok' },
   { id: 'borradores', t: 'pedidos en borrador', v: k => k.borradores, cls: k => k.borradores ? 'warn' : '', h: 'x-ventas' }
 );
 Object.assign(AYUDA_KPI, {
   uds_mes: 'Unidades de los pedidos validados desde el día 1 de este mes. En verde si va por delante de los mismos días del mes anterior. Pulsa para ir a Analítica.',
   importe_mes: 'Importe sin IVA de los pedidos validados este mes (con el descuento de cada línea).',
-  prescriptores: 'Médicos distintos a los que se ha atribuido alguna venta este mes.',
-  nuevos_presc: 'Médicos cuya primera venta atribuida ha sido este mes: el mejor indicador de captación.',
-  activos_90: 'Médicos con alguna venta atribuida en los últimos 90 días: tu base de prescriptores activos.',
-  conversion: 'De los médicos ya presentados, interesados o prescriptores, qué parte prescribe. Mide cómo avanza el embudo.',
-  visitas_7d: 'Visitas registradas en los últimos siete días, contando hoy.',
+  prescriptores: `${TT('medico', 'p', '', 'l', 'C', 'distinto')} a los que se ha atribuido alguna venta este mes.`,
+  nuevos_presc: `${TT('medico', 'p', '', 'l', 'C')} cuya primera venta atribuida ha sido este mes: el mejor indicador de captación.`,
+  activos_90: `${TT('medico', 'p', '', 'l', 'C')} con alguna venta atribuida en los últimos 90 días: tu base de prescriptores activos.`,
+  conversion: `${TT('medico', 'p', 'del', 'C', 'l')} ya presentados, interesados o prescriptores, qué parte prescribe. Mide cómo avanza el embudo.`,
+  visitas_7d: `${TT('visita', 'p', '', 'l', 'C', 'registrado')} en los últimos siete días, contando hoy.`,
   citas_7d: 'Tus citas abiertas de hoy a los próximos seis días. Pulsa para ver tu semana.',
-  muestras_mes: 'Muestras entregadas en las visitas de este mes.',
+  muestras_mes: `Muestras entregadas en ${TT('visita', 'p', 'el', 'l', 'l')} de este mes.`,
   material_mes: 'Veces que se ha entregado material comercial (dípticos, talonarios…) este mes.',
-  sin_visita_60: 'Médicos que puedes ver y que no se visitan desde hace más de 60 días (o nunca).',
-  sin_horario: 'Médicos sin días ni horas de consulta en su ficha. Sin ese dato, las rutas y el planificador no pueden ajustarse a su horario.',
+  sin_visita_60: `${TT('medico', 'p', '', 'l', 'C')} que puedes ver y que no se visitan desde hace más de 60 días (o nunca).`,
+  sin_horario: `${TT('medico', 'p', '', 'l', 'C')} sin días ni horas de consulta en su ficha. Sin ese dato, las rutas y el planificador no pueden ajustarse a su horario.`,
   borradores: 'Pedidos guardados como borrador que todavía no cuentan en métricas ni comisiones. Pulsa para verlos.'
 });
 ['uds_mes', 'prescriptores', 'citas_7d', 'sin_visita_60'].forEach(k => { if (!KPI_DEF.includes(k)) KPI_DEF.push(k); });
@@ -8111,13 +8224,13 @@ async function pintarResumenAnalitica() {
       (verImportes() ? kpi(eurI(t.importe || 0), 'Ventas sin IVA', 'Importe sin IVA de los pedidos validados, con el descuento de cada línea.', d(+t.importe || 0, +ant.importe || 0)) : '') +
       kpi(num(t.pedidos || 0), 'Pedidos', 'Pedidos validados en el periodo.', d(+t.pedidos || 0, +ant.pedidos || 0)) +
       (verImportes() ? kpi(t.pedidos ? eurI(t.importe / t.pedidos) : '—', 'Ticket medio', 'Importe medio de cada pedido: ventas sin IVA entre número de pedidos.') : '') +
-      kpi(num(t.medicos || 0), 'Médicos que prescriben', 'Médicos distintos con alguna venta atribuida en el periodo.', d(+t.medicos || 0, +ant.medicos || 0)) +
-      kpi(visitas ? (Math.round((t.unidades || 0) / visitas * 10) / 10).toString().replace('.', ',') : '—', 'Unidades por visita', 'Unidades vendidas entre visitas registradas en el periodo. Indica cuánto rinde cada visita.');
+      kpi(num(t.medicos || 0), `${TT('medico', 'p', '', 'l', 'C')} que prescriben`, `${TT('medico', 'p', '', 'l', 'C', 'distinto')} con alguna venta atribuida en el periodo.`, d(+t.medicos || 0, +ant.medicos || 0)) +
+      kpi(visitas ? (Math.round((t.unidades || 0) / visitas * 10) / 10).toString().replace('.', ',') : '—', `Unidades por ${TT('visita', 's', '', 'l', 'l')}`, `Unidades vendidas entre ${TT('visita', 'p', '', 'l', 'l', 'registrado')} en el periodo. Indica cuánto rinde cada ${TT('visita', 's', '', 'l', 'l')}.`);
 
     const meses = mesesEntre(desde, hasta);
     const serie = {}; (act.serie || []).forEach(s => serie[s.mes] = s);
     const vis = {}; actv.forEach(s => vis[s.mes] = s);
-    const orden = ['Sin contactar', 'Presentado', 'Interesado', 'Prescribe'];
+    const orden = ESTADOS_DEF.filter(x => x.papel !== 'negativo').map(x => x.valor), negEst = estadoPapel('negativo');
     const embTot = orden.reduce((n, k) => n + (+emb[k] || 0), 0);
     $('angraf').innerHTML = `
       <div class="card ancard ancha"><h2>Evolución de las ventas</h2>
@@ -8128,20 +8241,20 @@ async function pintarResumenAnalitica() {
         ${(act.por_producto || []).length ? svgDonut((act.por_producto || []).slice(0, 6).map(x => ({ n: x.nombre, v: x.unidades })))
           : vacioGrafico('Verás qué parte de las unidades corresponde a cada producto.')}
         <p class="leer"><b>Cómo leerlo:</b> el porcentaje de unidades de cada producto en el periodo. Sirve para ver de qué depende la facturación.</p></div>
-      <div class="card ancard"><h2>Médicos que más prescriben</h2>
-        ${med.filter(x => x.clave !== 'sin').length ? barrasH(med.filter(x => x.clave !== 'sin').map(x => ({ n: x.nombre, v: x.unidades })), num) : vacioGrafico('Aparecerán los 10 médicos con más unidades atribuidas.')}
-        <p class="leer"><b>Cómo leerlo:</b> los diez médicos con más unidades atribuidas. Son los que conviene cuidar: visitas frecuentes, material y seguimiento.</p></div>
+      <div class="card ancard"><h2>${TT('medico', 'p', '', 'l', 'C')} que más prescriben</h2>
+        ${med.filter(x => x.clave !== 'sin').length ? barrasH(med.filter(x => x.clave !== 'sin').map(x => ({ n: x.nombre, v: x.unidades })), num) : vacioGrafico(`Aparecerán los 10 ${TT('medico', 'p', '', 'l', 'l')} con más unidades atribuidas.`)}
+        <p class="leer"><b>Cómo leerlo:</b> los diez ${TT('medico', 'p', '', 'l', 'l')} con más unidades atribuidas. Son los que conviene cuidar: ${TT('visita', 'p', '', 'l', 'l')} frecuentes, material y seguimiento.</p></div>
       <div class="card ancard"><h2>Embudo comercial</h2>
         ${embTot ? `<div class="embudo">${orden.map((k, i) => { const v = +emb[k] || 0, ant2 = i ? (+emb[orden[i - 1]] || 0) : 0;
           return `<div class="emb"><span class="embn">${esc(k)}</span><span class="embb"><i style="width:${Math.max(3, v / embTot * 100)}%"></i></span><b>${num(v)}</b>
             ${i ? `<span class="sm">${ant2 ? pct(v, ant2 + v) + '% avanza' : ''}</span>` : '<span class="sm"></span>'}</div>`; }).join('')}
-          ${emb['No interesado'] ? `<div class="sm" style="margin-top:6px">No interesados: ${num(emb['No interesado'])}</div>` : ''}</div>`
-          : vacioGrafico('Verás cuántos médicos hay en cada estado comercial.')}
-        <p class="leer"><b>Cómo leerlo:</b> cuántos médicos hay en cada estado. El porcentaje indica qué parte ha pasado a ese estado respecto al anterior. El objetivo es que la barra de «Prescribe» crezca.</p></div>
+          ${negEst && emb[negEst] ? `<div class="sm" style="margin-top:6px">${esc(negEst)}: ${num(emb[negEst])}</div>` : ''}</div>`
+          : vacioGrafico(`Verás cuántos ${TT('medico', 'p', '', 'l', 'l')} hay en cada estado comercial.`)}
+        <p class="leer"><b>Cómo leerlo:</b> cuántos ${TT('medico', 'p', '', 'l', 'l')} hay en cada estado. El porcentaje indica qué parte ha pasado a ese estado respecto al anterior. El objetivo es que la barra de «Prescribe» crezca.</p></div>
       <div class="card ancard ancha"><h2>Actividad y resultados</h2>
-        ${actv.length || (t.unidades || 0) ? svgBarras(meses, meses.map(m => (vis[m] || {}).visitas || 0), meses.map(m => (serie[m] || {}).unidades || 0), ['Visitas', 'Unidades vendidas'])
-          : vacioGrafico('Verás las visitas de cada mes junto a las unidades vendidas.')}
-        <p class="leer"><b>Cómo leerlo:</b> las barras son las visitas registradas y la línea, las unidades vendidas. Si las visitas suben y las ventas no, conviene revisar a quién se visita y con qué mensaje.</p></div>`;
+        ${actv.length || (t.unidades || 0) ? svgBarras(meses, meses.map(m => (vis[m] || {}).visitas || 0), meses.map(m => (serie[m] || {}).unidades || 0), [`${TT('visita', 'p', '', 'l', 'C')}`, 'Unidades vendidas'])
+          : vacioGrafico(`Verás ${TT('visita', 'p', 'el', 'l', 'l')} de cada mes junto a las unidades vendidas.`)}
+        <p class="leer"><b>Cómo leerlo:</b> las barras son ${TT('visita', 'p', 'el', 'l', 'l', 'registrado')} y la línea, las unidades vendidas. Si ${TT('visita', 'p', 'el', 'l', 'l')} suben y las ventas no, conviene revisar a quién se visita y con qué mensaje.</p></div>`;
   };
   montarPeriodo($('anper'), { id: 'analitica-resumen', valor: 'anio', alCambiar: pinta });
   pinta();
@@ -8165,7 +8278,7 @@ cargarAnalitica = (orig => async function () {
   if (ANSEC === 'resumen') pintarResumenAnalitica();
 })(cargarAnalitica);
 
-AYUDA.analitica[2].unshift('<b>Resumen</b>: indicadores con la comparación frente al periodo anterior y gráficos explicados (evolución, productos, médicos, embudo y actividad). <b>Explorar datos</b>: ranking y tablas con filtros por médico, comercial y producto.');
+AYUDA.analitica[2].unshift(`<b>Resumen</b>: indicadores con la comparación frente al periodo anterior y gráficos explicados (evolución, productos, ${TT('medico', 'p', '', 'l', 'l')}, embudo y actividad). <b>Explorar datos</b>: ranking y tablas con filtros por ${TT('medico', 's', '', 'l', 'l')}, comercial y producto.`);
 
 
 /* ============================================================
@@ -8175,7 +8288,7 @@ AYUDA.analitica[2].unshift('<b>Resumen</b>: indicadores con la comparación fren
 
 Object.assign(RPC_TTL, { stock_resumen: 30, compras_lista: 30, proveedores_lista: 60, almacenes_lista: 60, alertas_stock: 60 });
 
-const puedeCompras = () => PERFIL && (PERFIL.rol === 'Administrador' || ((PERFIL.areas || {}).V || 0) >= 3);
+const puedeCompras = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).V || 0) >= 3);
 let PEDSEC = 'ventas', PROVEEDORES = [], ALMACENES = [];
 async function cargarProveedores() { const { data } = await db.rpc('proveedores_lista'); PROVEEDORES = data || []; }
 async function cargarAlmacenes() { const { data } = await db.rpc('almacenes_lista'); ALMACENES = data || []; }
@@ -8473,14 +8586,14 @@ async function trazabilidad(loteId) {
   const { data } = await RPC_ORIG('trazabilidad_lote', { p_lote: loteId });
   const lo = (data && data.lote) || {}, m = (data && data.movimientos) || [];
   const tipos = { inicial: 'Stock inicial', entrada_compra: 'Entrada por compra', salida_venta: 'Venta', anulacion_venta: 'Anulación de venta',
-    salida_muestra: 'Muestra en visita', ajuste: 'Ajuste de inventario', traspaso_salida: 'Traspaso (sale)', traspaso_entrada: 'Traspaso (entra)', devolucion: 'Devolución' };
+    salida_muestra: `Muestra en ${TT('visita', 's', '', 'l', 'l')}`, ajuste: 'Ajuste de inventario', traspaso_salida: 'Traspaso (sale)', traspaso_entrada: 'Traspaso (entra)', devolucion: 'Devolución' };
   $('dlg2body').innerHTML = `
     <div class="fh"><div><h2>Trazabilidad · lote ${esc(lo.numero_lote || '')}</h2>
       <div class="sm">${esc(lo.producto || '')}${lo.caducidad ? ' · caduca el ' + fechaCorta(lo.caducidad) : ''}${lo.proveedor ? ' · ' + esc(lo.proveedor) : ''}${lo.compra ? ' · compra ' + esc(lo.compra) : ''}</div></div>
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
     <p class="sm">Todas las entradas y salidas de este lote. Ante una alerta sanitaria, aquí están los clientes a los que llegó.</p>
     <div class="dgrid-wrap"><div class="dgrid traz">
-      <div class="dh"><span>Fecha</span><span>Movimiento</span><span class="num">Uds.</span><span>Cliente</span><span>Médico</span><span>Almacén</span></div>
+      <div class="dh"><span>Fecha</span><span>Movimiento</span><span class="num">Uds.</span><span>Cliente</span><span>${TT('medico', 's', '', 'l', 'C')}</span><span>Almacén</span></div>
       ${m.map(x => `<div class="dr" style="cursor:default"><span>${fechaCorta(String(x.fecha).slice(0, 10))}</span><span>${esc(tipos[x.tipo] || x.tipo)}${x.pedido ? `<span class="sm">Pedido ${esc(x.pedido)}</span>` : ''}</span>
         <span class="num" style="color:${x.unidades < 0 ? 'var(--danger)' : 'var(--ok)'}"><b>${x.unidades > 0 ? '+' : ''}${num(x.unidades)}</b></span>
         <span>${esc(x.cliente || '—')}${x.telefono ? `<span class="sm">${esc(x.telefono)}</span>` : ''}</span><span class="sm">${esc(x.medico || '—')}</span><span class="sm">${esc(x.almacen)}</span></div>`).join('')
@@ -8530,7 +8643,7 @@ async function editorAlmacenes() {
       <h3 style="margin-top:14px">Nuevo maletín de comercial</h3>
       <div class="g2"><div><label for="almu">Comercial</label><select id="almu">${COMS.map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div>
         <div><label>&nbsp;</label><button class="btn" id="almok">Crear maletín</button></div></div>
-      <p class="sm">Pasa unidades del central a un maletín con «Traspasar» en la ficha del producto. Si las muestras restan stock, salen del maletín de quien registra la visita.</p>`;
+      <p class="sm">Pasa unidades del central a un maletín con «Traspasar» en la ficha del producto. Si las muestras restan stock, salen del maletín de quien registra ${TT('visita', 's', 'el', 'l', 'l')}.</p>`;
     $('almok').onclick = async () => {
       const u = COMS.find(x => x.id === $('almu').value);
       const { error } = await db.rpc('guardar_almacen', { p: { nombre: 'Maletín ' + String(u.nombre).split(' ')[0], tipo: 'maletin', usuario_id: u.id } });
@@ -8545,10 +8658,10 @@ async function editorMuestras() {
   await Promise.all([cargarAjustes(), cargarProductos()]);
   const m = Object.assign({ producto_id: null, restar_stock: false }, AJUSTES.muestras || {});
   $('dbody').innerHTML = `
-    <div class="fh"><div><h2>Muestras y stock</h2><div class="sm">Qué pasa con el stock cuando se registran muestras en una visita</div></div>
+    <div class="fh"><div><h2>Muestras y stock</h2><div class="sm">Qué pasa con el stock cuando se registran muestras en ${TT('visita', 's', 'un', 'l', 'l')}</div></div>
       <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <label class="opt" style="margin-top:10px"><input type="checkbox" id="murest" ${m.restar_stock ? 'checked' : ''}>
-      <span><b>Restar las muestras del stock</b><br><span class="sm">Salen del maletín de quien registra la visita o, si no tiene, del almacén central, por lote y caducidad.</span></span></label>
+      <span><b>Restar las muestras del stock</b><br><span class="sm">Salen del maletín de quien registra ${TT('visita', 's', 'el', 'l', 'l')} o, si no tiene, del almacén central, por lote y caducidad.</span></span></label>
     <label for="muprod">Producto de las muestras</label><select id="muprod"><option value="">—</option>${PRODUCTOS.map(p => `<option value="${p.id}" ${p.id === m.producto_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="muok">Guardar</button></div>`;
   $('dlg').showModal();
@@ -8568,7 +8681,7 @@ Object.assign(AYUDA, {
     '<b>Ventas</b>: pedidos de clientes. En borrador no cuentan; al validarlos cuentan en métricas y comisiones y <b>salen del stock</b>, primero del lote que caduca antes.',
     '<b>Compras</b>: pedidos a proveedores. Borrador → Enviado → En tránsito → Recibido. Al recibir se anota cada lote con su caducidad y entra en el stock.',
     '<b>Proveedores</b>: datos, plazo de entrega y cuenta contable. El plazo se usa para avisar de cuándo hay que pedir.',
-    'La venta a paciente se atribuye al médico indicado y a su comercial; la venta a centro no cuenta como prescripción.']]
+    `La venta a ${TT('paciente', 's', '', 'l', 'l')} se atribuye ${TT('medico', 's', 'al', 'l', 'l', 'indicado')} y a su comercial; la venta a centro no cuenta como prescripción.`]]
 });
 AYUDA.productos[2].push('<b>Stock y lotes</b>: stock por almacén y lote, caducidades, cobertura según el ritmo de venta, trazabilidad de cada lote (a qué clientes llegó), entradas, ajustes y traspasos a los maletines.');
 MANUAL.forEach(s => { if (s.id === 'ventas') { s.t = 'Pedidos, Clientes y Productos'; s.para = 'Pedidos de venta y de compra, proveedores, clientes, productos, servicios y stock por lotes.'; s.hacer.push([3, 'Crear pedidos de compra, recibir mercancía por lotes, ajustar stock y gestionar proveedores y almacenes']); } });
@@ -8581,7 +8694,7 @@ MANUAL.forEach(s => { if (s.id === 'ventas') { s.t = 'Pedidos, Clientes y Produc
 
 Object.assign(RPC_TTL, { facturas_lista: 20, series_lista: 60, eventos_facturacion_lista: 20 });
 let FSEC = 'facturas';
-const puedeFacturar = () => PERFIL && (PERFIL.rol === 'Administrador' || (VE_TODO() && ((PERFIL.areas || {}).V || 0) >= 2));
+const puedeFacturar = () => PERFIL && (puede('administrar') || (VE_TODO() && ((PERFIL.areas || {}).V || 0) >= 2));
 const pillCobro = e => `<span class="pill ${e === 'Cobrada' ? 'p-est' : e === 'Vencida' ? 'p-anu' : 'p-bor'}">${esc(e)}</span>`;
 
 /* ---------------- navegación ---------------- */
@@ -8590,7 +8703,7 @@ const pillCobro = e => `<span class="pill ${e === 'Cobrada' ? 'p-est' : e === 'V
 /* ---------------- módulo ---------------- */
 
 async function cargarFacturacion() {
-  const admin = PERFIL.rol === 'Administrador';
+  const admin = puede('administrar');
   const secs = [['facturas', 'Facturas'], ['series', 'Series y numeración']].concat(admin ? [['empresa', 'Datos fiscales'], ['verifactu', 'VeriFactu'], ['registro', 'Registro']] : []);
   if (!secs.some(s => s[0] === FSEC)) FSEC = 'facturas';
   $('v-facturacion').innerHTML = `
@@ -8703,7 +8816,7 @@ async function verFacturaBase(id) {
     <div class="blk"><h3>Cobros</h3>
       ${cob.length ? cob.map(c => `<div class="sm" style="display:flex;justify-content:space-between;gap:8px;padding:4px 0">
         <span>${fechaCorta(c.fecha)} · ${esc(c.forma_pago || '')}${c.nota ? ' · ' + esc(c.nota) : ''}</span><b>${eurI(c.importe)}</b>
-        ${PERFIL.rol === 'Administrador' ? `<button class="kcfg" data-bcob="${c.id}">Quitar</button>` : ''}</div>`).join('') : '<div class="sm">Sin cobros registrados.</div>'}
+        ${puede('administrar') ? `<button class="kcfg" data-bcob="${c.id}">Quitar</button>` : ''}</div>`).join('') : '<div class="sm">Sin cobros registrados.</div>'}
       ${pendiente ? `<div class="sm" style="margin-top:4px">Pendiente: <b>${eurI(pendiente)}</b></div>` : ''}</div>
     ${f.huella ? `<div class="blk"><h3>Registro de facturación</h3><div class="sm mono">Huella: ${esc(f.huella.slice(0, 32))}…</div>
       <div class="sm">VeriFactu: ${esc((f.verifactu || {}).estado || 'No aplica')}</div></div>` : ''}
@@ -8732,7 +8845,7 @@ function cobroFactura(f, pendiente) {
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
     <div class="g2"><div><label for="cbi">Importe (€)</label><input id="cbi" type="number" step="0.01" value="${pendiente}"></div>
       <div><label for="cbf">Fecha</label><input id="cbf" type="date" value="${hoyISO()}"></div></div>
-    <div class="g2"><div><label for="cbp">Forma de pago</label><select id="cbp">${(CAT.FORMA_PAGO || []).map(x => `<option ${x.valor === f.forma_pago ? 'selected' : ''}>${esc(x.valor)}</option>`).join('')}</select></div>
+    <div class="g2"><div><label for="cbp">Forma de pago</label><select id="cbp">${(CAT.forma_pago || []).map(x => `<option ${x.valor === f.forma_pago ? 'selected' : ''}>${esc(x.valor)}</option>`).join('')}</select></div>
       <div><label for="cbn">Nota</label><input id="cbn" placeholder="Opcional"></div></div>
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar2>Cancelar</button><button class="btn" id="cbok">Registrar</button></div>`;
   $('dlg2').showModal();
@@ -8824,7 +8937,7 @@ function imprimirFactura(f, vf, rectificaNum) {
 async function pintarSeries() {
   cargando($('fcuerpo'), 'Cargando series…');
   const { data } = await RPC_ORIG('series_lista', {});
-  const l = data || [], admin = PERFIL.rol === 'Administrador';
+  const l = data || [], admin = puede('administrar');
   $('fcuerpo').innerHTML = `<div class="panel">
     <div class="cuenta">Cada serie numera sus facturas de forma correlativa. Para continuar la numeración de otro programa, pon en «Siguiente número» el que toca.
       ${admin ? '<button class="btn sec" id="sernueva" style="margin-left:8px">+ Nueva serie</button>' : ''}</div>
@@ -8840,7 +8953,7 @@ async function pintarSeries() {
 }
 
 function editorSerie(s) {
-  const admin = PERFIL.rol === 'Administrador', ro = admin ? '' : 'disabled';
+  const admin = puede('administrar'), ro = admin ? '' : 'disabled';
   s = s || { codigo: '', nombre: '', tipo: 'ordinaria', formato: '{S}{AA}{NNNN}', siguiente: 1, anio: +hoyISO().slice(0, 4), reinicio_anual: true };
   $('dbody').innerHTML = `
     <div class="fh"><div><h2>${s.id ? 'Serie ' + esc(s.codigo) : 'Nueva serie'}</h2><div class="sm">Próximo número: <b id="serprev"></b></div></div>
@@ -8891,7 +9004,7 @@ async function pintarEmpresa() {
     <label for="em_pie">Pie de factura</label><textarea id="em_pie" rows="2" placeholder="Condiciones, protección de datos…">${esc(e.pie || '')}</textarea>
     <h2 style="padding:18px 0 8px">Al emitir</h2>
     <div class="g2"><div><label for="fcv">Días hasta el vencimiento</label><input id="fcv" type="number" min="0" value="${+c.vencimiento_dias || 0}"></div>
-      <div><label for="fcf">Forma de pago si el pedido no la indica</label><select id="fcf"><option value="">—</option>${(CAT.FORMA_PAGO || []).map(x => `<option ${x.valor === c.forma_pago ? 'selected' : ''}>${esc(x.valor)}</option>`).join('')}</select></div></div>
+      <div><label for="fcf">Forma de pago si el pedido no la indica</label><select id="fcf"><option value="">—</option>${(CAT.forma_pago || []).map(x => `<option ${x.valor === c.forma_pago ? 'selected' : ''}>${esc(x.valor)}</option>`).join('')}</select></div></div>
     <label class="opt" style="margin-top:10px"><input type="checkbox" id="fce" ${c.emitir_al_validar ? 'checked' : ''}>
       <span><b>Emitir la factura automáticamente al validar un pedido</b><br><span class="sm">Si no, se emite a mano desde el pedido con «Emitir factura».</span></span></label>
     <div class="acts" style="justify-content:flex-end"><button class="btn" id="emok">Guardar</button></div></div>`;
@@ -9013,14 +9126,14 @@ MANUAL.push({ id: 'facturacion', t: 'Facturación', a: 'V', para: 'Facturas desd
 abrirHorarioPlan = (orig => function () {
   orig();
   const ayuda = {
-    hsal: 'A qué hora sales. La primera visita se calcula desde aquí o desde ahora, si esa hora ya ha pasado.',
-    htop: 'Hora tope para volver. No se planifican visitas que te hagan volver más tarde; si el día se pasa, se marca en naranja.',
-    hvis: 'Lo que dura de media cada visita con un médico, dentro de la consulta.',
-    hpar: 'Tiempo extra cada vez que llegas a un sitio nuevo: aparcar, entrar, esperar en recepción. Si ves a varios médicos en el mismo centro, se cuenta una sola vez.'
+    hsal: `A qué hora sales. La ${TT('visita', 's', 'primer', 'l', 'l')} se calcula desde aquí o desde ahora, si esa hora ya ha pasado.`,
+    htop: `Hora tope para volver. No se planifican ${TT('visita', 'p', '', 'l', 'l')} que te hagan volver más tarde; si el día se pasa, se marca en naranja.`,
+    hvis: `Lo que dura de media cada ${TT('visita', 's', '', 'l', 'l')} con ${TT('medico', 's', 'un', 'l', 'l')}, dentro de la consulta.`,
+    hpar: `Tiempo extra cada vez que llegas a un sitio nuevo: aparcar, entrar, esperar en recepción. Si ves a varios ${TT('medico', 'p', '', 'l', 'l')} en el mismo centro, se cuenta una sola vez.`
   };
   Object.entries(ayuda).forEach(([id, t]) => { const i = $(id); if (i && !i.parentElement.querySelector('.ayudah')) i.insertAdjacentHTML('afterend', `<span class="sm ayudah">${esc(t)}</span>`); });
   const fh = $('dbody').querySelector('.fh');
-  if (fh && !$('horinfo')) fh.insertAdjacentHTML('afterend', `<p class="sm" id="horinfo">Con estos datos se calculan las horas estimadas de tus rutas, de «Tu día» y del planificador semanal. Los desplazamientos entre visitas se estiman por la distancia.</p>`);
+  if (fh && !$('horinfo')) fh.insertAdjacentHTML('afterend', `<p class="sm" id="horinfo">Con estos datos se calculan las horas estimadas de tus rutas, de «Tu día» y del planificador semanal. Los desplazamientos entre ${TT('visita', 'p', '', 'l', 'l')} se estiman por la distancia.</p>`);
 })(abrirHorarioPlan);
 
 /* ---------------- mapa del directorio: botón de cerrar siempre visible ---------------- */
@@ -9045,10 +9158,10 @@ function pintarCerca() {
   $('lista').innerHTML = vista.length ? vista.map(m => `<button class="trow" data-id="${m.id}" style="padding:10px 14px;gap:12px">
       <span class="tcell" style="width:70px;min-width:70px"><b style="color:var(--navy)">${m.km} km</b></span>
       <span class="tcell" style="flex:1;width:auto">
-        <span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? '<span class="pill p-sr" title="Solo visita presencial: sin informes ni feedback">Sin reporting</span> ' : ''}${esc(m.nombre)}</span>
+        <span class="nm">${m.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${m.sin_reporting ? `<span class="pill p-sr" title="Solo ${TT('visita', 's', '', 'l', 'l')} presencial: sin informes ni feedback">Sin reporting</span> ` : ''}${esc(m.nombre)}</span>
         <span class="sm">${esc(m.especialidad || '')} · ${esc(m.centro_nombre || '')} ${esc(m.municipio || '')}</span></span>
       <span class="tcell cercaest"><span class="pill p-est">${esc(m.estado_comercial)}</span></span>
-    </button>`).join('') : '<div class="vacio">No hay médicos con ubicación a menos de 10 km.</div>';
+    </button>`).join('') : `<div class="vacio">No hay ${TT('medico', 'p', '', 'l', 'l')} con ubicación a menos de 10 km.</div>`;
   $('mas').classList.add('hide');
   $('dirpag').classList.remove('hide');
   paginador($('dirpag'), l.length, pag, p => { CERCA.pagina = p; pintarCerca(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
@@ -9065,7 +9178,7 @@ MANUAL.unshift({ id: 'roles', t: 'Roles del equipo', a: null, para: 'Qué ve y q
   hacer: [[0, 'Administrador: todo, incluida la gestión de usuarios, permisos, configuración, facturación y VeriFactu'],
     [0, 'Dirección: ve toda la actividad del equipo (agendas, cumplimiento, ventas, facturación, analítica); por defecto consulta sin modificar'],
     [0, 'Televenta: ve toda la base, crea y valida pedidos, da de alta clientes, emite facturas y registra cobros'],
-    [0, 'Comercial: su cartera, su agenda y rutas, sus visitas y las ventas y clientes de sus médicos'],
+    [0, `Comercial: su cartera, su agenda y rutas, sus ${TT('visita', 'p', '', 'l', 'l')} y las ventas y clientes de sus ${TT('medico', 'p', '', 'l', 'l')}`],
     [0, 'Solo consulta: ve sin modificar lo que le permitan sus permisos']], config: ['Permisos por persona: Administración → Usuarios → Editar'] });
 
 
@@ -9086,7 +9199,7 @@ Object.assign(RPC_TTL, { operativa_pendiente: 20, llamadas_lista: 20, llamadas_r
   AREAS.splice(i + 1, 0, ['L', 'Clientes'], ['P', 'Productos y stock'], ['F', 'Facturación'], ['A', 'Analítica'],
     ['E', 'Importes de ventas'], ['Q', 'Calidad del dato']);
 })();
-const nivelDe2 = a => !PERFIL ? 0 : PERFIL.rol === 'Administrador' ? 3 : +((PERFIL.areas || {})[a] || 0);
+const nivelDe2 = a => !PERFIL ? 0 : puede('administrar') ? 3 : +((PERFIL.areas || {})[a] || 0);
 const verImportes = () => nivelDe2('E') >= 1;
 
 // Qué permiso abre cada módulo
@@ -9142,7 +9255,7 @@ const KPI_CATEGORIA = {
 const KPI_PERMISO = { importe_mes: ['E', 1], borradores: ['V', 1], dups: ['Q', 1], sin_horario: ['M', 1] };
 function kpiPermitido(c) {
   if (!c) return false;
-  if (c.admin && PERFIL.rol !== 'Administrador') return false;
+  if (c.admin && !puede('administrar')) return false;
   const r = KPI_PERMISO[c.id];
   return !r || nivelDe2(r[0]) >= r[1];
 }
@@ -9161,14 +9274,14 @@ async function bloqueZonas(u) {
   const sel = new Set((yo && yo.zonas) || []);
   const bonito = p => p.charAt(0) + p.slice(1).toLowerCase();
   return `<div class="blk" id="uzonas"><h3>Zona de trabajo</h3>
-    <p class="sm">Marca las provincias de su zona. Al guardar, los médicos de esas provincias que no tengan comercial entran en su cartera, y los que se den de alta después entran solos. Solo verá los médicos de su cartera.</p>
+    <p class="sm">Marca las provincias de su zona. Al guardar, ${TT('medico', 'p', 'el', 'l', 'l')} de esas provincias que no tengan comercial entran en su cartera, y los que se den de alta después entran solos. Solo verá ${TT('medico', 'p', 'el', 'l', 'l')} de su cartera.</p>
     <div class="zonas">${Object.keys(PROV_CCAA).sort().map(cc => {
       const ps = PROV_CCAA[cc].filter((x, i, a) => a.findIndex(y => y.n === x.n && bonito(y.p).slice(0, 4) === bonito(x.p).slice(0, 4)) === i || x.n);
       return `<details ${ps.some(x => sel.has(x.p)) ? 'open' : ''}><summary><label onclick="event.stopPropagation()"><input type="checkbox" data-zcc="${esc(cc)}" ${ps.every(x => sel.has(x.p)) ? 'checked' : ''}> ${esc(cc)}</label>
-        <span class="sm">${num(ps.reduce((n, x) => n + x.n, 0))} médicos</span></summary>
+        <span class="sm">${num(ps.reduce((n, x) => n + x.n, 0))} ${TT('medico', 'p', '', 'l', 'l')}</span></summary>
         <div class="zprov">${ps.map(x => `<label><input type="checkbox" data-zp="${esc(x.p)}" data-zpc="${esc(cc)}" ${sel.has(x.p) ? 'checked' : ''}> ${esc(bonito(x.p))} <span class="sm">${num(x.n)}</span></label>`).join('')}</div></details>`;
     }).join('')}</div>
-    <div class="acts" style="margin-top:8px"><button class="btn sec" id="uzok">Guardar zona y asignar sus médicos</button></div></div>`;
+    <div class="acts" style="margin-top:8px"><button class="btn sec" id="uzok">Guardar zona y asignar sus ${TT('medico', 'p', '', 'l', 'l')}</button></div></div>`;
 }
 
 
@@ -9206,16 +9319,16 @@ async function pintarOperativa() {
 
 
 async function catLlamadas() {
-  for (const k of ['MOTIVO_LLAMADA', 'RESULTADO_LLAMADA']) {
-    if (!(CAT[k] || []).length) { const { data } = await db.rpc('catalogo', { p_clave: k }); CAT[k] = data || []; }
+  for (const k of ['motivo_llamada', 'resultado_llamada']) {
+    if (!(CAT[k] || []).length) { const { data } = await db.rpc('catalogo_papel', { p_papel: k }); CAT[k] = data || []; }
   }
 }
 async function pintarLlamadas() {
   await catLlamadas();
   $('vcuerpo').innerHTML = `<div class="panel">
     <div class="filtros"><div id="llper"></div>
-      <div><label for="llq">Buscar</label><input id="llq" type="search" placeholder="Nombre, teléfono o médico"></div>
-      <div><label for="llfres">Resultado</label><select id="llfres"><option value="">Todos</option>${(CAT.RESULTADO_LLAMADA || []).map(x => `<option>${esc(x.valor)}</option>`).join('')}</select></div></div>
+      <div><label for="llq">Buscar</label><input id="llq" type="search" placeholder="Nombre, teléfono o ${TT('medico', 's', '', 'l', 'l')}"></div>
+      <div><label for="llfres">Resultado</label><select id="llfres"><option value="">Todos</option>${(CAT.resultado_llamada || []).map(x => `<option>${esc(x.valor)}</option>`).join('')}</select></div></div>
     <div class="kpis vtot" id="lltot"></div>
     <div class="angrid" id="llres2" style="margin:0 0 14px"></div>
     <div id="lllista"></div></div>`;
@@ -9232,13 +9345,13 @@ async function pintarLlamadas() {
       <div class="kpi"><b>${res.total ? Math.round(res.con_pedido / res.total * 100) + '%' : '—'}</b><span>Conversión</span></div>`;
     $('llres2').innerHTML = `<div class="card ancard"><h2>Cómo terminan</h2>${(res.por_resultado || []).length ? barrasH(res.por_resultado.map(x => ({ n: x.resultado, v: x.n })), num) : vacioGrafico('Registra llamadas para ver cómo terminan.')}
         <p class="leer"><b>Cómo leerlo:</b> si pesan «El precio no le convence» o «Solo quería información», conviene revisar el argumentario o las condiciones.</p></div>
-      <div class="card ancard"><h2>De qué médico vienen</h2>${(res.por_medico || []).length ? `<div class="barrash">${res.por_medico.map((x, i) => `<div class="bh"><span class="bhn">${i + 1}. ${esc(x.medico)}</span>
-          <span class="bhb"><i style="width:${Math.max(3, x.n / res.por_medico[0].n * 100)}%"></i></span><b>${num(x.pedidos)}/${num(x.n)}</b></div>`).join('')}</div>` : vacioGrafico('Verás qué médicos generan llamadas y cuántas acaban en pedido.')}
-        <p class="leer"><b>Cómo leerlo:</b> pedidos sobre llamadas por médico. Un médico con muchas llamadas y pocos pedidos es una oportunidad de seguimiento.</p></div>`;
+      <div class="card ancard"><h2>De qué ${TT('medico', 's', '', 'l', 'l')} vienen</h2>${(res.por_medico || []).length ? `<div class="barrash">${res.por_medico.map((x, i) => `<div class="bh"><span class="bhn">${i + 1}. ${esc(x.medico)}</span>
+          <span class="bhb"><i style="width:${Math.max(3, x.n / res.por_medico[0].n * 100)}%"></i></span><b>${num(x.pedidos)}/${num(x.n)}</b></div>`).join('')}</div>` : vacioGrafico(`Verás qué ${TT('medico', 'p', '', 'l', 'l')} generan llamadas y cuántas acaban en pedido.`)}
+        <p class="leer"><b>Cómo leerlo:</b> pedidos sobre llamadas por ${TT('medico', 's', '', 'l', 'l')}. ${TT('medico', 's', 'un', 'C', 'l')} con muchas llamadas y pocos pedidos es una oportunidad de seguimiento.</p></div>`;
     const tamL = tamPagina(); LLPAG = Math.min(LLPAG, Math.max(0, Math.ceil(lista.length / tamL) - 1));
     const lvis = lista.slice(LLPAG * tamL, LLPAG * tamL + tamL);
     $('lllista').innerHTML = lista.length ? `<div class="dgrid-wrap"><div class="dgrid llam">
-      <div class="dh"><span>Fecha</span><span>Quién llama</span><span>Médico</span><span>Motivo</span><span>Resultado</span><span>Próximo paso</span><span>Atendió</span></div>
+      <div class="dh"><span>Fecha</span><span>Quién llama</span><span>${TT('medico', 's', '', 'l', 'C')}</span><span>Motivo</span><span>Resultado</span><span>Próximo paso</span><span>Atendió</span></div>
       ${lvis.map(x => `<button class="dr" data-ll="${x.id}"><span>${new Date(x.fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}<span class="sm">${esc(x.direccion || '')}</span></span>
         <span><b>${esc(x.nombre || x.cliente || '—')}</b><span class="sm">${esc(x.telefono || '')}</span></span><span class="corta">${esc(x.medico || x.medico_texto || '—')}</span>
         <span class="sm">${esc(x.motivo || '—')}</span><span>${esc(x.resultado || '—')}${x.pedido ? `<span class="sm">Pedido ${esc(x.pedido)}</span>` : ''}</span>
@@ -9268,12 +9381,12 @@ document.querySelectorAll('[data-t="seguimiento"]').forEach(b => { if (b.closest
 
 /* ---------------- ayudas y manual ---------------- */
 
-AYUDA.seguimiento = ['Calidad del dato', 'Qué parte de la base está completa y qué falta, y el avance comercial de cada médico.', [
+AYUDA.seguimiento = ['Calidad del dato', `Qué parte de la base está completa y qué falta, y el avance comercial de cada ${TT('medico', 's', '', 'l', 'l')}.`, [
   'Arriba, el porcentaje de fichas completas y cuántas fichas no tienen ubicación, horario, especialidad, contacto, provincia o comercial.',
-  'Debajo, cada médico con su estado, visitas y próxima acción, con filtros para localizar los atrasados.']];
+  `Debajo, cada ${TT('medico', 's', '', 'l', 'l')} con su estado, ${TT('visita', 'p', '', 'l', 'l')} y próxima acción, con filtros para localizar los atrasados.`]];
 MANUAL.forEach(s => {
-  if (s.id === 'ventas') s.hacer.push([1, 'Operativa de cada pedido: pago recibido, paquete preparado y emails enviados (televenta)'], [1, 'Registro de llamadas de televenta, con motivo, resultado y médico del que viene']);
-  if (s.id === 'admin') s.hacer.push([3, 'Zona de cada comercial por provincias; los médicos nuevos de su zona entran solos en su cartera'], [3, 'Esquema de comisión con fecha de efecto: hoy, todo el histórico o una fecha concreta']);
+  if (s.id === 'ventas') s.hacer.push([1, 'Operativa de cada pedido: pago recibido, paquete preparado y emails enviados (televenta)'], [1, `Registro de llamadas de televenta, con motivo, resultado y ${TT('medico', 's', '', 'l', 'l')} del que viene`]);
+  if (s.id === 'admin') s.hacer.push([3, `Zona de cada comercial por provincias; ${TT('medico', 'p', 'el', 'l', 'l', 'nuevo')} de su zona entran solos en su cartera`], [3, 'Esquema de comisión con fecha de efecto: hoy, todo el histórico o una fecha concreta']);
 });
 MANUAL.push({ id: 'permisos', t: 'Permisos por módulo', a: null, para: 'Cada módulo se abre con su permiso; si no lo tienes, no aparece en el menú.',
   hacer: [[0, 'Clientes, Productos y stock, Facturación, Analítica y Calidad del dato tienen su propio permiso'],
@@ -9292,7 +9405,7 @@ Object.assign(RPC_TTL, { pedidos_pagina: 30 });
 
 function avisoSinSalida(el) {
   if (prefsActivas().salida || !el || el.querySelector('.sinsalida')) return;
-  el.insertAdjacentHTML('afterbegin', `<div class="avisoh sinsalida"><span>📍 <b>Aún no has configurado tu punto de salida.</b> Las horas se calculan desde la primera visita, sin el desplazamiento inicial.</span>
+  el.insertAdjacentHTML('afterbegin', `<div class="avisoh sinsalida"><span>📍 <b>Aún no has configurado tu punto de salida.</b> Las horas se calculan desde la ${TT('visita', 's', 'primer', 'l', 'l')}, sin el desplazamiento inicial.</span>
     <button class="btn sec" data-irprefs>Configurarlo</button></div>`);
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-irprefs]')) { CFG_SEC = 'prefs'; ir('config'); } });
@@ -9326,7 +9439,7 @@ async function listaPedidos() {
   const ico = p => p.estado !== 'Confirmado' ? '' : `<span class="opico" title="Pago ${p.pago_estado === 'Cobrado' ? 'recibido' : 'pendiente'} · Paquete ${p.paquete_en ? 'preparado' : 'por preparar'}${p.factura ? ' · Factura ' + (p.email_factura_en ? 'enviada' : 'por enviar') : ''}">
       <i class="${p.pago_estado === 'Cobrado' ? 'ok' : 'no'}">💳</i><i class="${p.paquete_en ? 'ok' : 'no'}">📦</i>${p.factura ? `<i class="${p.email_factura_en ? 'ok' : 'no'}">🧾</i>` : ''}</span>`;
   $('pedlista').innerHTML = PEDIDOS.length ? `<div class="dgrid-wrap"><div class="dgrid peds2 ${imp ? '' : 'sinimp'}">
-    <div class="dh"><span>Fecha</span><span>Cliente</span><span>Médico</span><span>Comercial</span><span>Productos</span>
+    <div class="dh"><span>Fecha</span><span>Cliente</span><span>${TT('medico', 's', '', 'l', 'C')}</span><span>Comercial</span><span>Productos</span>
       <span class="num">Uds.</span>${imp ? '<span class="num">Base</span><span class="num">Total</span>' : ''}<span>Estado</span><span>Operativa</span></div>
     ${PEDIDOS.map(p => `<button class="dr" data-ped="${p.id}" style="${p.estado === 'Anulado' ? 'opacity:.55' : ''}">
       <span>${fechaCorta(p.fecha)}${p.factura || p.numero ? `<span class="sm">${esc(p.factura || p.numero)}</span>` : ''}</span>
@@ -9541,10 +9654,10 @@ pintarEmpresa = (orig => async function () {
 const ICONOS_MANUAL = { roles: '👥', inicio: '🏠', agenda: '📅', rutas: '🧭', directorio: '🩺', centros: '🏥', visitas: '📝', ventas: '🛒',
   config: '⚙️', admin: '🛡️', facturacion: '🧾', permisos: '🔐' };
 const PRIMEROS_PASOS = {
-  Comercial: [['📍', 'Configura tu punto de salida', 'Configuración → Preferencias. Con él se calculan las horas de tus rutas.', 'config'],
-    ['📅', 'Planifica tu semana', 'Agenda → Semana → «Planificar la semana». Reparte a tus médicos por días.', 'agenda'],
-    ['▶', 'Empieza la jornada', 'Agenda → Tu día → «Empezar jornada» y registra cada visita al terminarla.', 'agenda']],
-  Televenta: [['🛒', 'Crea y valida pedidos', 'Pedidos → Ventas → «+ Nuevo pedido». Al validarlo sale del stock.', 'ventas'],
+  cartera: [['📍', 'Configura tu punto de salida', 'Configuración → Preferencias. Con él se calculan las horas de tus rutas.', 'config'],
+    ['📅', 'Planifica tu semana', `Agenda → Semana → «Planificar la semana». Reparte a tus ${TT('medico', 'p', '', 'l', 'l')} por días.`, 'agenda'],
+    ['▶', 'Empieza la jornada', `Agenda → Tu día → «Empezar jornada» y registra cada ${TT('visita', 's', '', 'l', 'l')} al terminarla.`, 'agenda']],
+  televenta: [['🛒', 'Crea y valida pedidos', 'Pedidos → Ventas → «+ Nuevo pedido». Al validarlo sale del stock.', 'ventas'],
     ['📞', 'Registra cada llamada', 'Pedidos → Llamadas. Aunque no acabe en pedido: así se ve por qué.', 'ventas'],
     ['✅', 'Cierra la operativa', 'Valida el pago, prepara el paquete y envía la factura desde el pedido.', 'ventas']],
   default: [['🏠', 'Revisa Inicio', 'Indicadores, alertas y tu semana de un vistazo.', 'inicio'],
@@ -9593,7 +9706,7 @@ async function cargarManualPaso2() {
   v.onclick = e => {
     const m = e.target.closest('[data-mira]'); if (!m) return;
     const i = [...v.querySelectorAll('.manpaso')].indexOf(m.closest('.manpaso'));
-    const pasos = PRIMEROS_PASOS[PERFIL.rol] || PRIMEROS_PASOS.default;
+    const pasos = PRIMEROS_PASOS[['cartera', 'televenta'].find(c => puede(c))] || PRIMEROS_PASOS.default;
     if (i >= 0 && pasos[i]) infoManual(null, pasos[i]);
   };
   v.querySelectorAll('.mancard').forEach(c => c.onclick = () => infoManual(c.dataset.mansec));
@@ -9613,10 +9726,10 @@ async function cargarManualPaso3() {
 
 async function cargarManualBase() {
   const v = $('v-manual');
-  const accesoTxt = s => s.a ? NIVEL_TXT[nivelDe2(s.a)] : (PERFIL.rol === 'Administrador' ? 'Completo' : '—');
-  const nivelSec = s => s.a ? nivelDe2(s.a) : (PERFIL.rol === 'Administrador' ? 3 : (s.id === 'roles' || s.id === 'permisos') ? 1 : 0);
+  const accesoTxt = s => s.a ? NIVEL_TXT[nivelDe2(s.a)] : (puede('administrar') ? 'Completo' : '—');
+  const nivelSec = s => s.a ? nivelDe2(s.a) : (puede('administrar') ? 3 : (s.id === 'roles' || s.id === 'permisos') ? 1 : 0);
   const modulos = Object.keys(MODULO_AREA).filter(puedeModulo).length;
-  const pasos = PRIMEROS_PASOS[PERFIL.rol] || PRIMEROS_PASOS.default;
+  const pasos = PRIMEROS_PASOS[['cartera', 'televenta'].find(c => puede(c))] || PRIMEROS_PASOS.default;
   v.innerHTML = `
     <div class="manhero">
       <div><h1>Manual de uso</h1><p>Todo lo que puedes hacer en la plataforma, explicado para tu perfil.</p>
@@ -9839,9 +9952,9 @@ if (EN_PRUEBAS) {
   pintarFranjaPruebas = (orig => async function () {
     orig();
     const b = $('prreset'); if (!b) return;
-    const { data: puede, error } = await RPC_ORIG('pruebas_puede_restablecer', {});
+    const { data: permitido, error } = await RPC_ORIG('pruebas_puede_restablecer', {});
     if (error) return;               // proyecto sin el ajuste: se mantiene como estaba
-    if (!puede) { b.remove(); return; }
+    if (!permitido) { b.remove(); return; }
     b.onclick = async () => {
       const txt = await pedirTexto('Se borrará todo lo creado o cambiado en pruebas y los datos quedarán como se copiaron de producción.\n\nEscribe VOLVER para confirmar.', '', { titulo: '¿Volver a los datos de partida?', ok: 'Volver a los datos de partida' });
       if (txt === null) return;
@@ -9856,7 +9969,7 @@ if (EN_PRUEBAS) {
 
 /* ---------------- espacio del médico ---------------- */
 
-const ES_MEDICO = () => PERFIL && PERFIL.rol === 'Medico';
+const ES_MEDICO = () => puede('portal_prescriptor');
 
 async function cargarInforme() {
   const v = $('v-informe');
@@ -9866,7 +9979,7 @@ async function cargarInforme() {
   const pinta = async () => {
     const r = $('mdper').__rango();
     const { data: d } = await RPC_ORIG('informe_medico', { p_desde: r.desde, p_hasta: r.hasta });
-    if (!d || !d.ok) { $('mdcuerpo').innerHTML = `<div class="card"><div class="vacio">Tu usuario todavía no está vinculado a tu ficha de médico. Avisa a la empresa para activarlo.</div></div>`; return; }
+    if (!d || !d.ok) { $('mdcuerpo').innerHTML = `<div class="card"><div class="vacio">Tu usuario todavía no está vinculado a tu ficha de ${TT('medico', 's', '', 'l', 'l')}. Avisa a la empresa para activarlo.</div></div>`; return; }
     $('mdnom').textContent = d.medico.nombre; $('mdesp').textContent = d.medico.especialidad || '';
     const top = d.posicion && d.posicion <= 3 ? 'Top 3' : d.posicion && d.posicion <= 5 ? 'Top 5' : d.posicion && d.posicion <= 10 ? 'Top 10' : null;
     const ll = d.llamadas || {}, conv = ll.total ? Math.round(ll.con_pedido / ll.total * 100) : null;
@@ -9875,23 +9988,23 @@ async function cargarInforme() {
       <div class="kpis vtot mdk">
         <div class="kpi"><b>${num(d.unidades)}</b><span>unidades pautadas</span></div>
         <div class="kpi"><b>${num(d.pautas)}</b><span>pautas (pedidos)</span></div>
-        <div class="kpi"><b>${num(d.pacientes)}</b><span>pacientes</span></div>
-        <div class="kpi"><b>${num(d.repiten)}</b><span>pacientes que repiten</span></div>
+        <div class="kpi"><b>${num(d.pacientes)}</b><span>${TT('paciente', 'p', '', 'l', 'l')}</span></div>
+        <div class="kpi"><b>${num(d.repiten)}</b><span>${TT('paciente', 'p', '', 'l', 'l')} que repiten</span></div>
         <div class="kpi ${top ? 'ok' : ''}"><b>${top ? '🏆 ' + top : d.posicion ? 'Nº ' + d.posicion : '—'}</b><span>${d.posicion ? `de ${num(d.prescriptores)} prescriptores` : 'sin pautas en el periodo'}</span></div>
       </div>
       <div class="angrid">
         <div class="card ancard ancha"><h2>Tus pautas mes a mes</h2>
           ${d.unidades ? svgBarras(meses, meses.map(m => (serie[m] || {}).unidades || 0), meses.map(m => (serie[m] || {}).pautas || 0), ['Unidades', 'Pautas'])
-            : vacioGrafico('Cuando tus pacientes hagan su pedido, verás aquí la evolución.')}
+            : vacioGrafico(`Cuando tus ${TT('paciente', 'p', '', 'l', 'l')} hagan su pedido, verás aquí la evolución.`)}
           <p class="leer">Cada barra son las unidades pautadas en el mes y la línea, el número de pautas.${d.ultima_pauta ? ' Última pauta: ' + fechaCorta(d.ultima_pauta) + '.' : ''}</p></div>
         <div class="card ancard"><h2>Qué pautas</h2>
           ${(d.productos || []).length ? svgDonut(d.productos.map(x => ({ n: x.nombre, v: x.unidades }))) : vacioGrafico('Aparecerá el reparto por producto.')}</div>
-        <div class="card ancard"><h2>Llamadas de tus pacientes</h2>
+        <div class="card ancard"><h2>Llamadas de tus ${TT('paciente', 'p', '', 'l', 'l')}</h2>
           <div class="minis"><div><b>${num(ll.total || 0)}</b><span>llamadas</span></div><div><b>${conv == null ? '—' : conv + '%'}</b><span>acaban en pedido</span></div></div>
-          ${(ll.por_resultado || []).length ? barrasH(ll.por_resultado.map(x => ({ n: x.resultado, v: x.n })), num) : '<p class="sm" style="padding:0 16px">Todavía no hay llamadas registradas de pacientes que vengan de tu parte.</p>'}
-          <p class="leer">Pacientes que llaman a la empresa de tu parte. Si muchos llaman por dudas o por precio, podemos darte material para explicarlo en consulta.</p></div>
+          ${(ll.por_resultado || []).length ? barrasH(ll.por_resultado.map(x => ({ n: x.resultado, v: x.n })), num) : `<p class="sm" style="padding:0 16px">Todavía no hay llamadas registradas de ${TT('paciente', 'p', '', 'l', 'l')} que vengan de tu parte.</p>`}
+          <p class="leer">${TT('paciente', 'p', '', 'l', 'C')} que llaman a la empresa de tu parte. Si muchos llaman por dudas o por precio, podemos darte material para explicarlo en consulta.</p></div>
       </div>
-      <p class="sm" style="text-align:center;margin:18px 0">Por confidencialidad no se muestran datos de tus pacientes ni importes.</p>`;
+      <p class="sm" style="text-align:center;margin:18px 0">Por confidencialidad no se muestran datos de tus ${TT('paciente', 'p', '', 'l', 'l')} ni importes.</p>`;
   };
   montarPeriodo($('mdper'), { id: 'informe', valor: 'anio', alCambiar: pinta });
   pinta();
@@ -9919,9 +10032,9 @@ if (typeof pintarBnav === 'function') pintarBnav = (orig => function () {
 
 // Vincular un usuario de tipo Médico con su ficha (Administración → Usuarios → Editar)
 
-MANUAL.push({ id: 'medico', t: 'Espacio del médico', a: null, para: 'Los médicos con usuario ven su informe de prescripción y reciben un aviso con cada pauta a su nombre.',
+MANUAL.push({ id: 'medico', t: `Espacio ${TT('medico', 's', 'del', 'l', 'l')}`, a: null, para: `${TT('medico', 'p', 'el', 'C', 'l')} con usuario ven su informe de prescripción y reciben un aviso con cada pauta a su nombre.`,
   hacer: [[3, 'Crear el usuario con el rol «Medico» y vincularlo a su ficha (Administración → Usuarios → Editar)']],
-  config: ['El médico ve unidades, pautas, pacientes (solo el número), su posición entre los prescriptores y las llamadas de sus pacientes. Nunca importes ni nombres.'] });
+  config: [`${TT('medico', 's', 'el', 'C', 'l')} ve unidades, pautas, ${TT('paciente', 'p', '', 'l', 'l')} (solo el número), su posición entre los prescriptores y las llamadas de sus ${TT('paciente', 'p', '', 'l', 'l')}. Nunca importes ni nombres.`] });
 ICONOS_MANUAL.medico = '🩺';
 
 /* ---------------- factura en PDF con el logo circular ---------------- */
@@ -10111,8 +10224,8 @@ async function vistazoHoy() {
 const KPI_ICO = { citas: '📅', urgentes: '⚠️', visitas_sem: '📝', visitas_mes: '🗓️', interesados: '✨', sin_contactar: '📇', cartera: '🩺', dups: '🧩',
   sin_visita_60: '⏳', sin_horario: '🕘', uds_mes: '📦', prescriptores: '💊', nuevos_presc: '🌱', activos_90: '🔁', conversion: '📈',
   importe_mes: '€', borradores: '✏️', muestras_mes: '🎁', material_mes: '📚', citas_7d: '📆', visitas_7d: '🧭' };
-const KPI_TXT = { citas: 'Visitadas de las citas de hoy', urgentes: 'Médicos marcados urgentes sin visita', visitas_sem: 'Registradas de lunes a hoy',
-  visitas_mes: 'Registradas en el mes', interesados: 'En estado «Interesado»', sin_contactar: 'Todavía sin primera visita', cartera: 'Asignados a ti',
+const KPI_TXT = { citas: 'Visitadas de las citas de hoy', urgentes: `${TT('medico', 'p', '', 'l', 'C', 'marcado')} urgentes sin ${TT('visita', 's', '', 'l', 'l')}`, visitas_sem: 'Registradas de lunes a hoy',
+  visitas_mes: 'Registradas en el mes', interesados: 'En estado «Interesado»', sin_contactar: `Todavía sin ${TT('visita', 's', 'primer', 'l', 'l')}`, cartera: 'Asignados a ti',
   dups: 'Fichas por revisar', uds_mes: 'Cajas validadas en el mes', prescriptores: 'Con alguna venta este mes', nuevos_presc: 'Primera venta este mes',
   activos_90: 'Con ventas en 90 días', conversion: 'Visitados que ya prescriben', importe_mes: 'Base sin IVA del mes', borradores: 'Pedidos sin validar',
   sin_visita_60: 'Hace más de 60 días', sin_horario: 'Sin días de consulta', muestras_mes: 'Entregadas este mes', material_mes: 'Entregado este mes',
@@ -10131,11 +10244,11 @@ function indicadoresCompletos() {
 /* ---------------- alertas: ventana clara, con qué significa y qué hacer ---------------- */
 
 const EXPLICA_ALERTA = [
-  [/sin comercial/i, 'Ventas de médicos que no están en la cartera de ningún comercial: nadie cobra comisión por ellas.', 'Asigna un comercial desde la ficha del médico.'],
-  [/más de una cartera/i, 'El mismo médico aparece en la cartera de varias personas.', 'Deja una sola persona desde Administración → Usuarios → Asignar.'],
-  [/otra cartera|otro comercial/i, 'Un comercial ha visitado médicos que lleva otra persona.', 'Revisa si hay que cambiar la cartera o coordinar las visitas.'],
-  [/dos personas|14 días/i, 'Dos personas han visitado al mismo médico en pocos días.', 'Coordina quién lo lleva para no repetir visitas.'],
-  [/sin médico|sin atribuir/i, 'Pedidos validados que no tienen médico: no cuentan como prescripción.', 'Ábrelos y asigna el médico que lo recomendó.'],
+  [/sin comercial/i, `Ventas de ${TT('medico', 'p', '', 'l', 'l')} que no están en la cartera de ningún comercial: nadie cobra comisión por ellas.`, `Asigna un comercial desde la ficha ${TT('medico', 's', 'del', 'l', 'l')}.`],
+  [/más de una cartera/i, `El mismo ${TT('medico', 's', '', 'l', 'l')} aparece en la cartera de varias personas.`, 'Deja una sola persona desde Administración → Usuarios → Asignar.'],
+  [/otra cartera|otro comercial/i, `Un comercial ha visitado ${TT('medico', 'p', '', 'l', 'l')} que lleva otra persona.`, `Revisa si hay que cambiar la cartera o coordinar ${TT('visita', 'p', 'el', 'l', 'l')}.`],
+  [/dos personas|14 días/i, `Dos personas han visitado al mismo ${TT('medico', 's', '', 'l', 'l')} en pocos días.`, `Coordina quién lo lleva para no repetir ${TT('visita', 'p', '', 'l', 'l')}.`],
+  [/sin médico|sin atribuir/i, `Pedidos validados que no tienen ${TT('medico', 's', '', 'l', 'l')}: no cuentan como prescripción.`, `Ábrelos y asigna ${TT('medico', 's', 'el', 'l', 'l')} que lo recomendó.`],
   [/stock|caduc/i, 'Productos con pocas unidades o lotes próximos a caducar.', 'Revisa el stock y prepara un pedido de compra.'],
   [/compra|recepci/i, 'Pedidos de compra pendientes de recibir.', 'Registra la recepción cuando llegue la mercancía.']
 ];
@@ -10334,10 +10447,10 @@ async function editorLlamada(l, previa) {
     <div class="llpaso"><span class="lln">1</span><b>Quién llama</b>
       <div class="segm2"><button type="button" data-lmodo="exist" class="${nuevo ? '' : 'on'}">Cliente existente</button><button type="button" data-lmodo="nuevo" class="${nuevo ? 'on' : ''}">Cliente nuevo</button></div>
       <div id="llcli"></div></div>
-    <div class="llpaso"><span class="lln">2</span><b>Médico que lo recomienda</b><div id="llmed"></div>
+    <div class="llpaso"><span class="lln">2</span><b>${TT('medico', 's', '', 'l', 'C')} que lo recomienda</b><div id="llmed"></div>
       <div class="sm" style="margin-top:4px">Si no está en la base, escribe su nombre: se guarda igualmente para las métricas.</div></div>
-    <div class="llpaso"><span class="lln">3</span><b>Motivo</b><div class="chipsw" id="llmot">${chips('MOTIVO_LLAMADA', l.motivo, 'data-lm')}</div></div>
-    <div class="llpaso"><span class="lln">4</span><b>Resultado</b><div class="chipsw" id="llres">${chips('RESULTADO_LLAMADA', l.resultado, 'data-lr')}</div>
+    <div class="llpaso"><span class="lln">3</span><b>Motivo</b><div class="chipsw" id="llmot">${chips('motivo_llamada', l.motivo, 'data-lm')}</div></div>
+    <div class="llpaso"><span class="lln">4</span><b>Resultado</b><div class="chipsw" id="llres">${chips('resultado_llamada', l.resultado, 'data-lr')}</div>
       <div id="llseg" class="${!l.resultado || l.resultado === 'Pedido hecho' ? 'hide' : ''}">
         <div class="sm" style="margin:8px 0 4px">¿Cuándo volver a llamar?</div>
         <div class="chipsw">${[['Mañana', 1], ['En 3 días', 3], ['En una semana', 7], ['En un mes', 30]].map(([t, d]) => `<button type="button" class="chipsel" data-ld="${d}">${t}</button>`).join('')}</div>
@@ -10357,7 +10470,7 @@ async function editorLlamada(l, previa) {
       c.innerHTML = `<div class="g2"><div><input id="lcn" placeholder="Nombre y apellidos" value="${esc(l.nombre || '')}"></div>
         <div><input id="lct" placeholder="Teléfono" inputmode="tel" value="${esc(l.telefono || '')}"></div></div>
         <div class="g2"><div><input id="lce" type="email" placeholder="Email (para la factura)"></div><div><input id="lcd" placeholder="DNI (opcional)"></div></div>
-        <div class="sm">Si hace el pedido, se da de alta como cliente con su médico.</div>`;
+        <div class="sm">Si hace el pedido, se da de alta como cliente con su ${TT('medico', 's', '', 'l', 'l')}.</div>`;
     } else if (cliente) {
       c.innerHTML = `<div class="clisel"><span><b>${esc(cliente.nombre)}</b><span class="sm">${esc(cliente.tel || cliente.telefono || '')}</span></span><button type="button" class="btn sec" id="lccambia">Cambiar</button></div>`;
       $('lccambia').onclick = () => { cliente = null; pintaCli(); };
@@ -10438,9 +10551,9 @@ pintarLlamadas = (orig => async function () {
   const { data: s } = await RPC_ORIG('llamadas_resumen', { p_desde: r.desde, p_hasta: r.hasta });
   if (!s || !$('llres2') || $('llcom')) return;
   $('llres2').insertAdjacentHTML('beforeend', `
-    <div class="card ancard" id="llcom"><h2>Por comercial del médico</h2>${(s.por_comercial || []).length ? `<div class="barrash">${s.por_comercial.map(x => `<div class="bh"><span class="bhn">${esc(x.comercial)}</span>
-        <span class="bhb"><i style="width:${Math.max(3, x.n / s.por_comercial[0].n * 100)}%"></i></span><b>${num(x.pedidos)}/${num(x.n)}</b></div>`).join('')}</div>` : vacioGrafico('Aparecerá cuando haya llamadas con médico.')}
-      <p class="leer"><b>Cómo leerlo:</b> pedidos sobre llamadas de pacientes que vienen de médicos de cada comercial. Mide el volumen que genera el trabajo de cada zona.</p></div>
+    <div class="card ancard" id="llcom"><h2>Por comercial ${TT('medico', 's', 'del', 'l', 'l')}</h2>${(s.por_comercial || []).length ? `<div class="barrash">${s.por_comercial.map(x => `<div class="bh"><span class="bhn">${esc(x.comercial)}</span>
+        <span class="bhb"><i style="width:${Math.max(3, x.n / s.por_comercial[0].n * 100)}%"></i></span><b>${num(x.pedidos)}/${num(x.n)}</b></div>`).join('')}</div>` : vacioGrafico(`Aparecerá cuando haya llamadas con ${TT('medico', 's', '', 'l', 'l')}.`)}
+      <p class="leer"><b>Cómo leerlo:</b> pedidos sobre llamadas de ${TT('paciente', 'p', '', 'l', 'l')} que vienen de ${TT('medico', 'p', '', 'l', 'l')} de cada comercial. Mide el volumen que genera el trabajo de cada zona.</p></div>
     <div class="card ancard"><h2>Por qué no compran</h2>${(s.no_compra || []).length ? barrasH(s.no_compra.map(x => ({ n: x.resultado, v: x.n })), num) : vacioGrafico('Sin llamadas sin compra en el periodo.')}
       <p class="leer"><b>Qué hacer:</b> «Precio» pide revisar condiciones o argumentario; «Se lo piensa» y «Pagará más tarde» deben tener seguimiento programado (${num(s.seguimientos || 0)} pendientes).</p></div>`);
 })(pintarLlamadas);
@@ -10460,7 +10573,7 @@ async function personasEsquema(id) {
   if (!COMS.length) await cargarComerciales();
   const pinta = async () => {
     const { data } = await db.rpc('asignaciones_esquema_lista');
-    const l = (data || []).filter(x => x.esquema_id === id), hoy = hoyISO(), admin = PERFIL.rol === 'Administrador';
+    const l = (data || []).filter(x => x.esquema_id === id), hoy = hoyISO(), admin = puede('administrar');
     if (!$('esqlista')) return;
     $('esqlista').innerHTML = `${l.length ? `<div class="esqfilas">${l.map(x => {
       const est = x.vigente ? ['Vigente', 'p-est'] : x.desde > hoy ? ['Programado', 'p-per'] : ['Terminado', 'p-anu'];
@@ -10470,7 +10583,7 @@ async function personasEsquema(id) {
         ${admin && x.vigente ? `<button type="button" class="kcfg" data-efin="${x.usuario_id}">Terminar hoy</button>` : ''}
         ${admin && x.desde > hoy ? `<button type="button" class="kcfg" data-equi="${x.usuario_id}" data-edesde="${x.desde}">Anular</button>` : ''}</div>`;
     }).join('')}</div>` : '<p class="sm">Nadie cobra todavía con este esquema.</p>'}
-    ${admin ? `<div class="esqadd"><select id="eap"><option value="">Añadir persona…</option>${COMS.filter(u => ['Comercial', 'Televenta'].includes(u.rol)).map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select>
+    ${admin ? `<div class="esqadd"><select id="eap"><option value="">Añadir persona…</option>${COMS.filter(u => rolPuede(u.rol, 'cobrar_comision')).map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select>
       <select id="eadm"><option value="hoy">desde hoy</option><option value="todo">todo su histórico</option><option value="fecha">desde una fecha…</option></select>
       <span id="eadfw" class="hide"><input id="eadf" type="date" value="${hoy}"></span>
       <button type="button" class="btn sec" id="eaok">Asignar</button></div>
@@ -10633,7 +10746,7 @@ function infoManual(id, paso) {
     if ($('mangoir')) $('mangoir').onclick = () => { $('dlg').close(); if (m === 'config') CFG_SEC = 'prefs'; ir(m); };
     return;
   }
-  const n = s.a ? nivelDe2(s.a) : (PERFIL.rol === 'Administrador' ? 3 : 1);
+  const n = s.a ? nivelDe2(s.a) : (puede('administrar') ? 3 : 1);
   const ay = AYUDA[id === 'visitas' ? 'agenda' : id === 'centros' ? 'directorio' : id] || null;
   const destino = MODULO_AREA[id] || ['manual', 'config'].includes(id) ? id : null;
   const cfg = CFG_DE_MODULO[id];
@@ -10642,7 +10755,7 @@ function infoManual(id, paso) {
     ${ay && ay[2] && ay[2].length ? `<h3 class="mansub">Cómo funciona</h3><ul class="manlist">${ay[2].map(x => `<li><span>•</span><span>${x}</span></li>`).join('')}</ul>` : ''}
     ${s.config.length ? `<h3 class="mansub">Dónde se configura</h3><div class="mancfg">${s.config.map(x => `<span>⚙ ${esc(x)}</span>`).join('')}</div>` : ''}
     <div class="acts" style="justify-content:flex-end;flex-wrap:wrap;margin-top:14px"><button class="btn sec" data-cerrar>Cerrar</button>
-      ${cfg && (PERFIL.rol === 'Administrador' || ['horario', 'kpis', 'prefs'].includes(cfg)) ? `<button class="btn sec" id="manircfg">Ir a su configuración</button>` : ''}
+      ${cfg && (puede('administrar') || ['horario', 'kpis', 'prefs'].includes(cfg)) ? `<button class="btn sec" id="manircfg">Ir a su configuración</button>` : ''}
       ${destino && destino !== 'manual' && (destino === 'config' || puedeModulo(destino)) ? `<button class="btn" id="manirmod">Abrir ${esc(s.t)}</button>` : ''}</div>`;
   $('dlg').showModal();
   if ($('manirmod')) $('manirmod').onclick = () => { $('dlg').close(); ir(destino); };
@@ -10830,9 +10943,9 @@ async function pintarMarca() {
 
 const PLANES = [
   { id: 'esencial', nombre: 'Esencial', precio: 149, incluidos: 5, bloque: [5, 99], medicos: 0,
-    para: 'Equipos pequeños que quieren ordenar sus visitas',
+    para: `Equipos pequeños que quieren ordenar sus ${TT('visita', 'p', '', 'l', 'l')}`,
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento'],
-    ventajas: ['Directorio de médicos y centros', 'Agenda, «Tu día» y registro de visitas', 'Rutas optimizadas y planificación semanal', 'Calidad del dato y duplicados', 'App móvil instalable'] },
+    ventajas: [`Directorio de ${TT('medico', 'p', '', 'l', 'l')} y centros`, `Agenda, «Tu día» y registro de ${TT('visita', 'p', '', 'l', 'l')}`, 'Rutas optimizadas y planificación semanal', 'Calidad del dato y duplicados', 'App móvil instalable'] },
   { id: 'profesional', nombre: 'Profesional', precio: 349, incluidos: 10, bloque: [5, 149], medicos: 0,
     para: 'Equipos que venden y quieren medir resultados',
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica'],
@@ -10840,11 +10953,11 @@ const PLANES = [
   { id: 'avanzado', nombre: 'Avanzado', precio: 649, incluidos: 20, bloque: [10, 249], medicos: 50,
     para: 'Empresas con facturación propia y varios equipos',
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
-    ventajas: ['Todo lo de Profesional', 'Facturación con VeriFactu y cobros', 'Compras, proveedores y trazabilidad', 'Zonas, supervisión del equipo y alertas', 'Espacio del médico (hasta 50 médicos)'] },
+    ventajas: ['Todo lo de Profesional', 'Facturación con VeriFactu y cobros', 'Compras, proveedores y trazabilidad', 'Zonas, supervisión del equipo y alertas', `Espacio ${TT('medico', 's', 'del', 'l', 'l')} (hasta 50 ${TT('medico', 'p', '', 'l', 'l')})`] },
   { id: 'premium', nombre: 'Premium', precio: 1190, incluidos: 40, bloque: [10, 249], medicos: null,
     para: 'Redes comerciales grandes que lo quieren todo',
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
-    ventajas: ['Todo lo de Avanzado', 'Espacio del médico sin límite', 'Entrar como otro usuario y auditoría completa', 'Puesta en marcha y migración de datos incluidas', 'Soporte prioritario'] }
+    ventajas: ['Todo lo de Avanzado', `Espacio ${TT('medico', 's', 'del', 'l', 'l')} sin límite`, 'Entrar como otro usuario y auditoría completa', 'Puesta en marcha y migración de datos incluidas', 'Soporte prioritario'] }
 ];
 let PLAN_ACTUAL = { plan: 'premium' };
 const planDe = id => PLANES.find(p => p.id === id) || PLANES[3];
@@ -10860,7 +10973,7 @@ function avisoPlan(mod) {
     <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <p>Está disponible desde el plan <b>${esc(p ? p.nombre : 'Premium')}</b>${p ? ` (${eurI(p.precio)}/mes, ${p.incluidos} usuarios incluidos)` : ''}.</p>
     ${p ? `<ul class="manlist">${p.ventajas.map(v => `<li><span>✓</span><span>${esc(v)}</span></li>`).join('')}</ul>` : ''}
-    <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Ahora no</button>${PERFIL.rol === 'Administrador' ? '<button class="btn" id="vplan">Ver planes</button>' : ''}</div>`;
+    <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Ahora no</button>${puede('administrar') ? '<button class="btn" id="vplan">Ver planes</button>' : ''}</div>`;
   $('dlg').showModal();
   if ($('vplan')) $('vplan').onclick = () => { $('dlg').close(); CFG_SEC = 'plan'; ir('config'); };
 }
@@ -10874,7 +10987,7 @@ async function pintarPlan2() {
     <div class="planact"><div><div class="sm">Tu plan</div><h2 style="padding:0;margin:2px 0">${esc(act.nombre)} <span class="pill ${(d.plan || {}).estado === 'activo' ? 'p-est' : 'p-per'}">${esc((d.plan || {}).estado || 'activo')}</span></h2>
       <div class="sm">${eurI(act.precio)}/mes · ${act.incluidos} usuarios incluidos${bloques ? ` + ${bloques} ${bloques === 1 ? 'bloque' : 'bloques'} de ${act.bloque[0]}` : ''}</div></div>
       <div class="planuso"><b>${num(d.usuarios || 0)} / ${num(maxU)}</b><span>usuarios activos</span><div class="barra"><i style="width:${pct}%"></i></div>
-        ${act.medicos !== 0 ? `<span class="sm">${num(d.medicos || 0)}${act.medicos ? ' / ' + act.medicos : ''} médicos con acceso</span>` : ''}</div></div></div>
+        ${act.medicos !== 0 ? `<span class="sm">${num(d.medicos || 0)}${act.medicos ? ' / ' + act.medicos : ''} ${TT('medico', 'p', '', 'l', 'l')} con acceso</span>` : ''}</div></div></div>
     <div class="planes">${PLANES.map(p => `<div class="plan ${p.id === act.id ? 'actual' : ''} ${p.id === 'avanzado' ? 'dest' : ''}">
       ${p.id === 'avanzado' ? '<span class="plancinta">El más elegido</span>' : ''}
       <h3>${esc(p.nombre)}</h3><div class="sm">${esc(p.para)}</div>
@@ -10887,7 +11000,7 @@ async function pintarPlan2() {
     <div class="card cfgpanel"><h3 style="margin-top:0">Cómo funciona</h3><ul class="manlist">
       <li><span>💳</span><span>Pago mensual con tarjeta o domiciliación. Con pago anual, dos meses gratis.</span></li>
       <li><span>👥</span><span>Cada plan incluye un número de usuarios; si el equipo crece, se añaden bloques de usuarios sin cambiar de plan.</span></li>
-      <li><span>🩺</span><span>Los médicos con acceso a su informe no cuentan como usuarios.</span></li>
+      <li><span>🩺</span><span>${TT('medico', 'p', 'el', 'C', 'l')} con acceso a su informe no cuentan como usuarios.</span></li>
       <li><span>🔄</span><span>Se puede cambiar de plan en cualquier momento; el cambio se aplica al confirmarse el pago.</span></li></ul>
       <div class="acts"><button class="btn sec" id="plbloque">+ Añadir un bloque de ${act.bloque[0]} usuarios (${eurI(act.bloque[1])}/mes)</button></div></div>`;
   const contratar = clave => {
@@ -10909,7 +11022,7 @@ async function pintarUsuarios2() {
   const { data } = await RPC_ORIG('usuarios_resumen', {});
   const todos = data || []; USUARIOS = todos.map(u => Object.assign({ medicos: u.cartera, visitas: u.visitas_mes }, u));
   const act = planDe(PLAN_ACTUAL.plan), maxU = act.incluidos + (+PLAN_ACTUAL.bloques_extra || 0) * act.bloque[0];
-  const activos = todos.filter(u => u.activo && u.rol !== 'Medico');
+  const activos = todos.filter(u => u.activo && !rolPuede(u.rol, 'portal_prescriptor'));
   const hace30 = Date.now() - 30 * 864e5;
   const inactivos = activos.filter(u => !u.ultima_actividad || new Date(u.ultima_actividad).getTime() < hace30).length;
   const porRol = {}; activos.forEach(u => porRol[u.rol] = (porRol[u.rol] || 0) + 1);
@@ -10918,14 +11031,14 @@ async function pintarUsuarios2() {
     const l = todos.filter(u => (!q || (u.nombre + ' ' + (u.email || '')).toLowerCase().includes(q)) && (!USR_F.rol || u.rol === USR_F.rol)
       && (USR_F.est === 'todos' || (USR_F.est === 'activos' ? u.activo : !u.activo)));
     $('usrl').innerHTML = l.map(u => {
-      const mods = Object.keys(MODULO_AREA).filter(m => u.rol === 'Administrador' || +((u.areas || {})[MODULO_AREA[m]] || 0) >= 1);
+      const mods = Object.keys(MODULO_AREA).filter(m => rolPuede(u.rol, 'administrar') || +((u.areas || {})[MODULO_AREA[m]] || 0) >= 1);
       const reciente = u.ultima_actividad ? new Date(u.ultima_actividad) : null;
       return `<button class="usrcard ${u.activo ? '' : 'off'}" data-usr="${u.id}">
-        <span class="usrav" style="background:${u.rol === 'Administrador' ? 'var(--grad)' : u.rol === 'Medico' ? 'linear-gradient(135deg,#0F6E4C,#12805C)' : u.rol === 'Televenta' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'linear-gradient(135deg,#1E6FB8,#5BB4E5)'}">${esc(iniciales(u.nombre))}</span>
+        <span class="usrav" style="background:${esc((rolDef(u.rol) || {}).color || 'linear-gradient(135deg,#1E6FB8,#5BB4E5)')}">${esc(iniciales(u.nombre))}</span>
         <span class="usrtx"><b>${esc(u.nombre)}</b><span class="sm">${esc(u.email || '')}</span>
           <span class="usrchips"><span class="pill p-est">${esc(u.rol)}</span>${u.activo ? '' : '<span class="pill p-anu">Desactivado</span>'}
-            ${u.rol === 'Medico' ? `<span class="pill p-per">${esc(u.medico || 'Sin ficha')}</span>` : `<span class="sm">${mods.length} módulos</span>`}</span></span>
-        <span class="usrdat">${u.rol !== 'Medico' ? `<span><b>${num(u.cartera)}</b> en cartera</span><span><b>${num(u.visitas_mes)}</b> visitas mes</span>` : ''}
+            ${rolPuede(u.rol, 'portal_prescriptor') ? `<span class="pill p-per">${esc(u.medico || 'Sin ficha')}</span>` : `<span class="sm">${mods.length} módulos</span>`}</span></span>
+        <span class="usrdat">${!rolPuede(u.rol, 'portal_prescriptor') ? `<span><b>${num(u.cartera)}</b> en cartera</span><span><b>${num(u.visitas_mes)}</b> ${TT('visita', 'p', '', 'l', 'l')} mes</span>` : ''}
           <span class="sm">${reciente ? 'Activo ' + fechaCorta(isoLocal(reciente)) : 'Sin actividad'}</span></span></button>`;
     }).join('') || '<div class="vacio">Nadie con estos filtros.</div>';
     $('usrl').querySelectorAll('[data-usr]').forEach(b => b.onclick = () => detalleUsuario(todos.find(u => u.id === b.dataset.usr)));
@@ -10935,10 +11048,10 @@ async function pintarUsuarios2() {
       <div class="kpi"><b>${num(activos.length)} / ${num(maxU)}</b><span>usuarios del plan ${esc(act.nombre)}</span></div>
       ${Object.entries(porRol).map(([r, n]) => `<div class="kpi"><b>${num(n)}</b><span>${esc(r)}</span></div>`).join('')}
       <div class="kpi ${inactivos ? 'warn' : 'ok'}"><b>${num(inactivos)}</b><span>sin actividad en 30 días</span></div>
-      <div class="kpi"><b>${num(todos.filter(u => u.rol === 'Medico' && u.activo).length)}</b><span>médicos con acceso</span></div></div>
+      <div class="kpi"><b>${num(todos.filter(u => rolPuede(u.rol, 'portal_prescriptor') && u.activo).length)}</b><span>${TT('medico', 'p', '', 'l', 'l')} con acceso</span></div></div>
     <div class="card" style="padding:14px 16px">
       <div class="usrbar"><input id="usrq" type="search" placeholder="Buscar por nombre o email" value="${esc(USR_F.q)}">
-        <select id="usrrol"><option value="">Todos los roles</option>${ROLES.map(r => `<option ${USR_F.rol === r ? 'selected' : ''}>${r}</option>`).join('')}</select>
+        <select id="usrrol"><option value="">Todos los roles</option>${rolesNombres().map(r => `<option ${USR_F.rol === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
         <select id="usrest"><option value="activos" ${USR_F.est === 'activos' ? 'selected' : ''}>Activos</option><option value="inactivos" ${USR_F.est === 'inactivos' ? 'selected' : ''}>Desactivados</option><option value="todos" ${USR_F.est === 'todos' ? 'selected' : ''}>Todos</option></select>
         <button class="btn" id="usrnuevo">+ Nuevo usuario</button></div>
       <div id="usrl" class="usrlista"></div></div></div>`;
@@ -10951,27 +11064,20 @@ async function pintarUsuarios2() {
 
 /* ---------------- Roles y permisos ---------------- */
 
-const ROLES_BASE = {
-  'Administrador': { H: 3, G: 3, R: 3, M: 3, C: 3, S: 3, V: 3, L: 3, P: 3, F: 3, A: 3, E: 1, Q: 3, K: 3, U: 3 },
-  'Dirección': { H: 2, G: 2, R: 1, M: 1, C: 1, S: 1, V: 1, L: 1, P: 1, F: 1, A: 1, E: 1, Q: 1, K: 1, U: 0 },
-  'Comercial': { H: 2, G: 2, R: 2, M: 2, C: 2, S: 2, V: 0, L: 0, P: 0, F: 0, A: 0, E: 0, Q: 0, K: 0, U: 0 },
-  'Televenta': { H: 2, G: 1, R: 1, M: 2, C: 2, S: 1, V: 3, L: 3, P: 1, F: 2, A: 1, E: 1, Q: 1, K: 0, U: 0 },
-  'Solo consulta': { H: 1, G: 1, R: 1, M: 1, C: 1, S: 1, V: 1, L: 1, P: 1, F: 0, A: 1, E: 0, Q: 1, K: 0, U: 0 }
-};
-const QUE_ABRE = { H: 'Inicio: indicadores, alertas y resumen', G: 'Agenda, citas y «Tu día»', R: 'Rutas y planificador', M: 'Médicos, centros y sus fichas',
-  C: 'Centros y sus datos', S: 'Registro de visitas', V: 'Pedidos: ventas, compras y llamadas', L: 'Clientes (pacientes y empresas)', P: 'Productos, servicios y stock',
+const QUE_ABRE = { H: 'Inicio: indicadores, alertas y resumen', G: 'Agenda, citas y «Tu día»', R: 'Rutas y planificador', M: `${TT('medico', 'p', '', 'l', 'C')}, centros y sus fichas`,
+  C: 'Centros y sus datos', S: `Registro de ${TT('visita', 'p', '', 'l', 'l')}`, V: 'Pedidos: ventas, compras y llamadas', L: `Clientes (${TT('paciente', 'p', '', 'l', 'l')} y empresas)`, P: 'Productos, servicios y stock',
   F: 'Facturación, cobros y rectificativas', A: 'Analítica y rankings', E: 'Importes en euros (si no, solo unidades)', Q: 'Calidad del dato y duplicados',
   K: 'Clasificadores y listas de valores', U: 'Entrar como otra persona' };
-const plantillaRol = r => Object.assign({}, ROLES_BASE[r] || {}, (AJUSTES.roles || {})[r] || {});
+const plantillaRol = r => Object.assign({}, (rolDef(r) || {}).plantilla || {}, (AJUSTES.roles || {})[r] || {});
 async function pintarRoles() {
   await cargarAjustes();
-  const roles = Object.keys(ROLES_BASE);
+  const roles = rolesNombres().filter(r => !rolPuede(r, 'portal_prescriptor'));
   $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Roles y permisos</h2>
-    <p class="sm">Cada rol tiene una plantilla de permisos que se aplica al dar de alta a una persona o al cambiarle el rol. Después se puede ajustar persona a persona en Usuarios. Los médicos con acceso solo ven su informe.</p>
+    <p class="sm">Cada rol tiene una plantilla de permisos que se aplica al dar de alta a una persona o al cambiarle el rol. Después se puede ajustar persona a persona en Usuarios. ${TT('medico', 'p', 'el', 'C', 'l')} con acceso solo ven su informe.</p>
     <div class="nivleg">${NIVEL_TXT.map((t, i) => `<span class="nv${i}"><b>${esc(t)}</b>${['No ve el módulo ni aparece en el menú', 'Lo ve, pero no cambia nada', 'Crea y edita lo suyo', 'Todo, incluido borrar y configurar'][i]}</span>`).join('')}</div>
     <div class="dgrid-wrap"><table class="rolmat"><thead><tr><th>Permiso</th>${roles.map(r => `<th>${esc(r)}</th>`).join('')}</tr></thead>
       <tbody>${AREAS.map(([k, n]) => `<tr><td><b>${esc(n)}</b><span class="sm">${esc(QUE_ABRE[k] || '')}</span></td>
-        ${roles.map(r => `<td><select data-rol="${esc(r)}" data-ar="${k}" class="nvsel" ${r === 'Administrador' ? 'disabled' : ''}>${NIVEL_TXT.map((t, i) => `<option value="${i}" ${+(plantillaRol(r)[k] || 0) === i ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        ${roles.map(r => `<td><select data-rol="${esc(r)}" data-ar="${k}" class="nvsel" ${rolPuede(r, 'administrar') ? 'disabled' : ''}>${NIVEL_TXT.map((t, i) => `<option value="${i}" ${+(plantillaRol(r)[k] || 0) === i ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <div class="acts" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn sec" id="rolrest">Volver a los valores recomendados</button><button class="btn" id="rolok">Guardar plantillas</button></div></div>`;
   const colorea = () => $('cfgcuerpo').querySelectorAll('.nvsel').forEach(s => s.className = 'nvsel nv' + s.value);
   $('cfgcuerpo').addEventListener('change', colorea); colorea();
@@ -11024,13 +11130,13 @@ abrirMasMovil = (orig => function () {
 /* ---------------- notificaciones ---------------- */
 
 const TIPOS_NOTIF = [
-  ['pauta', '💊', 'Pautas a mi nombre', 'Cada vez que se registra una pauta con tu nombre', ['Medico']],
-  ['venta_cartera', '🛒', 'Ventas de mi cartera', 'Cuando se valida una venta de un médico que llevas', ['Comercial']],
-  ['cartera', '🩺', 'Cambios en mi cartera', 'Cuando te asignan médicos nuevos', ['Comercial']],
-  ['cruce', '🔁', 'Visitas de otros a mi cartera', 'Cuando otra persona visita a un médico que llevas', ['Comercial']],
-  ['pedido_validado', '📦', 'Pedidos validados', 'Cada pedido que se valida (menos los tuyos)', ['Administrador', 'Dirección', 'Televenta']]
+  ['pauta', '💊', 'Pautas a mi nombre', 'Cada vez que se registra una pauta con tu nombre'],
+  ['venta_cartera', '🛒', 'Ventas de mi cartera', `Cuando se valida una venta de ${TT('medico', 's', 'un', 'l', 'l')} que llevas`],
+  ['cartera', '🩺', 'Cambios en mi cartera', `Cuando te asignan ${TT('medico', 'p', '', 'l', 'l', 'nuevo')}`],
+  ['cruce', '🔁', `${TT('visita', 'p', '', 'l', 'C')} de otros a mi cartera`, `Cuando otra persona ${TT('visita', 's', '', 'l', 'l')} a ${TT('medico', 's', 'un', 'l', 'l')} que llevas`],
+  ['pedido_validado', '📦', 'Pedidos validados', 'Cada pedido que se valida (menos los tuyos)']
 ];
-const tiposDeMiRol = () => TIPOS_NOTIF.filter(t => t[4].includes(PERFIL.rol));
+const tiposDeMiRol = () => TIPOS_NOTIF.filter(t => puede('aviso_' + t[0]));
 let NOTIF_N = 0;
 async function refrescarCampana() {
   if (!PERFIL || document.body.classList.contains('sin-sesion')) return;
@@ -11231,21 +11337,21 @@ async function pintarMaterial() {
   await Promise.all([cargarAjustes(), cargarProductos()]);
   const m = Object.assign({ producto_id: null, restar_stock: false }, AJUSTES.muestras || {});
   const { data: clas } = await db.rpc('clasificadores_visita');
-  const mat = (clas || []).find(c => c.clave === 'MATERIAL');
-  const { data: cid } = await db.from('clasificadores').select('id').eq('clave', 'MATERIAL').maybeSingle();
+  const mat = (clas || []).find(c => c.papel === 'material_visita');
+  const { data: cid } = await db.from('clasificadores').select('id').eq('papel', 'material_visita').maybeSingle();
   const { data: vals } = cid ? await db.from('valores_clasificador').select('id,valor,activo,dato_tipo').eq('clasificador_id', cid.id).order('orden') : { data: [] };
   $('cfgcuerpo').innerHTML = `
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">Material de visita</h2>
-      <p class="sm">Todo lo que un comercial puede dejar en una visita. Al registrar la visita se marca qué se entregó y cuánto, y queda en la ficha del médico y en Analítica (material por comercial, por médico y por mes).</p>
+    <div class="card cfgpanel"><h2 style="padding:0 0 4px">Material de ${TT('visita', 's', '', 'l', 'l')}</h2>
+      <p class="sm">Todo lo que un comercial puede dejar en ${TT('visita', 's', 'un', 'l', 'l')}. Al registrar ${TT('visita', 's', 'el', 'l', 'l')} se marca qué se entregó y cuánto, y queda en la ficha ${TT('medico', 's', 'del', 'l', 'l')} y en Analítica (material por comercial, por ${TT('medico', 's', '', 'l', 'l')} y por mes).</p>
       <div class="mattipos"><div><b>💊 Muestras de producto</b><span>Unidades de un producto del catálogo. Pueden descontarse del stock.</span></div>
         <div><b>📚 Material promocional</b><span>Dípticos, talonarios de recomendación, flyers, tarjetas… Se cuentan, pero no descuentan stock.</span></div></div></div>
     <div class="card cfgpanel"><h2 style="padding:0 0 4px">💊 Muestras de producto</h2>
       <div class="g2"><div><label for="muprod">Producto que se entrega como muestra</label><select id="muprod"><option value="">— Ninguno —</option>${PRODUCTOS.filter(p => p.tipo !== 'servicio').map(p => `<option value="${p.id}" ${p.id === m.producto_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div><div></div></div>
       <label class="vfswitch" style="margin-top:10px"><input type="checkbox" id="murest" ${m.restar_stock ? 'checked' : ''}><span class="sw"></span>
-        <span><b>Descontar las muestras del stock</b><br><span class="sm">Salen del maletín de quien registra la visita (o del almacén central si no tiene), empezando por el lote que caduca antes. Así sabes cuántas muestras quedan y a quién llegó cada lote.</span></span></label>
+        <span><b>Descontar las muestras del stock</b><br><span class="sm">Salen del maletín de quien registra ${TT('visita', 's', 'el', 'l', 'l')} (o del almacén central si no tiene), empezando por el lote que caduca antes. Así sabes cuántas muestras quedan y a quién llegó cada lote.</span></span></label>
       <div class="acts" style="justify-content:flex-end"><button class="btn" id="muok">Guardar</button></div></div>
     <div class="card cfgpanel"><h2 style="padding:0 0 4px">📚 Material promocional</h2>
-      <p class="sm">Lo que aparece para marcar al registrar una visita. «Pide cantidad» hace que se indique cuántas unidades se dejaron.</p>
+      <p class="sm">Lo que aparece para marcar al registrar ${TT('visita', 's', 'un', 'l', 'l')}. «Pide cantidad» hace que se indique cuántas unidades se dejaron.</p>
       <div class="matlista">${(vals || []).map(v => `<div class="matfila ${v.activo ? '' : 'off'}"><b>${esc(v.valor)}</b><span class="sm">${v.dato_tipo === 'numero' ? 'Pide cantidad' : 'Solo se marca'}</span>
         <label class="vfswitch mini"><input type="checkbox" data-mact="${v.id}" ${v.activo ? 'checked' : ''}><span class="sw"></span><span class="sm">${v.activo ? 'Activo' : 'Oculto'}</span></label></div>`).join('') || '<div class="sm">Todavía no hay material.</div>'}</div>
       <div class="matadd"><input id="matn" placeholder="Nuevo material, p. ej. Póster para consulta"><label class="opt" style="margin:0"><input type="checkbox" id="matq" checked> Pide cantidad</label>
@@ -11255,7 +11361,7 @@ async function pintarMaterial() {
     const { error } = await db.rpc('guardar_ajuste', { p_clave: 'muestras', p_valor: { producto_id: $('muprod').value || null, restar_stock: $('murest').checked } });
     if (error) { toast('No se ha podido guardar', true); return; } AJUSTES.muestras = { producto_id: $('muprod').value || null, restar_stock: $('murest').checked }; toast('Guardado');
   };
-  $('cfgcuerpo').querySelectorAll('[data-mact]').forEach(c => c.onchange = async () => { await db.rpc('guardar_valor', { p: { id: c.dataset.mact, activo: c.checked } }); toast(c.checked ? 'Visible en las visitas' : 'Oculto en las visitas'); cargarCatalogos(); pintarMaterial(); });
+  $('cfgcuerpo').querySelectorAll('[data-mact]').forEach(c => c.onchange = async () => { await db.rpc('guardar_valor', { p: { id: c.dataset.mact, activo: c.checked } }); toast(c.checked ? `Visible en ${TT('visita', 'p', 'el', 'l', 'l')}` : `Oculto en ${TT('visita', 'p', 'el', 'l', 'l')}`); cargarCatalogos(); pintarMaterial(); });
   $('matok').onclick = async () => {
     const v = $('matn').value.trim(); if (!v) return;
     const { error } = await db.rpc('guardar_valor', { p: Object.assign({ clasificador_id: cid.id, valor: v }, $('matq').checked ? { dato_tipo: 'numero', dato_etiqueta: 'Unidades' } : {}) });
@@ -11268,18 +11374,18 @@ async function pintarMaterial() {
 async function pintarAlmacenes2() {
   await cargarAlmacenes(); if (!COMS.length) await cargarComerciales();
   const { data: st } = await RPC_ORIG('stock_resumen', {});
-  const sinMaletin = COMS.filter(u => u.rol === 'Comercial' && !ALMACENES.some(a => a.usuario_id === u.id));
+  const sinMaletin = COMS.filter(u => rolPuede(u.rol, 'almacen_propio') && !ALMACENES.some(a => a.usuario_id === u.id));
   $('cfgcuerpo').innerHTML = `
     <div class="card cfgpanel"><h2 style="padding:0 0 4px">Almacenes</h2>
       <p class="sm">Dónde está físicamente tu stock. Cada unidad está en un almacén y en un lote, así sabes qué hay, dónde y cuándo caduca.</p>
       <div class="mattipos"><div><b>🏢 Almacén central</b><span>Donde entra la mercancía al recibir las compras y de donde salen los pedidos.</span></div>
-        <div><b>💼 Maletín de comercial</b><span>Las muestras que lleva cada comercial. Se reponen traspasando desde el central y se descuentan al registrar visitas.</span></div></div></div>
+        <div><b>💼 Maletín de comercial</b><span>Las muestras que lleva cada comercial. Se reponen traspasando desde el central y se descuentan al registrar ${TT('visita', 'p', '', 'l', 'l')}.</span></div></div></div>
     <div class="card cfgpanel"><h2 style="padding:0 0 8px">Tus almacenes</h2>
       <div class="almgrid">${ALMACENES.map(a => `<div class="almc"><span class="ic">${a.tipo === 'central' ? '🏢' : '💼'}</span>
         <b>${esc(a.nombre)}</b><span class="sm">${a.tipo === 'central' ? 'Almacén central' : 'Maletín de ' + esc(a.usuario || '—')}${a.activo ? '' : ' · inactivo'}</span>
         <span class="almu"><b>${num(a.unidades || 0)}</b> unidades</span></div>`).join('')}</div>
       ${sinMaletin.length ? `<div class="avisoh" style="margin-top:12px"><span>${sinMaletin.length === 1 ? esc(sinMaletin[0].nombre) + ' no tiene' : sinMaletin.length + ' comerciales no tienen'} maletín: sus muestras saldrán del almacén central.</span></div>` : ''}
-      <div class="matadd" style="margin-top:12px"><select id="almu">${COMS.filter(u => u.rol === 'Comercial').map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select>
+      <div class="matadd" style="margin-top:12px"><select id="almu">${COMS.filter(u => rolPuede(u.rol, 'almacen_propio')).map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select>
         <button class="btn sec" id="almok">Crear maletín</button></div>
       <p class="sm" style="margin-top:8px">Para pasar unidades del central a un maletín: Productos → Stock → abre el producto → «Traspasar».${Array.isArray(st) && st.length ? '' : ''}</p></div>`;
   $('almok').onclick = async () => {
@@ -11316,18 +11422,18 @@ async function logoData() { if (MARCA.logo && (AJUSTES.marca || {}).logo_factura
 /* ---------------- planes alineados con el mercado ---------------- */
 
 PLANES.splice(0, PLANES.length,
-  { id: 'esencial', nombre: 'Esencial', precio: 29, incluidos: 2, bloque: [1, 10], medicos: 0, para: 'Para empezar a ordenar las visitas',
+  { id: 'esencial', nombre: 'Esencial', precio: 29, incluidos: 2, bloque: [1, 10], medicos: 0, para: `Para empezar a ordenar ${TT('visita', 'p', 'el', 'l', 'l')}`,
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento'],
-    ventajas: ['Directorio de médicos y centros', 'Agenda, «Tu día» y registro de visitas', 'Rutas optimizadas y planificación semanal', 'App móvil instalable'] },
+    ventajas: [`Directorio de ${TT('medico', 'p', '', 'l', 'l')} y centros`, `Agenda, «Tu día» y registro de ${TT('visita', 'p', '', 'l', 'l')}`, 'Rutas optimizadas y planificación semanal', 'App móvil instalable'] },
   { id: 'profesional', nombre: 'Profesional', precio: 59, incluidos: 4, bloque: [1, 10], medicos: 0, para: 'Para equipos que venden y miden',
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica'],
     ventajas: ['Todo lo de Esencial', 'Pedidos, clientes y llamadas', 'Productos y stock por lotes', 'Analítica, ranking y comisiones'] },
   { id: 'avanzado', nombre: 'Avanzado', precio: 99, incluidos: 7, bloque: [1, 10], medicos: 25, para: 'Con facturación y varios comerciales',
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
-    ventajas: ['Todo lo de Profesional', 'Facturación con VeriFactu y cobros', 'Compras, proveedores y trazabilidad', 'Zonas, supervisión y espacio del médico (25)'] },
+    ventajas: ['Todo lo de Profesional', 'Facturación con VeriFactu y cobros', 'Compras, proveedores y trazabilidad', `Zonas, supervisión y espacio ${TT('medico', 's', 'del', 'l', 'l')} (25)`] },
   { id: 'premium', nombre: 'Premium', precio: 179, incluidos: 15, bloque: [1, 8], medicos: null, para: 'Redes comerciales completas',
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
-    ventajas: ['Todo lo de Avanzado', 'Espacio del médico sin límite', 'Entrar como otro usuario y auditoría', 'Soporte prioritario y ayuda con la migración'] });
+    ventajas: ['Todo lo de Avanzado', `Espacio ${TT('medico', 's', 'del', 'l', 'l')} sin límite`, 'Entrar como otro usuario y auditoría', 'Soporte prioritario y ayuda con la migración'] });
 pintarPlan2 = (orig => async function () {
   await orig();
   const c = $('cfgcuerpo'); if (!c) return;
@@ -11344,21 +11450,21 @@ pintarPlan2 = (orig => async function () {
 /* ---------------- notificaciones ampliadas ---------------- */
 
 TIPOS_NOTIF.push(
-  ['citas_hoy', '📅', 'Mis citas de hoy', 'Al empezar el día, cuántas citas tienes', ['Comercial', 'Administrador', 'Dirección', 'Televenta']],
-  ['sin_visitar', '⏳', 'Médicos sin visitar', 'Los lunes, médicos de tu cartera con más de 60 días sin visita', ['Comercial']],
-  ['cliente_nuevo', '🧑‍⚕️', 'Pacientes nuevos de mi cartera', 'Cuando se da de alta un cliente que viene de un médico tuyo', ['Comercial']],
-  ['pago_recibido', '💳', 'Pagos de mis pedidos', 'Cuando se valida el pago de un pedido que creaste', ['Comercial', 'Televenta', 'Administrador']],
-  ['borrador_nuevo', '✏️', 'Pedidos en borrador', 'Cuando alguien deja un pedido pendiente de validar', ['Administrador', 'Televenta']],
-  ['seguimientos_hoy', '📞', 'Llamadas de seguimiento', 'Al empezar el día, las llamadas que tocan hoy', ['Administrador', 'Televenta']],
-  ['pagos_pendientes', '⌛', 'Pagos pendientes', 'Al empezar el día, pedidos con el pago pendiente hace más de una semana', ['Administrador', 'Televenta']],
-  ['facturas_vencidas', '🧾', 'Facturas vencidas', 'Al empezar el día, facturas vencidas sin cobrar', ['Administrador', 'Dirección', 'Televenta']],
-  ['stock_minimo', '📉', 'Stock bajo', 'Cuando un producto baja de su stock mínimo', ['Administrador', 'Dirección']],
-  ['lotes_caducan', '⚠️', 'Lotes que caducan', 'Al empezar el día, lotes que caducan en 30 días', ['Administrador', 'Dirección']],
-  ['compra_recibida', '🚚', 'Mercancía recibida', 'Cuando se registra la recepción de una compra', ['Administrador', 'Dirección']],
-  ['rectificativa', '↩️', 'Facturas rectificativas', 'Cada rectificativa que se emite', ['Administrador', 'Dirección']],
-  ['duplicado', '🧩', 'Posibles duplicados', 'Cuando una ficha se marca como posible duplicado', ['Administrador']],
-  ['usuario_nuevo', '👤', 'Usuarios nuevos', 'Cuando se da de alta una persona', ['Administrador']],
-  ['esquema', '€', 'Mi comisión', 'Cuando te asignan un esquema de comisión', ['Comercial', 'Televenta', 'Dirección']]);
+  ['citas_hoy', '📅', 'Mis citas de hoy', 'Al empezar el día, cuántas citas tienes'],
+  ['sin_visitar', '⏳', `${TT('medico', 'p', '', 'l', 'C')} sin visitar`, `Los lunes, ${TT('medico', 'p', '', 'l', 'l')} de tu cartera con más de 60 días sin ${TT('visita', 's', '', 'l', 'l')}`],
+  ['cliente_nuevo', '🧑‍⚕️', `${TT('paciente', 'p', '', 'l', 'C', 'nuevo')} de mi cartera`, `Cuando se da de alta un cliente que viene de ${TT('medico', 's', 'un', 'l', 'l', 'tuyo')}`],
+  ['pago_recibido', '💳', 'Pagos de mis pedidos', 'Cuando se valida el pago de un pedido que creaste'],
+  ['borrador_nuevo', '✏️', 'Pedidos en borrador', 'Cuando alguien deja un pedido pendiente de validar'],
+  ['seguimientos_hoy', '📞', 'Llamadas de seguimiento', 'Al empezar el día, las llamadas que tocan hoy'],
+  ['pagos_pendientes', '⌛', 'Pagos pendientes', 'Al empezar el día, pedidos con el pago pendiente hace más de una semana'],
+  ['facturas_vencidas', '🧾', 'Facturas vencidas', 'Al empezar el día, facturas vencidas sin cobrar'],
+  ['stock_minimo', '📉', 'Stock bajo', 'Cuando un producto baja de su stock mínimo'],
+  ['lotes_caducan', '⚠️', 'Lotes que caducan', 'Al empezar el día, lotes que caducan en 30 días'],
+  ['compra_recibida', '🚚', 'Mercancía recibida', 'Cuando se registra la recepción de una compra'],
+  ['rectificativa', '↩️', 'Facturas rectificativas', 'Cada rectificativa que se emite'],
+  ['duplicado', '🧩', 'Posibles duplicados', 'Cuando una ficha se marca como posible duplicado'],
+  ['usuario_nuevo', '👤', 'Usuarios nuevos', 'Cuando se da de alta una persona'],
+  ['esquema', '€', 'Mi comisión', 'Cuando te asignan un esquema de comisión']);
 irEnlace = (orig => function (e) {
   const [t] = String(e || '').split(':');
   if (t === 'agenda') { AG_MODO = 'dia'; AG_FECHA = hoyISO(); ir('agenda'); }
@@ -11695,7 +11801,7 @@ async function pintarCopias() {
   const { data: au } = await db.from('auditoria').select('creado_en').eq('accion', 'Copia de seguridad').order('creado_en', { ascending: false }).limit(1);
   const ultima = au && au[0] ? new Date(au[0].creado_en) : null, dias = ultima ? Math.floor((Date.now() - ultima) / 864e5) : null;
   $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Copias de seguridad</h2>
-    <p class="sm">Descarga en un único archivo todos los datos de la empresa: médicos, visitas, agenda, clientes, pedidos, facturas, stock y configuración. Las contraseñas no se incluyen.</p>
+    <p class="sm">Descarga en un único archivo todos los datos de la empresa: ${TT('medico', 'p', '', 'l', 'l')}, ${TT('visita', 'p', '', 'l', 'l')}, agenda, clientes, pedidos, facturas, stock y configuración. Las contraseñas no se incluyen.</p>
     <div class="copiaest ${dias == null || dias > 7 ? 'mal' : 'bien'}"><b>${ultima ? 'Última copia: ' + ultima.toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }) : 'Todavía no se ha hecho ninguna copia'}</b>
       <span>${dias == null ? 'Haz la primera ahora.' : dias > 7 ? `Hace ${dias} días: conviene hacer una nueva.` : 'Al día.'}</span></div>
     <div class="acts" style="margin:12px 0 0"><button class="btn" id="copok">⬇ Descargar copia completa</button></div>
@@ -11974,13 +12080,13 @@ function ordenarMenu() {
   ORDEN_MENU.forEach(t => { const b = nav.querySelector(`:scope > [data-t="${t}"]`); if (b) nav.appendChild(b); });
   const cal = nav.querySelector('[data-t="seguimiento"]'); if (cal) cal.classList.add('hide', 'fuera');
   const dir = nav.querySelector('[data-t="directorio"]');
-  if (dir) [...dir.childNodes].forEach(n => { if (n.nodeType === 3 && /Directorio/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace('Directorio', 'Médicos'); });
+  if (dir) [...dir.childNodes].forEach(n => { if (n.nodeType === 3 && /Directorio/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace('Directorio', `${TT('medico', 'p', '', 'l', 'C')}`); });
 }
 ordenarMenu();
 // «Calidad del dato» pasa a ser un botón dentro de Médicos
 function botonCalidad() {
   const v = $('v-directorio'); if (!v || $('dircab')) return;
-  v.insertAdjacentHTML('afterbegin', `<div class="saludo" id="dircab"><div><h1>Médicos</h1><div class="fecha">Médicos, centros y sus fichas</div></div>
+  v.insertAdjacentHTML('afterbegin', `<div class="saludo" id="dircab"><div><h1>${TT('medico', 'p', '', 'l', 'C')}</h1><div class="fecha">${TT('medico', 'p', '', 'l', 'C')}, centros y sus fichas</div></div>
     <div class="acts">${puedeModulo('seguimiento') ? `<button class="btn sec" id="dircalidad">${svgIco(ICON_NOM['shield-check'])} Calidad del dato</button>` : ''}</div></div>`);
   if ($('dircalidad')) $('dircalidad').onclick = () => ir('seguimiento');
 }
@@ -12004,7 +12110,7 @@ function botonCalidad() {
 let CFG_SUB = null;
 const fac = fn => () => { $('cfgcuerpo').innerHTML = '<div id="fcuerpo"></div>'; fn(); };
 function arbolConfig() {
-  const admin = PERFIL.rol === 'Administrador';
+  const admin = puede('administrar');
   return [
     ['Tu cuenta', [
       { k: 'perfil', ic: 'user', t: 'Mi perfil', d: 'Tus datos, idioma y qué abrir al entrar', r: pintarPerfil },
@@ -12013,12 +12119,12 @@ function arbolConfig() {
       { k: 'inicio', ic: 'house', t: 'Inicio y mensajes', d: 'Indicadores de Inicio y resumen semanal', sub: [['kpis', 'Indicadores', () => panelDeVentana(abrirKpis)], ['mensajes', 'Mensajes', () => pintarPrefsParte('mensajes')]] }]],
     ['Equipo', admin ? [
       { k: 'equipo', ic: 'users', t: 'Usuarios y roles', d: 'Personas, permisos y roles', sub: [['usuarios', 'Usuarios', pintarUsuarios2], ['roles', 'Roles y permisos', pintarRoles]] },
-      { k: 'cartera', ic: 'compass', t: 'Cartera y visitas', d: 'Reglas de cartera y frecuencia de visita', sub: [['reglas', 'Reglas de cartera', () => panelDeVentana(editorReglasCartera)], ['frec', 'Frecuencia de visita', () => panelDeVentana(editorFrecuencia)]] },
+      { k: 'cartera', ic: 'compass', t: `Cartera y ${TT('visita', 'p', '', 'l', 'l')}`, d: `Reglas de cartera y frecuencia de ${TT('visita', 's', '', 'l', 'l')}`, sub: [['reglas', 'Reglas de cartera', () => panelDeVentana(editorReglasCartera)], ['frec', `Frecuencia de ${TT('visita', 's', '', 'l', 'l')}`, () => panelDeVentana(editorFrecuencia)]] },
       { k: 'comis', ic: 'euro', t: 'Comisiones', d: 'Esquemas y quién cobra con cada uno', mod: 'ventas', r: () => panelDeModulo('comisiones') },
       { k: 'seguridad', ic: 'lock-keyhole', t: 'Seguridad y registro', d: 'Accesos y cambios registrados', sub: [['accesos', 'Accesos', () => panelDeModulo('accesos')], ['auditoria', 'Auditoría', () => panelDeModulo('auditoria')]] }] : []],
     ['Datos', [
       ...(puedeCatalogos() ? [{ k: 'cat', ic: 'tag', t: 'Clasificadores', d: 'Listas de valores: especialidades, motivos…', r: () => { $('cfgcuerpo').innerHTML = ''; pintarCatalogos(); } }] : []),
-      ...(admin || nivelDe2('P') >= 3 ? [{ k: 'stock', ic: 'warehouse', t: 'Stock y material', d: 'Almacenes y material de visita', mod: 'productos', sub: [['alm', 'Almacenes', pintarAlmacenes2], ['mues', 'Material de visita', pintarMaterial]] }] : [])]],
+      ...(admin || nivelDe2('P') >= 3 ? [{ k: 'stock', ic: 'warehouse', t: 'Stock y material', d: `Almacenes y material de ${TT('visita', 's', '', 'l', 'l')}`, mod: 'productos', sub: [['alm', 'Almacenes', pintarAlmacenes2], ['mues', `Material de ${TT('visita', 's', '', 'l', 'l')}`, pintarMaterial]] }] : [])]],
     ['Facturación', admin ? [
       { k: 'fact', ic: 'receipt', t: 'Facturación', d: 'Datos fiscales, series y VeriFactu', mod: 'facturacion', sub: [['fiscal', 'Datos fiscales', fac(pintarEmpresa)], ['series', 'Series', fac(pintarSeries)], ['vf', 'VeriFactu', fac(pintarVerifactu)]] }] : []],
     ['Empresa', admin ? [
@@ -12063,7 +12169,7 @@ async function cargarConfig() {
       $('cfgcuerpo').innerHTML = `<div class="card cfgpanel planup"><div class="planupico">${svgIco(ICON_NOM.lock)}</div><h2>${esc(it.t)} está en el plan ${esc(p ? p.nombre : 'Premium')}</h2>
         <p class="sm">Tu plan ${esc(planDe(PLAN_ACTUAL.plan).nombre)} no lo incluye. ${p ? `Con ${esc(p.nombre)} (${eurI(p.precio)}/mes) tienes:` : ''}</p>
         ${p ? `<ul class="manlist">${p.ventajas.map(v => `<li><span>✓</span><span>${esc(v)}</span></li>`).join('')}</ul>` : ''}
-        ${PERFIL.rol === 'Administrador' ? '<div class="acts"><button class="btn" id="planver">Ver planes</button></div>' : ''}</div>`;
+        ${puede('administrar') ? '<div class="acts"><button class="btn" id="planver">Ver planes</button></div>' : ''}</div>`;
       if ($('planver')) $('planver').onclick = () => abrir('plan', null, true);
     } else {
       const r = it.sub ? it.sub.find(s => s[0] === CFG_SUB)[2] : it.r;
@@ -12098,14 +12204,14 @@ const MOD_DE_MANUAL = { agenda: 'agenda', rutas: 'rutas', directorio: 'directori
 /* ---------------- notificaciones mejor explicadas ---------------- */
 
 const EXPLICA_NOTIF = {
-  pauta: ['Cada vez que se registra un pedido de un paciente que viene de tu parte.', 'Consulta tu informe para ver la evolución.'],
-  venta_cartera: ['Cuando se valida una venta de un médico que llevas, con las unidades y el producto.', 'Buen momento para agradecérselo en la próxima visita.'],
-  cartera: ['Cuando te asignan médicos nuevos, a mano o por tu zona.', 'Revisa su ficha y planifica la primera visita.'],
-  cruce: ['Cuando otra persona del equipo visita a un médico de tu cartera.', 'Coordinaos para no repetir visitas.'],
+  pauta: [`Cada vez que se registra un pedido de ${TT('paciente', 's', 'un', 'l', 'l')} que viene de tu parte.`, 'Consulta tu informe para ver la evolución.'],
+  venta_cartera: [`Cuando se valida una venta de ${TT('medico', 's', 'un', 'l', 'l')} que llevas, con las unidades y el producto.`, `Buen momento para agradecérselo en la ${TT('visita', 's', 'proximo', 'l', 'l')}.`],
+  cartera: [`Cuando te asignan ${TT('medico', 'p', '', 'l', 'l', 'nuevo')}, a mano o por tu zona.`, `Revisa su ficha y planifica la ${TT('visita', 's', 'primer', 'l', 'l')}.`],
+  cruce: [`Cuando otra persona del equipo ${TT('visita', 's', '', 'l', 'l')} a ${TT('medico', 's', 'un', 'l', 'l')} de tu cartera.`, `Coordinaos para no repetir ${TT('visita', 'p', '', 'l', 'l')}.`],
   pedido_validado: ['Cada pedido que valida otra persona del equipo.', 'Prepara el envío, valida el pago o emite la factura.'],
   citas_hoy: ['Al empezar el día, cuántas citas tienes.', 'Abre «Tu día» para empezar la jornada.'],
-  sin_visitar: ['Cada lunes, los médicos de tu cartera que llevan más de 60 días sin visita.', 'Tenlos en cuenta al planificar la semana.'],
-  cliente_nuevo: ['Cuando se da de alta un paciente que viene de un médico de tu cartera.', 'Señal de que el médico está recomendando.'],
+  sin_visitar: [`Cada lunes, ${TT('medico', 'p', 'el', 'l', 'l')} de tu cartera que llevan más de 60 días sin ${TT('visita', 's', '', 'l', 'l')}.`, 'Tenlos en cuenta al planificar la semana.'],
+  cliente_nuevo: [`Cuando se da de alta ${TT('paciente', 's', 'un', 'l', 'l')} que viene de ${TT('medico', 's', 'un', 'l', 'l')} de tu cartera.`, `Señal de que ${TT('medico', 's', 'el', 'l', 'l')} está recomendando.`],
   pago_recibido: ['Cuando se confirma el pago de un pedido que creaste.', 'Ya se puede preparar el envío.'],
   borrador_nuevo: ['Cuando alguien deja un pedido pendiente de validar.', 'Revísalo y valídalo para que salga el pedido.'],
   seguimientos_hoy: ['Al empezar el día, las llamadas de seguimiento que tocan o están atrasadas.', 'Están en Pedidos → Llamadas.'],
@@ -12144,7 +12250,7 @@ db.rpc = (orig => function (fn, params, opts) {
 
 /* ---------------- nombre del módulo de contactos ---------------- */
 
-const ETIQUETAS = ['Prescriptores', 'Cuentas', 'Médicos', 'Contactos', 'Clientes potenciales', 'Puntos de venta'];
+const ETIQUETAS = ['Prescriptores', 'Cuentas', `${TT('medico', 'p', '', 'l', 'C')}`, 'Contactos', 'Clientes potenciales', 'Puntos de venta'];
 const etiquetaContactos = () => ((AJUSTES.marca || {}).etiqueta || 'Prescriptores');
 function aplicarEtiqueta() {
   const n = etiquetaContactos();
@@ -12209,7 +12315,15 @@ pintarMarca = (orig => async function () {
   ok.closest('.acts').insertAdjacentHTML('beforebegin', `<div class="mketqbox"><label for="mketq">Cómo llamáis a quienes visitáis</label>
     <div class="g2"><select id="mketq">${ETIQUETAS.map(e => `<option ${e === actual ? 'selected' : ''}>${e}</option>`).join('')}<option value="__otra" ${otra ? 'selected' : ''}>Otro nombre…</option></select>
       <input id="mketqo" class="${otra ? '' : 'hide'}" value="${otra ? esc(actual) : ''}" placeholder="Escribe el nombre"></div>
-    <div class="sm">Es el nombre del módulo donde están médicos, farmacias, centros y cualquier otro contacto al que visitáis.</div></div>`);
+    <div class="sm">Es el nombre del módulo donde están ${TT('medico', 'p', '', 'l', 'l')}, farmacias, centros y cualquier otro contacto al que visitáis.</div></div>`);
+  const ETQ_TERM = { medico: 'Profesional al que visitáis', paciente: 'Cliente final', visita: 'Cada encuentro con el profesional' };
+  ok.closest('.acts').insertAdjacentHTML('beforebegin', `<div class="mkvoc"><label>Vocabulario de la plataforma</label>
+    <div class="sm">Cómo se llaman en todos los textos. En blanco, se usa el nombre de siempre.</div>
+    ${Object.keys(TERM_DEF).map(k => { const d = TERM_DEF[k], t = TERMINOS[k] || {}; return `<div class="g3 mkvocf" data-term="${k}">
+      <div><label class="sm">${esc(ETQ_TERM[k])} · singular</label><input data-tf="s" value="${esc(t.s || '')}" placeholder="${esc(d.s)}"></div>
+      <div><label class="sm">Plural</label><input data-tf="p" value="${esc(t.p || '')}" placeholder="${esc(d.p)}"></div>
+      <div><label class="sm">Género</label><select data-tf="g"><option value="">${d.g === 'f' ? 'Femenino' : 'Masculino'} (el de siempre)</option>
+        <option value="m" ${t.g === 'm' ? 'selected' : ''}>Masculino</option><option value="f" ${t.g === 'f' ? 'selected' : ''}>Femenino</option></select></div></div>`; }).join('')}</div>`);
   $('mketq').onchange = () => $('mketqo').classList.toggle('hide', $('mketq').value !== '__otra');
   const guardar = ok.onclick;
   ok.onclick = async () => {
@@ -12218,6 +12332,14 @@ pintarMarca = (orig => async function () {
     const v = Object.assign({}, AJUSTES.marca || {}, { etiqueta: etq });
     const { error } = await db.rpc('guardar_ajuste', { p_clave: 'marca', p_valor: v });
     if (!error) { AJUSTES.marca = v; aplicarEtiqueta(); }
+    const voc = {};
+    document.querySelectorAll('.mkvocf').forEach(f => { const o = {}; f.querySelectorAll('[data-tf]').forEach(i => { if (i.value.trim()) o[i.dataset.tf] = i.value.trim(); }); if (Object.keys(o).length) voc[f.dataset.term] = o; });
+    if (JSON.stringify(voc) !== JSON.stringify(TERMINOS || {})) {
+      const { error: e3 } = await db.rpc('guardar_ajuste', { p_clave: 'terminos', p_valor: voc });
+      if (e3) { toast('No se ha podido guardar el vocabulario', true); return; }
+      try { localStorage.setItem(TERMKEY, JSON.stringify(voc)); } catch (e) {}
+      toast('Vocabulario guardado: se recarga la plataforma'); setTimeout(() => location.reload(), 900);
+    }
   };
 })(pintarMarca);
 
@@ -12226,8 +12348,8 @@ pintarMarca = (orig => async function () {
 function detalleUsuario(u) {
   const nombres = { inicio: 'Inicio', agenda: 'Agenda', rutas: 'Rutas', directorio: etiquetaContactos(), ventas: 'Pedidos', pacientes: 'Clientes', productos: 'Productos', facturacion: 'Facturación', analitica: 'Analítica', seguimiento: 'Calidad del dato' };
   const orden = ['inicio', 'agenda', 'rutas', 'directorio', 'ventas', 'pacientes', 'productos', 'facturacion', 'analitica', 'seguimiento'];
-  const nivel = m => u.rol === 'Administrador' ? 3 : +((u.areas || {})[MODULO_AREA[m]] || 0);
-  const importes = u.rol === 'Administrador' || +((u.areas || {}).E || 0) >= 1;
+  const nivel = m => rolPuede(u.rol, 'administrar') ? 3 : +((u.areas || {})[MODULO_AREA[m]] || 0);
+  const importes = rolPuede(u.rol, 'administrar') || +((u.areas || {}).E || 0) >= 1;
   $('dbody').innerHTML = `<div class="fh"><div class="usrcab"><span class="usrav grande">${esc(iniciales(u.nombre))}</span>
       <div><h2>${esc(u.nombre)}</h2><div class="sm">${esc(u.email || '')}</div>
         <div class="usrchips"><span class="pill p-est">${esc(u.rol)}</span>${u.activo ? '' : '<span class="pill p-anu">Desactivado</span>'}</div></div></div>
@@ -12236,15 +12358,15 @@ function detalleUsuario(u) {
       <div class="permtabla">${orden.filter(m => m in MODULO_AREA).map(m => { const n = nivel(m); return `<div class="permfila ${n ? '' : 'no'}">
         <span class="permmod">${svgIco(ICON_NOM[n ? 'check' : 'minus'])}${esc(nombres[m])}</span><span class="permniv nv${n}">${esc(NIVEL_TXT[n])}</span></div>`; }).join('')}</div>
       <div class="sm" style="margin-top:8px">${importes ? 'Ve los importes de las ventas.' : 'En ventas solo ve unidades, no importes.'}</div></div>
-    <div class="blk"><h3>Actividad</h3>${u.rol === 'Medico' ? `<p class="sm">Vinculado a <b>${esc(u.medico || 'ninguna ficha')}</b>.</p>` : `
-      <div class="uper" style="grid-template-columns:repeat(2,1fr)"><div><b>${num(u.cartera)}</b><span>en cartera</span></div><div><b>${num(u.visitas_mes)}</b><span>visitas este mes</span></div></div>
+    <div class="blk"><h3>Actividad</h3>${rolPuede(u.rol, 'portal_prescriptor') ? `<p class="sm">Vinculado a <b>${esc(u.medico || 'ninguna ficha')}</b>.</p>` : `
+      <div class="uper" style="grid-template-columns:repeat(2,1fr)"><div><b>${num(u.cartera)}</b><span>en cartera</span></div><div><b>${num(u.visitas_mes)}</b><span>${TT('visita', 'p', '', 'l', 'l')} este mes</span></div></div>
       ${u.zonas && u.zonas.length ? `<div class="sm">Zona: ${esc(u.zonas.map(z => z.charAt(0) + z.slice(1).toLowerCase()).join(', '))}</div>` : ''}`}
       <div class="sm" style="margin-top:6px">Última actividad: ${u.ultima_actividad ? new Date(u.ultima_actividad).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : 'ninguna registrada'}</div></div>
     <div class="usracc">
       <button class="btn" data-uacc="editar">✏️ Editar rol, permisos y zona</button>
-      ${u.rol !== 'Medico' ? '<button class="btn sec" data-uacc="cartera">🩺 Asignar cartera</button>' : ''}
+      ${!rolPuede(u.rol, 'portal_prescriptor') ? '<button class="btn sec" data-uacc="cartera">🩺 Asignar cartera</button>' : ''}
       <button class="btn sec" data-uacc="pass">🔑 Enviar cambio de contraseña</button>
-      ${typeof puedeSuplantar === 'function' && puedeSuplantar() && u.id !== PERFIL.id && u.rol !== 'Administrador' && u.activo ? '<button class="btn sec" data-uacc="como">👤 Entrar como esta persona</button>' : ''}</div>`;
+      ${typeof puedeSuplantar === 'function' && puedeSuplantar() && u.id !== PERFIL.id && !rolPuede(u.rol, 'administrar') && u.activo ? '<button class="btn sec" data-uacc="como">👤 Entrar como esta persona</button>' : ''}</div>`;
   $('dlg').showModal();
   $('dbody').querySelectorAll('[data-uacc]').forEach(b => b.onclick = () => {
     const a = b.dataset.uacc;
@@ -12426,7 +12548,7 @@ abrirHerramientas = (orig => function (ctx, ...r) {
 cargarSeguimiento = (orig => async function () {
   await orig();
   const acts = document.querySelector('#v-seguimiento .saludo .acts') || (document.querySelector('#v-seguimiento .saludo') && document.querySelector('#v-seguimiento .saludo').appendChild(Object.assign(document.createElement('div'), { className: 'acts' })));
-  if (acts && PERFIL.rol === 'Administrador' && !$('caldup')) {
+  if (acts && puede('administrar') && !$('caldup')) {
     acts.insertAdjacentHTML('beforeend', `<button class="btn sec" id="caldup">${svgIco(ICON_NOM.copy)} Duplicados</button>`);
     $('caldup').onclick = () => ir('duplicados');
   }
@@ -12609,7 +12731,7 @@ new MutationObserver(() => {
 
 let MED_ACCESO = null;
 async function cargarAccesoMedicos() {
-  if (!(PERFIL && (PERFIL.rol === 'Administrador' || VE_TODO()))) { MED_ACCESO = {}; return; }
+  if (!(PERFIL && (puede('administrar') || VE_TODO()))) { MED_ACCESO = {}; return; }
   const { data } = await RPC_ORIG('medicos_con_acceso', {});
   MED_ACCESO = {}; (data || []).forEach(x => { MED_ACCESO[x.medico_id] = x; });
 }
@@ -12631,7 +12753,7 @@ const PAGINAS = {
 let PAG_TAB = {};
 function cargarPagina(t) {
   const P = PAGINAS[t];
-  if (P.admin && PERFIL.rol !== 'Administrador') { ir('inicio'); return; }
+  if (P.admin && !puede('administrar')) { ir('inicio'); return; }
   let sec = $('v-' + t);
   if (!sec) { document.querySelector('main').insertAdjacentHTML('beforeend', `<section id="v-${t}"></section>`); sec = $('v-' + t); }
   // Solo puede haber un contenedor de contenido a la vez: Configuración y las otras páginas se vacían (se repintan al volver)
@@ -12666,9 +12788,9 @@ document.addEventListener('click', e => {
 
 // Plan y suscripción: página comercial con lo que aporta cada plan y cada módulo
 const MOD_PLAN = [
-  ['agenda', 'Agenda y «Tu día»', 'Citas, visitas y el plan de cada jornada'], ['rutas', 'Rutas', 'Rutas optimizadas y planificación semanal'],
-  ['directorio', 'Prescriptores', 'Directorio de médicos, centros y fichas'], ['seguimiento', 'Calidad del dato', 'Duplicados y datos que faltan'],
-  ['ventas', 'Pedidos y llamadas', 'Ventas, compras, proveedores y televenta'], ['pacientes', 'Clientes', 'Pacientes y empresas con su historial'],
+  ['agenda', 'Agenda y «Tu día»', `Citas, ${TT('visita', 'p', '', 'l', 'l')} y el plan de cada jornada`], ['rutas', 'Rutas', 'Rutas optimizadas y planificación semanal'],
+  ['directorio', 'Prescriptores', `Directorio de ${TT('medico', 'p', '', 'l', 'l')}, centros y fichas`], ['seguimiento', 'Calidad del dato', 'Duplicados y datos que faltan'],
+  ['ventas', 'Pedidos y llamadas', 'Ventas, compras, proveedores y televenta'], ['pacientes', 'Clientes', `${TT('paciente', 'p', '', 'l', 'C')} y empresas con su historial`],
   ['productos', 'Productos y stock', 'Catálogo, lotes, caducidades y almacenes'], ['analitica', 'Analítica', 'Ventas, ranking de prescriptores y comisiones'],
   ['facturacion', 'Facturación', 'Facturas con VeriFactu, cobros y rectificativas']];
 async function pintarPaginaPlan() {
@@ -12693,11 +12815,11 @@ async function pintarPaginaPlan() {
     <div class="card"><div class="dgrid-wrap"><table class="planmat"><thead><tr><th>Módulo</th>${PLANES.map(p => `<th class="${p.id === act.id ? 'act' : ''}">${esc(p.nombre)}</th>`).join('')}</tr></thead>
       <tbody>${MOD_PLAN.map(([m, n, desc]) => `<tr><td><b>${esc(n)}</b><span class="sm">${esc(desc)}</span></td>${PLANES.map(p => `<td class="${p.id === act.id ? 'act' : ''}">${p.modulos.includes(m) ? '<span class="si">✓</span>' : '<span class="no">—</span>'}</td>`).join('')}</tr>`).join('')}
         <tr><td><b>Usuarios incluidos</b></td>${PLANES.map(p => `<td class="${p.id === act.id ? 'act' : ''}"><b>${p.incluidos}</b></td>`).join('')}</tr>
-        <tr><td><b>Médicos con acceso a su informe</b></td>${PLANES.map(p => `<td class="${p.id === act.id ? 'act' : ''}">${p.medicos === null ? 'Sin límite' : p.medicos ? p.medicos : '—'}</td>`).join('')}</tr></tbody></table></div></div>
+        <tr><td><b>${TT('medico', 'p', '', 'l', 'C')} con acceso a su informe</b></td>${PLANES.map(p => `<td class="${p.id === act.id ? 'act' : ''}">${p.medicos === null ? 'Sin límite' : p.medicos ? p.medicos : '—'}</td>`).join('')}</tr></tbody></table></div></div>
     <div class="card cfgpanel"><h3 style="margin-top:0">Cómo funciona</h3><ul class="manlist">
       <li><span>💳</span><span>Pago mensual con tarjeta o domiciliación, sin permanencia.</span></li>
       <li><span>👥</span><span>Si el equipo crece, se añaden usuarios sueltos sin cambiar de plan.</span></li>
-      <li><span>🩺</span><span>Los médicos con acceso a su informe no cuentan como usuarios.</span></li>
+      <li><span>🩺</span><span>${TT('medico', 'p', 'el', 'C', 'l')} con acceso a su informe no cuentan como usuarios.</span></li>
       <li><span>🔄</span><span>El cambio de plan se aplica en cuanto se confirma el pago.</span></li></ul>
       <div class="acts"><button class="btn sec" id="pextra">+ Añadir un usuario (${eurI(act.bloque[1])}/mes)</button></div></div>`;
   const contratar = clave => { if (enlaces[clave]) { window.open(enlaces[clave], '_blank', 'noopener'); return; }
@@ -13444,14 +13566,14 @@ pintarPaginaPlan = (orig => async function () {
       ${[['mouse-pointer-click', 'Eliges tu plan', 'Según los módulos que necesitas. Puedes empezar por uno pequeño y crecer después.'],
          ['credit-card', 'Pagas de forma segura', 'Con tarjeta o domiciliación, cada mes y sin permanencia. Recibes la factura por correo.'],
          ['zap', 'Se activa al momento', 'En cuanto se confirma el pago, los módulos del plan se desbloquean para todo tu equipo.'],
-         ['users', 'Creces cuando quieras', `Añade usuarios sueltos (${eurI(act.bloque[1])}/mes cada uno) o cambia de plan. Los médicos con acceso a su informe no cuentan.`]]
+         ['users', 'Creces cuando quieras', `Añade usuarios sueltos (${eurI(act.bloque[1])}/mes cada uno) o cambia de plan. ${TT('medico', 'p', 'el', 'C', 'l')} con acceso a su informe no cuentan.`]]
         .map(([ic, t, d], i) => `<div class="pasoplan"><span class="pasonum">${i + 1}</span><span class="pasoico">${svgIco(ICON_NOM[ic])}</span><b>${t}</b><p>${d}</p></div>`).join('')}
     </div>
     <h2 class="plantit">Preguntas frecuentes</h2>
     <div class="card faqplan">${[
       ['¿Puedo cambiar de plan en cualquier momento?', 'Sí. Al mejorar, los módulos nuevos se activan en cuanto se confirma el pago. Al bajar de plan, el cambio se aplica al siguiente mes y tus datos se conservan.'],
       ['¿Qué pasa con mis datos si dejo de pagar o me doy de baja?', 'Tus datos son tuyos: antes de la baja puedes descargar una copia completa desde Empresa → Copias de seguridad.'],
-      ['¿Cómo se cuentan los usuarios?', 'Cuenta cada persona activa del equipo. Los médicos que solo ven su informe no cuentan, y las personas desactivadas tampoco.'],
+      ['¿Cómo se cuentan los usuarios?', `Cuenta cada persona activa del equipo. ${TT('medico', 'p', 'el', 'C', 'l')} que solo ven su informe no cuentan, y las personas desactivadas tampoco.`],
       ['¿Los precios incluyen IVA?', 'No. Los precios son sin IVA; en la factura se añade el IVA que corresponda.'],
       ['¿Hay permanencia?', 'No. El pago es mensual y puedes cancelar cuando quieras.']]
       .map(([q, a]) => `<details><summary>${esc(q)}${svgIco(ICON_NOM['chevron-down'])}</summary><p>${esc(a)}</p></details>`).join('')}</div>
@@ -13478,7 +13600,7 @@ reportarProblema = function () {
       <div><label>¿Cuánto te afecta?</label>${chips('gravedad', [['bloquea', 'No puedo seguir trabajando'], ['molesta', 'Puedo seguir, pero molesta'], ['menor', 'Es un detalle']], 'molesta')}</div>
       <div><label>¿Pasa siempre?</label>${chips('frecuencia', [['siempre', 'Siempre'], ['aveces', 'A veces'], ['una', 'Solo una vez']], 'siempre')}</div>
     </div>
-    <label for="rpque">Cuéntalo con tus palabras</label><textarea id="rpque" rows="4" placeholder="Qué intentabas hacer, qué esperabas y qué ha pasado. Por ejemplo: «Al guardar una visita de un médico nuevo, sale un error y no se guarda»."></textarea>
+    <label for="rpque">Cuéntalo con tus palabras</label><textarea id="rpque" rows="4" placeholder="Qué intentabas hacer, qué esperabas y qué ha pasado. Por ejemplo: «Al guardar ${TT('visita', 's', 'un', 'l', 'l')} de ${TT('medico', 's', 'un', 'l', 'l', 'nuevo')}, sale un error y no se guarda»."></textarea>
     <label>Captura de pantalla (opcional)</label><input type="file" id="rpcap" accept="image/*">
     <details class="rptec"><summary>Datos técnicos que se adjuntan</summary><div class="sm">Pantalla: ${esc(TAB)} · versión ${esc(VERSION_APP)} · ${innerWidth}×${innerHeight} · ${ERRORES_SESION.length} errores en esta sesión · tus últimas ${RASTRO.length} acciones</div></details>
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="rptok" disabled>Enviar el reporte</button></div>`;
@@ -13509,7 +13631,7 @@ async function graficoCanal() {
   const emb = [...document.querySelectorAll('#v-analitica .ancard')].find(c => /Embudo comercial/.test(c.querySelector('h2') ? c.querySelector('h2').textContent : ''));
   if (!emb || $('ancanal')) return;
   emb.insertAdjacentHTML('afterend', `<div class="card ancard" id="ancanal"><h2>Ventas por canal</h2><div class="cargandolocal" style="min-height:160px"></div>
-    <p class="leer"><b>Cómo leerlo:</b> qué parte de las unidades llega por recomendación de un médico y qué parte por venta directa a un centro.</p></div>`);
+    <p class="leer"><b>Cómo leerlo:</b> qué parte de las unidades llega por recomendación de ${TT('medico', 's', 'un', 'l', 'l')} y qué parte por venta directa a un centro.</p></div>`);
   const { data } = await RPC_ORIG('analitica_tabla', { p_dim: 'canal', p_medida: 'unidades' });
   const filas = (data && data.filas) || [], tot = filas.reduce((s, f) => s + (+f.total || 0), 0);
   const cols = ['#15528F', '#5BB4E5', '#0F6E4C', '#D97706'];
@@ -13918,7 +14040,7 @@ async function disenoPDF() {
 }
 // Botón en Facturas (administración)
 function botonDisenoPDF() {
-  if (TAB !== 'facturacion' || FSEC !== 'facturas' || !PERFIL || PERFIL.rol !== 'Administrador' || $('fpdfbtn')) return;
+  if (TAB !== 'facturacion' || FSEC !== 'facturas' || !PERFIL || !puede('administrar') || $('fpdfbtn')) return;
   const acts = document.querySelector('#v-facturacion .saludo .acts'); if (!acts) return;
   acts.insertAdjacentHTML('afterbegin', `<button class="btn sec" id="fpdfbtn" type="button">${svgIco(ICON_NOM.file)} Diseño del PDF</button>`);
   $('fpdfbtn').onclick = () => disenoPDF();
@@ -14033,7 +14155,7 @@ const IMP_CAMPOS = {
     ['pais', 'País', 0, ['pais', 'country']],
     ['empresa', 'Empresa', 0, ['empresa', 'company', 'compania']],
     ['tipo', 'Tipo (Persona o Empresa)', 0, ['tipo', 'tipo cliente', 'tipo de cliente']],
-    ['medico', 'Médico que lo recomienda', 0, ['medico', 'prescriptor', 'doctor', 'recomendado por']],
+    ['medico', `${TT('medico', 's', '', 'l', 'C')} que lo recomienda`, 0, ['medico', 'prescriptor', 'doctor', 'recomendado por']],
     ['nota', 'Notas', 0, ['notas', 'nota', 'observaciones', 'comentarios']]],
   productos: [
     ['nombre', 'Nombre', 1, ['nombre', 'producto', 'articulo', 'name', 'descripcion corta']],
@@ -14070,15 +14192,15 @@ const IMP_CAMPOS = {
     ['precio', 'Precio unitario', 0, ['precio', 'precio unitario', 'pvp']],
     ['importe', 'Importe de la línea (sin IVA)', 0, ['importe', 'subtotal', 'base', 'total linea', 'base imponible']],
     ['iva', 'IVA (%)', 0, ['iva', 'impuesto', 'tipo iva']],
-    ['medico', 'Médico', 0, ['medico', 'prescriptor', 'doctor']],
+    ['medico', `${TT('medico', 's', '', 'l', 'C')}`, 0, ['medico', 'prescriptor', 'doctor']],
     ['forma_pago', 'Forma de pago', 0, ['forma de pago', 'f pago', 'metodo de pago', 'pago']],
     ['cobrado', 'Cobrado (sí o no)', 0, ['cobrado', 'pagado', 'estado cobro']],
     ['canal', 'Canal', 0, ['canal']]]
 };
 const IMP_TIPOS = () => [
-  ['clientes', 'Clientes', 'Pacientes y empresas: datos de contacto y facturación', 'users'],
+  ['clientes', 'Clientes', `${TT('paciente', 'p', '', 'l', 'C')} y empresas: datos de contacto y facturación`, 'users'],
   ['productos', 'Productos', 'Catálogo: referencias, precios, IVA y costes', 'package'],
-  ['prescriptores', etiquetaContactos(), 'Médicos y sus centros de consulta', 'stethoscope'],
+  ['prescriptores', etiquetaContactos(), `${TT('medico', 'p', '', 'l', 'C')} y sus centros de consulta`, 'stethoscope'],
   ['ventas', 'Ventas', 'Histórico de ventas con sus líneas de producto', 'shopping-cart']];
 const impNorm = t => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const impClave = t => impNorm(t).toUpperCase().replace(/ /g, '_').slice(0, 40) || 'CAMPO';
@@ -14317,7 +14439,7 @@ async function pintarImportaciones() {
 // Configuración → Datos → Importar datos (administración)
 arbolConfig = (orig => function () {
   const g = orig();
-  if (PERFIL.rol !== 'Administrador') return g;
+  if (!puede('administrar')) return g;
   const datos = g.find(x => x[0] === 'Datos');
   const item = { k: 'importar', ic: 'file-spreadsheet', t: 'Importar datos', d: 'Clientes, productos, prescriptores y ventas desde Excel o CSV',
     sub: [['nueva', 'Nueva importación', pintarImportar], ['historial', 'Importaciones', pintarImportaciones]] };
@@ -14325,11 +14447,117 @@ arbolConfig = (orig => function () {
   return g;
 })(arbolConfig);
 
+
+/* ============================================================
+   v2.72.0 · Motor de campos personalizados (fase 2 de la auditoría)
+   Cada cliente define sus campos (tipo, obligatorio, dónde se ven) en
+   Configuración → Catálogos, y la plataforma genera los formularios,
+   las columnas y los filtros. Los valores se guardan con guardar_campos().
+   ============================================================ */
+const CAMPOS = { medico: [], cliente: [], producto: [], pedido: [] };
+const CAMPO_TABLA = { medico: 'medicos', cliente: 'contactos', producto: 'productos', pedido: 'pedidos' };
+const TIPOS_CAMPO = [['lista', 'Lista de valores'], ['texto', 'Texto'], ['numero', 'Número'], ['fecha', 'Fecha'], ['si_no', 'Sí / No']];
+async function cargarCampos() {
+  const ambs = Object.keys(CAMPOS);
+  const r = await Promise.all(ambs.map(a => db.rpc('campos_de', { p_ambito: a })));
+  ambs.forEach((a, i) => { if (!r[i].error) CAMPOS[a] = r[i].data || []; });
+  camposEnDirectorio();
+}
+const campoTexto = (c, v) => v == null || v === '' ? '' : c && c.tipo === 'si_no' ? (v === true || v === 'true' ? 'Sí' : 'No')
+  : c && c.tipo === 'fecha' ? fechaCorta(String(v)) : c && c.tipo === 'numero' ? String(v).replace('.', ',') : String(v);
+function campoInput(c, v) {
+  const a = `data-cpk="${esc(c.clave)}" ${c.solo_lectura ? 'disabled' : ''}`;
+  const val = v == null ? '' : v;
+  if (c.tipo === 'lista') return `<select ${a}><option value=""></option>${(c.valores || []).concat(val && !(c.valores || []).includes(val) ? [val] : [])
+    .map(x => `<option ${x === val ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+  if (c.tipo === 'si_no') return `<select ${a}><option value=""></option><option value="true" ${val === true ? 'selected' : ''}>Sí</option><option value="false" ${val === false ? 'selected' : ''}>No</option></select>`;
+  if (c.tipo === 'fecha') return `<input type="date" ${a} value="${esc(String(val))}">`;
+  if (c.tipo === 'numero') return `<input type="text" inputmode="decimal" ${a} value="${esc(String(val).replace('.', ','))}">`;
+  return `<input ${a} value="${esc(String(val))}" maxlength="500" placeholder="${esc(c.descripcion || '')}">`;
+}
+function camposHTML(amb, valores) {
+  const l = (CAMPOS[amb] || []).filter(c => c.en_ficha);
+  if (!l.length) return '';
+  return `<div class="cpersform" data-cpamb="${amb}"><h3>Campos personalizados</h3><div class="g2">${l.map(c =>
+    `<div><label>${esc(c.nombre)}${c.obligatorio ? ' <span class="cpob">*</span>' : ''}</label>${campoInput(c, (valores || {})[c.clave])}</div>`).join('')}</div></div>`;
+}
+// Lee los campos del formulario. Devuelve null si no hay campos; { falta } si falta un obligatorio.
+function camposLeer(raiz) {
+  const b = raiz && raiz.querySelector('.cpersform'); if (!b) return null;
+  const amb = b.dataset.cpamb, v = {}, falta = [];
+  b.querySelectorAll('[data-cpk]:not([disabled])').forEach(i => {
+    const c = (CAMPOS[amb] || []).find(x => x.clave === i.dataset.cpk); v[i.dataset.cpk] = i.value.trim();
+    if (c && c.obligatorio && !i.value.trim()) falta.push(c.nombre);
+  });
+  return { amb, valores: v, falta };
+}
+async function camposGuardar(leido, id) {
+  if (!leido || !id || !Object.keys(leido.valores).length) return true;
+  const { data, error } = await db.rpc('guardar_campos', { p_ambito: leido.amb, p_id: id, p_valores: leido.valores });
+  if (!error && data && data.ok) return true;
+  const e = (data && data.errores || [])[0];
+  const c = e && (CAMPOS[leido.amb] || []).find(x => x.clave === e.campo);
+  toast(e ? `Revisa «${c ? c.nombre : e.campo}»: ${{ obligatorio: 'es obligatorio', numero: 'tiene que ser un número', fecha: 'no es una fecha válida', lista: 'no es un valor de la lista', si_no: 'tiene que ser sí o no', solo_lectura: 'no se puede cambiar', desconocido: 'ya no existe' }[e.error] || e.error}`
+    : 'No se han podido guardar los campos personalizados', true);
+  return false;
+}
+// Inserta el bloque en un formulario ya pintado, con los valores actuales de la ficha
+async function camposInsertar(raiz, amb, id, antesDe) {
+  if (!raiz || !(CAMPOS[amb] || []).some(c => c.en_ficha) || raiz.querySelector('.cpersform')) return;
+  let v = {};
+  if (id) { const { data } = await db.from(CAMPO_TABLA[amb]).select('clasificadores').eq('id', id).maybeSingle(); v = (data && data.clasificadores) || {}; }
+  if (raiz.querySelector('.cpersform') || !raiz.isConnected) return;
+  const ref = antesDe && antesDe.isConnected ? antesDe : null;
+  if (ref) ref.insertAdjacentHTML('beforebegin', camposHTML(amb, v)); else raiz.insertAdjacentHTML('beforeend', camposHTML(amb, v));
+}
+// Filtros generados (listas y sí/no) para una zona de filtros; al cambiar, actualiza «estado» y llama a «alCambiar»
+function camposFiltros(amb, estado, pref) {
+  return (CAMPOS[amb] || []).filter(c => c.en_filtro && ['lista', 'si_no'].includes(c.tipo)).map((c, i) => {
+    const ops = c.tipo === 'si_no' ? [['true', 'Sí'], ['false', 'No']] : (c.valores || []).map(x => [x, x]);
+    const act = estado[c.clave] == null ? '' : String(estado[c.clave]);
+    return `<div class="fcpers"><label for="${pref}${i}">${esc(c.nombre)}</label><select id="${pref}${i}" data-fcp="${esc(c.clave)}" data-fcpt="${c.tipo}">
+      <option value="">Todos</option>${ops.map(([v, t]) => `<option value="${esc(v)}" ${act === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`;
+  }).join('');
+}
+function camposFiltrosActivar(zona, estado, alCambiar) {
+  zona.querySelectorAll('[data-fcp]').forEach(sel => sel.onchange = () => {
+    const k = sel.dataset.fcp;
+    if (!sel.value) delete estado[k]; else estado[k] = sel.dataset.fcpt === 'si_no' ? sel.value === 'true' : sel.value;
+    alCambiar();
+  });
+}
+// Directorio: columnas y filtros generados
+function camposEnDirectorio() {
+  (CAMPOS.medico || []).filter(c => c.en_tabla).forEach(c => { if (!COLS.some(x => x.k === 'cp:' + c.clave)) COLS.push({ k: 'cp:' + c.clave, t: c.nombre, w: 150 }); });
+  const zona = document.querySelector('#v-directorio .filtros'), ord = $('forden');
+  if (!zona || !ord) return;
+  zona.querySelectorAll('.fcpers').forEach(x => x.remove());
+  (CAMPOS.medico || []).filter(c => c.en_filtro && ['lista', 'si_no'].includes(c.tipo)).forEach((c, i) => {
+    const ops = c.tipo === 'si_no' ? [['true', 'Sí'], ['false', 'No']] : (c.valores || []).map(x => [x, x]);
+    const act = F.campos[c.clave] == null ? '' : String(F.campos[c.clave]);
+    ord.closest('div').insertAdjacentHTML('beforebegin', `<div class="fcpers"><label for="fcp${i}">${esc(c.nombre)}</label><select id="fcp${i}" data-fcp="${esc(c.clave)}" data-fcpt="${c.tipo}">
+      <option value="">Todos</option>${ops.map(([v, t]) => `<option value="${esc(v)}" ${act === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`);
+  });
+  zona.querySelectorAll('[data-fcp]').forEach(sel => sel.onchange = () => {
+    const k = sel.dataset.fcp;
+    if (!sel.value) delete F.campos[k]; else F.campos[k] = sel.dataset.fcpt === 'si_no' ? sel.value === 'true' : sel.value;
+    buscar(true);
+  });
+}
+
 /* ---------- campos personalizados en las fichas ---------- */
 async function bloqueCampos(tabla, id, cont) {
   if (!cont || !id || cont.querySelector('.campospers')) return;
   const { data } = await db.from(tabla).select('clasificadores').eq('id', id).maybeSingle();
   const c = (data && data.clasificadores) || {}; const ks = Object.keys(c).filter(k => c[k] !== '' && c[k] != null);
+  const amb = Object.keys(CAMPO_TABLA).find(a => CAMPO_TABLA[a] === tabla), defs = CAMPOS[amb] || [];
+  if (defs.length && ks.length) {
+    if (cont.querySelector('.campospers')) return;
+    const orden = defs.filter(d => ks.includes(d.clave)).concat(ks.filter(k => !defs.some(d => d.clave === k)).map(k => ({ clave: k, nombre: k.replace(/_/g, ' ').toLowerCase().replace(/^./, x => x.toUpperCase()) })));
+    cont.insertAdjacentHTML('beforeend', `<div class="campospers"><h3>Campos personalizados</h3><div class="cpgrid">${orden.map(d =>
+      `<div><span class="sm">${esc(d.nombre)}</span><b>${esc(campoTexto(d, c[d.clave]))}</b></div>`).join('')}</div></div>`);
+    return;
+  }
   if (!ks.length || cont.querySelector('.campospers')) return;
   cont.insertAdjacentHTML('beforeend', `<div class="campospers"><h3>Campos personalizados</h3><div class="cpgrid">${ks.map(k => `<div><span class="sm">${esc(k.replace(/_/g, ' ').toLowerCase().replace(/^./, x => x.toUpperCase()))}</span><b>${esc(typeof c[k] === 'object' ? JSON.stringify(c[k]) : c[k])}</b></div>`).join('')}</div></div>`);
 }
@@ -14514,7 +14742,7 @@ abrirVisita = (orig => async function (id, ...a) {
       d.querySelectorAll('.chips button, [data-res], .chip').forEach(b => { if (/reporting/i.test(b.textContent)) { b.style.display = 'none'; n++; } });
       if (n && !d.querySelector('.srnota')) {
         const ch = d.querySelector('.chips, [data-res]'); const cont = ch && (ch.classList.contains('chips') ? ch : ch.parentElement);
-        if (cont) cont.insertAdjacentHTML('afterend', '<p class="sm srnota">Este médico no quiere reporting: solo visita presencial.</p>');
+        if (cont) cont.insertAdjacentHTML('afterend', `<p class="sm srnota">${TT('medico', 's', 'este', 'C', 'l')} no quiere reporting: solo ${TT('visita', 's', '', 'l', 'l')} presencial.</p>`);
       }
     }
   } catch (e) { /* si no se puede comprobar, la ventana queda como siempre */ }
@@ -14528,3 +14756,14 @@ pintarBnav();
 pintarConexion();
 vaciarCola();
 arrancar();
+
+/* v2.71.0 · Textos fijos de index.html con el vocabulario del cliente (solo si lo ha cambiado) */
+(function () {
+  if (!Object.keys(TERMINOS || {}).length) return;
+  const q = document.getElementById('q'); if (q) q.placeholder = `Buscar ${TT('medico', 's', '', 'l', 'l')}, centro o municipio`;
+  const h = document.querySelector('#c-ultimas h2'); if (h) h.textContent = `Últimas ${TT('visita', 'p', '', 'l', 'l')}`;
+  const o = document.querySelector('option[value="reciente"]'); if (o) o.textContent = `${TT('visita', 's', '', 'l', 'C')} más reciente`;
+})();
+
+/* v2.74.0 · El detalle del pedido muestra sus campos personalizados */
+verPedido = (orig => async function (id, ...a) { const r = await orig.call(this, id, ...a); if (id) setTimeout(() => bloqueCampos('pedidos', id, $('dbody')), 150); return r; })(verPedido);
