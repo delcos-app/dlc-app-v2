@@ -81,7 +81,8 @@ try { ESTADOS_DEF = JSON.parse(localStorage.getItem(ESTKEY) || '[]') || []; } ca
 const estados = () => ESTADOS_DEF.map(x => x.valor);
 const estadoPapel = p => (ESTADOS_DEF.find(x => x.papel === p) || {}).valor || '';
 const papelEstado = v => (ESTADOS_DEF.find(x => x.valor === v) || {}).papel || '';
-const COL_PAPEL = { inicial: '#0E2F52', avance: '#2B6CB0', interes: '#B7791F', positivo: '#12805C', negativo: '#9B2C2C' };
+// v2.97.0: colores del sistema de diseño por papel (pendiente ámbar, avance azul, interés marino, positivo verde, negativo gris)
+const COL_PAPEL = { inicial: '#8A4B0B', avance: '#3F82C0', interes: '#17457A', positivo: '#0E6B4C', negativo: '#4A5868' };
 const colEstado = v => COL_PAPEL[papelEstado(v)] || '';
 async function cargarRoles() {
   const [{ data, error }, { data: est, error: e2 }, voc] = await Promise.all([
@@ -373,6 +374,8 @@ async function abrirFicha(id, ...r) {
     await fichaAvisoHorario(id);
     await fichaMaterialVisitas(id);
     await fichaUnidades(id);
+    // v2.96.0: si no hay ventas que enseñar (o no hay permiso para verlas), la sección no aparece
+    if ($('fventas') && !$('fventasc').children.length) $('fventas').remove();
   } finally { clearTimeout(limite); requestAnimationFrame(() => d.classList.remove('cargando')); }
   await fichaAcceso(id);
 }
@@ -401,7 +404,7 @@ async function fichaComercialYPacientes(id) {
   if (esAdmin || ((PERFIL.areas || {}).V || 0) >= 1) {
     const { data } = await db.rpc('clientes_lista', { q: null, p_medico: id, lim: 5, desplaz: 0 });
     if (FICHA_ID !== id || !data || !data.total) return;
-    $('fbody').insertAdjacentHTML('beforeend', `<div class="blk"><h3>${TT('paciente', 'p', '', 'l', 'C')}<span class="n" style="margin-left:6px">${num(data.total)}</span></h3>
+    ($('fventasc') || $('fbody')).insertAdjacentHTML('beforeend', `<div class="blk"><h3>${TT('paciente', 'p', '', 'l', 'C')}<span class="n" style="margin-left:6px">${num(data.total)}</span></h3>
       ${data.filas.map(x => `<button class="item" data-fmpac="${x.id}" style="padding:7px 4px"><span class="tx"><b>${esc(x.nombre)}</b>
         <span class="sm">${num(x.unidades)} uds. · ${num(x.pedidos)} pedidos${x.ultimo_pedido ? ' · último ' + fechaCorta(x.ultimo_pedido) : ''}</span></span></button>`).join('')}
       ${data.total > 5 ? `<button class="verlo" id="fmpactodos" style="border-radius:8px;margin-top:6px">Ver los ${num(data.total)} ${TT('paciente', 'p', '', 'l', 'l')}</button>` : ''}</div>`);
@@ -446,8 +449,10 @@ async function fichaUnidades(id) {
       .map(([t, v]) => `<div><b>${num(v)}</b><span>${t}</span></div>`).join('')}</div>
     <div class="spark" title="Últimos 12 meses">${(u.meses || []).map(m => `<i style="height:${Math.round(m.unidades / max * 100)}%" title="${periodoTxt(m.mes)}: ${num(m.unidades)}"></i>`).join('')}</div>
     <div class="sm">${u.total ? `${num(u.pautas)} pautas · última el ${fechaCorta(u.ultima)} · barras: últimos 12 meses` : 'Todavía sin pautas registradas.'}</div></div>`;
-  const ref = $('fbody').querySelector('.blk:nth-of-type(2)') || $('fbody').lastElementChild;
-  ref.insertAdjacentHTML('beforebegin', bloque);
+  // v2.96.0: las ventas van en su sección plegada, al final de la ficha
+  const zona = $('fventasc');
+  if (zona) zona.insertAdjacentHTML('afterbegin', bloque);
+  else ($('fbody').querySelector('.blk:nth-of-type(2)') || $('fbody').lastElementChild).insertAdjacentHTML('beforebegin', bloque);
 }
 
 // Ficha · Acceso del médico a la plataforma (administración)
@@ -489,16 +494,17 @@ async function pintarFichaBase(id) {
       ${puedeEditarTipo(m.tipo) ? `<button class="btn ${m.urgente ? 'sec' : 'warn'}" data-act="urgente" data-id="${m.id}" data-urg="${m.urgente ? 1 : 0}">${m.urgente ? 'Quitar urgente' : 'Marcar urgente'}</button>` : ''}
       <button class="btn sec" data-agendar="${m.id}">+ Añadir a mi agenda</button>
     </div>` : ''}
+    ${fichaVisitaHTML(m, cons, vis)}
     <div class="blk"><h3>Estado</h3>
       <div>${puedeEditar()
         ? `<select data-estado="${m.id}" style="max-width:240px">${estados().map(x => `<option ${x === m.estado_comercial ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
         : `<span class="pill p-est">${esc(m.estado_comercial)}</span>`}</div>
-      ${m.urgente && m.urgente_motivo ? `<div class="sm" style="margin-top:6px">Urgente: ${esc(m.urgente_motivo)}</div>` : ''}
       ${com.length ? `<div class="sm" style="margin-top:6px">Comercial: ${com.map(esc).join(', ')}</div>` : ''}
-      ${m.telefono ? `<div class="sm" style="margin-top:6px">Teléfono: ${esc(m.telefono)}</div>` : ''}
     </div>
-    ${cons.map(c => `<div class="blk"><h3>${esc(c.centro_nombre || 'Consulta privada')}</h3>
+    ${cons.filter(c => c !== consultaDeLaVisita(cons)).map(c => `<div class="blk"><h3>${esc(c.centro_nombre || 'Consulta privada')}</h3>
       <div>${esc([c.direccion, c.cp, c.municipio].filter(Boolean).join(', ')) || '<span class="sm">Sin dirección</span>'}</div>
+      ${c.planta || c.sala ? `<div class="sm">${esc([c.planta, c.sala].filter(Boolean).join(' · '))}</div>` : ''}
+      ${c.indicaciones ? `<div class="sm">${esc(c.indicaciones)}</div>` : ''}
       ${c.telefono ? `<div class="sm">Teléfono: ${esc(c.telefono)}</div>` : ''}
       <div class="dias" style="margin-top:8px">${dias.map(k => `<span class="${(c.dias || {})[k] ? 'on' : ''}">${k}</span>`).join('')}</div>
       ${dias.filter(k => (c.dias || {})[k]).map(k => `<div class="sm">${k}: ${esc(c.dias[k])}</div>`).join('')}
@@ -512,10 +518,57 @@ async function pintarFichaBase(id) {
           ${v.proxima_fecha ? `<div class="sm">Próxima: ${fechaCorta(v.proxima_fecha)} · ${esc(v.proxima_accion || '')}</div>` : ''}</span>
         ${puedeRegistrar() ? `<button class="btn sec" data-editv='${esc(JSON.stringify(v))}' style="min-height:30px;padding:5px 9px;font-size:12.5px">Editar</button>` : ''}
       </div>`).join('') : `<div class="sm">Todavía no hay ${TT('visita', 'p', '', 'l', 'l', 'registrado')}.</div>`}</div>
-    ${m.nota ? `<div class="blk"><h3>Nota</h3><div>${esc(m.nota)}</div></div>` : ''}
-    ${m.contacto ? `<div class="blk"><h3>Contacto</h3><div>${esc(m.contacto)}</div></div>` : ''}`;
+    <div id="fzcampos"></div>
+    <details class="blk fventas" id="fventas"><summary>Ventas y ${TT('paciente', 'p', '', 'l', 'l')}</summary><div id="fventasc"></div></details>`;
   $('fx').onclick = () => $('ficha').close();
   $('fbody').querySelectorAll('[data-editv]').forEach(b => b.onclick = () => editarVisita(JSON.parse(b.dataset.editv), id));
+}
+
+/* v2.96.0 · «Para la visita»: lo que hace falta al llegar, arriba del todo.
+   Dónde (centro, planta, sala, cómo llegar), cuándo (su horario de hoy y el del centro), cómo entrar,
+   lo que quedó pendiente en la última visita, las notas y a quién llamar. Las ventas van al final. */
+// La consulta de la visita: la que tiene consulta hoy; si ninguna, la principal
+function consultaDeLaVisita(cons) {
+  const hoy = hoyLetra();
+  return (cons || []).find(c => (c.dias || {})[hoy]) || (cons || [])[0] || null;
+}
+function fichaVisitaHTML(m, cons, vis) {
+  const fila = (ico, html, cls) => `<div class="fvfila ${cls || ''}"><span class="fvico">${svgIco(ICON_NOM[ico] || '')}</span><div>${html}</div></div>`;
+  const c = consultaDeLaVisita(cons), hoy = hoyLetra(), filas = [];
+  const NOMDIA = { L: 'lunes', M: 'martes', X: 'miércoles', J: 'jueves', V: 'viernes', S: 'sábado', D: 'domingo' };
+  if (m.urgente) filas.push(fila('circle-alert', `<b>Urgente</b>${m.urgente_motivo ? ': ' + esc(m.urgente_motivo) : ''}`, 'fvurg'));
+  if (c) {
+    const donde = [c.planta, c.sala].filter(Boolean).map(esc).join(' · ');
+    filas.push(fila('building-2', `<b>${esc(c.centro_nombre || 'Consulta privada')}</b>${donde ? `<span class="fvdonde">${donde}</span>` : ''}
+      <div class="sm">${esc([c.direccion, [c.cp, c.municipio].filter(Boolean).join(' ')].filter(Boolean).join(', ')) || 'Sin dirección'}</div>
+      ${c.lat ? `<button class="btn sec fvbtn" type="button" data-nav="${navAttr([c.lat, c.lon])}">${svgIco(ICON_NOM['map-pin'])} Cómo llegar</button>` : ''}`));
+    // Cuándo: su horario de hoy en esta consulta (o el próximo día que pasa consulta) y el horario del centro
+    const d = c.dias || {}, orden = 'LMXJVSD', h = d[hoy];
+    const prox = h ? null : [...orden.slice(orden.indexOf(hoy) + 1), ...orden.slice(0, orden.indexOf(hoy) + 1)].find(k => d[k]);
+    const cen = (c.horario_centro || {})[hoy];
+    filas.push(fila('clock', `${h ? `<b>Hoy pasa consulta: ${esc(h)}</b>` : prox ? `Hoy no pasa consulta aquí · el ${NOMDIA[prox]}: ${esc(d[prox])}` : 'Sin horario de consulta'}
+      ${cen ? `<div class="sm">Centro abierto hoy: ${esc(cen)}</div>` : ''}
+      <div class="dias fvdias">${['L', 'M', 'X', 'J', 'V'].map(k => `<span class="${d[k] ? 'on' : ''} ${k === hoy ? 'hoy' : ''}" title="${esc(d[k] || '')}">${k}</span>`).join('')}</div>`));
+    if (c.indicaciones) filas.push(fila('info', `<b>Cómo llegar dentro:</b> ${esc(c.indicaciones)}`, 'fvind'));
+  } else filas.push(fila('building-2', '<span class="sm">Sin consulta registrada: añádela en «Editar ficha».</span>'));
+  // Lo último que pasó y lo que quedó pendiente
+  const ult = (vis || [])[0];
+  if (ult) {
+    const mat = detTxt(ult);
+    filas.push(fila('notebook-pen', `<b>Última ${TT('visita', 's', '', 'l', 'l')}: ${fechaCorta(ult.fecha)}</b> · ${esc((ult.resultados || []).join(' + ') || 'Sin resultado')}
+      ${ult.nota ? `<div class="sm">${esc(ult.nota)}</div>` : ''}${mat ? `<div class="sm">Material: ${esc(mat)}</div>` : ''}`));
+  }
+  const pend = (vis || []).find(v => v.proxima_accion || v.proxima_fecha);
+  if (pend) {
+    const f = pend.proxima_fecha, hoyIso = hoyISO();
+    const est = !f ? '' : f < hoyIso ? '<span class="pill p-bor">Atrasada</span>' : f === hoyIso ? '<span class="pill p-est">Hoy</span>' : '';
+    filas.push(fila('clipboard-list', `<b>Pendiente:</b> ${esc(pend.proxima_accion || 'Volver a ' + TT('visita', 's', '', 'l', 'l'))}${f ? ` · ${fechaCorta(f)}` : ''} ${est}`));
+  }
+  if (m.nota) filas.push(fila('message-circle', `<b>Notas:</b> ${esc(m.nota)}`));
+  const tels = [m.telefono, c && c.telefono].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i);
+  if (tels.length || m.contacto) filas.push(fila('phone', `${tels.map(t => `<a href="tel:${esc(t.replace(/\s+/g, ''))}"><b>${esc(t)}</b></a>`).join(' · ')}
+    ${m.contacto ? `<div class="sm">${esc(m.contacto)}</div>` : ''}`));
+  return `<section class="fvis" aria-label="Para la ${TT('visita', 's', '', 'l', 'l')}"><h3>Para la ${TT('visita', 's', '', 'l', 'l')}</h3>${filas.join('')}</section>`;
 }
 
 $('ficha').addEventListener('click', e => { if (e.target.id === 'ficha') $('ficha').close(); });
@@ -666,6 +719,11 @@ function consHTML(c, i) {
     ${h('direccion', c.direccion)}${h('cp', c.cp)}${h('lat', c.lat)}${h('lon', c.lon)}
     <label>Centro</label><div class="cenpick" data-cp="${i}"></div>
     <div class="g2" style="margin-top:10px">
+      <div><label>Planta</label><input data-cf="${i}|planta" value="${esc(c.planta || '')}" maxlength="60" placeholder="p. ej. 2.ª planta"></div>
+      <div><label>Sala o consulta</label><input data-cf="${i}|sala" value="${esc(c.sala || '')}" maxlength="60" placeholder="p. ej. Consulta 14"></div>
+    </div>
+    <label>Indicaciones para llegar</label><input data-cf="${i}|indicaciones" value="${esc(c.indicaciones || '')}" maxlength="300" placeholder="p. ej. Entrar por la puerta B y preguntar en recepción">
+    <div class="g2" style="margin-top:10px">
       <div><label>Teléfono de la consulta</label><input data-cf="${i}|telefono" value="${esc(c.telefono || '')}" inputmode="tel" placeholder="Si es distinto del del centro"></div><div></div>
     </div>
     <label>Días y horario de ${TT('visita', 's', '', 'l', 'l')}</label>${dpHTML(c.dias || {}, i)}
@@ -736,7 +794,8 @@ async function abrirEditor(id, tipo) {
         id: (box.querySelector(`[data-cid="${i}"]`) || {}).value || null, centro_id: g('centro_id') || null,
         centro_nombre: g('centro_nombre').toUpperCase(), municipio: g('municipio').toUpperCase(),
         provincia: g('provincia').toUpperCase(), direccion: g('direccion'), cp: g('cp'),
-        telefono: g('telefono'), dias: dpLeer(box, i), lat: g('lat') || null, lon: g('lon') || null
+        telefono: g('telefono'), dias: dpLeer(box, i), lat: g('lat') || null, lon: g('lon') || null,
+        planta: g('planta').trim(), sala: g('sala').trim(), indicaciones: g('indicaciones').trim()
       };
     });
     return {
@@ -2898,7 +2957,7 @@ async function duplicarRuta(id) {
   if (!nombre) return;
   const { error } = await db.rpc('guardar_ruta', { p: {
     nombre, tipo: r.tipo, desde: hoyISO(), nota: r.nota,
-    codigos: r.codigos || [], reglas: r.reglas || null, visible_para: r.visible_para || ''
+    codigos: r.codigos || [], centros: r.centros || [], reglas: r.reglas || null, visible_para: r.visible_para || ''
   }});
   if (error) { toast('No se ha podido duplicar: ' + error.message, true); return; }
   toast('Ruta duplicada'); cargarRutas();
@@ -2969,6 +3028,8 @@ async function editorRuta(id) {
   let codigos = r && r.codigos ? r.codigos.slice() : [];
   let medicos = [];
   let busca = '';
+  // v2.98.0: centros de la ruta; sus médicos se planifican en ese centro
+  let centrosR = [], buscaCen = '';
   let cab = { nombre: r ? r.nombre : '', tipo: r ? r.tipo : 'Normal', desde: (r && r.desde) || hoyISO(), salida: (r && r.salida) || '', vuelta: (r && r.vuelta) || '' };
   const leerCab = () => { if ($('rn')) cab = { nombre: $('rn').value, tipo: $('rt').value, desde: $('rd').value, salida: ($('rsal') || {}).value || '', vuelta: ($('rvue') || {}).value || '' }; };
   let op = { provincias: [], municipios: [], centros: [], especialidades: [], estados: [] };
@@ -2979,7 +3040,14 @@ async function editorRuta(id) {
 
   db.rpc('opciones_filtros', {}).then(({ data }) => { if (data) { op = data; if (modo === 'crit') pinta(); } });
   if (codigos.length) {
-    db.rpc('cuentas_por_ids', { p_ids: codigos }).then(({ data }) => { medicos = data || []; pinta(); });
+    // v2.98.0: con cuentas_de_ruta cada médico sabe en qué centro de la ruta está
+    (id && !(r && r.dinamica) ? db.rpc('cuentas_de_ruta', { p_id: id }) : db.rpc('cuentas_por_ids', { p_ids: codigos }))
+      .then(({ data }) => { medicos = (data || []).filter(m => codigos.includes(m.id)); pinta(); });
+  }
+  if (r && (r.centros || []).length) {
+    db.from('centros').select('id,nombre,municipio').in('id', r.centros).then(({ data }) => {
+      centrosR = r.centros.map(c => (data || []).find(x => x.id === c)).filter(Boolean); pinta();
+    });
   }
 
   const sel = (lista, v) => '<option value=""></option>' + (lista || []).map(o =>
@@ -3006,9 +3074,10 @@ async function editorRuta(id) {
         <button type="button" data-rm="crit" aria-pressed="${modo === 'crit'}">Por criterios</button></div>
 
       ${modo === 'lista' ? `
-        <div class="chips">${medicos.map(m => `<span class="chip">${esc(m.nombre)}
-          <button type="button" data-rq="${m.id}" style="border:0;background:none;color:var(--dang);cursor:pointer;font-weight:700">✕</button></span>`).join('')
-          || `<span class="sm">Todavía no has añadido ${TT('medico', 'p', '', 'l', 'l')}.</span>`}</div>
+        ${rutaCentrosHTML(centrosR, medicos)}
+        <label for="rbuscacen">Añadir un centro</label>
+        <input id="rbuscacen" value="${esc(buscaCen)}" placeholder="Busca el centro: se añaden todos sus ${TT('medico', 'p', '', 'l', 'l')}" autocomplete="off">
+        <div id="rrescen" class="lista"></div>
         <label for="rbusca">Añadir ${TT('medico', 'p', '', 'l', 'l')}</label>
         <input id="rbusca" value="${esc(busca)}" placeholder="Busca por nombre, centro o municipio" autocomplete="off">
         <div id="rres" class="lista"></div>`
@@ -3041,8 +3110,44 @@ async function editorRuta(id) {
     $('dbody').querySelectorAll('[data-rq]').forEach(b => b.onclick = () => {
       codigos = codigos.filter(c => c !== b.dataset.rq);
       medicos = medicos.filter(m => m.id !== b.dataset.rq);
+      // v2.98.0: un centro sin médicos ya no pinta nada en la ruta
+      centrosR = centrosR.filter(c => medicos.some(m => m.centro_ruta === c.id));
       pinta();
     });
+    $('dbody').querySelectorAll('[data-rqc]').forEach(b => b.onclick = () => {
+      const fuera = medicos.filter(m => m.centro_ruta === b.dataset.rqc).map(m => m.id);
+      codigos = codigos.filter(c => !fuera.includes(c)); medicos = medicos.filter(m => !fuera.includes(m.id));
+      centrosR = centrosR.filter(c => c.id !== b.dataset.rqc);
+      pinta();
+    });
+    if ($('rbuscacen')) {
+      let tc;
+      const buscarCen = async q => {
+        if (q.length < 2) { $('rrescen').innerHTML = ''; return; }
+        const { data } = await RPC_ORIG('buscar_centros', { p_q: q, p_lat: null, p_lon: null, p_radio: 400, p_lim: 8 });
+        if (!$('rrescen')) return;
+        const res = (data || []).filter(c => !centrosR.some(x => x.id === c.id));
+        $('rrescen').innerHTML = res.map((c, i) => `<button class="item" type="button" data-raddc="${i}"><span class="ic">+</span>
+          <span class="tx"><b>${esc(c.nombre)}</b><span class="sm">${esc([c.direccion, c.municipio].filter(Boolean).join(' · '))}${c.medicos ? ` · ${num(c.medicos)} ${TT('medico', c.medicos === 1 ? 's' : 'p', '', 'l', 'l')}` : ''}</span></span></button>`).join('')
+          || '<div class="vacio">Ningún centro con ese nombre.</div>';
+        $('rrescen').querySelectorAll('[data-raddc]').forEach(b => b.onclick = async () => {
+          const c = res[+b.dataset.raddc];
+          b.disabled = true;
+          const { data: meds, error } = await db.rpc('cuentas_de_centro', { p_centro: c.id });
+          if (error) { toast('No se ha podido añadir el centro: ' + error.message, true); b.disabled = false; return; }
+          // Todos sus médicos; los que ya estaban en la ruta pasan a este centro
+          const lista = meds || [];
+          lista.forEach(m => { const ya = medicos.find(x => x.id === m.id); if (ya) ya.centro_ruta = c.id; else { codigos.push(m.id); medicos.push(m); } });
+          if (lista.length) centrosR.push({ id: c.id, nombre: c.nombre, municipio: c.municipio });
+          buscaCen = '';
+          toast(lista.length ? `${num(lista.length)} ${TT('medico', lista.length === 1 ? 's' : 'p', '', 'l', 'l')} de ${c.nombre} añadidos: quita los que no vayas a ver`
+            : `${c.nombre} no tiene ${TT('medico', 'p', '', 'l', 'l')} en la base`, !lista.length);
+          pinta();
+        });
+      };
+      $('rbuscacen').oninput = e => { buscaCen = e.target.value; clearTimeout(tc); tc = setTimeout(() => buscarCen(e.target.value.trim()), 300); };
+      if (buscaCen) buscarCen(buscaCen);
+    }
 
     if (modo === 'lista') {
       let t;
@@ -3098,6 +3203,7 @@ async function editorRuta(id) {
         salida: ($('rsal') || {}).value || '', vuelta: ($('rvue') || {}).value || '',
         visible_para: puede('administrar') ? '*' : '',
         codigos: modo === 'lista' ? codigos : [],
+        centros: modo === 'lista' ? centrosR.map(c => c.id) : [],
         reglas: modo === 'crit' ? ($('dbody').__reglas ? $('dbody').__reglas() : {}) : null
       }});
       ev.target.disabled = false; ev.target.textContent = id ? 'Guardar' : 'Crear ruta';
@@ -3314,11 +3420,11 @@ $('q').addEventListener('input', e => {
     if (!m.length && !c.length && !me.length) { $('gsug').innerHTML = `<div class="gload">Sin resultados para «${esc(q)}».</div>`; return; }
     $('gsug').innerHTML =
       (m.length ? `<div class="gsh">Municipios</div>` + m.map(x => `<button data-gm="${esc(x.valor)}">
-        <span class="gic">📍</span><span><b>${esc(x.valor)}</b><span class="sm">${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')}</span></span></button>`).join('') : '') +
+        <span class="gic">📍</span><span><b>${resaltarBusqueda(x.valor, q)}</b><span class="sm">${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')}</span></span></button>`).join('') : '') +
       (c.length ? `<div class="gsh">Centros</div>` + c.map(x => `<button data-gc="${esc(x.valor)}">
-        <span class="gic">🏥</span><span><b>${esc(x.valor)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')}</span></span></button>`).join('') : '') +
+        <span class="gic">🏥</span><span><b>${resaltarBusqueda(x.valor, q)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')}</span></span></button>`).join('') : '') +
       (me.length ? `<div class="gsh">${TT('medico', 'p', '', 'l', 'C')}${m.length || c.length ? ' que pasan consulta allí o coinciden' : ''}</div>` + me.map(x => `<button data-gme="${x.id}">
-        <span class="gic">${x.urgente ? '❗' : '👤'}</span><span><b>${esc(x.nombre)}</b>
+        <span class="gic">${x.urgente ? '❗' : '👤'}</span><span><b>${resaltarBusqueda(x.nombre, q)}</b>
         <span class="sm">${esc(x.especialidad || '')} · ${esc(x.centro_nombre || '')} ${esc(x.municipio || '')}</span></span></button>`).join('') : '');
     $('gsug').classList.remove('hide');
   }, 250);
@@ -4562,11 +4668,10 @@ async function inicioOperativaPedidos() {
   const d = data || {}, n = k => (d[k] || []).length;
   if (!(n('pago') + n('paquete') + n('email_factura') + n('email_pago')) || $('iniops')) return;
   $('iniextra').insertAdjacentHTML('afterbegin', `<div class="card" id="iniops"><h2>Operativa de pedidos</h2>
-    <div class="minis"><div><b style="${n('pago') ? 'color:var(--warn)' : ''}">${num(n('pago'))}</b><span>pagos por validar</span></div>
-      <div><b>${num(n('paquete'))}</b><span>paquetes por preparar</span></div>
-      <div><b>${num(n('email_factura') + n('email_pago'))}</b><span>emails por enviar</span></div></div>
-    <div class="acts" style="padding:0 16px 14px"><button class="btn sec" id="iniopsver">Ver en Pedidos</button></div></div>`);
-  $('iniopsver').onclick = () => { PEDSEC = 'ventas'; ir('ventas'); };
+    <div class="opfilas">${[[n('pago'), 'pagos por validar', n('pago') ? 'aviso' : ''], [n('paquete'), 'paquetes por preparar', ''],
+      [n('email_factura') + n('email_pago'), 'emails por enviar', '']].map(([v, t, c]) =>
+      `<button class="opfila" data-opver><b class="${c}">${num(v)}</b><span>${t}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`).join('')}</div></div>`);
+  $('iniops').querySelectorAll('[data-opver]').forEach(b => b.onclick = () => { PEDSEC = 'ventas'; ir('ventas'); });
 }
 
 async function inicioVistazoEIndicadores() {
@@ -5332,11 +5437,11 @@ function selectorMedico(el, o) {
         if (!mu.length && !ce.length && !me.length) { sug.innerHTML = `<div class="gload">Sin resultados para «${esc(q)}».</div>`; return; }
         sug.innerHTML =
           (mu.length ? '<div class="gsh">Municipios</div>' + mu.map((x, i) => `<button type="button" data-pmu="${i}"><span class="gic">📍</span>
-            <span><b>${esc(x.valor)}</b><span class="sm">${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')} · ver la lista</span></span></button>`).join('') : '') +
+            <span><b>${resaltarBusqueda(x.valor, q)}</b><span class="sm">${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')} · ver la lista</span></span></button>`).join('') : '') +
           (ce.length ? '<div class="gsh">Centros</div>' + ce.map((x, i) => `<button type="button" data-pce="${i}"><span class="gic">🏥</span>
-            <span><b>${esc(x.valor)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')} · ver la lista</span></span></button>`).join('') : '') +
+            <span><b>${resaltarBusqueda(x.valor, q)}</b><span class="sm">${esc(x.municipio || '')} · ${num(x.n)} ${TT('medico', 'p', '', 'l', 'l')} · ver la lista</span></span></button>`).join('') : '') +
           (me.length ? `<div class="gsh">${TT('medico', 'p', '', 'l', 'C')}</div>` + me.map((x, i) => `<button type="button" data-pme="${i}"><span class="gic">${x.urgente ? '❗' : '👤'}</span>
-            <span><b>${esc(x.nombre)}</b><span class="sm">${esc([x.especialidad, x.centro_nombre, x.municipio].filter(Boolean).join(' · '))}</span></span></button>`).join('') : '');
+            <span><b>${resaltarBusqueda(x.nombre, q)}</b><span class="sm">${esc([x.especialidad, x.centro_nombre, x.municipio].filter(Boolean).join(' · '))}</span></span></button>`).join('') : '');
         sug.querySelectorAll('[data-pmu]').forEach(b => b.onclick = () => listaMedicos(mu[+b.dataset.pmu].valor, { f_municipio: mu[+b.dataset.pmu].valor }));
         sug.querySelectorAll('[data-pce]').forEach(b => b.onclick = () => listaMedicos(ce[+b.dataset.pce].valor, { q: ce[+b.dataset.pce].valor }));
         sug.querySelectorAll('[data-pme]').forEach(b => b.onclick = () => elegir(me[+b.dataset.pme]));
@@ -7614,10 +7719,10 @@ async function listaPacientes() {
   $('paccuenta').innerHTML = `<b>${num(data.total)}</b> ${data.total === 1 ? 'cliente' : 'clientes'}`;
   const f = data.filas || [];
   const v = x => x ? esc(x) : '<span class="vac">—</span>';
-  const cpCols = (CAMPOS.cliente || []).filter(c => c.en_tabla);
+  const cpCols = clasVisibles('cliente');
   $('paclista').innerHTML = f.length ? `<div class="dgrid-wrap"><div class="dgrid pacs">
     <div class="dh"><span>Cliente</span><span>Tipo</span><span>DNI / CIF</span><span>Teléfono</span><span>Email</span><span>Población</span>
-      <span>${TT('medico', 's', '', 'l', 'C')}</span><span>Comercial</span><span class="num">Pedidos</span><span class="num">Uds.</span><span>Último pedido</span>${cpCols.map(c => `<span>${esc(c.nombre)}</span>`).join('')}</div>
+      <span>${TT('medico', 's', '', 'l', 'C')}</span><span>Comercial</span><span class="num">Pedidos</span><span class="num">Uds.</span><span>Último pedido</span>${clasCabeceras(cpCols)}</div>
     ${f.map(x => `<button class="dr" data-pac="${x.id}">
       <span><b>${esc(x.nombre)}</b></span>
       <span><span class="pill ${x.tipo === 'Empresa' ? 'p-emp' : 'p-per'}">${x.tipo === 'Empresa' ? 'Empresa' : `${TT('paciente', 's', '', 'l', 'C')}`}</span></span>
@@ -7627,8 +7732,7 @@ async function listaPacientes() {
       <span>${x.ultimo_pedido ? fechaCorta(x.ultimo_pedido) : '<span class="vac">—</span>'}</span>${cpCols.map(c => `<span>${v(campoTexto(c, (x.clasificadores || {})[c.clave]))}</span>`).join('')}
     </button>`).join('')}</div></div>` : '<div class="vacio">Ningún cliente con estos filtros.</div>';
   // Columnas de campos personalizados: se añaden a la rejilla
-  const rej = $('paclista').querySelector('.dgrid.pacs');
-  if (rej && cpCols.length) { const cs = getComputedStyle(rej); rej.style.setProperty('--cols', cs.getPropertyValue('--cols').trim() + ' 130px'.repeat(cpCols.length)); rej.style.minWidth = (parseInt(cs.minWidth) || 1080) + 140 * cpCols.length + 'px'; }
+  clasRejilla($('paclista').querySelector('.dgrid.pacs'), cpCols.length);
   $('paclista').querySelectorAll('[data-pac]').forEach(b => b.onclick = () => fichaPaciente(b.dataset.pac));
   paginador($('pacpag'), data.total, PAC.pagina, p => { PAC.pagina = p; listaPacientes(); }, () => { PAC.pagina = 0; listaPacientes(); });
 }
@@ -7882,6 +7986,7 @@ citaRepetida = (orig => async function (medicoId, fecha) {
 /* ---------------- servicios en Productos ---------------- */
 
 let PSEC = 'productos';
+let PRODF = {};   // v2.88.0: filtros por campos del producto (Clasificadores)
 async function cargarProductosModulo() {
   const esAdmin = puede('administrar');
   vaciarModulos('v-productos');
@@ -7900,18 +8005,22 @@ async function pintarProductos() {
   const esAdmin = puede('administrar');
   cargando($('vcuerpo'), 'Cargando productos…');
   const { data } = await RPC_ORIG('productos_lista', { p_todos: esAdmin });
-  const l = (data || []).filter(p => (p.tipo || 'producto') === 'producto');
+  // v2.88.0: filtros por campos (Clasificadores); la lista llega entera, así que se filtra aquí
+  const l = (data || []).filter(p => (p.tipo || 'producto') === 'producto' && clasCumple(p.clasificadores, PRODF));
+  const cpCols = clasVisibles('producto');
   $('vcuerpo').innerHTML = `<div class="panel">
     <div class="cuenta"><b>${num(l.filter(p => p.activo).length)}</b> ${l.filter(p => p.activo).length === 1 ? 'producto activo' : 'productos activos'}${l.some(p => !p.activo) ? ` · ${num(l.filter(p => !p.activo).length)} inactivos` : ''}</div>
     <div class="dgrid-wrap"><div class="dgrid prods">
-      <div class="dh"><span></span><span>Producto</span><span>Referencia</span><span class="num">Sin IVA</span><span class="num">IVA</span><span class="num">Con IVA</span><span>Estado</span></div>
+      <div class="dh"><span></span><span>Producto</span><span>Referencia</span><span class="num">Sin IVA</span><span class="num">IVA</span><span class="num">Con IVA</span><span>Estado</span>${clasCabeceras(cpCols)}</div>
       ${l.map(p => `<button class="dr" data-prod="${p.id}" style="${p.activo ? '' : 'opacity:.55'}">
         <span><span class="pfoto" style="${p.foto_url ? `background-image:url('${esc(p.foto_url)}')` : ''}">${p.foto_url ? '' : '◧'}</span></span>
         <span><b>${esc(p.nombre)}</b><span class="sm">${esc(p.presentacion || 'Sin presentación')}</span></span>
         <span class="sm">${esc(p.referencia || '—')}</span><span class="num">${p.precio != null ? eurI(p.precio) : '—'}</span>
         <span class="num">${num(p.iva || 0)}%</span><span class="num"><b>${p.pvp != null ? eurI(p.pvp) : '—'}</b></span>
-        <span><span class="pill ${p.activo ? 'p-est' : 'p-anu'}">${p.activo ? 'Activo' : 'Inactivo'}</span></span></button>`).join('') || '<div class="vacio">Todavía no hay productos.</div>'}
+        <span><span class="pill ${p.activo ? 'p-est' : 'p-anu'}">${p.activo ? 'Activo' : 'Inactivo'}</span></span>${clasCeldas(cpCols, p.clasificadores)}</button>`).join('')
+        || `<div class="vacio">${Object.keys(PRODF).length ? 'Ningún producto con estos filtros.' : 'Todavía no hay productos.'}</div>`}
     </div></div></div>`;
+  clasRejilla($('vcuerpo').querySelector('.dgrid.prods'), cpCols.length);
   $('vcuerpo').querySelectorAll('[data-prod]').forEach(b => b.onclick = () => editorProducto(l.find(p => p.id === b.dataset.prod)));
 }
 
@@ -9388,6 +9497,7 @@ document.addEventListener('click', e => { if (e.target.closest('[data-irprefs]')
 /* ---------------- Pedidos → Ventas: por páginas y guardado en el dispositivo ---------------- */
 
 let PEDPAG = 0;
+let PEDF = {};   // v2.88.0: filtros por campos del pedido (Clasificadores)
 async function listaPedidos() {
   if (!$('pedlista') || !$('pper') || !$('pcanal')) return;
   const r = $('pper').__rango();
@@ -9397,7 +9507,8 @@ async function listaPedidos() {
     $('popf').onchange = () => { PEDPAG = 0; listaPedidos(); };
   }
   const params = { p_desde: r.desde, p_hasta: r.hasta, p_canal: $('pcanal').value || null, q: ($('pq') && $('pq').value.trim()) || null,
-    p_estado: $('pestado').value || null, p_operativa: ($('popf') && $('popf').value) || null, lim: tamPagina(), desplaz: PEDPAG * tamPagina() };
+    p_estado: $('pestado').value || null, p_operativa: ($('popf') && $('popf').value) || null, lim: tamPagina(), desplaz: PEDPAG * tamPagina(),
+    ...(Object.keys(PEDF).length ? { f_campos: PEDF } : {}) };
   const clave = 'pedidos-' + JSON.stringify(params);
   if (!$('pedlista').querySelector('.dgrid')) cargando($('pedlista'), 'Cargando pedidos…');
   const res = await rpcCache('pedidos_pagina', params, clave);
@@ -9413,9 +9524,10 @@ async function listaPedidos() {
     <div class="kpi ok"><b>${eurI(s.total || 0)}</b><span>Total con IVA</span></div>` : ''}`;
   const ico = p => p.estado !== 'Confirmado' ? '' : `<span class="opico" title="Pago ${p.pago_estado === 'Cobrado' ? 'recibido' : 'pendiente'} · Paquete ${p.paquete_en ? 'preparado' : 'por preparar'}${p.factura ? ' · Factura ' + (p.email_factura_en ? 'enviada' : 'por enviar') : ''}">
       <i class="${p.pago_estado === 'Cobrado' ? 'ok' : 'no'}">💳</i><i class="${p.paquete_en ? 'ok' : 'no'}">📦</i>${p.factura ? `<i class="${p.email_factura_en ? 'ok' : 'no'}">🧾</i>` : ''}</span>`;
+  const cpCols = clasVisibles('pedido');
   $('pedlista').innerHTML = PEDIDOS.length ? `<div class="dgrid-wrap"><div class="dgrid peds2 ${imp ? '' : 'sinimp'}">
     <div class="dh"><span>Fecha</span><span>Cliente</span><span>${TT('medico', 's', '', 'l', 'C')}</span><span>Comercial</span><span>Productos</span>
-      <span class="num">Uds.</span>${imp ? '<span class="num">Base</span><span class="num">Total</span>' : ''}<span>Estado</span><span>Operativa</span></div>
+      <span class="num">Uds.</span>${imp ? '<span class="num">Base</span><span class="num">Total</span>' : ''}<span>Estado</span><span>Operativa</span>${clasCabeceras(cpCols)}</div>
     ${PEDIDOS.map(p => `<button class="dr" data-ped="${p.id}" style="${p.estado === 'Anulado' ? 'opacity:.55' : ''}">
       <span>${fechaCorta(p.fecha)}${p.factura || p.numero ? `<span class="sm">${esc(p.factura || p.numero)}</span>` : ''}</span>
       <span><b>${esc(p.contacto || p.centro || p.cuenta_texto || '—')}</b><span class="sm">${p.canal === 'centro' ? 'Venta a centro' : 'Recomendación'}${p.forma_pago ? ' · ' + esc(p.forma_pago) : ''}</span></span>
@@ -9423,8 +9535,9 @@ async function listaPedidos() {
       <span>${p.comercial ? esc(p.comercial) : '<span class="vac">—</span>'}</span>
       <span class="sm corta">${esc(p.productos || '')}</span><span class="num">${num(p.unidades)}</span>
       ${imp ? `<span class="num">${eurI(p.base)}</span><span class="num"><b>${eurI(p.total)}</b></span>` : ''}
-      <span>${pillEstado(p.estado)}</span><span>${ico(p)}</span></button>`).join('')}
+      <span>${pillEstado(p.estado)}</span><span>${ico(p)}</span>${clasCeldas(cpCols, p.clasificadores)}</button>`).join('')}
   </div></div>` : '<div class="vacio">No hay pedidos con estos filtros.</div>';
+  clasRejilla($('pedlista').querySelector('.dgrid.peds2'), cpCols.length);
   if (!$('pedpag')) $('pedlista').insertAdjacentHTML('afterend', '<div id="pedpag"></div>');
   paginador($('pedpag'), d.total, PEDPAG, p => { PEDPAG = p; listaPedidos(); $('pedlista').scrollIntoView({ block: 'start' }); }, () => { PEDPAG = 0; listaPedidos(); });
   if (res.cache) avisoCache($('pedlista'), res.fecha);
@@ -10120,7 +10233,8 @@ function ordenarCabeceraMovil(sec) {
   const principal = hijos.find(b => b.tagName === 'BUTTON' && !b.classList.contains('sec') && /^\s*\+/.test(b.textContent));
   if (principal) {
     principal.classList.add('fab'); principal.setAttribute('aria-label', principal.textContent.replace('+', '').trim());
-    principal.dataset.txt = principal.textContent.replace('+', '').trim(); principal.textContent = '+';
+    // v2.95.0: el «+» es el icono de la biblioteca, no un carácter
+    principal.dataset.txt = principal.textContent.replace('+', '').trim(); principal.innerHTML = svgIco(ICON_NOM.plus);
     sec.appendChild(principal);
   }
   // Agenda: modos en un selector segmentado y la navegación junto a la fecha
@@ -10211,7 +10325,8 @@ function indicadoresCompletos() {
   cards.forEach((k, i) => {
     const c = cfg[i]; if (!c || k.dataset.comp) return;
     k.dataset.comp = '1';
-    k.insertAdjacentHTML('afterbegin', `<span class="kico" aria-hidden="true">${KPI_ICO[c.id] || '•'}</span>`);
+    // v2.92.0: los indicadores sin icono propio (por ejemplo, los de una zona) no llevan caja de icono vacía
+    if (KPI_ICO[c.id]) k.insertAdjacentHTML('afterbegin', `<span class="kico" aria-hidden="true">${KPI_ICO[c.id]}</span>`);
     if (KPI_TXT[c.id]) k.insertAdjacentHTML('beforeend', `<em class="kdesc">${esc(KPI_TXT[c.id])}</em>`);
   });
 }
@@ -10988,7 +11103,7 @@ async function pintarUsuarios2() {
       const mods = Object.keys(MODULO_AREA).filter(m => rolPuede(u.rol, 'administrar') || +((u.areas || {})[MODULO_AREA[m]] || 0) >= 1);
       const reciente = u.ultima_actividad ? new Date(u.ultima_actividad) : null;
       return `<button class="usrcard ${u.activo ? '' : 'off'}" data-usr="${u.id}">
-        <span class="usrav" style="background:${esc((rolDef(u.rol) || {}).color || 'linear-gradient(135deg,#1E6FB8,#5BB4E5)')}">${esc(iniciales(u.nombre))}</span>
+        <span class="usrav" style="background:${esc((rolDef(u.rol) || {}).color || '#17457A')}">${esc(iniciales(u.nombre))}</span>
         <span class="usrtx"><b>${esc(u.nombre)}</b><span class="sm">${esc(u.email || '')}</span>
           <span class="usrchips"><span class="pill p-est">${esc(u.rol)}</span>${u.activo ? '' : '<span class="pill p-anu">Desactivado</span>'}
             ${rolPuede(u.rol, 'portal_prescriptor') ? `<span class="pill p-per">${esc(u.medico || 'Sin ficha')}</span>` : `<span class="sm">${mods.length} módulos</span>`}</span></span>
@@ -13749,7 +13864,13 @@ let REVELADO = 0;
 function revelar(el, max, desde) {
   if (!el) return; const turno = ++REVELADO;
   el.classList.add('preparando');
-  estable(el, max, desde).then(() => { if (turno === REVELADO || !el.matches('main > section')) el.classList.remove('preparando'); });
+  estable(el, max, desde).then(() => { if (turno === REVELADO || !el.matches('main > section')) { el.classList.remove('preparando'); llegar(el); } });
+}
+// v2.92.0: la pantalla recién revelada llega con un fundido corto (las repintadas posteriores no se animan)
+function llegar(el) {
+  if (!el || !el.matches('main > section')) return;
+  el.classList.remove('llega'); void el.offsetWidth; el.classList.add('llega');
+  clearTimeout(el._llega); el._llega = setTimeout(() => el.classList.remove('llega'), 700);
 }
 ir = (orig => function (t) {
   const t0 = Date.now() - 2;
@@ -14571,7 +14692,7 @@ async function bloqueCampos(tabla, id, cont) {
 }
 fichaPaciente = (orig => async function (id, ...a) { const r = await orig.call(this, id, ...a); bloqueCampos('contactos', id, $('ficha') && ($('ficha').querySelector('.fbody, #fbody') || $('ficha').firstElementChild)); return r; })(fichaPaciente);
 editorProducto = (orig => function (p, ...a) { const r = orig.call(this, p, ...a); if (p && p.id) setTimeout(() => bloqueCampos('productos', p.id, $('dbody')), 150); return r; })(editorProducto);
-abrirFicha = (orig => async function (id, ...a) { const r = await orig.call(this, id, ...a); bloqueCampos('cuentas', id, $('ficha') && ($('ficha').querySelector('.fbody, #fbody') || $('ficha').firstElementChild)); return r; })(abrirFicha);
+abrirFicha = (orig => async function (id, ...a) { const r = await orig.call(this, id, ...a); bloqueCampos('cuentas', id, $('fzcampos') || ($('ficha') && ($('ficha').querySelector('.fbody, #fbody') || $('ficha').firstElementChild))); return r; })(abrirFicha);
 
 
 /* ============================================================
@@ -14758,6 +14879,298 @@ abrirVisita = (orig => async function (id, ...a) {
 })(abrirVisita);
 
 
+/* ============================================================
+   v2.88.0 · «Clasificadores» en «Filtros y columnas»
+   Todos los campos personalizados de Cuentas, Clientes, Pedidos y Productos
+   se pueden usar como filtro y como columna desde el panel. Listas y textos
+   con pocos valores: desplegable; con muchos: buscador. Números y fechas:
+   desde / hasta. «Columna en la tabla» decide si la columna se ve de entrada
+   y «Filtro» coloca el campo el primero de la sección.
+   ============================================================ */
+const CLAS_MAX_LISTA = 15;   // hasta este número de valores, desplegable; con más, buscador
+const CLAS_VALORES = {};     // por ámbito: valores que ya tienen las fichas en cada campo
+const clasNorm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// Los mismos criterios que campos_cumplen() en la base (para Productos, que se filtra aquí)
+function clasCumple(v, f) {
+  v = v || {};
+  return Object.entries(f || {}).every(([k, c]) => {
+    const x = v[k];
+    if (!c || typeof c !== 'object') return x === c;
+    if ('contiene' in c && !clasNorm(x).includes(clasNorm(c.contiene))) return false;
+    for (const op of ['desde', 'hasta']) {
+      if (!(op in c)) continue;
+      if (x == null || x === '') return false;
+      const a = typeof c[op] === 'number' ? +x : String(x);
+      if (typeof a === 'number' && isNaN(a)) return false;
+      if (op === 'desde' ? a < c[op] : a > c[op]) return false;
+    }
+    return true;
+  });
+}
+// Campos de la pantalla: primero los marcados como «Filtro», después el resto (en su orden)
+const clasCampos = amb => [...(CAMPOS[amb] || [])].sort((a, b) => (b.en_filtro ? 1 : 0) - (a.en_filtro ? 1 : 0));
+function clasColsGuardadas(amb) { try { return JSON.parse(localStorage.getItem('clas-cols-' + amb)) || {}; } catch (e) { return {}; } }
+// Columnas visibles: lo que haya elegido la persona o, si no ha elegido, «Columna en la tabla»
+function clasVisibles(amb) {
+  const g = clasColsGuardadas(amb);
+  return (CAMPOS[amb] || []).filter(c => c.clave in g ? g[c.clave] : c.en_tabla);
+}
+function clasVeColumna(amb, clave) {
+  if (amb === 'medico') return !!(colsConfig().find(c => c.k === 'cp:' + clave) || {}).on;
+  return clasVisibles(amb).some(c => c.clave === clave);
+}
+function clasPonerColumna(amb, clave, on) {
+  // Cuentas: sus columnas se guardan con las demás de la tabla (Elegir columnas)
+  if (amb === 'medico') {
+    const D = colsConfig(), x = D.find(c => c.k === 'cp:' + clave);
+    if (x) x.on = on; else D.push({ k: 'cp:' + clave, on, w: 150 });
+    colsGuardar(D); return;
+  }
+  const g = clasColsGuardadas(amb); g[clave] = on;
+  try { localStorage.setItem('clas-cols-' + amb, JSON.stringify(g)); } catch (e) { /* sin almacenamiento: dura hasta recargar */ }
+}
+const clasCabeceras = cols => cols.map(c => `<span class="cpcol">${esc(c.nombre)}</span>`).join('');
+const clasCeldas = (cols, v) => cols.map(c => { const t = campoTexto(c, (v || {})[c.clave]); return `<span class="sm">${t ? esc(t) : '<span class="vac">—</span>'}</span>`; }).join('');
+// Las columnas de los campos se añaden a la rejilla de la tabla
+function clasRejilla(g, n) {
+  if (!g || !n) return;
+  const cs = getComputedStyle(g);
+  g.style.setProperty('--cols', cs.getPropertyValue('--cols').trim() + ' 130px'.repeat(n));
+  g.style.minWidth = (parseInt(cs.minWidth) || 900) + 140 * n + 'px';
+}
+// Texto de un filtro activo (para los chips)
+function clasTextoFiltro(c, f) {
+  if (f && typeof f === 'object') {
+    if ('contiene' in f) return `${c.nombre} contiene «${f.contiene}»`;
+    const t = x => campoTexto(c, x);
+    return 'desde' in f && 'hasta' in f ? `${c.nombre}: de ${t(f.desde)} a ${t(f.hasta)}` : 'desde' in f ? `${c.nombre}: desde ${t(f.desde)}` : `${c.nombre}: hasta ${t(f.hasta)}`;
+  }
+  return `${c.nombre}: ${campoTexto(c, f)}`;
+}
+const clasChips = (amb, estado) => Object.keys(estado || {}).map(k => {
+  const c = (CAMPOS[amb] || []).find(x => x.clave === k) || { clave: k, nombre: k };
+  return { k, t: clasTextoFiltro(c, estado[k]) };
+});
+async function clasCargarValores(amb) {
+  const { data } = await db.rpc('valores_campos', { p_ambito: amb });
+  if (data) CLAS_VALORES[amb] = data;
+  return CLAS_VALORES[amb] || {};
+}
+// Control de filtro de un campo según su tipo y cuántos valores tiene
+function clasControl(c, act, vals, id) {
+  const a = `id="${id}"`;
+  if (c.tipo === 'si_no') return `<select ${a} data-clv><option value="">Todos</option>${[['true', 'Sí'], ['false', 'No']].map(([v, t]) =>
+    `<option value="${v}" ${act === (v === 'true') ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+  if (c.tipo === 'numero' || c.tipo === 'fecha') {
+    const r = act && typeof act === 'object' ? act : {}, tipo = c.tipo === 'fecha' ? 'type="date"' : 'type="text" inputmode="decimal"';
+    const val = x => x == null ? '' : esc(c.tipo === 'numero' ? String(x).replace('.', ',') : String(x));
+    return `<div class="clasrango"><input ${a} ${tipo} data-clr="desde" value="${val(r.desde)}" placeholder="Desde" aria-label="${esc(c.nombre)}: desde">
+      <input ${tipo} data-clr="hasta" value="${val(r.hasta)}" placeholder="Hasta" aria-label="${esc(c.nombre)}: hasta"></div>`;
+  }
+  const lista = c.tipo === 'lista' ? (c.valores || []) : (vals[c.clave] || []);
+  if (lista.length <= CLAS_MAX_LISTA) {
+    const ops = typeof act === 'string' && act && !lista.includes(act) ? lista.concat([act]) : lista;
+    return `<select ${a} data-clv><option value="">Todos</option>${ops.map(v => `<option ${act === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  }
+  // Muchos valores: buscador con sugerencias
+  const txt = act && typeof act === 'object' ? act.contiene || '' : typeof act === 'string' ? act : '';
+  return `<input ${a} type="search" data-clbus list="${id}_l" value="${esc(txt)}" placeholder="Escribe para buscar" autocomplete="off">
+    <datalist id="${id}_l">${lista.map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
+}
+// Sección «Clasificadores»: un filtro y la casilla «Columna» por cada campo de la pantalla
+async function clasPintar(cont, amb, estado, alCambiar, alColumna, titulo) {
+  if (!cont) return;
+  const campos = clasCampos(amb);
+  const cab = titulo === 'h3' ? '<h3 style="margin-top:18px">Clasificadores</h3>' : '<h4>Clasificadores</h4>';
+  if (!campos.length) {
+    cont.innerHTML = puedeCatalogos() ? `<div class="htbloque clasif">${cab}<p class="sm">Esta pantalla aún no tiene campos propios. Se crean en Configuración → Clasificadores.</p></div>` : '';
+    return;
+  }
+  const vals = campos.some(c => c.tipo === 'texto' || (c.tipo === 'lista' && (c.valores || []).length > CLAS_MAX_LISTA)) ? await clasCargarValores(amb) : {};
+  if (!cont.isConnected) return;
+  const pref = 'clas_' + amb + '_';
+  cont.innerHTML = `<div class="htbloque clasif">${cab}${campos.map((c, i) => `<div class="clascampo" data-clk="${esc(c.clave)}">
+      <div class="clascab"><label for="${pref}${i}">${esc(c.nombre)}</label>
+        <label class="clascol" title="Ver «${esc(c.nombre)}» como columna de la tabla"><input type="checkbox" data-clcol ${clasVeColumna(amb, c.clave) ? 'checked' : ''}> Columna</label></div>
+      ${clasControl(c, estado[c.clave], vals, pref + i)}</div>`).join('')}</div>`;
+  cont.querySelectorAll('[data-clk]').forEach(b => {
+    const k = b.dataset.clk, c = campos.find(x => x.clave === k);
+    const sel = b.querySelector('select[data-clv]');
+    if (sel) sel.onchange = () => { if (!sel.value) delete estado[k]; else estado[k] = c.tipo === 'si_no' ? sel.value === 'true' : sel.value; alCambiar(); };
+    const bus = b.querySelector('input[data-clbus]');
+    if (bus) { let t; bus.oninput = () => { clearTimeout(t); t = setTimeout(() => { const x = bus.value.trim(); if (x) estado[k] = { contiene: x }; else delete estado[k]; alCambiar(); }, 400); }; }
+    const rs = [...b.querySelectorAll('input[data-clr]')];
+    rs.forEach(r => r.onchange = () => {
+      const o = {};
+      for (const z of rs) {
+        const v = z.value.trim(); if (!v) continue;
+        const n = c.tipo === 'numero' ? +v.replace(',', '.') : v;
+        if (c.tipo === 'numero' && isNaN(n)) { toast(`«${c.nombre}» tiene que ser un número`, true); return; }
+        o[z.dataset.clr] = n;
+      }
+      if (Object.keys(o).length) estado[k] = o; else delete estado[k];
+      alCambiar();
+    });
+    const col = b.querySelector('[data-clcol]');
+    if (col) col.onchange = () => { clasPonerColumna(amb, k, col.checked); alColumna(); };
+  });
+}
+
+/* ---------- Clientes, Pedidos y Productos: la sección va en el panel lateral ---------- */
+const CLAS_PANT = {
+  pacientes: { amb: 'cliente', estado: () => (PAC.campos = PAC.campos || {}), recargar: () => { PAC.pagina = 0; listaPacientes(); } },
+  ventas: { amb: 'pedido', estado: () => PEDF, recargar: () => { PEDPAG = 0; listaPedidos(); }, activo: () => !!$('pedlista') },
+  productos: { amb: 'producto', estado: () => PRODF, recargar: () => pintarProductos(), activo: () => PSEC === 'productos' }
+};
+const clasPantalla = sec => { const P = sec && CLAS_PANT[sec.id.replace('v-', '')]; return P && (!P.activo || P.activo()) ? P : null; };
+function clasPintarLateral(sec) {
+  const P = clasPantalla(sec), cont = $('tools').querySelector('.htclas');
+  if (P && cont && htLateralAbierto() && HERR_CTX === 'ht-' + sec.id.replace('v-', '')) clasPintar(cont, P.amb, P.estado(), P.recargar, P.recargar);
+}
+htAbrirLateral = (orig => function (sec) {
+  orig(sec);
+  const d = $('tools'), auto = d.querySelector('.htauto');
+  if (!clasPantalla(sec) || !htLateralAbierto() || !auto || d.querySelector('.htclas')) return;
+  auto.insertAdjacentHTML('beforebegin', '<div class="htclas"></div>');
+  clasPintarLateral(sec);
+})(htAbrirLateral);
+// El contador del botón suma los filtros de Clasificadores
+htActivos = (orig => function (sec) { const P = clasPantalla(sec); return orig(sec) + (P ? Object.keys(P.estado()).length : 0); })(htActivos);
+// Chips de los filtros de Clasificadores junto al buscador (en su propio contenedor)
+htChips = (orig => function (sec) {
+  orig(sec);
+  const P = clasPantalla(sec), c = sec.querySelector('.htchips'); if (!c) return;
+  let c2 = sec.querySelector('.htchips2');
+  if (!c2) { c.insertAdjacentHTML('afterend', '<div class="htchips htchips2"></div>'); c2 = sec.querySelector('.htchips2'); }
+  const est = P ? P.estado() : {}, chips = P ? clasChips(P.amb, est) : [];
+  const html = chips.map(x => `<button class="htchip" type="button" data-hcp="${esc(x.k)}">${esc(x.t)} <span aria-hidden="true">✕</span></button>`).join('');
+  if (c2.innerHTML === html) return;
+  c2.innerHTML = html;
+  c2.querySelectorAll('[data-hcp]').forEach(b => b.onclick = () => { delete est[b.dataset.hcp]; P.recargar(); clasPintarLateral(sec); htContador(sec); });
+})(htChips);
+// El botón «Filtros y columnas» vive en la barra de la tabla: si la tabla se vuelve a pintar entera
+// (Productos al filtrar o guardar), el botón desaparecía con ella. Se vuelve a crear si falta.
+htPreparar = (orig => function (sec) {
+  const acts = sec.querySelector('.saludo .acts');
+  // v2.96.0: en Clientes, Pedidos y Productos el panel existe aunque la lista salga vacía (un periodo sin datos o
+  // un filtro de Clasificadores que no deja nada): sin él no se podría cambiar el filtro que la ha vaciado
+  const ref = sec.querySelector('.subnav') || sec.querySelector('.saludo');
+  if (!sec.querySelector('.htpanel') && !sec.querySelector('.dgrid') && clasPantalla(sec) && ref && acts) {
+    ref.insertAdjacentHTML('afterend', '<div class="htpanel hide"><div class="htpropios"></div><div class="htauto"></div></div>');
+  }
+  if (sec.querySelector('.htpanel') && !sec.querySelector('.htbtn') && acts) {
+    acts.insertAdjacentHTML('afterbegin', `<button class="btn sec htbtn" type="button" title="Filtros y columnas" aria-label="Filtros y columnas">${svgIco(ICON_NOM['sliders-horizontal'])}<span class="htl"> Filtros y columnas</span><span class="htn"></span></button>`);
+  }
+  const r = orig(sec);
+  if (!sec.querySelector('.dgrid') && clasPantalla(sec)) htContador(sec);
+  return r;
+})(htPreparar);
+// «Elegir columnas» no repite las columnas de los campos: se eligen en Clasificadores
+panelColumnas = (orig => function (titulo, cols, alCambiar) {
+  const g = $('v-' + TAB) && $('v-' + TAB).querySelector('.dgrid'), cab = g ? [...(g.querySelector(':scope > .dh') || { children: [] }).children] : [];
+  return orig(titulo, cols.filter(c => !(cab[c.i] && cab[c.i].classList.contains('cpcol'))), alCambiar);
+})(panelColumnas);
+
+/* ---------- Cuentas: la sección va en su panel de filtros, con sus columnas ---------- */
+// Todos los campos pueden ser columna; de entrada se ven los que tienen «Columna en la tabla»
+camposEnDirectorio = function () {
+  (CAMPOS.medico || []).forEach(c => { if (!COLS.some(x => x.k === 'cp:' + c.clave)) COLS.push({ k: 'cp:' + c.clave, t: c.nombre, w: 150 }); });
+};
+colsConfig = (orig => function () {
+  let guardada = null;
+  try { guardada = JSON.parse(localStorage.getItem(colKey()) || 'null'); } catch (e) { /* sin almacenamiento */ }
+  return orig().map(c => c.k.startsWith('cp:') && !(guardada || []).some(x => x.k === c.k)
+    ? { ...c, on: !!((CAMPOS.medico || []).find(x => 'cp:' + x.clave === c.k) || {}).en_tabla } : c);
+})(colsConfig);
+abrirHerramientas = (orig => function (ctx, ...r) {
+  const x = orig(ctx, ...r);
+  const d = $('tools'), z = d.querySelector('.tfcampos');
+  if (ctx === 'directorio' && z && d.classList.contains('abierto')) {
+    // Después de los filtros y antes de las columnas
+    const hcol = [...d.querySelectorAll('h3')].find(h => h.textContent.trim() === 'Columnas');
+    if (hcol) hcol.before(z);
+    clasPintar(z, 'medico', F.campos = F.campos || {}, () => buscar(true), () => buscar(true), 'h3');
+  }
+  return x;
+})(abrirHerramientas);
+pintarChips = (orig => function () {
+  orig();
+  const cs = clasChips('medico', F.campos);
+  if (cs.length) $('chips').insertAdjacentHTML('beforeend', cs.map(x => `<button class="chip" data-xcp="${esc(x.k)}">${esc(x.t)} ✕</button>`).join(''));
+})(pintarChips);
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-xcp]'); if (!b) return;
+  delete F.campos[b.dataset.xcp]; buscar(true);
+  const z = $('tools').querySelector('.tfcampos');
+  if (z && $('tools').classList.contains('abierto')) clasPintar(z, 'medico', F.campos, () => buscar(true), () => buscar(true), 'h3');
+});
+// Los filtros de siempre ya están en la sección Clasificadores
+camposFiltros = () => '';
+['directorio', 'pacientes', 'ventas', 'productos'].forEach(k => { if (AYUDA[k]) AYUDA[k][2].push('En <b>Filtros y columnas → Clasificadores</b> filtras por los campos propios de esta pantalla y eliges cuáles ver como columna. Con pocos valores se eligen de una lista; con muchos, se escribe y se busca.'); });
+
+/* ============================================================
+   v2.94.0 · Buscador inteligente
+   La base de datos busca palabra a palabra (sin acentos, en cualquier orden,
+   por el principio de cada palabra y con una letra de margen) y ordena por
+   relevancia. Aquí se resalta en los resultados la parte que coincide.
+   ============================================================ */
+function resaltarBusqueda(texto, q) {
+  const s = String(texto == null ? '' : texto);
+  // Las más largas primero: si «pe» y «pedro» coinciden, se marca «pedro»
+  const tks = [...new Set(clasNorm(q).split(/[^\p{L}\p{N}]+/u).filter(Boolean))].sort((a, b) => b.length - a.length);
+  if (!tks.length) return esc(s);
+  let html = '', ult = 0;
+  for (const m of s.matchAll(/[\p{L}\p{N}]+/gu)) {
+    const w = clasNorm(m[0]);
+    if (w.length !== m[0].length) continue;   // si al quitar acentos cambia el largo, no se marca (no se descuadra)
+    let ini = -1, largo = 0;
+    for (const tk of tks) {
+      if (w.startsWith(tk)) { ini = 0; largo = tk.length; break; }
+      if (ini < 0 && tk.length >= 3 && w.indexOf(tk) > 0) { ini = w.indexOf(tk); largo = tk.length; }
+    }
+    if (ini < 0) continue;
+    const a = m.index + ini;
+    html += esc(s.slice(ult, a)) + '<mark>' + esc(s.slice(a, a + largo)) + '</mark>';
+    ult = a + largo;
+  }
+  return html + esc(s.slice(ult));
+}
+if (AYUDA.directorio) AYUDA.directorio[2].push('El <b>buscador</b> no necesita el nombre exacto: busca palabra a palabra, sin acentos y en cualquier orden («ped lo» encuentra «López, Pedro») y perdona una letra equivocada. Primero salen los que coinciden en más palabras.');
+
+
+/* ============================================================
+   v2.96.0 · Ficha pensada para la visita
+   Arriba, «Para la visita»: dónde (centro, planta, sala, cómo llegar), cuándo
+   (su horario de hoy y el del centro), cómo entrar, lo pendiente de la última
+   visita, las notas y a quién llamar. Las ventas, plegadas al final.
+   Iconos del catálogo del sistema de diseño (Lucide).
+   ============================================================ */
+Object.assign(ICON_NOM, {"building-2":"<path d=\"M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z\"></path> <path d=\"M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2\"></path> <path d=\"M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2\"></path> <path d=\"M10 6h4\"></path> <path d=\"M10 10h4\"></path> <path d=\"M10 14h4\"></path> <path d=\"M10 18h4\"></path>","map-pin":"<path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"></path> <circle cx=\"12\" cy=\"10\" r=\"3\"></circle>","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\"></circle> <polyline points=\"12 6 12 12 16 14\"></polyline>","notebook-pen":"<path d=\"M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4\"></path> <path d=\"M2 6h4\"></path> <path d=\"M2 10h4\"></path> <path d=\"M2 14h4\"></path> <path d=\"M2 18h4\"></path> <path d=\"M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z\"></path>","clipboard-list":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\"></rect> <path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"></path> <path d=\"M12 11h4\"></path> <path d=\"M12 16h4\"></path> <path d=\"M8 11h.01\"></path> <path d=\"M8 16h.01\"></path>","phone":"<path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z\"></path>","circle-alert":"<circle cx=\"12\" cy=\"12\" r=\"10\"></circle> <line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\"></line> <line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\"></line>","message-circle":"<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"></path>"});
+
+
+/* ============================================================
+   v2.98.0 · Centros en las rutas
+   En el editor de rutas, «Añadir un centro» añade todos sus médicos (se quitan
+   los que no se van a ver). La ruta guarda sus centros y cada médico se
+   planifica en ese centro aunque pase consulta también en otros.
+   ============================================================ */
+function rutaCentrosHTML(centros, medicos) {
+  const chip = m => `<span class="chip">${esc(m.nombre)}
+    <button type="button" data-rq="${m.id}" aria-label="Quitar ${esc(m.nombre)}" style="border:0;background:none;color:var(--dang);cursor:pointer;font-weight:700">✕</button></span>`;
+  if (!medicos.length) return `<div class="chips"><span class="sm">Todavía no has añadido ${TT('medico', 'p', '', 'l', 'l')}.</span></div>`;
+  const grupos = centros.map(c => {
+    const ms = medicos.filter(m => m.centro_ruta === c.id);
+    return `<div class="rcentro"><div class="rcentrocab"><span class="rcentronom">${svgIco(ICON_NOM['building-2'])}<b>${esc(c.nombre)}</b>
+        <span class="sm">${esc(c.municipio || '')}${c.municipio ? ' · ' : ''}${num(ms.length)} ${TT('medico', ms.length === 1 ? 's' : 'p', '', 'l', 'l')}</span></span>
+      <button type="button" class="lnk" data-rqc="${c.id}">Quitar el centro</button></div>
+      <div class="chips">${ms.map(chip).join('')}</div></div>`;
+  }).join('');
+  const sueltos = medicos.filter(m => !centros.some(c => c.id === m.centro_ruta));
+  return grupos + (sueltos.length ? `${centros.length ? `<div class="sm rcentrootros">Otros ${TT('medico', 'p', '', 'l', 'l')}</div>` : ''}<div class="chips">${sueltos.map(chip).join('')}</div>` : '');
+}
+if (AYUDA.rutas) AYUDA.rutas[2].push(`Con <b>Añadir un centro</b> entran todos sus ${TT('medico', 'p', '', 'l', 'l')}: quita los que no vayas a ver. En el plan, los de un mismo centro forman una sola parada y se les planifica en ese centro aunque pasen consulta en otros.`);
+
+
 // Barra inferior del móvil y barra de «Entrar como» desde el primer momento
 pintarBnav();
 
@@ -14827,3 +15240,206 @@ async function pintarOrganizaciones() {
     $('dlg').showModal();
   };
 }
+
+
+/* ============================================================
+   v2.101.0 · Fechas, horas y números
+   Los mismos selectores en escritorio y en móvil para todos los campos:
+   fecha, hora, mes (liquidaciones) y fecha con hora (llamadas), que antes
+   abrían el selector del sistema. Calendario con vista de meses y años
+   (se pulsa el título), atajos «Hoy» y «Mañana» y manejo con el teclado.
+   Reloj con «Ahora» y los minutos según el paso del campo. Números con el
+   teclado adecuado en el móvil, mantener pulsado para sumar o restar
+   seguido, la rueda del ratón ya no los cambia sin querer y se respetan
+   el mínimo y el máximo al escribir.
+   ============================================================ */
+const selDos = n => String(n).padStart(2, '0');
+const SEL_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const selFechaLarga = iso => { const d = new Date(iso + 'T12:00:00'); return `${SEL_DIAS[d.getDay()]}, ${d.getDate()} de ${MESES_L[d.getMonth()]} de ${d.getFullYear()}`; };
+const selFechaMedia = iso => { const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); };
+const selTipo = inp => inp.type === 'month' ? 'mes' : inp.type === 'datetime-local' ? 'fechahora' : inp.type === 'time' ? 'hora' : 'fecha';
+
+// ---------- Calendario: días, meses y años ----------
+abrirCalendario = function (inp, o) {
+  o = o || {};
+  // Si viene del reloj (o el reloj de él), se sustituye dentro de la misma ventanita: cerrarla y abrirla haría que el primer toque se ignore
+  if (o.mismo && SELPOP) { SELPOP.remove(); SELPOP = null; } else cerrarSelector();
+  const tipo = selTipo(inp), valor = inp.value || '';
+  const diaIni = o.fecha || (tipo === 'mes' ? (valor ? valor + '-01' : '') : valor.slice(0, 10));
+  let ver = diaIni ? new Date(diaIni + 'T12:00:00') : new Date(hoyISO() + 'T12:00:00');
+  let foco = diaIni || hoyISO();
+  let vista = tipo === 'mes' ? 'meses' : 'dias';
+  const min = (inp.min || '').slice(0, tipo === 'mes' ? 7 : 10) || null, max = (inp.max || '').slice(0, tipo === 'mes' ? 7 : 10) || null;
+  const pop = document.createElement('div'); pop.className = 'selpop cal'; SELPOP = pop; pop.__t = Date.now();
+  pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', tipo === 'mes' ? 'Elegir mes' : 'Elegir fecha');
+  const mesActual = hoyISO().slice(0, 7);
+  const elegido = tipo === 'mes' ? valor.slice(0, 7) : valor.slice(0, 10);
+  const pinta = () => {
+    const y = ver.getFullYear(), m = ver.getMonth();
+    let cab = '', cuerpo = '', pie = '';
+    if (vista === 'dias') {
+      const hueco = (new Date(y, m, 1).getDay() + 6) % 7, dias = new Date(y, m + 1, 0).getDate(), hoy = hoyISO();
+      let celdas = '';
+      for (let i = 0; i < hueco; i++) celdas += '<span></span>';
+      for (let d = 1; d <= dias; d++) {
+        const f = `${y}-${selDos(m + 1)}-${selDos(d)}`, fuera = (min && f < min) || (max && f > max);
+        celdas += `<button type="button" data-cd="${f}" class="${f === elegido ? 'sel' : ''} ${f === hoy ? 'hoy' : ''}" tabindex="${f === foco ? 0 : -1}" ${f === foco ? 'autofocus' : ''}
+          aria-label="${selFechaLarga(f)}" aria-pressed="${f === elegido}" ${fuera ? 'disabled' : ''}>${d}</button>`;
+      }
+      cab = `<button type="button" data-cm="-1" aria-label="Mes anterior">‹</button><button type="button" class="caltit" data-cv="meses" aria-label="Elegir mes y año">${MESES_L[m]} ${y}</button><button type="button" data-cm="1" aria-label="Mes siguiente">›</button>`;
+      cuerpo = `<div class="calg">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(x => `<i>${x}</i>`).join('')}${celdas}</div>`;
+      pie = `<button type="button" data-cq="hoy">Hoy</button><button type="button" data-cq="manana">Mañana</button>${inp.required ? '' : '<button type="button" data-cq="borrar">Borrar</button>'}`;
+    } else if (vista === 'meses') {
+      cab = `<button type="button" data-cy="-1" aria-label="Año anterior">‹</button><button type="button" class="caltit" data-cv="anios" aria-label="Elegir año">${y}</button><button type="button" data-cy="1" aria-label="Año siguiente">›</button>`;
+      cuerpo = `<div class="calm">${MESES_L.map((n, i) => { const k = `${y}-${selDos(i + 1)}`, fuera = (min && k < min.slice(0, 7)) || (max && k > max.slice(0, 7));
+        return `<button type="button" data-cmes="${i}" class="${k === elegido.slice(0, 7) ? 'sel' : ''} ${k === mesActual ? 'hoy' : ''}" aria-label="${n} de ${y}" ${fuera ? 'disabled' : ''}>${MESES_C[i]}</button>`; }).join('')}</div>`;
+      pie = tipo === 'mes' ? `<button type="button" data-cq="estemes">Este mes</button>${inp.required ? '' : '<button type="button" data-cq="borrar">Borrar</button>'}` : '';
+    } else {
+      const ini = y - 5;
+      cab = `<button type="button" data-cy="-12" aria-label="Años anteriores">‹</button><b>${ini} – ${ini + 11}</b><button type="button" data-cy="12" aria-label="Años siguientes">›</button>`;
+      cuerpo = `<div class="calm">${Array.from({ length: 12 }, (_, i) => ini + i).map(a => `<button type="button" data-canio="${a}" class="${String(a) === elegido.slice(0, 4) ? 'sel' : ''} ${String(a) === mesActual.slice(0, 4) ? 'hoy' : ''}">${a}</button>`).join('')}</div>`;
+    }
+    pop.innerHTML = `<div class="calh">${cab}</div>${cuerpo}${pie ? `<div class="calp">${pie}</div>` : ''}`;
+    colocarPop(pop, inp.closest('.selw') || inp);
+    if (!ES_MOVIL() && vista === 'dias') { const b = pop.querySelector(`[data-cd="${foco}"]`); if (b && pop.contains(document.activeElement) || o.teclado) b && b.focus({ preventScroll: true }); }
+  };
+  const fijar = f => {
+    if (tipo === 'fechahora') { abrirReloj(inp, { fecha: f, desdeCal: true, mismo: true }); return; }
+    inp.value = f; emitir(inp); cerrarSelector(); inp.focus({ preventScroll: true });
+  };
+  pop.addEventListener('pointerdown', () => { pop.__t = Date.now(); });
+  pop.addEventListener('click', e => {
+    e.stopPropagation();
+    const t = e.target.closest('button'); if (!t || t.disabled) return;
+    const ds = t.dataset;
+    if (ds.cd) fijar(ds.cd);
+    else if (ds.cm) { ver = new Date(ver.getFullYear(), ver.getMonth() + +ds.cm, 1); pinta(); }
+    else if (ds.cy) { ver = new Date(ver.getFullYear() + +ds.cy, ver.getMonth(), 1); pinta(); }
+    else if (ds.cv) { vista = ds.cv; pinta(); }
+    else if (ds.cmes !== undefined) {
+      if (tipo === 'mes') { inp.value = `${ver.getFullYear()}-${selDos(+ds.cmes + 1)}`; emitir(inp); cerrarSelector(); return; }
+      ver = new Date(ver.getFullYear(), +ds.cmes, 1); vista = 'dias'; pinta();
+    } else if (ds.canio) { ver = new Date(+ds.canio, ver.getMonth(), 1); vista = 'meses'; pinta(); }
+    else if (ds.cq === 'hoy') fijar(hoyISO());
+    else if (ds.cq === 'manana') fijar(isoMas(hoyISO(), 1));
+    else if (ds.cq === 'estemes') { inp.value = mesActual; emitir(inp); cerrarSelector(); }
+    else if (ds.cq === 'borrar') { inp.value = ''; emitir(inp); cerrarSelector(); }
+  });
+  // Teclado: flechas de día en día y de semana en semana, Re Pág / Av Pág de mes en mes, Inicio / Fin de la semana
+  pop.addEventListener('keydown', e => {
+    if (vista !== 'dias') return;
+    const salto = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+    const d = new Date(foco + 'T12:00:00');
+    if (salto) d.setDate(d.getDate() + salto);
+    else if (e.key === 'PageUp' || e.key === 'PageDown') d.setMonth(d.getMonth() + (e.key === 'PageUp' ? -1 : 1));
+    else if (e.key === 'Home') d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    else if (e.key === 'End') d.setDate(d.getDate() + (6 - (d.getDay() + 6) % 7));
+    else return;
+    e.preventDefault();
+    foco = isoLocal(d); ver = new Date(d.getFullYear(), d.getMonth(), 1); o.teclado = true; pinta();
+  });
+  $('seldlg') ? $('seldlg').appendChild(pop) : capaSelector(inp).appendChild(pop); pinta();
+};
+
+// ---------- Reloj: horas, minutos según el paso, «Ahora» ----------
+abrirReloj = function (inp, o) {
+  o = o || {};
+  const tipo = selTipo(inp);
+  if (!o.desdeCal && (tipo === 'mes' || tipo === 'fechahora')) return abrirCalendario(inp);
+  if (o.mismo && SELPOP) { SELPOP.remove(); SELPOP = null; } else cerrarSelector();
+  const actual = tipo === 'fechahora' ? (inp.value || '').slice(11, 16) : (inp.value || '');
+  const pasoMin = (() => { const s = +inp.step; const m = s >= 60 ? Math.round(s / 60) : 5; return [1, 2, 3, 4].includes(m) || m > 30 ? 5 : m; })();
+  const redondea = x => Math.min(60 - pasoMin, Math.round(x / pasoMin) * pasoMin);
+  const [h0, m0] = (actual || '09:00').split(':').map(Number);
+  let h = isNaN(h0) ? 9 : h0, m = isNaN(m0) ? 0 : m0;
+  const pop = document.createElement('div'); pop.className = 'selpop reloj'; SELPOP = pop; pop.__t = Date.now();
+  pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Elegir hora');
+  const mins = Array.from({ length: Math.ceil(60 / pasoMin) }, (_, i) => i * pasoMin);
+  const pinta = () => {
+    pop.innerHTML = `${o.fecha ? `<div class="rjfecha"><span>${selFechaMedia(o.fecha)}</span><button type="button" data-rq="dia">Cambiar día</button></div>` : ''}
+      <div class="rjh"><b>${selDos(h)}:${selDos(m)}</b></div>
+      <div class="rjt">Hora</div><div class="rjg">${Array.from({ length: 24 }, (_, i) => `<button type="button" data-rh="${i}" class="${i === h ? 'sel' : ''}" aria-pressed="${i === h}">${selDos(i)}</button>`).join('')}</div>
+      <div class="rjt">Minutos</div><div class="rjg m">${mins.map(i => `<button type="button" data-rm="${i}" class="${i === m ? 'sel' : ''}" aria-pressed="${i === m}">${selDos(i)}</button>`).join('')}</div>
+      <div class="calp"><button type="button" data-rq="ahora">Ahora</button>${inp.required ? '' : '<button type="button" data-rq="borrar">Borrar</button>'}<button type="button" data-rq="ok" class="okb">Aceptar</button></div>`;
+    colocarPop(pop, inp.closest('.selw') || inp);
+  };
+  pop.addEventListener('pointerdown', () => { pop.__t = Date.now(); });
+  pop.addEventListener('click', e => {
+    e.stopPropagation();
+    const a = e.target.closest('[data-rh]'), b = e.target.closest('[data-rm]'), q = e.target.closest('[data-rq]');
+    if (a) { h = +a.dataset.rh; pinta(); }
+    if (b) { m = +b.dataset.rm; pinta(); }
+    if (!q) return;
+    const accion = q.dataset.rq;
+    if (accion === 'dia') { abrirCalendario(inp, { fecha: o.fecha, mismo: true }); return; }
+    if (accion === 'ahora') { const d = new Date(); h = d.getHours(); m = redondea(d.getMinutes()); pinta(); return; }
+    const hora = `${selDos(h)}:${selDos(m)}`;
+    inp.value = accion === 'borrar' ? '' : tipo === 'fechahora' ? `${o.fecha || (inp.value || hoyISO()).slice(0, 10)}T${hora}` : hora;
+    emitir(inp); cerrarSelector(); inp.focus({ preventScroll: true });
+  });
+  $('seldlg') ? $('seldlg').appendChild(pop) : capaSelector(inp).appendChild(pop); pinta();
+};
+
+// ---------- Valor visible de mes y de fecha con hora ----------
+valorVisible = (orig => function (inp) {
+  const t = selTipo(inp);
+  if (t !== 'mes' && t !== 'fechahora') return orig(inp);
+  const w = inp.closest('.selw'), sp = w && w.querySelector('.selval'); if (!sp) return;
+  const v = inp.value;
+  if (!v) { sp.textContent = t === 'mes' ? 'Elige un mes' : 'Elige fecha y hora'; sp.classList.add('vacio'); return; }
+  sp.classList.remove('vacio');
+  if (t === 'mes') { const [y, mm] = v.split('-'); sp.textContent = `${MESES_L[+mm - 1] || ''} ${y}`; return; }
+  sp.textContent = `${selFechaMedia(v.slice(0, 10))} · ${v.slice(11, 16)}`;
+})(valorVisible);
+
+// ---------- Mes y fecha con hora con el mismo selector; teclado de los números ----------
+function mejorarCamposNuevos(raiz) {
+  const r = raiz && raiz.querySelectorAll ? raiz : document;
+  const lista = [...r.querySelectorAll('input[type=month]:not([data-sel]), input[type=datetime-local]:not([data-sel])')];
+  if (r.matches && r.matches('input[type=month]:not([data-sel]), input[type=datetime-local]:not([data-sel])')) lista.push(r);
+  lista.forEach(inp => {
+    inp.dataset.sel = '1';
+    if (inp.closest('.selpop')) return;
+    const w = document.createElement('span'); w.className = 'selw fecha';
+    inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+    w.insertAdjacentHTML('beforeend', '<span class="selico" aria-hidden="true">📅</span>');
+    inp.dataset.ro = inp.readOnly ? '1' : '';
+    inp.readOnly = true; inp.setAttribute('inputmode', 'none');
+    w.insertAdjacentHTML('afterbegin', '<span class="selval"></span>');
+    const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    Object.defineProperty(inp, 'value', { configurable: true, get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); valorVisible(this); } });
+    inp.addEventListener('change', () => valorVisible(inp)); inp.addEventListener('input', () => valorVisible(inp));
+    valorVisible(inp);
+  });
+  r.querySelectorAll('input[type=number]:not([inputmode])').forEach(inp => {
+    const paso = inp.step && inp.step !== 'any' ? +inp.step : 1;
+    inp.setAttribute('inputmode', paso < 1 || inp.step === 'any' ? 'decimal' : 'numeric');
+  });
+}
+mejorarCampos = (orig => function (raiz) { orig(raiz); mejorarCamposNuevos(raiz); })(mejorarCampos);
+mejorarCamposNuevos(document);
+
+// Números: mantener pulsado «+» o «−» repite; el último clic no suma otra vez
+(function () {
+  let t1 = 0, t2 = 0, repetido = false;
+  const parar = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = 0; };
+  document.addEventListener('pointerdown', e => {
+    const nb = e.target.closest('.numw .nb'); if (!nb) return;
+    repetido = false; parar();
+    t1 = setTimeout(() => { t2 = setInterval(() => { repetido = true; nb.dispatchEvent(new MouseEvent('click', { bubbles: true })); }, 90); }, 450);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => document.addEventListener(ev, parar, true));
+  // En la ventana y en captura: va antes que el manejador de los botones, que está en el documento
+  window.addEventListener('click', e => {
+    if (e.isTrusted && repetido && e.target.closest && e.target.closest('.numw .nb')) { repetido = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+})();
+// La rueda del ratón no cambia un número sin querer
+document.addEventListener('wheel', e => { const i = e.target; if (i && i.matches && i.matches('input[type=number]') && document.activeElement === i) i.blur(); }, { passive: true });
+// Al escribir un número fuera de su mínimo o máximo, se corrige al salir del campo
+document.addEventListener('change', e => {
+  const i = e.target; if (!i.matches || !i.matches('input[type=number]') || i.value === '') return;
+  let n = +i.value; if (isNaN(n)) return;
+  if (i.min !== '' && n < +i.min) n = +i.min; if (i.max !== '' && n > +i.max) n = +i.max;
+  if (n !== +i.value) { i.value = n; i.dispatchEvent(new Event('input', { bubbles: true })); }
+}, true);

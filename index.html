@@ -14,6 +14,10 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="apple-touch-icon" href="./apple-touch-180.png">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
 <style>
 html{color-scheme:light only}
 :root{
@@ -418,7 +422,7 @@ body.conruta{padding-top:46px}
 .prec{font-size:11.5px;color:var(--warn);font-weight:650}
 .dgrid.servs{--cols:minmax(200px,2fr) 100px 60px 110px minmax(140px,1fr) 90px;min-width:720px}
 /* v2.29.0 */
-.cargatotal{position:fixed;inset:0;z-index:300;background:rgba(245,247,250,.92);display:grid;place-items:center;backdrop-filter:blur(2px)}
+.cargatotal{position:fixed;inset:0;z-index:300;background:rgba(242,247,252,.94);display:grid;place-items:center}
 .cargatotal.hide{display:none}
 .cargatotal > div{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:24px}
 .cargatotal .spin{width:42px;height:42px;border-width:4px}
@@ -459,7 +463,7 @@ body.conruta{padding-top:46px}
 .embudo{padding:4px 16px;display:flex;flex-direction:column;gap:9px}
 .emb{display:grid;grid-template-columns:110px minmax(0,1fr) 44px 80px;gap:8px;align-items:center;font-size:13px}
 .embb{height:16px;background:var(--bg);border-radius:6px;overflow:hidden}
-.embb i{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--sky));border-radius:6px}
+.embb i{display:block;height:100%;background:var(--sky);border-radius:6px}
 .gvacio{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:26px 16px;color:var(--muted);background:repeating-linear-gradient(135deg,var(--bg) 0 10px,var(--panel) 10px 20px);border-radius:12px;margin:6px 16px}
 .gvacio span:first-child{font-size:26px}
 .gvacio b{color:var(--navy)}
@@ -522,7 +526,7 @@ body.conruta{padding-top:46px}
 #agmeses{width:auto;min-height:44px;padding:6px 10px;border-radius:10px}
 #agcuerpo.varios .mesbloque{border-bottom:1px solid var(--line);padding-bottom:10px}
 .barra{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
-.barra i{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--sky))}
+.barra i{display:block;height:100%;background:var(--sky)}
 /* v2.35.0 */
 .dgrid.peds2{--cols:84px minmax(160px,1.4fr) minmax(140px,1.2fr) 110px minmax(110px,1fr) 50px 90px 96px 96px 80px;min-width:1100px}
 .dgrid.peds2.sinimp{--cols:84px minmax(160px,1.4fr) minmax(140px,1.2fr) 110px minmax(110px,1fr) 50px 96px 80px;min-width:900px}
@@ -531,7 +535,7 @@ body.conruta{padding-top:46px}
 .opico i.no{filter:grayscale(1);opacity:.35}
 .adjunto{margin-top:10px;padding:8px 12px;border:1px dashed var(--line);border-radius:10px;font-size:13px;color:var(--navy);background:var(--sky-soft)}
 .manhero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,1fr);gap:18px;align-items:end;padding:22px;border-radius:18px;margin-bottom:18px;
-  background:linear-gradient(135deg,#0E2F52 0%,#1d4f86 60%,#2B6CB0 100%);color:#fff}
+  background:var(--ink);color:#fff}
 .manhero h1{color:#fff;margin:0 0 4px}.manhero p{margin:0 0 12px;opacity:.9}
 .manchips{display:flex;gap:8px;flex-wrap:wrap}.manchips span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 10px;font-size:12.5px}
 .manbusca input{background:#fff;border:0;min-height:50px;font-size:15px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
@@ -690,80 +694,71 @@ input[type=date],input[type=time],input[type=month],input[type=datetime-local]{c
   --cristal:rgba(255,255,255,.82);
 }
 html,body{background:#F3F8FC}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:
-    radial-gradient(900px 520px at -8% -10%, rgba(124,195,236,.35), transparent 60%),
-    radial-gradient(700px 480px at 108% 8%, rgba(46,134,201,.14), transparent 62%),
-    radial-gradient(900px 600px at 30% 115%, rgba(124,195,236,.22), transparent 60%),
-    linear-gradient(180deg,#EEF6FC 0%,#F7FBFE 40%,#FFFFFF 100%)}
+body::before{content:none}
 /* Cabecera y menú de cristal */
-header{background:rgba(255,255,255,.72);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border-bottom:1px solid rgba(220,232,242,.8)}
-header .logo{height:46px!important;width:46px!important;max-width:none;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 4px 14px rgba(46,134,201,.2)}
+header{background:#FFFFFF;border-bottom:1px solid var(--line)}
+header .logo{height:46px!important;width:46px!important;max-width:none;border-radius:50%;object-fit:cover;background:#fff;box-shadow:none}
 nav.main{background:transparent;border-bottom:0}
 nav.main button{border-radius:10px;margin:4px 0;transition:background .15s,color .15s}
-nav.main button:hover{background:rgba(46,134,201,.08);color:var(--navy)}
-nav.main button[aria-selected=true]{color:var(--navy);background:rgba(46,134,201,.10)}
-nav.main button[aria-selected=true]::after{height:3px;bottom:-4px;background:var(--grad);left:14px;right:14px}
+nav.main button:hover{background:var(--hielo);color:var(--navy)}
+nav.main button[aria-selected=true]{color:var(--navy);background:transparent}
+nav.main button[aria-selected=true]::after{height:3px;bottom:-4px;background:var(--navy);left:10px;right:10px;border-radius:3px 3px 0 0}
 /* Superficies */
-.card,.kpi,.panel{background:var(--cristal);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.9);
-  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, var(--sh)}
+.card,.kpi,.panel{background:#FFFFFF;border:1px solid var(--line);box-shadow:var(--sh)}
 .card{border-radius:18px}
 .kpi{border-radius:16px;overflow:hidden}
-.kpi::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--celeste),var(--sky));opacity:.55}
-.kpi.warn::before{background:linear-gradient(90deg,#F4B266,#B45309)}
-.kpi.ok::before{background:linear-gradient(90deg,#7ED3AE,#12805C)}
+.kpi::before{content:none}
 .kpi b{color:var(--navy);letter-spacing:-.01em}
 .saludo h1,h1{color:var(--navy);letter-spacing:-.015em}
 .card h2{color:var(--navy)}
 /* Botones */
-.btn{background:var(--grad);border:0;border-radius:12px;box-shadow:0 6px 16px rgba(21,82,143,.22);transition:transform .08s,box-shadow .15s,filter .15s}
-.btn:hover{filter:brightness(1.06);box-shadow:0 8px 22px rgba(21,82,143,.28)}
-.btn:active{transform:translateY(1px)}
-.btn.sec{background:rgba(255,255,255,.9);color:var(--navy);border:1px solid #CFE1F0;box-shadow:0 1px 2px rgba(11,58,102,.05)}
-.btn.sec:hover{background:#fff;border-color:var(--celeste)}
-.btn.dang{background:linear-gradient(135deg,#9B2C2C,#C24141);box-shadow:0 6px 16px rgba(155,44,44,.22)}
-.btn.sec.dang{background:#fff;color:var(--dang);border-color:#F1C9C9;box-shadow:none}
-.subnav button{border-color:#D6E6F3;background:rgba(255,255,255,.85)}
-.subnav button[aria-pressed=true]{background:var(--grad);border-color:transparent;box-shadow:0 4px 12px rgba(21,82,143,.2)}
+.btn{background:var(--navy);border:1px solid transparent;border-radius:10px;box-shadow:none;transition:background-color var(--t-rapido) var(--ease-sal),border-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal),box-shadow var(--t-rapido) var(--ease-sal),transform var(--t-rapido) var(--ease-sal)}
+.btn:hover{background:var(--navy-2);border-color:transparent;box-shadow:none}
+.btn:active{transform:scale(var(--pulsa))}
+.btn:focus-visible{outline:none;box-shadow:var(--foco)}
+.btn.sec{background:#FFFFFF;color:var(--navy);border:1px solid var(--line-f);box-shadow:none}
+.btn.sec:hover{background:var(--hielo);border-color:var(--sky)}
+.btn.dang{background:var(--peligro);box-shadow:none}
+.btn.dang:hover{background:var(--peligro-h)}
+.btn.sec.dang{background:#fff;color:var(--peligro);border-color:#F1C4BF;box-shadow:none}
+.btn.sec.dang:hover{background:var(--peligro-s)}
+.subnav button{border-color:var(--line-f);background:#FFFFFF}
+.subnav button[aria-pressed=true]{background:var(--navy);border-color:transparent;box-shadow:none}
 /* Campos */
-input,select,textarea{background:rgba(255,255,255,.95);border:1px solid #D3E3F0;border-radius:12px;transition:border-color .15s, box-shadow .15s}
-input:focus,select:focus,textarea:focus{outline:0;border-color:var(--celeste);box-shadow:0 0 0 4px rgba(124,195,236,.25)}
+input,select,textarea{background:#FFFFFF;border:1px solid var(--line-f);border-radius:10px;transition:border-color var(--t-rapido) var(--ease-sal),box-shadow var(--t-rapido) var(--ease-sal)}
+input:hover,select:hover,textarea:hover{border-color:#9DB4CB}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--sky);box-shadow:0 0 0 3px rgba(63,130,192,.22)}
 select{appearance:none;-webkit-appearance:none;padding-right:34px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232E86C9' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%233F82C0' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 12px center}
 input[type=checkbox],input[type=radio]{accent-color:var(--sky)}
 /* Tablas */
-.dgrid .dh{background:linear-gradient(180deg,#F2F8FD,#EAF4FB);color:var(--navy-2)}
+.dgrid .dh{background:var(--hielo);color:var(--muted)}
 .dgrid .dr:hover{background:rgba(124,195,236,.10)}
 .pill{border-radius:999px}
 /* Ventanas */
-dialog{border-radius:20px;box-shadow:0 30px 80px rgba(11,58,102,.28);background:linear-gradient(180deg,#FFFFFF 0%,#FAFDFF 100%)}
-dialog::backdrop{background:rgba(11,58,102,.28);backdrop-filter:blur(3px)}
+dialog{border-radius:16px;box-shadow:var(--sombra-3);background:#FFFFFF}
+dialog::backdrop{background:rgba(11,37,64,.42)}
 .x{background:var(--sky-soft);color:var(--navy)}
 /* Acceso */
-#login{background:url('./fondo.jpg') left top/cover no-repeat, #F3F8FC;position:relative;overflow:hidden}
-#login::after{content:"";position:absolute;left:-10%;right:-10%;bottom:-6%;height:46%;background:url('./ola.jpg') center/cover no-repeat;opacity:.55;
-  -webkit-mask-image:linear-gradient(180deg,transparent,#000 45%);mask-image:linear-gradient(180deg,transparent,#000 45%);pointer-events:none}
-.lbox{position:relative;z-index:1;background:rgba(255,255,255,.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.95);
-  border-radius:24px;box-shadow:0 30px 70px rgba(11,58,102,.18);text-align:center}
-.lbox img{height:96px;width:96px;border-radius:50%;margin:0 auto 14px;display:block;box-shadow:0 10px 30px rgba(46,134,201,.25)}
+#login{background:var(--hielo);position:relative;overflow:hidden}
+#login::after{content:none}
+.lbox{position:relative;z-index:1;background:#FFFFFF;border:1px solid var(--line);border-radius:20px;box-shadow:var(--sombra-2);text-align:center}
+.lbox img{height:96px;width:96px;border-radius:50%;margin:0 auto 14px;display:block;box-shadow:none}
 .lbox label{text-align:left}
 .lbox h1{font-size:24px}
 /* Barra inferior del móvil */
-.bnav{background:rgba(255,255,255,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid rgba(220,232,242,.9)}
-.bnav button[aria-selected=true]{color:var(--sky)}
+.bnav{background:#FFFFFF;border-top:1px solid var(--line)}
+.bnav button[aria-selected=true]{color:var(--navy)}
 /* Resumen de Inicio con la ola */
-#v-inicio .saludo{position:relative;border-radius:22px;padding:22px 22px;margin-bottom:16px;overflow:hidden;
-  background:linear-gradient(100deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.75) 45%,rgba(255,255,255,.1) 100%), url('./ola.jpg') right center/cover no-repeat;
-  box-shadow:var(--sh);border:1px solid rgba(255,255,255,.9)}
-@media (max-width:760px){#v-inicio .saludo{background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.7)), url('./ola.jpg') 70% center/cover no-repeat}}
+#v-inicio .saludo{position:relative;border-radius:16px;padding:22px 22px;margin-bottom:16px;overflow:hidden;background:#FFFFFF;box-shadow:var(--sh);border:1px solid var(--line)}
 /* Selectores propios */
 .selw{position:relative;display:block}
 .selw input{cursor:pointer;padding-right:40px;caret-color:transparent}
 .selw input::-webkit-calendar-picker-indicator{display:none;-webkit-appearance:none}
 .selw .selico{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:15px;opacity:.8}
-.numw{display:flex;align-items:stretch;border:1px solid #D3E3F0;border-radius:12px;background:#fff;overflow:hidden}
-.numw:focus-within{border-color:var(--celeste);box-shadow:0 0 0 4px rgba(124,195,236,.25)}
+.numw{display:flex;align-items:stretch;border:1px solid var(--line-f);border-radius:10px;background:#fff;overflow:hidden}
+.numw:focus-within{border-color:var(--sky);box-shadow:0 0 0 3px rgba(63,130,192,.22)}
 .numw input{border:0!important;box-shadow:none!important;text-align:center;border-radius:0;min-width:0;flex:1;-moz-appearance:textfield}
 .numw input::-webkit-outer-spin-button,.numw input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .numw .nb{border:0;background:var(--sky-soft);color:var(--navy);font-size:18px;font-weight:700;width:40px;cursor:pointer;flex:0 0 auto}
@@ -789,7 +784,7 @@ dialog::backdrop{background:rgba(11,58,102,.28);backdrop-filter:blur(3px)}
 .rjg button:hover{background:var(--sky-soft)}.rjg button.sel{background:var(--grad);color:#fff}
 /* Espacio del médico */
 .medhero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:24px;border-radius:22px;margin-bottom:16px;color:#fff;
-  background:linear-gradient(110deg,rgba(11,58,102,.94),rgba(21,82,143,.82) 55%,rgba(46,134,201,.55)), url('./ola.jpg') center/cover no-repeat;box-shadow:0 20px 50px rgba(11,58,102,.25)}
+  background:var(--ink);box-shadow:none}
 .medhero h1{color:#fff;margin:4px 0}
 .medper{min-width:240px}.medper select,.medper input{color:var(--ink)}
 .selval{position:absolute;left:14px;right:40px;top:50%;transform:translateY(-50%);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
@@ -836,7 +831,7 @@ dialog{overscroll-behavior:contain}
 .uper div{background:var(--sky-soft);border-radius:12px;padding:8px 6px;text-align:center}
 .uper b{display:block;font-size:18px;color:var(--navy)}.uper span{font-size:11px;color:var(--muted)}
 .spark{display:flex;align-items:flex-end;gap:3px;height:44px;margin-bottom:6px}
-.spark i{flex:1;background:linear-gradient(180deg,var(--celeste),var(--sky));border-radius:3px 3px 0 0;min-height:2px}
+.spark i{flex:1;background:var(--sky);border-radius:3px 3px 0 0;min-height:2px}
 .tabinfo{display:flex;flex-direction:column;gap:4px;padding:12px 14px;margin-bottom:10px;border-radius:12px;background:var(--sky-soft);font-size:13px}
 .tabinfo b{color:var(--navy)}
 .manres{margin-top:8px;background:#fff;border-radius:14px;box-shadow:0 12px 30px rgba(11,58,102,.18);max-height:360px;overflow:auto;text-align:left}
@@ -901,7 +896,7 @@ dialog{overscroll-behavior:contain}
   .saludo .acts.chips select{width:auto;min-width:130px}
   .segm{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;margin:0 0 8px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:14px}
   .segm button{border:0;background:none;border-radius:10px;height:36px;font:inherit;font-weight:650;font-size:13.5px;color:var(--muted);cursor:pointer}
-  .segm button.on{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(21,82,143,.25)}
+  .segm button.on{background:var(--grad);color:#fff;box-shadow:none}
   .agnavm{display:grid;grid-template-columns:44px 1fr 44px;gap:6px;margin:0 0 10px}
   .agnavm .chip{justify-content:center;border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:15px!important}
   .subnav{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;scrollbar-width:none;padding-bottom:2px}
@@ -944,8 +939,8 @@ dialog{overscroll-behavior:contain}
 .chipsel{border:1px solid #D3E3F0;background:#fff;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
 .chipsel:hover{border-color:var(--celeste)}
 .chipsel.on{background:var(--grad);border-color:transparent;color:#fff}
-.chipsel.neg.on{background:linear-gradient(135deg,#B45309,#D97706)}
-.chipsel.pos.on{background:linear-gradient(135deg,#0F6E4C,#12805C)}
+.chipsel.neg.on{background:#B45309}
+.chipsel.pos.on{background:var(--ok)}
 .clisel{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--sky-soft)}
 .clisel .sm{display:block}
 #lcres{margin-top:6px}
@@ -968,16 +963,16 @@ dialog{overscroll-behavior:contain}
 .manbusca input{color:var(--ink)!important}
 .manres{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;max-height:320px;overflow:auto;margin:0}
 .mansub{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 0 6px}
-.miperfil{padding:18px 20px;margin-bottom:14px;background:linear-gradient(120deg,#fff 0%,#F2F9FE 100%)}
+.miperfil{padding:18px 20px;margin-bottom:14px;background:#FFFFFF}
 .mpcab{display:flex;gap:14px;align-items:center}
-.mpav{width:58px;height:58px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;flex:0 0 58px;box-shadow:0 8px 20px rgba(21,82,143,.25)}
+.mpav{width:58px;height:58px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;flex:0 0 58px;box-shadow:none}
 .mpchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .mpgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
 .mpgrid > div > b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
 .mpmods{display:flex;flex-wrap:wrap;gap:6px}.mpmods span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px}
 .mplist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
 .vfhero{display:flex;gap:16px;align-items:flex-start;padding:20px 22px;border-radius:20px;margin-bottom:14px;color:#fff;
-  background:linear-gradient(115deg,rgba(11,58,102,.95),rgba(21,82,143,.85) 60%,rgba(46,134,201,.6)),url('./gel.jpg') center/cover no-repeat;box-shadow:0 16px 40px rgba(11,58,102,.22)}
+  background:var(--ink);box-shadow:none}
 .vfhero h2{color:#fff;padding:0;margin:0 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.vfhero p{margin:0;opacity:.92;max-width:640px}
 .vfico{font-size:34px;width:60px;height:60px;border-radius:18px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:0 0 60px}
 .vfpasos{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
@@ -991,7 +986,7 @@ dialog{overscroll-behavior:contain}
 .vfswitch input{position:absolute;opacity:0;pointer-events:none}
 .vfswitch .sw{width:46px;height:26px;border-radius:999px;background:#CBD8E4;position:relative;flex:0 0 46px;transition:background .15s;margin-top:2px}
 .vfswitch .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
-.vfswitch input:checked + .sw{background:linear-gradient(135deg,#0F6E4C,#12805C)}.vfswitch input:checked + .sw::after{left:23px}
+.vfswitch input:checked + .sw{background:var(--ok)}.vfswitch input:checked + .sw::after{left:23px}
 .vfmodos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
 .vfmodo{display:flex;flex-direction:column;gap:3px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;margin:0;color:var(--ink)}
 .vfmodo input{width:16px;height:16px;min-height:0}.vfmodo b{color:var(--navy)}.vfmodo span{font-size:12.5px;color:var(--muted)}
@@ -1138,7 +1133,7 @@ body.masabierto .bnav{border-top-color:transparent;box-shadow:none}
 
 /* v2.45.1 · recuperación de contraseña en pantalla limpia */
 html.recuperando body > *:not(#recupera):not(script):not(style){display:none!important}
-#recupera{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:20px;background:url('./fondo.jpg') left top/cover no-repeat,#F3F8FC}
+#recupera{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:20px;background:var(--hielo)}
 #recupera .lbox{width:min(400px,100%);display:flex;flex-direction:column;text-align:left}
 #recupera .lbox img{height:84px;width:84px;border-radius:50%;margin:0 auto 12px;object-fit:cover;display:block}
 #recupera h1{text-align:center;font-size:22px;margin:0 0 4px}#recupera .lbox > p.sm:first-of-type{text-align:center}
@@ -1215,7 +1210,7 @@ nav.main button[aria-selected=true] .navico{opacity:1}
   z-index:6001!important;animation:avisoEntra .28s cubic-bezier(.2,.8,.2,1)}
 .cfgsubs{display:flex;gap:4px;padding:4px;margin:0 0 12px;background:#fff;border:1px solid var(--line);border-radius:14px;width:max-content;max-width:100%;overflow-x:auto}
 .cfgsubs button{border:0;background:none;border-radius:10px;padding:8px 14px;font:inherit;font-weight:650;font-size:13.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
-.cfgsubs button.on{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(21,82,143,.2)}
+.cfgsubs button.on{background:var(--grad);color:#fff;box-shadow:none}
 .cfgg .ci .ico{width:19px;height:19px}
 .pill.p-plan{background:#F3E8FF;color:#6B21A8;display:inline-flex;align-items:center;gap:4px;font-size:11px}
 .pill.p-plan .ico{width:12px;height:12px}
@@ -1361,13 +1356,47 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
 .mkcab{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid var(--line)}
 .mkcab img{width:32px;height:32px;border-radius:50%;object-fit:cover}.mkbus{flex:1;height:30px;border-radius:9px;background:var(--bg);color:var(--muted);font-size:12px;display:flex;align-items:center;padding:0 10px}
 .mkav{width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
-.mklogin{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px;border-radius:18px;background:url('./fondo.jpg') center/cover;border:1px solid var(--line)}
+.mklogin{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px;border-radius:18px;background:var(--hielo);border:1px solid var(--line)}
 .mklogin img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#fff}.mklogin b{color:var(--navy);font-size:16px}.mklogin span{font-size:11.5px;color:var(--muted)}
 .mklogin i{display:block;width:80%;height:26px;border-radius:8px;background:#fff;border:1px solid var(--line)}.mklogin em{font-style:normal;width:80%;text-align:center;padding:6px;border-radius:8px;background:var(--grad);color:#fff;font-weight:700;font-size:12px}
 /* Filtros activos al lado del buscador */
 .htchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1 1 auto}
 .htchip{display:inline-flex;align-items:center;gap:6px;border:1px solid #CFE4F4;background:var(--sky-soft);color:var(--navy);border-radius:999px;padding:5px 10px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 .htchip span{opacity:.6}.htchip:hover span{opacity:1}
+/* v2.88.0 · Sección «Clasificadores» de «Filtros y columnas» */
+.htchips2:empty{display:none}
+.clascampo{display:flex;flex-direction:column;gap:4px;margin:0 0 10px}
+.clascab{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.clascab>label:first-child{margin:0}
+.clascol{display:inline-flex!important;align-items:center;gap:5px;margin:0!important;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.clascol input{width:auto;min-height:0;margin:0}
+.clasrango{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+/* v2.94.0 · Buscador: la parte que coincide, resaltada (como en el manual) */
+.gsug mark{background:#FFF1B8;color:inherit;border-radius:3px;padding:0 1px}
+/* v2.96.0 · Ficha: «Para la visita» arriba; ventas plegadas al final */
+.fvis{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px 4px;margin-top:12px}
+.fvis h3{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 4px}
+.fvfila{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);line-height:1.4}
+.fvis h3 + .fvfila{border-top:0}
+.fvico{flex:none;width:20px;color:var(--sky);padding-top:1px}.fvico .ico{width:18px;height:18px}
+.fvfila > div{min-width:0;flex:1}
+.fvfila a{color:var(--navy)}
+.fvdonde{display:inline-block;margin-left:8px;padding:1px 9px;border-radius:999px;background:var(--sky-soft);color:var(--navy);font-size:12.5px;font-weight:600;vertical-align:1px}
+.fvbtn{margin-top:8px}
+.fvurg,.fvind{border-radius:10px;padding:9px 10px;margin:4px 0;border-top:0}
+.fvurg{background:var(--peligro-s,#FDECEA);color:var(--peligro,#B42318)}.fvurg .fvico{color:inherit}
+.fvind{background:var(--warn-bg);color:var(--ink)}.fvind .fvico{color:var(--warn)}
+.fvind + .fvfila,.fvurg + .fvfila{border-top:0}
+.fvdias{margin-top:6px}.fvdias span.hoy{box-shadow:0 0 0 2px var(--sky)}
+.fventas summary{cursor:pointer;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;min-height:32px;display:flex;align-items:center}
+.fventas[open] summary{margin-bottom:4px}
+.fventas .blk{margin-top:8px}
+/* v2.98.0 · Rutas: cada centro con sus médicos */
+.rcentro{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;background:#fff}
+.rcentrocab{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rcentronom{display:flex;align-items:center;gap:8px;min-width:0}.rcentronom .ico{width:18px;height:18px;color:var(--sky);flex:none}
+.rcentro .chips{margin-top:8px}
+.rcentrootros{margin:10px 0 4px;font-weight:600;color:var(--muted)}
 /* Segundo panel lateral (columnas) */
 .t2volver{display:inline-flex;border:0;background:none;color:var(--sky);font:inherit;font-weight:700;padding:0 0 10px;cursor:pointer}
 .tools2{z-index:1202!important;box-shadow:-12px 0 30px rgba(11,58,102,.12)}
@@ -1376,7 +1405,7 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
 .t2cols{display:flex;flex-direction:column;gap:2px;margin-top:10px}.t2cols .opt{padding:8px 4px;border-bottom:1px solid var(--line);margin:0}
 .t2abrir{width:100%;justify-content:space-between!important;display:flex!important}
 /* Tablas: todas con el mismo aspecto */
-.thead{background:linear-gradient(180deg,#F2F8FD,#EAF4FB)!important;color:var(--navy-2)!important;font-size:11.5px!important;letter-spacing:.05em!important}
+.thead{background:var(--hielo)!important;color:var(--muted)!important;font-size:11.5px!important;letter-spacing:.05em!important}
 .thead .tcell{padding:9px 16px!important}.trow .tcell{padding:10px 16px!important;font-size:13.5px}
 .trow:hover,.dgrid .dr:hover{background:#F6FAFD}
 .dgrid .dr > .num,.dgrid .dr > [data-num]{text-align:right;font-variant-numeric:tabular-nums}
@@ -1538,8 +1567,8 @@ main > section.preparando::after,dialog > .preparando::after{animation:cargaApar
 
 /* El rango de fechas del periodo va debajo sin descuadrar la fila de filtros */
 .filtros > div:has(> .perrango){position:relative}
-.filtros .perrango{position:absolute;left:2px;top:100%;margin-top:3px!important;white-space:nowrap}
-.filtros:has(.perrango){padding-bottom:22px}
+/* v2.93.0: las fechas del periodo van en la línea de «Periodo», a la derecha (debajo se montaban sobre la fila siguiente) */
+.filtros .perrango{position:absolute;top:0;right:2px;left:auto;margin:0!important;white-space:nowrap;font-size:12.5px;line-height:1.5}
 .tbarra > .ai,.filtros.conbtn > .ai{align-self:center}
 
 /* v2.63.0 · acceso, aviso de la agenda y barra de progreso */
@@ -1644,6 +1673,288 @@ body:not(.inilisto) #v-inicio .saludo .acts{visibility:hidden}
   #agsug .item > .acts{grid-column:2;justify-content:flex-start;flex-wrap:wrap;gap:6px}
   #agsug .item > .acts .btn{min-height:34px;padding:4px 12px}
 }
+
+/* ============================================================
+   v2.89.0 · Marca de la plataforma (dirección A · Continuidad)
+   Tinta y marino más profundos, azul intermedio, celeste de la órbita.
+   Títulos en Manrope y texto en Source Sans 3, con cifras de ancho fijo.
+   v2.90.0 · Biblioteca de interfaz, fase 1: superficies planas y nítidas,
+   un solo color para actuar (sin degradados ni cristal), sin fotos de fondo,
+   botones que se hunden al pulsar y anillo de foco. Movimiento sobrio.
+   ============================================================ */
+:root{
+  --navy:#17457A; --navy-2:#123A66; --sky:#3F82C0; --sky-soft:#E4EFFA; --celeste:#7CC3EC; --hielo:#F2F7FC;
+  --bg:#F2F7FC; --ink:#0B2540; --muted:#4A617A; --line:#D8E4EF; --line-f:#C5D5E4;
+  --ok:#0E6B4C; --peligro:#B42318; --peligro-h:#912018; --peligro-s:#FDECEA; --dang:#B42318;
+  --sh:0 1px 2px rgba(11,37,64,.06);
+  --sombra-2:0 2px 4px rgba(11,37,64,.04), 0 8px 24px rgba(11,37,64,.08);
+  --sombra-3:0 4px 12px rgba(11,37,64,.08), 0 28px 72px rgba(11,37,64,.20);
+  --foco:0 0 0 2px #FFFFFF, 0 0 0 4px var(--sky);
+  --t-rapido:100ms; --t-medio:180ms; --t-lento:260ms; --ease-sal:cubic-bezier(.2,.8,.2,1); --pulsa:.97;
+  --grad:#17457A;
+  --grad-suave:#F2F7FC;
+  --cristal:#FFFFFF;
+  --f-texto:"Source Sans 3",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --f-titulo:Manrope,"Source Sans 3",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-family:var(--f-texto);
+}
+html,body{background:#F2F7FC;font-size:15.5px}
+h1,h2,h3,.lbox h1,.saludo h1,.kpi b,.fh h2,.card h2,dialog h2,dialog h3{font-family:var(--f-titulo);letter-spacing:-.015em}
+h1,h2{font-weight:800}
+.sm{font-size:13px}
+.kpi b,.dgrid,.num,.importe,td{font-variant-numeric:tabular-nums}
+.btn{font-weight:600}
+@media (prefers-reduced-motion: reduce){.btn,input,select,textarea{transition:none!important}.btn:active{transform:none}}
+/* Firma de la plataforma en el acceso: discreta, bajo la marca de cada empresa */
+.firmaplat{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;font-size:12px;color:var(--muted)}
+.firmaplat svg{width:14px;height:14px;flex:none}
+.firmaplat b{font-family:var(--f-titulo);font-weight:800;color:var(--ink);letter-spacing:-.02em}
+.firmaplat b span{font-weight:600;color:var(--sky)}
+
+/* ============================================================
+   v2.91.0 · Biblioteca de interfaz, fase 2: buscador con icono,
+   barra del móvil con píldora, pestañas, tarjetas, tablas, ventanas
+   y avisos con los estados de la biblioteca
+   ============================================================ */
+/* Buscador: lupa de trazo en lugar del símbolo ⌕ */
+.gsearch::before{content:"";width:18px;height:18px;left:12px;font-size:0;background:var(--muted);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") center/contain no-repeat}
+.gsearch input{padding-left:40px}
+/* Menú principal */
+nav.main button{transition:background-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal)}
+/* Barra inferior del móvil: la sección activa lleva una píldora detrás del icono */
+.bnav button{gap:4px;padding:6px 4px 8px;font-size:12px;min-height:56px;transition:color var(--t-rapido) var(--ease-sal)}
+.bnav button > span:first-child{display:inline-flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:999px;
+  transition:background-color var(--t-medio) var(--ease-sal)}
+.bnav button[aria-selected=true] > span:first-child{background:var(--sky-soft)}
+/* Pestañas y selectores de sección */
+.subnav button{transition:background-color var(--t-rapido) var(--ease-sal),border-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal)}
+.subnav button:hover{background:var(--hielo);border-color:var(--sky)}
+.subnav button[aria-pressed=true]:hover{background:var(--navy-2);border-color:transparent}
+/* Tarjetas: las que abren algo se elevan al pasar por encima */
+.card{border-radius:16px}
+.kpi.click{transition:transform var(--t-medio) var(--ease-sal),box-shadow var(--t-medio) var(--ease-sal),border-color var(--t-rapido) var(--ease-sal)}
+.kpi.click:hover{transform:translateY(-2px);border-color:#B7CCE0;box-shadow:var(--sombra-2)}
+.kpi.click:active{transform:scale(.99)}
+/* Tablas */
+.dgrid .dr{transition:background-color var(--t-rapido) var(--ease-sal)}
+.dgrid .dr:hover{background:var(--hielo)}
+/* Ventanas: sin el marco negro del navegador al abrirse; botón de cerrar discreto */
+dialog:focus,dialog:focus-visible{outline:none}
+.x{background:transparent;color:var(--muted);border-radius:8px;transition:background-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal)}
+.x:hover{background:var(--sky-soft);color:var(--navy)}
+/* Avisos */
+.toast{background:var(--ink);border-radius:12px!important;box-shadow:var(--sombra-3)}
+.toast.err{background:var(--peligro)}
+/* Foco visible con el tabulador en todo lo que se pulsa */
+nav.main button:focus-visible,.subnav button:focus-visible,.bnav button:focus-visible,.kpi.click:focus-visible,.x:focus-visible{outline:none;box-shadow:var(--foco)}
+@media (prefers-reduced-motion: reduce){nav.main button,.bnav button,.bnav button > span:first-child,.subnav button,.kpi.click,.dgrid .dr,.x{transition:none!important}.kpi.click:hover,.kpi.click:active{transform:none}}
+/* ============================================================
+   v2.92.0 · Biblioteca de interfaz, fase 3: movimiento sobrio y Inicio
+   Cargador de órbita en todas las esperas, pantallas que llegan enteras con
+   un fundido corto (sin cascada: el revelado es atómico), ventanas que suben y crecen un 2 %,
+   avisos que bajan, interruptores con rebote suave. Inicio con cabecera
+   abierta, indicadores con caja de icono y operativa en filas.
+   ============================================================ */
+:root{--sube:6px;
+  --orbita:radial-gradient(circle at 50% 50%,var(--navy) 0 27%,transparent 28%),radial-gradient(circle at 50% 13%,var(--celeste) 0 12%,transparent 13%);
+  --orbita-blanca:radial-gradient(circle at 50% 50%,#FFFFFF 0 27%,transparent 28%),radial-gradient(circle at 50% 13%,var(--celeste) 0 12%,transparent 13%)}
+/* Cargador de órbita: la esfera queda quieta y el satélite gira */
+.spin{border:0!important;border-radius:0!important;background:var(--orbita);animation:gira .9s linear infinite}
+.btn .giro{border:0!important;border-radius:0!important;background:var(--orbita-blanca);animation:girobtn .9s linear infinite}
+.btn.sec .giro{background:var(--orbita)}
+.cfgcarga .giro{border:0!important;border-radius:0!important;background:var(--orbita)}
+.cargandolocal::before{border:0!important;border-radius:0!important;background:var(--orbita)}
+main > section.preparando::after,dialog > .preparando::after{border:0!important;border-radius:0!important;background:var(--orbita)}
+/* Llegar a una pantalla: toda a la vez, con un fundido corto (revelado atómico) */
+@keyframes uiFunde{from{opacity:0}to{opacity:1}}
+main > section.llega > *{animation:uiFunde var(--t-lento) var(--ease-sal)}
+/* Ventanas: el fondo se oscurece y la ventana sube y crece un 2 % */
+@keyframes uiVentana{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+dialog[open]{animation:uiVentana var(--t-medio) var(--ease-sal)}
+dialog[open]::backdrop{animation:uiFunde var(--t-medio) linear}
+/* Avisos: bajan un poco y aparecen */
+@keyframes avisoEntra{from{transform:translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+.toast,.upd{animation-duration:var(--t-medio)!important}
+/* Interruptores: la bolita llega con un rebote suave */
+.vfswitch .sw{transition:background-color var(--t-medio) var(--ease-sal)}
+.vfswitch .sw::after{transition:left var(--t-medio) cubic-bezier(.34,1.4,.64,1)}
+.vfswitch input:focus-visible + .sw{box-shadow:var(--foco)}
+/* Inicio: cabecera abierta, sin tarjeta */
+#v-inicio .saludo{background:transparent;border:0;box-shadow:none;border-radius:0;padding:4px 110px 6px 0;overflow:visible}
+#v-inicio .saludo h1{font-size:30px}
+@media (max-width:760px){#v-inicio .saludo{padding:2px 100px 4px 0}#v-inicio .saludo h1{font-size:24px}}
+/* Indicadores: icono en su caja */
+.kico{right:12px;bottom:12px;width:32px;height:32px;border-radius:10px;background:var(--sky-soft);color:var(--navy)!important;display:grid;place-items:center;opacity:1!important;font-size:16px}
+.kico .icw svg{width:18px;height:18px}
+/* Operativa de pedidos en filas que llevan a Pedidos */
+.opfilas{display:flex;flex-direction:column;padding:0 8px 10px}
+.opfila{display:flex;align-items:center;gap:14px;min-height:48px;padding:0 10px;border:0;border-radius:10px;background:none;cursor:pointer;font:inherit;color:var(--ink);text-align:left;
+  transition:background-color var(--t-rapido) var(--ease-sal)}
+.opfila:hover{background:var(--hielo)}
+.opfila:focus-visible{outline:none;box-shadow:var(--foco)}
+.opfila b{font-family:var(--f-titulo);font-weight:800;font-size:20px;min-width:40px;color:var(--navy);font-variant-numeric:tabular-nums}
+.opfila b.aviso{color:var(--warn)}
+.opfila span{flex:1}
+.opfila svg{width:18px;height:18px;color:var(--sky);flex:none}
+@media (prefers-reduced-motion: reduce){
+  main > section.llega > *,dialog[open],dialog[open]::backdrop,.toast,.upd{animation:none!important}
+  .vfswitch .sw,.vfswitch .sw::after,.opfila{transition:none!important}
+}
+
+/* ============================================================
+   v2.95.0 · Biblioteca de interfaz: selector segmentado y botón flotante
+   Segmentado: la opción elegida en blanco con sombra suave sobre fondo hielo
+   (ya no en azul relleno). Botón flotante del móvil: redondo, icono «+» de
+   la biblioteca, sombra de lo que flota y respuesta al pulsar.
+   ============================================================ */
+.segm,.segs{background:var(--hielo);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.segm button,.segs button{border-radius:8px;font-weight:600;color:var(--muted);
+  transition:background-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal),box-shadow var(--t-rapido) var(--ease-sal)}
+.segm button:hover,.segs button:hover{color:var(--navy)}
+.segm button.on,.segs button.on{background:#FFFFFF;color:var(--navy);box-shadow:var(--sh)}
+.segm button:focus-visible,.segs button:focus-visible{outline:none;box-shadow:var(--foco)}
+.chipsel{transition:background-color var(--t-rapido) var(--ease-sal),border-color var(--t-rapido) var(--ease-sal)}
+.chipsel:hover{border-color:var(--sky)}
+.chipsel:focus-visible{outline:none;box-shadow:var(--foco)}
+@media (max-width:760px){
+  .fab{border-radius:999px!important;box-shadow:var(--sombra-2)!important;display:grid!important;place-items:center;
+    transition:background-color var(--t-rapido) var(--ease-sal),transform var(--t-rapido) var(--ease-sal)}
+  .fab svg{width:24px;height:24px}
+  .fab:hover{background:var(--navy-2)}
+  .fab:active{transform:scale(var(--pulsa))}
+}
+@media (prefers-reduced-motion: reduce){.segm button,.segs button,.chipsel,.fab{transition:none!important}.fab:active{transform:none}}
+
+/* ============================================================
+   v2.97.0 · Biblioteca de interfaz: etiquetas de estado
+   Punto de color delante, 12,5 px en negrita y el color según el papel
+   del estado: positivo o normal en azul suave, atención en ámbar oscuro,
+   urgente o error en rojo, anulado o sin valor comercial en gris.
+   Siempre con palabra: el color solo refuerza.
+   ============================================================ */
+:root{--warn:#8A4B0B; --warn-bg:#FDF1E1; --ok-bg:#E3F4EC; --neutro:#4A5868; --neutro-s:#EEF1F4}
+.pill{font-size:12.5px;font-weight:600;line-height:1.3;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.p-est,.p-per,.pill.p-plan{background:var(--sky-soft);color:var(--navy)}
+.p-urg{background:var(--peligro-s);color:var(--peligro)}
+.p-warn,.p-bor{background:var(--warn-bg);color:var(--warn)}
+.p-anu,.p-emp,.pill.p-sr{background:var(--neutro-s);color:var(--neutro);border:0}
+.pill.p-plan::before{content:none}
+
+/* ============================================================
+   v2.99.0 · Biblioteca de interfaz: avisos dentro de la pantalla (Banda)
+   Cuatro tonos sin borde lateral ni rayas: info (azul suave), atención
+   (ámbar), error (rojo) y correcto (verde), con icono y texto oscuro de
+   su tono. Clases .banda para lo nuevo; los avisos existentes las adoptan.
+   ============================================================ */
+:root{--ico-info:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E");
+  --ico-aviso:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
+  --ico-error:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m15 9-6 6M9 9l6 6'/%3E%3C/svg%3E");
+  --ico-ok:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")}
+.banda,.srnota{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;font-size:14.5px;line-height:1.45;margin:10px 0}
+.banda::before,.srnota::before{content:"";flex:none;width:20px;height:20px;margin-top:1px;background:currentColor;-webkit-mask:var(--ico-info) center/contain no-repeat;mask:var(--ico-info) center/contain no-repeat}
+.banda-info,.srnota{background:var(--sky-soft);color:var(--ink)}
+.banda-info::before,.srnota::before{color:var(--navy)}
+.banda-aviso{background:var(--warn-bg);color:#5C3207}
+.banda-aviso::before{-webkit-mask-image:var(--ico-aviso);mask-image:var(--ico-aviso);background:var(--warn)}
+.banda-peligro{background:var(--peligro-s);color:#7A1810}
+.banda-peligro::before{-webkit-mask-image:var(--ico-error);mask-image:var(--ico-error);background:var(--peligro)}
+.banda-ok{background:var(--ok-bg);color:#0A4D37}
+.banda-ok::before{-webkit-mask-image:var(--ico-ok);mask-image:var(--ico-ok);background:var(--ok)}
+.srnota::before{background:var(--navy)}
+/* Aviso de Inicio (duplicados pendientes): banda de atención con su acción a la derecha */
+.alerta{border:0;background:var(--warn-bg);color:#5C3207;border-radius:12px;padding:12px 16px;font-weight:500}
+.alerta .icw{color:var(--warn)}
+.alerta .btn{background:#FFFFFF;color:var(--warn);border:1px solid #E8C9A3;box-shadow:none}
+.alerta .btn:hover{background:#FFF8EE;border-color:var(--warn)}
+/* Lista de alertas de Inicio: contadores con el tono de su gravedad */
+.alerta2 .an{background:var(--sky-soft);color:var(--navy)}
+.alerta2.alta .an{background:var(--peligro);color:#FFFFFF}
+.alerta2.media .an{background:var(--warn);color:#FFFFFF}
+/* Franja del entorno de pruebas: color liso, sin rayas */
+#franjapruebas{background:var(--warn)}
+
+/* ============================================================
+   v2.100.0 · Biblioteca de interfaz, cierre de la marca: ayudas,
+   pantallas vacías, esqueletos de carga, casillas, contadores y avatares
+   ============================================================ */
+/* Ayuda: icono «info» de trazo en azul (antes una «i» dentro de un círculo) */
+.ai{width:18px;height:18px;border:0;border-radius:50%;background:transparent;color:var(--sky);font-size:0;opacity:1;transform:none;
+  transition:background-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal)}
+.ai svg{width:16px;height:16px}
+.ai:hover{background:var(--sky-soft);color:var(--navy);transform:none}
+.ai:focus-visible{outline:none;box-shadow:var(--foco)}
+#franjapruebas .ai{background:transparent;border:0;color:#FFFFFF}
+/* La ventanita de ayuda: tarjeta blanca con su título, como en el sistema de diseño */
+.aipop{background:#FFFFFF;color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sombra-3);font-size:14px;padding:12px 14px;
+  animation:uiFunde var(--t-medio) var(--ease-sal)}
+.aipop > b:first-child{font-family:var(--f-titulo);font-weight:800;font-size:14.5px;color:var(--ink)}
+.aipop a,.aiman{color:var(--navy)}
+/* Pantallas y listas vacías: centradas, con su icono en una caja redonda */
+.vacio{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:24px 16px;color:var(--muted);font-size:14.5px}
+.vacio::before{content:"";width:40px;height:40px;border-radius:50%;flex:none;
+  background:var(--sky-soft) var(--ico-vacio) center/20px no-repeat}
+.gsug .vacio,.selpop .vacio,.dr .vacio,td .vacio,.vacio.sinico{display:block;padding:12px 16px;font-size:13.5px}
+.gsug .vacio::before,.selpop .vacio::before,.dr .vacio::before,td .vacio::before,.vacio.sinico::before{content:none}
+:root{--ico-vacio:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317457A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 16 12 14 15 10 15 8 12 2 12'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E")}
+/* Gráficos sin datos: fondo liso, sin rayas */
+.gvacio{background:var(--hielo);border-radius:12px}
+.gvacio span:first-child{color:var(--sky)}
+/* Esqueletos de carga con los tonos del sistema */
+.skel{background:linear-gradient(90deg,#E9F0F6 0%,#F5F9FC 50%,#E9F0F6 100%);background-size:200% 100%;animation-duration:1.3s;border-radius:8px}
+/* Casillas y opciones marcadas en el color de actuar */
+input[type=checkbox],input[type=radio]{accent-color:var(--navy)}
+/* Contadores: rojo solo para avisos sin leer; el resto, neutros */
+.mdavisos .nb2{background:var(--peligro);min-width:20px;height:20px;display:inline-grid;place-items:center;font-size:12px;padding:0 6px;font-variant-numeric:tabular-nums}
+.card>h2 .n{font-size:12px;background:var(--sky-soft);color:var(--navy);padding:2px 8px;font-variant-numeric:tabular-nums}
+/* Avatares: iniciales en la letra de títulos */
+.av,.usrav,.mpav{font-family:var(--f-titulo);font-weight:700}
+@media (prefers-reduced-motion: reduce){.ai,.aipop{transition:none!important;animation:none!important}}
+
+/* ============================================================
+   v2.101.0 · Fechas, horas y números con el sistema de diseño
+   ============================================================ */
+.selw .selico{opacity:1;color:var(--sky);font-size:0;line-height:0}
+.selw .selico svg{width:18px;height:18px}
+.selpop{border:1px solid var(--line);border-radius:16px;box-shadow:var(--sombra-3);padding:12px}
+.seldlg::backdrop{background:rgba(11,37,64,.18)}
+.calh{gap:6px}
+.calh b{font-family:var(--f-titulo);font-weight:800;color:var(--ink)}
+.calh .caltit{flex:1;height:36px;border:0;border-radius:8px;background:transparent;font:800 15px var(--f-titulo);color:var(--ink);text-transform:capitalize;cursor:pointer;
+  transition:background-color var(--t-rapido) var(--ease-sal)}
+.calh .caltit:hover{background:var(--sky-soft);color:var(--navy)}
+.calh button:not(.caltit){width:36px;min-width:36px;padding:0;font-size:18px}
+.calg button{font-variant-numeric:tabular-nums;transition:background-color var(--t-rapido) var(--ease-sal)}
+.calg button.hoy{box-shadow:inset 0 0 0 1.5px var(--sky)}
+.calg button.sel{background:var(--navy);color:#FFFFFF}
+.calm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.calm button{height:44px;border:0;border-radius:10px;background:var(--hielo);font:600 14.5px var(--f-texto);color:var(--ink);text-transform:capitalize;cursor:pointer;
+  font-variant-numeric:tabular-nums;transition:background-color var(--t-rapido) var(--ease-sal)}
+.calm button:hover{background:var(--sky-soft)}
+.calm button.hoy{box-shadow:inset 0 0 0 1.5px var(--sky)}
+.calm button.sel{background:var(--navy);color:#FFFFFF}
+.calm button:disabled{opacity:.3;cursor:default}
+.calp{gap:8px;margin-top:12px}
+.calp button{flex:1;height:38px;border:1px solid var(--line-f);border-radius:10px;background:#FFFFFF;color:var(--navy);font:600 14px var(--f-texto);cursor:pointer}
+.calp button:hover{background:var(--hielo);border-color:var(--sky)}
+.calp .okb{background:var(--navy);border-color:transparent;color:#FFFFFF}
+.calp .okb:hover{background:var(--navy-2)}
+.rjfecha{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:14px;color:var(--muted)}
+.rjfecha button{border:0;background:none;color:var(--navy);font:600 13.5px var(--f-texto);cursor:pointer;padding:4px 6px;border-radius:8px}
+.rjfecha button:hover{background:var(--sky-soft)}
+.rjh{font-family:var(--f-titulo);font-size:30px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.rjg button{background:var(--hielo);font-variant-numeric:tabular-nums}
+.rjg button.sel{background:var(--navy);color:#FFFFFF}
+.calg button:focus-visible,.calm button:focus-visible,.rjg button:focus-visible,.calh button:focus-visible,.calp button:focus-visible,.rjfecha button:focus-visible{outline:none;box-shadow:var(--foco)}
+.seldlg.hoja .calm button{height:52px}
+/* Corrige la v2.100.0: el texto «Elige una fecha» de un campo vacío no es una pantalla vacía */
+.selval.vacio{display:block;padding:0;gap:0;text-align:left;font-size:inherit;color:var(--muted)}
+.selval.vacio::before{content:none}
+.numw .nb{transition:background-color var(--t-rapido) var(--ease-sal);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+@media (max-width:760px){.numw .nb{width:44px;min-height:44px}}
+@media (prefers-reduced-motion: reduce){.calh .caltit,.calg button,.calm button,.numw .nb{transition:none!important}}
 </style>
 </head>
 <body>
@@ -1661,6 +1972,7 @@ body:not(.inilisto) #v-inicio .saludo .acts{visibility:hidden}
     <input id="lp" type="password" autocomplete="current-password" required>
     <button class="btn block" id="lbtn">Entrar</button>
     <div class="msg" id="lmsg"></div>
+    <div class="firmaplat"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="20" cy="24" r="16" fill="#17457A"/><circle cx="35" cy="9" r="6" fill="#7CC3EC"/></svg>funciona con <b>dlc<span>os</span></b></div>
   </form>
 </section>
 
@@ -1779,6 +2091,6 @@ body:not(.inilisto) #v-inicio .saludo .acts{visibility:hidden}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.87.0"></script>
+<script src="./app.js?v=2.101.0"></script>
 </body>
 </html>
