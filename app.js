@@ -6351,6 +6351,7 @@ async function pintarAuditoria() {
         ${usuarios.map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></div>
       <div><label for="aent">Entidad</label><select id="aent"><option value="">Todas</option>
         ${Object.entries(nombreEnt).map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select></div></div>
+    <div id="auddes"></div>
     <div class="lista" id="audlista"></div>`;
   const pinta = async () => {
     cargando($('audlista'), 'Filtrando…');
@@ -6363,8 +6364,11 @@ async function pintarAuditoria() {
       <span class="ic ${a.accion === 'Baja' ? 'w' : a.accion === 'Alta' ? 'o' : ''}">${a.accion === 'Alta' ? '+' : a.accion === 'Baja' ? '−' : '✎'}</span>
       <span class="tx"><b>${esc(a.accion)} · ${esc(nombreEnt[a.entidad] || a.entidad)}</b>
         <span class="sm">${esc(a.usuario)} · ${new Date(a.creado_en).toLocaleString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-        <span class="sm">${esc(resumenDetalle(a.detalle))}</span></span></div>`).join('')
+        <span class="sm">${esc(resumenDetalle(a.detalle))}</span></span>${deshacible(a) ? `<button type="button" class="btn sec" data-audx="${a.id}">Deshacer</button>` : ''}</div>`).join('')
       || '<div class="vacio">Sin movimientos con estos filtros.</div>';
+    // v2.123.0: deshacer un cambio, o todo lo de la persona elegida desde el inicio del periodo
+    $('audlista').querySelectorAll('[data-audx]').forEach(b => b.onclick = () => deshacerUno(+b.dataset.audx, pinta));
+    cajaDeshacerPersona($('auddes'), $('ausr').value, r.desde, ($('ausr').selectedOptions[0] || {}).textContent || '', pinta);
   };
   montarPeriodo($('audper'), { id: 'auditoria', valor: '7d', alCambiar: pinta });
   ['ausr', 'aent'].forEach(id => $(id).onchange = pinta);
@@ -13353,7 +13357,7 @@ pintarMarca = (orig => async function (...a) {
   w.insertAdjacentHTML('beforeend', `<div class="previa"><div class="sm previat">Así lo verá tu equipo</div><div id="mkprev2"></div></div>`);
   const pinta = () => {
     const n = ($('mknom') || {}).value || nombreApp(), lg = ($('mklogo') || {}).src || 'logo-app.png';
-    $('mkprev2').innerHTML = `<div class="mkcab"><img src="${esc(lg)}" alt=""><span class="mkbus">Buscar…</span><span class="mkav">EM</span></div>
+    $('mkprev2').innerHTML = `<div class="mkcab"><img src="${esc(lg)}" alt=""><span class="mkbus">Buscar…</span><span class="mkav">${esc(iniciales(PERFIL ? PERFIL.nombre : ''))}</span></div>
       <div class="mklogin"><img src="${esc(lg)}" alt=""><b>${esc(n)}</b><span>Entra con tu correo y contraseña.</span><i></i><i></i><em>Entrar</em></div>`;
   };
   card.addEventListener('input', pinta); card.addEventListener('change', () => setTimeout(pinta, 300));
@@ -14309,6 +14313,13 @@ async function disenoPDF() {
     <div class="acts" style="justify-content:space-between"><button class="btn sec" id="pdfdef" type="button">Volver al diseño original</button>
       <div style="display:flex;gap:8px"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="pdfok">Guardar diseño</button></div></div>`;
   $('dlg').classList.add('amplia'); if (!$('dlg').open) $('dlg').showModal();
+  // v2.122.0: integrado en su pestaña (ordenador): sin cerrar, «Descartar cambios» vuelve a lo guardado y al guardar se queda
+  const enPagina = $('dlg').classList.contains('encajada');
+  if (enPagina) {
+    $('dbody').querySelector('.fh .x').remove();
+    const c = $('dbody').querySelector('.acts [data-cerrar]'); c.removeAttribute('data-cerrar'); c.textContent = 'Descartar cambios';
+    c.onclick = () => disenoPDF();
+  }
   let T = null;
   const pinta = () => { clearTimeout(T); T = setTimeout(async () => { const d = await facturaPDF(facturaEjemplo(), '', C); const u = d.output('bloburl'); $('pdfif').src = u + '#toolbar=0&navpanes=0&view=FitH'; }, 250); };
   $('dbody').querySelectorAll('[data-pk]').forEach(g => g.querySelectorAll('button').forEach(b => b.onclick = () => { C[g.dataset.pk] = b.dataset.v; g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); pinta(); }));
@@ -14320,7 +14331,7 @@ async function disenoPDF() {
   $('pdfok').onclick = () => conCarga($('pdfok'), 'Guardando…', async () => {
     const { data: r, error } = await db.rpc('guardar_ajuste', { p_clave: 'factura_pdf', p_valor: C });
     if (error || !r || !r.ok) { toast('No se ha podido guardar el diseño', true); return; }
-    AJUSTES.factura_pdf = JSON.parse(JSON.stringify(C)); delete $('dlg').dataset.sucio; $('dlg').close(); toast('Diseño del PDF guardado');
+    AJUSTES.factura_pdf = JSON.parse(JSON.stringify(C)); delete $('dlg').dataset.sucio; if (!enPagina) $('dlg').close(); toast('Diseño del PDF guardado');
   });
   pinta();
 }
@@ -16227,10 +16238,14 @@ function areaEncaje() {
   if (PAGINAS[TAB]) return document.querySelector(`#v-${TAB} .pagcuerpo`) || $('cfgcuerpo');
   return null;
 }
+// v2.122.0: la ventana va EN la página, en el sitio del apartado (antes flotaba encima con posición absoluta y su propio desplazamiento).
+// Se devuelve a <body> antes de cerrarse, para que los repintados del apartado no se la lleven por delante.
 function colocarEncajada(d, area) {
-  const r = area.getBoundingClientRect();
-  Object.assign(d.style, { top: (r.top + scrollY) + 'px', left: (r.left + scrollX) + 'px', width: r.width + 'px' });
-  area.style.minHeight = d.offsetHeight + 'px';
+  const cab = Math.max(0, ...['header', '.top', 'nav.main'].map(q => { const e = document.querySelector(q); return e && getComputedStyle(e).position.match(/fixed|sticky/) ? e.getBoundingClientRect().bottom : 0; }));
+  document.documentElement.style.setProperty('--alto-cab', cab + 'px');
+}
+function devolverEncajada(d) {
+  if (d.__casa && d.parentNode !== d.__casa) d.__casa.appendChild(d);
 }
 ['dlg', 'dlg2'].forEach(id => {
   const d = $(id); if (!d) return;
@@ -16239,17 +16254,23 @@ function colocarEncajada(d, area) {
     const area = areaEncaje();
     if (!area) return modal();
     if (d.open) return;
-    d.classList.add('encajada'); d.__area = area;
+    d.classList.add('encajada'); d.__area = area; d.__casa = d.__casa || d.parentNode;
+    area.parentNode.insertBefore(d, area);
     area.classList.add('con-ventana');
     d.show(); colocarEncajada(d, area);
-    if (!d.__ro) { d.__ro = new ResizeObserver(() => { if (d.open && d.__area) colocarEncajada(d, d.__area); }); d.__ro.observe(d); }
     // Al abrir, el navegador lleva la vista al primer campo: se vuelve arriba del área para ver su cabecera
     const tapa = () => Math.max(0, ...['body > header', 'header', '.top', 'nav.main'].map(q => { const e = document.querySelector(q); return e && getComputedStyle(e).position.match(/fixed|sticky/) ? e.getBoundingClientRect().bottom : 0; }));
-    const arriba = () => scrollTo({ top: Math.max(0, area.getBoundingClientRect().top + scrollY - tapa() - 12) });
+    // v2.122.0: la ventana ocupa el sitio del apartado; solo se desplaza la página si su cabecera queda por encima de la vista
+    const arriba = () => { const t = d.getBoundingClientRect().top; if (t < tapa()) scrollTo({ top: Math.max(0, t + scrollY - tapa() - 12) }); };
     arriba(); requestAnimationFrame(arriba);
     const f = d.querySelector('input:not([type=hidden]), select, textarea'); if (f) setTimeout(() => { f.focus({ preventScroll: true }); arriba(); }, 30);
   };
+  const cerrar = d.close;
+  d.close = function () { devolverEncajada(d); return cerrar.apply(this, arguments); };
+  // Si un repintado borra el apartado con la ventana dentro, se recupera (cerrada) en <body>
+  new MutationObserver(() => { if (d.__casa && !d.isConnected) { d.__casa.appendChild(d); if (d.open) d.close(); } }).observe(document.body, { childList: true, subtree: true });
   d.addEventListener('close', () => {
+    devolverEncajada(d);
     if (!d.classList.contains('encajada')) return;
     d.classList.remove('encajada'); d.removeAttribute('style');
     const area = d.__area; d.__area = null;
@@ -16271,3 +16292,70 @@ addEventListener('resize', () => ['dlg', 'dlg2'].forEach(id => { const d = $(id)
 // Si la app ya estaba a la vista al cargar este bloque (arranque con el perfil guardado), el menú se ajusta igualmente
 if (typeof PERFIL !== 'undefined' && PERFIL) menuOrganizacion();
 cargarAjustes = (orig => async function (...a) { const r = await orig(...a); if (PERFIL) menuOrganizacion(); return r; })(cargarAjustes);
+
+
+/* v2.123.0 · Historial de cambios y deshacer (administración). La base guarda cada cambio con su valor de antes; aquí se ve por
+   ficha y se deshace: un cambio, o todo lo que una persona cambió desde una fecha. Solo fichas, consultas, clientes, productos y
+   rutas (pedidos, facturas, usuarios y cartera tienen efectos en stock, facturación, comisiones o permisos). */
+const DESHACIBLES = ['cuentas', 'ubicaciones', 'contactos', 'productos', 'rutas'];
+const deshacible = a => DESHACIBLES.includes(a.entidad) && ['Edición', 'Baja'].includes(a.accion);
+const CAMPO_TXT = { nombre: 'Nombre', estado_comercial: 'Estado', especialidad: 'Especialidad', area: 'Área', telefono: 'Teléfono', movil: 'Móvil', email: 'Email',
+  direccion: 'Dirección', cp: 'Código postal', municipio: 'Población', provincia: 'Provincia', nota: 'Nota', urgente: 'Urgente', centro_nombre: 'Centro',
+  dias: 'Horario', principal: 'Principal', nif: 'DNI / CIF', cuenta_id: TT('medico', 's', '', 'l', 'C'), codigo: 'Código', precio: 'Precio', estado: 'Estado',
+  sin_reporting: 'Sin reporting', clasificadores: 'Campos propios', planta: 'Planta', sala: 'Sala', indicaciones: 'Cómo llegar', lat: 'Latitud', lon: 'Longitud' };
+const campoTxt = k => CAMPO_TXT[k] || (k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, ' '));
+const MOTIVO_DESHACER = { permiso: 'No tienes permiso', no_existe: 'Ese cambio ya no está en el registro', no_deshacible: 'Ese tipo de cambio no se puede deshacer',
+  ya_no_existe: 'El registro ya no existe', ya_existe: 'Ya estaba recuperado' };
+async function deshacerUno(id, despues) {
+  const { data: s } = await db.rpc('deshacer_cambio', { p_id: id, p_simular: true });
+  if (!s || !s.ok) { toast(MOTIVO_DESHACER[(s && s.motivo) || ''] || (s && s.motivo) || 'No se puede deshacer', true); return; }
+  if (!(s.campos || []).length) { toast('No hay nada que deshacer: esos datos se han vuelto a cambiar después', true); return; }
+  if (!await preguntar(`Volverán a su valor de antes: ${s.campos.map(campoTxt).join(', ')}. Lo que se haya cambiado después no se toca.`, { titulo: 'Deshacer el cambio', ok: 'Deshacer' })) return;
+  const { data: r, error } = await db.rpc('deshacer_cambio', { p_id: id, p_simular: false });
+  if (error || !r || !r.ok) { toast('No se ha podido deshacer: ' + ((r && (MOTIVO_DESHACER[r.motivo] || r.motivo)) || (error && error.message) || ''), true); return; }
+  toast('Cambio deshecho'); if (despues) despues();
+}
+function cajaDeshacerPersona(caja, usuario, desde, nombre, despues) {
+  if (!caja) return;
+  if (!usuario || !desde) { caja.innerHTML = ''; return; }
+  caja.innerHTML = `<div class="card" id="audpersona" style="margin:0 16px 10px"><h3>Deshacer los cambios de ${esc(nombre.trim())}</h3>
+    <p class="sm">Todo lo que cambió o borró en fichas, consultas, clientes, productos y rutas desde el ${fechaCorta(desde)}. Lo que otra persona haya cambiado después no se toca.</p>
+    <div class="acts" style="margin:6px 0 0"><button type="button" class="btn sec" id="audsim">Ver qué se desharía</button></div><div id="audres" class="sm"></div></div>`;
+  $('audsim').onclick = async ev => {
+    ev.target.disabled = true;
+    const { data: s } = await db.rpc('deshacer_persona', { p_usuario: usuario, p_desde: desde + 'T00:00:00', p_simular: true });
+    ev.target.disabled = false;
+    if (!s || !s.ok) { toast('No se ha podido calcular', true); return; }
+    const nom = { cuentas: 'fichas', ubicaciones: 'consultas', contactos: 'clientes', productos: 'productos', rutas: 'rutas' };
+    if (!s.cambios) { $('audres').textContent = 'No hay nada que deshacer en ese periodo (o ya se ha vuelto a cambiar).'; return; }
+    $('audres').innerHTML = `Se desharían <b>${num(s.cambios)}</b> cambios (${num(s.campos)} datos): ${Object.entries(s.por_entidad || {}).map(([k, n]) => `${num(n)} en ${nom[k] || k}`).join(', ')}.
+      ${s.sin_deshacer ? ` ${num(s.sin_deshacer)} no se pueden deshacer porque se han vuelto a cambiar después.` : ''}
+      <div class="acts" style="margin:8px 0 0"><button type="button" class="btn" id="audok">Deshacer ${num(s.cambios)} cambios</button></div>`;
+    $('audok').onclick = async ev2 => {
+      if (!await preguntar(`Se desharán ${num(s.cambios)} cambios de ${nombre.trim()} desde el ${fechaCorta(desde)}. Queda registrado y cada uno se puede volver a cambiar a mano.`, { titulo: 'Deshacer sus cambios', ok: 'Deshacer' })) return;
+      ev2.target.disabled = true;
+      const { data: r } = await db.rpc('deshacer_persona', { p_usuario: usuario, p_desde: desde + 'T00:00:00', p_simular: false });
+      if (!r || !r.ok) { ev2.target.disabled = false; toast('No se ha podido deshacer', true); return; }
+      toast(`Deshechos ${num(r.cambios)} cambios`); if (despues) despues();
+    };
+  };
+}
+// Ficha: historial de cambios (de la ficha y de sus consultas), plegado al final; solo administración
+async function fichaHistorial(id) {
+  if (!puede('administrar') || FICHA_ID !== id || !$('fbody') || $('fhist')) return;
+  const { data } = await RPC_ORIG('historial_entidad', { p_entidad: 'cuentas', p_id: id, lim: 100 });
+  const l = Array.isArray(data) ? data : [];
+  if (FICHA_ID !== id || !$('fbody') || $('fhist')) return;
+  const lineas = a => a.accion === 'Edición' && a.detalle && typeof a.detalle === 'object'
+    ? Object.keys(a.detalle).filter(k => Array.isArray(a.detalle[k]) && a.detalle[k].length === 2)
+        .map(k => `<span class="sm">${esc(campoTxt(k))}: ${esc(textoValor(a.detalle[k][0]).slice(0, 40) || '—')} → ${esc(textoValor(a.detalle[k][1]).slice(0, 40) || '—')}</span>`).join('')
+    : `<span class="sm">${esc(resumenDetalle(a.detalle))}</span>`;
+  $('fbody').insertAdjacentHTML('beforeend', `<details class="blk" id="fhist"><summary>Historial de cambios <span class="n">${num(l.length)}</span></summary>
+    <div class="lista">${l.map(a => `<div class="item" style="cursor:default"><span class="tx">
+        <b>${esc(a.accion)}${a.entidad === 'ubicaciones' ? ' · consulta' : ''}</b>
+        <span class="sm">${esc(a.usuario)} · ${new Date(a.creado_en).toLocaleString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+        ${lineas(a)}</span>${a.deshacible ? `<button type="button" class="btn sec" data-fhx="${a.id}">Deshacer</button>` : ''}</div>`).join('')
+      || '<div class="sm">Sin cambios registrados.</div>'}</div></details>`);
+  $('fhist').querySelectorAll('[data-fhx]').forEach(b => b.onclick = () => deshacerUno(+b.dataset.fhx, () => abrirFicha(id)));
+}
+abrirFicha = (orig => async function (id, ...a) { const r = await orig.call(this, id, ...a); fichaHistorial(id); return r; })(abrirFicha);
