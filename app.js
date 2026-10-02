@@ -116,7 +116,11 @@ const isoLocal = d => { const x = new Date(d.getTime() - d.getTimezoneOffset() *
 const hoyISO = () => isoLocal(new Date());
 let fechaLarga = d => d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 const fechaCorta = s => { const d = new Date(s + 'T00:00:00'); return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }); };
-const iniciales = n => String(n || '').split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
+// Nombre sin tratamiento delante («Dr. Gonzalo Serrano» → Gonzalo, iniciales GS)
+const TRATAMIENTO = /^(dr|dra|d|dña|dª|sr|sra|srta|prof|profa|lic|ldo|lda)\.?$/i;
+const partesNombre = n => { const p = String(n || '').trim().split(/\s+/); while (p.length > 1 && TRATAMIENTO.test(p[0])) p.shift(); return p; };
+const nombrePila = n => partesNombre(n)[0] || '';
+const iniciales = n => partesNombre(n).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
 const num = n => Number(n || 0).toLocaleString('es');
 
 /* ---------------- acceso ---------------- */
@@ -374,6 +378,7 @@ async function abrirFicha(id, ...r) {
     await fichaAvisoHorario(id);
     await fichaMaterialVisitas(id);
     await fichaUnidades(id);
+    await fichaClientes(id);
     // v2.96.0: si no hay ventas que enseñar (o no hay permiso para verlas), la sección no aparece
     if ($('fventas') && !$('fventasc').children.length) $('fventas').remove();
   } finally { clearTimeout(limite); requestAnimationFrame(() => d.classList.remove('cargando')); }
@@ -443,16 +448,48 @@ async function fichaUnidades(id) {
   if (FICHA_ID !== id || !$('fbody') || $('fundades')) return;
   const { data: u } = await RPC_ORIG('unidades_cuenta', { p_medico: id });
   if (!u || FICHA_ID !== id || $('fundades')) return;
-  const max = Math.max(1, ...(u.meses || []).map(m => m.unidades));
   const bloque = `<div class="blk" id="fundades"><h3>Unidades pautadas</h3>
     <div class="uper">${[['Hoy', u.hoy], ['Semana', u.semana], ['Mes', u.mes], ['Trimestre', u.trimestre], ['Año', u.anio], ['Total', u.total]]
       .map(([t, v]) => `<div><b>${num(v)}</b><span>${t}</span></div>`).join('')}</div>
-    <div class="spark" title="Últimos 12 meses">${(u.meses || []).map(m => `<i style="height:${Math.round(m.unidades / max * 100)}%" title="${periodoTxt(m.mes)}: ${num(m.unidades)}"></i>`).join('')}</div>
-    <div class="sm">${u.total ? `${num(u.pautas)} pautas · última el ${fechaCorta(u.ultima)} · barras: últimos 12 meses` : 'Todavía sin pautas registradas.'}</div></div>`;
+    ${u.total ? `<div class="segs" id="fuserie" role="group" aria-label="Evolución">${UDS_SERIES.map(([k, t]) => `<button type="button" data-us="${k}" class="${k === UDS_SERIE ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
+    <div class="spark" id="fuspark">${sparkUnidades(u, UDS_SERIE)}</div>
+    <div class="sm">${u.total ? `${num(u.pautas)} pautas · última el ${fechaCorta(u.ultima)} · <span id="fusley">${leyendaUnidades(UDS_SERIE)}</span>` : 'Todavía sin pautas registradas.'}</div></div>`;
   // v2.96.0: las ventas van en su sección plegada, al final de la ficha
   const zona = $('fventasc');
   if (zona) zona.insertAdjacentHTML('afterbegin', bloque);
   else ($('fbody').querySelector('.blk:nth-of-type(2)') || $('fbody').lastElementChild).insertAdjacentHTML('beforebegin', bloque);
+  // v2.113.0: semana, mes o año (se recuerda la última elegida)
+  $('fbody').querySelectorAll('#fuserie [data-us]').forEach(b => b.onclick = () => {
+    UDS_SERIE = b.dataset.us; try { localStorage.setItem('dlc-uds-serie', UDS_SERIE); } catch (e) {}
+    $('fbody').querySelectorAll('#fuserie [data-us]').forEach(x => x.classList.toggle('on', x === b));
+    $('fuspark').innerHTML = sparkUnidades(u, UDS_SERIE); $('fusley').textContent = leyendaUnidades(UDS_SERIE);
+  });
+}
+
+// v2.113.0 · Unidades de la ficha por semana (12), mes (12) o año (5)
+const UDS_SERIES = [['semana', 'Semana'], ['mes', 'Mes'], ['anio', 'Año']];
+let UDS_SERIE = (() => { try { const v = localStorage.getItem('dlc-uds-serie'); return ['semana', 'mes', 'anio'].includes(v) ? v : 'mes'; } catch (e) { return 'mes'; } })();
+const leyendaUnidades = k => ({ semana: 'barras: últimas 12 semanas', mes: 'barras: últimos 12 meses', anio: 'barras: últimos 5 años' })[k];
+function sparkUnidades(u, k) {
+  const s = k === 'semana' ? (u.semanas || []).map(x => [x.unidades, 'Semana del ' + fechaCorta(x.semana), fechaCorta(x.semana)])
+    : k === 'anio' ? (u.anios || []).map(x => [x.unidades, x.anio, x.anio])
+    : (u.meses || []).map(x => [x.unidades, periodoTxt(x.mes), periodoTxt(x.mes)]);
+  const max = Math.max(1, ...s.map(x => x[0]));
+  // v2.118.0: barra vacía como línea de base, la del periodo actual resaltada y las fechas de los extremos debajo
+  // (las fechas van como atributo de la primera y la última barra: el gráfico solo tiene barras)
+  return s.map(([n, t, c], i) => `<i class="${n ? '' : 'cero'}${i === s.length - 1 ? ' actual' : ''}" style="height:${Math.round(n / max * 100)}%" title="${esc(t)}: ${num(n)}"${i === 0 ? ` data-ini="${esc(c)}"` : ''}${i === s.length - 1 ? ` data-fin="${esc(c)}"` : ''}></i>`).join('');
+}
+
+// v2.113.0 · Ficha · Cuántos clientes tiene (vinculados o que han comprado con ella). Solo números: también lo ve el comercial
+async function fichaClientes(id) {
+  if (FICHA_ID !== id || !$('fventasc') || $('fclientes')) return;
+  const { data: c } = await RPC_ORIG('clientes_de_cuenta', { p_cuenta: id });
+  if (!c || !c.ok || FICHA_ID !== id || !$('fventasc') || $('fclientes')) return;
+  const bloque = `<div class="blk" id="fclientes"><h3>${TT('paciente', 'p', '', 'l', 'C')} asociados</h3>
+    <div class="uper">${[['Asociados', c.total], ['Con pedidos', c.con_pedido], ['Sin pedidos', c.sin_pedido]].map(([t, v]) => `<div><b>${num(v)}</b><span>${t}</span></div>`).join('')}</div>
+    ${c.total ? '' : `<div class="sm">Todavía no tiene ${TT('paciente', 'p', '', 'l', 'l')} asociados.</div>`}</div>`;
+  const u = $('fundades');
+  if (u) u.insertAdjacentHTML('afterend', bloque); else $('fventasc').insertAdjacentHTML('afterbegin', bloque);
 }
 
 // Ficha · Acceso del médico a la plataforma (administración)
@@ -521,7 +558,7 @@ async function pintarFichaBase(id) {
         ${puedeRegistrar() ? `<button class="btn sec" data-editv='${esc(JSON.stringify(v))}' style="min-height:30px;padding:5px 9px;font-size:12.5px">Editar</button>` : ''}
       </div>`).join('') : `<div class="sm">Todavía no hay ${TT('visita', 'p', '', 'l', 'l', 'registrado')}.</div>`}</div>
     <div id="fzcampos"></div>
-    <details class="blk fventas" id="fventas"><summary>Ventas y ${TT('paciente', 'p', '', 'l', 'l')}</summary><div id="fventasc"></div></details>`;
+    <section class="blk fventas" id="fventas"><h3>Ventas y ${TT('paciente', 'p', '', 'l', 'l')}</h3><div id="fventasc"></div></section>`;
   $('fx').onclick = () => $('ficha').close();
   $('fbody').querySelectorAll('[data-editv]').forEach(b => b.onclick = () => editarVisita(JSON.parse(b.dataset.editv), id));
 }
@@ -1756,7 +1793,7 @@ function pintarUsuarioBase(id) {
 
 /* Nuevo usuario: la ventana base, el límite del plan y el alta de médicos, y el resumen al crear (antes eran 3 capas). */
 function nuevoUsuario(pre) {
-  const act = planDe(PLAN_ACTUAL.plan), maxU = act.incluidos + (+PLAN_ACTUAL.bloques_extra || 0) * act.bloque[0];
+  const act = planDe(PLAN_ACTUAL.plan), maxU = usuariosContratados();
   const activos = (USUARIOS || []).filter(u => u.activo && !rolPuede(u.rol, 'portal_prescriptor')).length;
   nuevoUsuarioBase();
   nuevoUsuarioPlanYMedico(pre, act, maxU, activos);
@@ -1804,7 +1841,7 @@ function nuevoUsuarioResumen(pre) {
     const vinc = ($('nmsg').textContent.match(/Vinculado a (.+)\./) || [])[1];
     delete $('dlg').dataset.sucio;
     const url = location.origin + location.pathname;
-    const texto = `Hola ${datos.nombre.split(' ')[0]}, ya tienes acceso a ${nombreApp()}.\nEntra en ${url}\nUsuario: ${datos.email}\nContraseña temporal: ${datos.pass}\nCámbiala al entrar (Configuración → Mi perfil).`;
+    const texto = `Hola ${nombrePila(datos.nombre)}, ya tienes acceso a ${nombreApp()}.\nEntra en ${url}\nUsuario: ${datos.email}\nContraseña temporal: ${datos.pass}\nCámbiala al entrar (Configuración → Mi perfil).`;
     $('dbody').innerHTML = `<div class="fh"><div><h2>✓ Usuario creado</h2><div class="sm">Pásale estos datos para que entre</div></div><button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <div class="usrok"><div><span>Nombre</span><b>${esc(datos.nombre)}</b></div><div><span>Rol</span><b>${esc(datos.rol)}</b></div>
         <div><span>Usuario</span><b>${esc(datos.email)}</b></div><div><span>Contraseña temporal</span><b class="mono">${esc(datos.pass)}</b></div>
@@ -4489,11 +4526,11 @@ function mostrarApp(perfil) {
   $('login').classList.add('hide');
   $('app').classList.remove('hide');
   $('av').textContent = iniciales(p.nombre);
-  $('uname').textContent = String(p.nombre).split(' ')[0];
+  $('uname').textContent = nombrePila(p.nombre);
   $('umnom').textContent = p.nombre;
   $('umrol').textContent = p.rol + ' · ' + p.email;
   const h = new Date().getHours();
-  $('hola').textContent = (h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches') + ', ' + String(p.nombre).split(' ')[0];
+  $('hola').textContent = (h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches') + ', ' + nombrePila(p.nombre);
   $('hoyfecha').textContent = fechaLarga(new Date()).replace(/^./, c => c.toUpperCase());
   $('nuevoBtn').classList.toggle('hide', !puedeCrear());
   $('dupBtn').classList.toggle('hide', !puede('administrar'));
@@ -4588,9 +4625,14 @@ async function arrancar() {
   if (error && error.code !== 'PGRST116' && guardado) { perfil = guardado; error = null; }
   marca('perfil recibido');
   if (error || !perfil || !perfil.activo) {
+    // v2.117.0: si su empresa está bloqueada (prueba terminada o desactivada), se dice eso
+    const { data: acc } = await Promise.resolve(RPC_ORIG('acceso_organizacion', {})).catch(() => ({ data: null }));
     localStorage.removeItem(PKEY);
     await db.auth.signOut();
-    mostrarLogin(perfil && !perfil.activo ? 'Tu usuario está desactivado.'
+    mostrarLogin(acc && acc.bloqueada ? (acc.motivo === 'prueba_terminada'
+        ? `La prueba de ${acc.organizacion} terminó el ${fechaCorta(acc.prueba_hasta)}. Tus datos se conservan: escríbenos para seguir.`
+        : `${acc.organizacion} está desactivada. Tus datos se conservan: escríbenos para volver a activarla.`)
+      : perfil && !perfil.activo ? 'Tu usuario está desactivado.'
       : 'Tu usuario no tiene perfil en la plataforma. Avisa a administración.');
     return;
   }
@@ -4836,13 +4878,17 @@ async function editorPedido(pedido) {
     servicio_id: ped ? (ped.envio ? (ped.servicio_id || ((SERVICIOS[0] || {}).id) || '') : '') : ((SERVICIOS.find(x => x.por_defecto && x.activo) || {}).id || ''),
     envio: ped ? !!ped.envio : !!SERVICIOS.find(x => x.por_defecto && x.activo),
     envio_iva: ped && ped.envio ? +ped.envio_iva : +((SERVICIOS.find(x => x.por_defecto && x.activo) || {}).iva ?? 21),
-    envio_con: ped && ped.envio ? r2(+ped.envio_base * (1 + (+ped.envio_iva || 0) / 100)) : +((SERVICIOS.find(x => x.por_defecto && x.activo) || {}).pvp || 0) };
+    envio_con: ped && ped.envio ? r2(+ped.envio_base * (1 + (+ped.envio_iva || 0) / 100)) : +((SERVICIOS.find(x => x.por_defecto && x.activo) || {}).pvp || 0),
+    // v2.115.0: origen (web o no) y referencia del pago
+    origen: ped && ped.origen === 'web' ? 'web' : 'manual', pago_referencia: ped ? ped.pago_referencia || '' : '' };
+  const justifs = [];   // v2.115.0: justificantes elegidos, se suben al guardar
   const leerForm = () => {
     if (!$('pfecha')) return;
     Object.assign(form, { fecha: $('pfecha').value, canal: $('pcan').value, forma_pago: $('ppago').value,
       descuento: $('pdto').value, descuento_tipo: $('pdtot').value, nota: $('pnota').value,
       envio: $('penv').checked, envio_con: +$('penvi').value || 0, envio_iva: +$('penvv').value || 0, servicio_id: $('pserv').value,
-      cuenta_texto: $('pselmed') ? ($('pselmed').__texto || '') : form.cuenta_texto });
+      cuenta_texto: $('pselmed') ? ($('pselmed').__texto || '') : form.cuenta_texto,
+      origen: $('porig') ? $('porig').value : form.origen, pago_referencia: $('pref') ? $('pref').value : form.pago_referencia });
   };
 
   const pinta = () => {
@@ -4857,6 +4903,9 @@ async function editorPedido(pedido) {
           <option value="paciente" ${form.canal !== 'centro' ? 'selected' : ''}>Recomendación a ${TT('paciente', 's', '', 'l', 'l')}</option>
           <option value="centro" ${form.canal === 'centro' ? 'selected' : ''}>Venta a centro (con descuento)</option></select></div>
       </div>
+      <div class="g2"><div><label for="porig">Origen</label><select id="porig">
+          <option value="manual">Comercial, teléfono o correo</option>
+          <option value="web" ${form.origen === 'web' ? 'selected' : ''}>Pedido por la web</option></select></div><div></div></div>
       <div id="zonapac" class="${form.canal === 'centro' ? 'hide' : ''}">
         <label>${TT('paciente', 's', '', 'l', 'C')}</label><div id="pselpac"></div>
         <label>${TT('medico', 's', '', 'l', 'C')} que lo recomienda</label><div id="pselmed"></div>
@@ -4880,6 +4929,11 @@ async function editorPedido(pedido) {
           <div style="display:flex;gap:6px"><input id="pdto" type="number" min="0" step="0.01" value="${esc(form.descuento)}">
             <select id="pdtot" style="max-width:110px"><option value="porcentaje">%</option>
               <option value="importe" ${form.descuento_tipo === 'importe' ? 'selected' : ''}>€</option></select></div></div>
+      </div>
+      <div id="ppagox" class="g2 ${form.forma_pago ? '' : 'hide'}">
+        <div><label for="pref">Referencia del pago</label><input id="pref" value="${esc(form.pago_referencia)}" placeholder="Código de la transferencia, bizum…"></div>
+        <div><label>Justificante (foto o PDF)</label><label class="btn sec" style="display:inline-flex">📎 Adjuntar<input id="pjus" type="file" accept="image/*,application/pdf" data-fp="1" hidden></label>
+          <div class="sm" id="pjusl">${justifs.map((j, i) => `<span class="jusp">📎 ${esc(j.nombre)} <button type="button" class="lnk" data-jx="${i}" aria-label="Quitar ${esc(j.nombre)}">quitar</button></span>`).join(' ')}</div></div>
       </div>
       <div class="envbox">
         <label for="pserv" style="margin-top:0">Servicio</label>
@@ -4925,6 +4979,13 @@ async function editorPedido(pedido) {
     $('plmas').onclick = () => { lineas.push({ producto_id: productoPorDefecto(), unidades: 1, descuento: 0 }); autoImporte(lineas[lineas.length - 1]); pinta(); };
     $('plineas').querySelectorAll('[data-lx]').forEach(b => b.onclick = () => { lineas.splice(+b.dataset.lx, 1); pinta(); });
     $('pcan').onchange = () => $('zonapac').classList.toggle('hide', $('pcan').value === 'centro');
+    $('ppago').onchange = () => $('ppagox').classList.toggle('hide', !$('ppago').value);
+    $('pjus').onchange = async e => {
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+      const j = await leerJustificante(f); if (!j) return;
+      justifs.push(j); pinta();
+    };
+    $('dbody').querySelectorAll('[data-jx]').forEach(b => b.onclick = () => { justifs.splice(+b.dataset.jx, 1); pinta(); });
     ['pdto', 'pdtot', 'penv', 'penvi', 'penvv'].forEach(id => $(id).oninput = $(id).onchange = desglose);
     $('pserv').onchange = () => {
       const sv = SERVICIOS.find(x => x.id === $('pserv').value);
@@ -4956,7 +5017,7 @@ async function editorPedido(pedido) {
         fecha: $('pfecha').value, canal: $('pcan').value,
         cuenta_id: medico ? medico.id : null, cuenta_texto: medico ? '' : ($('pselmed').__texto || '').trim(),
         contacto_id: contacto ? contacto.id : null, nota: $('pnota').value.trim(),
-        forma_pago: $('ppago').value || null,
+        forma_pago: $('ppago').value || null, origen: $('porig').value, pago_referencia: $('ppago').value ? $('pref').value.trim() : '',
         descuento: +$('pdto').value || 0, descuento_tipo: $('pdtot').value,
         envio: $('penv').checked, envio_con_iva: +$('penvi').value || 0, envio_iva: +$('penvv').value || 0, servicio_id: $('pserv').value || null,
         lineas: lineas.filter(l => l.producto_id).map(l => ({ producto_id: l.producto_id, unidades: l.unidades || 1,
@@ -4970,6 +5031,7 @@ async function editorPedido(pedido) {
         return;
       }
       if (cps && !(await camposGuardar(cps, (r && r.id) || (ped && ped.id)))) return;
+      if (justifs.length && !(await subirJustificantes((r && r.id) || (ped && ped.id), justifs))) return;
       $('dlg').close();
       toast(estado === 'Borrador' ? 'Borrador guardado' : (medico ? 'Pedido validado y atribuido' : 'Pedido validado · pendiente de atribuir'));
       if (TAB === 'ventas') cargarVentas();
@@ -5008,6 +5070,7 @@ async function verPedido(id) {
     await verPedidoBase(id);
     await pedidoFacturas(id);
     await pedidoOperativa(id);
+    await pedidoPago(id);
   });
 }
 
@@ -5585,8 +5648,10 @@ function validarDoc(v, tipo) {
 
 /* ---------------- alta y edición de paciente ---------------- */
 
-function editorContacto(c, alGuardar) {
-  c = c || {};
+function editorContacto(c, alGuardar, op) {
+  c = c || {}; op = op || {};
+  // v2.119.0: en un cliente nuevo, desplegable «Registro de llamada» (abierto si se viene de registrar una llamada)
+  const conLlamada = !c.id;
   let tipo = c.tipo || 'Persona';
   let medico = c.cuenta_id ? { id: c.cuenta_id, nombre: c.medico || `${TT('medico', 's', '', 'l', 'C', 'asignado')}`, codigo: c.medico_codigo || '' } : null;
   $('dlg2body').innerHTML = `
@@ -5620,9 +5685,11 @@ function editorContacto(c, alGuardar) {
       <div id="koempw" class="${tipo === 'Empresa' ? 'hide' : ''}"><label for="koemp">Empresa (si factura a una)</label><input id="koemp" value="${esc(c.empresa || '')}"></div>
     </div>
     <label for="konota">Nota</label><input id="konota" value="${esc(c.nota || '')}">
-    <div class="acts" style="justify-content:flex-end">
+    ${conLlamada ? llamadaAltaHTML(op.llamada) : ''}
+    <div class="acts" style="justify-content:flex-end;flex-wrap:wrap">
       <button class="btn sec" id="kocancel">Cancelar</button>
-      <button class="btn" id="kook">${c.id ? 'Guardar' : `Crear ${TT('paciente', 's', '', 'l', 'l')}`}</button></div>`;
+      <button class="btn ${conLlamada && op.llamada ? 'sec' : ''}" id="kook">${c.id ? 'Guardar' : `Crear ${TT('paciente', 's', '', 'l', 'l')}`}</button>
+      ${conLlamada && op.llamada ? '<button class="btn" id="kopedido">🛒 Crear y hacer pedido</button>' : ''}</div>`;
 
   selectorMedico($('kosel'), { valor: medico, alElegir: m => { medico = m; } });
   const revisaDoc = () => {
@@ -5642,8 +5709,10 @@ function editorContacto(c, alGuardar) {
   });
   $('kocancel').onclick = () => $('dlg2').close();
   camposInsertar($('dlg2body'), 'cliente', c.id, $('kook') && $('kook').closest('.acts'));
-  $('kook').onclick = async ev => {
+  if (conLlamada) llamadaAltaActivar(() => medico, op.llamada);
+  const crear = async (ev, conPedido) => {
     if (!$('konom').value.trim()) { toast('Escribe el nombre', true); return; }
+    const ll = conLlamada ? llamadaAltaLeer() : null;
     const cps = camposLeer($('dlg2'));
     if (cps && cps.falta.length) { toast(`Rellena «${cps.falta[0]}»`, true); return; }
     const doc = revisaDoc();
@@ -5656,13 +5725,40 @@ function editorContacto(c, alGuardar) {
       email: $('komail').value.trim(), empresa: tipo === 'Empresa' ? '' : $('koemp').value.trim(), nota: $('konota').value.trim(),
       cuenta_id: medico ? medico.id : null
     }});
-    ev.target.disabled = false; ev.target.textContent = c.id ? 'Guardar' : `Crear ${TT('paciente', 's', '', 'l', 'l')}`;
+    ev.target.disabled = false; ev.target.textContent = c.id ? 'Guardar' : conPedido ? '🛒 Crear y hacer pedido' : `Crear ${TT('paciente', 's', '', 'l', 'l')}`;
     if (error || (r && r.ok === false)) { toast('No se ha podido guardar', true); return; }
     if (cps && !(await camposGuardar(cps, (r && r.contacto && r.contacto.id) || c.id))) return;
     $('dlg2').close(); toast(c.id ? `${TT('paciente', 's', '', 'l', 'C', 'guardado')}` : `${TT('paciente', 's', '', 'l', 'C', 'creado')}`);
     const res = Object.assign({}, r.contacto, medico ? { medico: medico.nombre, medico_codigo: medico.codigo } : {});
+    // v2.119.0: la llamada queda registrada con el cliente recién creado (si se ha apuntado algo o se viene de una llamada)
+    let lid = null;
+    if (ll && (conPedido || ll.motivo || ll.resultado || ll.nota || op.llamada)) lid = await llamadaAltaGuardar(ll, { contacto_id: res.id, nombre: res.nombre,
+      telefono: res.movil || res.telefono || '', medico, resultado: conPedido ? (ll.resultado || 'Pedido hecho') : ll.resultado }, op.llamada);
+    if (conPedido) {
+      if (lid) LLAMADA_PEND = lid;
+      await editorPedido({ contacto: res, medico: medico ? { id: medico.id, nombre: medico.nombre } : null });
+      return;
+    }
     if (alGuardar) alGuardar(res);
     if (TAB === 'pacientes') listaPacientes();
+    if (lid && TAB === 'ventas' && PEDSEC === 'llamadas') pintarLlamadas();
+  };
+  $('kook').onclick = ev => crear(ev, false);
+  if ($('kopedido')) $('kopedido').onclick = ev => crear(ev, true);
+  // «No compra»: solo la llamada, sin crear el cliente, con lo apuntado de él
+  if ($('kosolo')) $('kosolo').onclick = async ev => {
+    const ll = llamadaAltaLeer();
+    const nombre = $('konom').value.trim(), telefono = $('komov').value.trim() || $('kotel').value.trim();
+    if (!nombre && !telefono) { toast('Apunta al menos su nombre o su teléfono', true); return; }
+    ev.target.disabled = true;
+    const datos = { tipo, nif: $('konif').value.trim(), email: $('komail').value.trim(), direccion: $('kodir').value.trim(), cp: $('kocp').value.trim(),
+      municipio: $('komun').value.trim(), provincia: $('kopro').value.trim(), empresa: $('koemp').value.trim(), nota: $('konota').value.trim() };
+    Object.keys(datos).forEach(k => { if (!datos[k]) delete datos[k]; });
+    const lid = await llamadaAltaGuardar(ll, { contacto_id: null, nombre, telefono, medico, resultado: ll.resultado, datos }, op.llamada);
+    ev.target.disabled = false;
+    if (!lid) return;
+    $('dlg2').close(); toast('Llamada registrada (sin crear cliente)');
+    if (TAB === 'ventas' && PEDSEC === 'llamadas') pintarLlamadas();
   };
   $('dlg2').showModal();
 }
@@ -5707,7 +5803,7 @@ function celda(m, k) {
   if (k.startsWith('cp:')) { const cl = k.slice(3); return `<span class="sm">${esc(campoTexto((CAMPOS.medico || []).find(x => x.clave === cl), (m.clasificadores || {})[cl]))}</span>`; }
   if (k === 'comerciales') {
     const c = m.comerciales || [];
-    return `<span class="comchips">${c.length ? c.map(x => `<span>${esc(String(x.nombre).split(' ')[0])}</span>`).join('') : '<span class="sin">Sin asignar</span>'}</span>`;
+    return `<span class="comchips">${c.length ? c.map(x => `<span>${esc(nombrePila(x.nombre))}</span>`).join('') : '<span class="sin">Sin asignar</span>'}</span>`;
   }
   return `<span class="sm">${esc(m[k] || '')}</span>`;
 }
@@ -5801,7 +5897,7 @@ async function asignarCartera(id) {
     $('alista').innerHTML = `<div class="carsel">${f.map(m => `<label class="item" style="cursor:pointer;margin:0">
         <input type="checkbox" data-am="${m.id}" ${fuera.has(m.id) ? '' : 'checked'}>
         <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${esc([m.especialidad, m.centro_nombre, m.municipio].filter(Boolean).join(' · '))}</span></span>
-        <span class="comchips">${(m.comerciales || []).map(x => `<span>${esc(String(x.nombre).split(' ')[0])}</span>`).join('') || '<span class="sin">Sin asignar</span>'}</span>
+        <span class="comchips">${(m.comerciales || []).map(x => `<span>${esc(nombrePila(x.nombre))}</span>`).join('') || '<span class="sin">Sin asignar</span>'}</span>
       </label>`).join('') || `<div class="vacio">${TT('medico', 's', 'ningun', 'C', 'l')} con estos filtros.</div>`}</div><div id="apag"></div>`;
     $('alista').querySelectorAll('[data-am]').forEach(c => c.onchange = () => { if (c.checked) fuera.delete(c.dataset.am); else fuera.add(c.dataset.am); cuenta(); });
     $('apag').innerHTML = total > 50 ? pagHTML(total, pagina, 50).replace(/<span class="ptam">[\s\S]*?<\/span><\/div>$/, '</div>') : '';
@@ -7822,7 +7918,8 @@ function pintarBnav() {
 
 const SKEY = 'dlc-suplantador';
 const suplantando = () => { try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch (e) { return null; } };
-const puedeSuplantar = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).U || 0) >= 3) && !suplantando();
+// v2.117.0: «Entrar como otro usuario» es del plan A medida
+const puedeSuplantar = () => PERFIL && (puede('administrar') || ((PERFIL.areas || {}).U || 0) >= 3) && !suplantando() && PLAN_ACTUAL.plan === 'medida';
 
 function limpiarDatosLocales() {
   try { Object.keys(localStorage).filter(k => /^dlc-(rc-|perfil|jornada-)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
@@ -7831,7 +7928,7 @@ function limpiarDatosLocales() {
 async function entrarComo(id) {
   const u = (USUARIOS || []).find(x => x.id === id) || { nombre: 'esta persona' };
   if (!await preguntar(`Verás la plataforma exactamente como ${u.nombre}: su menú, sus permisos, su cartera y sus datos.\n\nLo que hagas quedará a su nombre, y la entrada queda anotada en la auditoría. Para volver, pulsa «Volver a mi sesión» en la barra morada.`,
-    { titulo: `¿Entrar como ${u.nombre}?`, ok: 'Entrar como ' + String(u.nombre).split(' ')[0] })) return;
+    { titulo: `¿Entrar como ${u.nombre}?`, ok: 'Entrar como ' + nombrePila(u.nombre) })) return;
   pantallaCarga('Entrando como ' + u.nombre + '…');
   const { data: { session } } = await db.auth.getSession();
   if (!session) return;
@@ -7871,7 +7968,7 @@ function pintarBarraSuplantacion() {
   if (!s) { if (b) b.remove(); return; }
   if (!b) { document.body.insertAdjacentHTML('afterbegin', '<div id="barrasup"></div>'); b = $('barrasup'); }
   b.innerHTML = `<span>👤 <b>Estás dentro como ${esc(PERFIL ? PERFIL.nombre : s.como)}</b>${PERFIL ? ' · ' + esc(PERFIL.rol) : ''} · Ves lo mismo que esa persona y lo que hagas queda a su nombre</span>
-    <button class="btn" id="supvolver">↩ Volver a mi sesión (${esc(String(s.nombre).split(' ')[0])})</button>`;
+    <button class="btn" id="supvolver">↩ Volver a mi sesión (${esc(nombrePila(s.nombre))})</button>`;
   $('supvolver').onclick = volverAMiSesion;
 }
 
@@ -8171,7 +8268,7 @@ const quitarCarga = () => { const o = $('cargatotal'); if (o) o.classList.add('h
 
 volverAMiSesion = (orig => async function () {
   const s = suplantando();
-  pantallaCarga('Volviendo a tu sesión' + (s ? ', ' + String(s.nombre).split(' ')[0] : '') + '…');
+  pantallaCarga('Volviendo a tu sesión' + (s ? ', ' + nombrePila(s.nombre) : '') + '…');
   await orig();
 })(volverAMiSesion);
 
@@ -9416,7 +9513,7 @@ const opHecho = (p, k) => k === 'pago' ? p.pago_estado === 'Cobrado' : !!p[OPS.f
 
 function textoEmailPago(p, total, cliente) {
   const e = AJUSTES.empresa || {};
-  return `Hola${cliente ? ' ' + String(cliente).split(' ')[0] : ''}:\n\nGracias por tu pedido${p.numero ? ' ' + p.numero : ''}. Para completarlo, haz una transferencia con estos datos:\n\n` +
+  return `Hola${cliente ? ' ' + nombrePila(cliente) : ''}:\n\nGracias por tu pedido${p.numero ? ' ' + p.numero : ''}. Para completarlo, haz una transferencia con estos datos:\n\n` +
     `Importe: ${eurI(total || 0)}\nBeneficiario: ${e.razon_social || nombreApp()}\nIBAN: ${e.iban || '(añade el IBAN en Facturación → Datos fiscales)'}\nConcepto: ${p.numero || 'Pedido'} ${cliente || ''}\n\n` +
     `En cuanto recibamos el pago preparamos el envío.\n\nUn saludo,\n${e.razon_social || nombreApp()}${e.telefono ? '\n' + e.telefono : ''}`;
 }
@@ -9545,8 +9642,15 @@ async function listaPedidos() {
       <option value="">Todo</option><option value="pago">Pago por validar</option><option value="paquete">Paquete por preparar</option><option value="email">Factura por enviar</option></select></div>`);
     $('popf').onchange = () => { PEDPAG = 0; listaPedidos(); };
   }
+  // v2.115.0: origen del pedido (web o el resto)
+  if (!$('porigf') && $('popf')) {
+    $('popf').closest('div').insertAdjacentHTML('afterend', `<div><label for="porigf">Origen</label><select id="porigf">
+      <option value="">Todos</option><option value="web">Por la web</option><option value="otros">Comercial, teléfono o correo</option></select></div>`);
+    $('porigf').onchange = () => { PEDPAG = 0; listaPedidos(); };
+  }
   const params = { p_desde: r.desde, p_hasta: r.hasta, p_canal: $('pcanal').value || null, q: ($('pq') && $('pq').value.trim()) || null,
     p_estado: $('pestado').value || null, p_operativa: ($('popf') && $('popf').value) || null, lim: tamPagina(), desplaz: PEDPAG * tamPagina(),
+    ...(($('porigf') && $('porigf').value) ? { p_origen: $('porigf').value } : {}),
     ...(Object.keys(PEDF).length ? { f_campos: PEDF } : {}) };
   const clave = 'pedidos-' + JSON.stringify(params);
   if (!$('pedlista').querySelector('.dgrid')) cargando($('pedlista'), 'Cargando pedidos…');
@@ -9558,6 +9662,7 @@ async function listaPedidos() {
   $('ptotales').innerHTML = `
     <div class="kpi"><b>${num(s.pedidos || 0)}</b><span>Pedidos validados${s.borradores ? ` · ${s.borradores} en borrador` : ''}</span></div>
     <div class="kpi"><b>${num(s.unidades || 0)}</b><span>Unidades</span></div>
+    ${s.web_pedidos != null ? `<div class="kpi" id="pkweb"><b>${num(s.web_pedidos || 0)}</b><span>Por la web${imp && s.web_base != null ? ` · ${eurI(s.web_base || 0)} sin IVA` : ''}</span></div>` : ''}
     ${imp ? `<div class="kpi"><b>${eurI(s.base || 0)}</b><span>Base sin IVA</span></div>
     <div class="kpi"><b>${eurI(s.iva || 0)}</b><span>IVA</span></div>
     <div class="kpi ok"><b>${eurI(s.total || 0)}</b><span>Total con IVA</span></div>` : ''}`;
@@ -9569,7 +9674,7 @@ async function listaPedidos() {
       <span class="num">Uds.</span>${imp ? '<span class="num">Base</span><span class="num">Total</span>' : ''}<span>Estado</span><span>Operativa</span>${clasCabeceras(cpCols)}</div>
     ${PEDIDOS.map(p => `<button class="dr" data-ped="${p.id}" style="${p.estado === 'Anulado' ? 'opacity:.55' : ''}">
       <span>${fechaCorta(p.fecha)}${p.factura || p.numero ? `<span class="sm">${esc(p.factura || p.numero)}</span>` : ''}</span>
-      <span><b>${esc(p.contacto || p.centro || p.cuenta_texto || '—')}</b><span class="sm">${p.canal === 'centro' ? 'Venta a centro' : 'Recomendación'}${p.forma_pago ? ' · ' + esc(p.forma_pago) : ''}</span></span>
+      <span><b>${esc(p.contacto || p.centro || p.cuenta_texto || '—')}</b><span class="sm">${p.canal === 'centro' ? 'Venta a centro' : 'Recomendación'}${p.origen === 'web' ? ' · <span class="pweb">Web</span>' : ''}${p.forma_pago ? ' · ' + esc(p.forma_pago) : ''}${p.justificante ? ' · <span title="Con justificante de pago">📎</span>' : ''}</span></span>
       <span class="corta">${p.medico ? esc(p.medico) : '<span class="vac">Sin atribuir</span>'}</span>
       <span>${p.comercial ? esc(p.comercial) : '<span class="vac">—</span>'}</span>
       <span class="sm corta">${esc(p.productos || '')}</span><span class="num">${num(p.unidades)}</span>
@@ -9709,7 +9814,7 @@ async function descargarFacturaPDF(f, rn) {
 async function enviarFacturaEmail(f, rn) {
   await cargarAjustes();
   const e = AJUSTES.empresa || {}, c = f.cliente || {};
-  const saludo = c.nombre ? String(c.nombre).split(' ')[0] : '';
+  const saludo = c.nombre ? nombrePila(c.nombre) : '';
   $('dlg2body').innerHTML = `
     <div class="fh"><div><h2>Enviar ${esc(f.numero)} por email</h2><div class="sm">La factura va adjunta en PDF</div></div>
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
@@ -10577,10 +10682,10 @@ async function editorLlamada(l, previa) {
   const pintaCli = () => {
     const c = $('llcli');
     if (nuevo) {
-      c.innerHTML = `<div class="g2"><div><input id="lcn" placeholder="Nombre y apellidos" value="${esc(l.nombre || '')}"></div>
-        <div><input id="lct" placeholder="Teléfono" inputmode="tel" value="${esc(l.telefono || '')}"></div></div>
-        <div class="g2"><div><input id="lce" type="email" placeholder="Email (para la factura)"></div><div><input id="lcd" placeholder="DNI (opcional)"></div></div>
-        <div class="sm">Si hace el pedido, se da de alta como cliente con su ${TT('medico', 's', '', 'l', 'l')}.</div>`;
+      // v2.119.0: un cliente nuevo se rellena siempre en su ficha completa (antes, cuatro campos y un cliente a medias)
+      c.innerHTML = `<button type="button" class="btn" id="llalta">Rellenar los datos del cliente nuevo</button>
+        <div class="sm" style="margin-top:6px">Se abre su ficha completa con esta llamada: si compra, queda dado de alta con todos sus datos; si no, se guarda solo la llamada con lo apuntado.</div>`;
+      $('llalta').onclick = () => aAltaCompleta();
     } else if (cliente) {
       c.innerHTML = `<div class="clisel"><span><b>${esc(cliente.nombre)}</b><span class="sm">${esc(cliente.tel || cliente.telefono || '')}</span></span><button type="button" class="btn sec" id="lccambia">Cambiar</button></div>`;
       $('lccambia').onclick = () => { cliente = null; pintaCli(); };
@@ -10613,7 +10718,16 @@ async function editorLlamada(l, previa) {
     $('llres').querySelectorAll('[data-lr]').forEach(x => x.classList.toggle('on', x.dataset.lr === resultado));
     $('llseg').classList.toggle('hide', !resultado || resultado === 'Pedido hecho');
   };
+  // Pasa a la ficha completa del cliente nuevo con lo ya marcado en la llamada
+  const aAltaCompleta = () => {
+    const est = { motivo, resultado, nota: $('llno').value.trim(), direccion: $('lld').value, fecha: $('llf').value ? new Date($('llf').value).toISOString() : null,
+      proxima_fecha: $('llpf') ? $('llpf').value : '', proxima_accion: $('llpa') ? $('llpa').value.trim() : '', previa: previa ? previa.id : null, id: l.id || null,
+      cuenta_texto: medico ? '' : ($('llmed').__texto || '').trim() };
+    $('dlg').close();
+    editorContacto(medico ? { cuenta_id: medico.id, medico: medico.nombre } : {}, null, { llamada: est });
+  };
   const guardar = async conPedido => {
+    if (conPedido && nuevo) { aAltaCompleta(); return null; }
     const datosNuevo = nuevo && $('lcn') ? { nombre: $('lcn').value.trim(), telefono: $('lct').value.trim(), email: $('lce').value.trim(), nif: $('lcd').value.trim() } : null;
     if (conPedido && !cliente && !(datosNuevo && datosNuevo.nombre)) { toast('Indica el cliente: búscalo o escribe su nombre', true); return null; }
     const { data: r, error } = await db.rpc('guardar_llamada', { p: { id: l.id || null, fecha: $('llf').value ? new Date($('llf').value).toISOString() : null,
@@ -11070,7 +11184,7 @@ const PLANES = [
     modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
     ventajas: ['Todo lo de Avanzado', `Espacio ${TT('medico', 's', 'del', 'l', 'l')} sin límite`, 'Entrar como otro usuario y auditoría completa', 'Puesta en marcha y migración de datos incluidas', 'Soporte prioritario'] }
 ];
-let PLAN_ACTUAL = { plan: 'premium' };
+let PLAN_ACTUAL = { plan: 'medida' };   // v2.117.0: hasta que llega el de la base, el completo
 const planDe = id => PLANES.find(p => p.id === id) || PLANES[3];
 const planIncluye = mod => !(mod in MODULO_AREA) || planDe(PLAN_ACTUAL.plan).modulos.includes(mod);
 const planMinimo = mod => PLANES.find(p => p.modulos.includes(mod));
@@ -11082,7 +11196,7 @@ function avisoPlan(mod) {
   const p = planMinimo(mod), n = (document.querySelector(`nav.main [data-t="${mod}"]`) || {}).textContent || mod;
   $('dbody').innerHTML = `<div class="fh"><div><h2>🔒 ${esc(n.replace('🔒', '').trim())}</h2><div class="sm">No está incluido en tu plan ${esc(planDe(PLAN_ACTUAL.plan).nombre)}</div></div>
     <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
-    <p>Está disponible desde el plan <b>${esc(p ? p.nombre : 'Premium')}</b>${p ? ` (${eurI(p.precio)}/mes, ${p.incluidos} usuarios incluidos)` : ''}.</p>
+    <p>Está disponible desde el plan <b>${esc(p ? p.nombre : 'A medida')}</b>${p ? ` (${precioPlan(p)})` : ''}.</p>
     ${p ? `<ul class="manlist">${p.ventajas.map(v => `<li><span>✓</span><span>${esc(v)}</span></li>`).join('')}</ul>` : ''}
     <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Ahora no</button>${puede('administrar') ? '<button class="btn" id="vplan">Ver planes</button>' : ''}</div>`;
   $('dlg').showModal();
@@ -11132,7 +11246,7 @@ let USR_F = { q: '', rol: '', est: 'activos' };
 async function pintarUsuarios2() {
   const { data } = await RPC_ORIG('usuarios_resumen', {});
   const todos = data || []; USUARIOS = todos.map(u => Object.assign({ medicos: u.cartera, visitas: u.visitas_mes }, u));
-  const act = planDe(PLAN_ACTUAL.plan), maxU = act.incluidos + (+PLAN_ACTUAL.bloques_extra || 0) * act.bloque[0];
+  const act = planDe(PLAN_ACTUAL.plan), maxU = usuariosContratados();
   const activos = todos.filter(u => u.activo && !rolPuede(u.rol, 'portal_prescriptor'));
   const hace30 = Date.now() - 30 * 864e5;
   const inactivos = activos.filter(u => !u.ultima_actividad || new Date(u.ultima_actividad).getTime() < hace30).length;
@@ -11372,7 +11486,7 @@ function pintarPerfilPaso2() {
       const [a, b] = await Promise.all([db.rpc('guardar_preferencias', { p: prefs }), db.from('perfiles').update({ nombre }).eq('id', PERFIL.id)]);
       if (a.error) { toast('No se ha podido guardar', true); return; }
       PERFIL.preferencias = a.data || prefs;
-      if (!b.error) { PERFIL.nombre = nombre; $('uname').textContent = nombre.split(' ')[0]; $('av').textContent = iniciales(nombre); }
+      if (!b.error) { PERFIL.nombre = nombre; $('uname').textContent = nombrePila(nombre); $('av').textContent = iniciales(nombre); }
       toast('Datos guardados');
     };
   }
@@ -11417,7 +11531,7 @@ function pintarPerfilBase() {
     const prefs = Object.assign({}, pr, { telefono: $('pft').value.trim(), inicio: $('pfi').value });
     const [a, b] = await Promise.all([db.rpc('guardar_preferencias', { p: prefs }), db.from('perfiles').update({ nombre }).eq('id', PERFIL.id)]);
     if (a.error) { toast('No se ha podido guardar', true); return; }
-    PERFIL.preferencias = a.data || prefs; if (!b.error) { PERFIL.nombre = nombre; $('uname').textContent = nombre.split(' ')[0]; $('av').textContent = iniciales(nombre); }
+    PERFIL.preferencias = a.data || prefs; if (!b.error) { PERFIL.nombre = nombre; $('uname').textContent = nombrePila(nombre); $('av').textContent = iniciales(nombre); }
     toast('Datos guardados');
   };
   $('pfpok').onclick = async () => {
@@ -12290,8 +12404,8 @@ async function cargarConfig() {
     // Apartado de un módulo que no incluye el plan: se explica en lugar de mostrarlo
     if (it.mod && !planIncluye(it.mod)) {
       const p = planMinimo(it.mod);
-      $('cfgcuerpo').innerHTML = `<div class="card cfgpanel planup"><div class="planupico">${svgIco(ICON_NOM.lock)}</div><h2>${esc(it.t)} está en el plan ${esc(p ? p.nombre : 'Premium')}</h2>
-        <p class="sm">Tu plan ${esc(planDe(PLAN_ACTUAL.plan).nombre)} no lo incluye. ${p ? `Con ${esc(p.nombre)} (${eurI(p.precio)}/mes) tienes:` : ''}</p>
+      $('cfgcuerpo').innerHTML = `<div class="card cfgpanel planup"><div class="planupico">${svgIco(ICON_NOM.lock)}</div><h2>${esc(it.t)} está en el plan ${esc(p ? p.nombre : 'A medida')}</h2>
+        <p class="sm">Tu plan ${esc(planDe(PLAN_ACTUAL.plan).nombre)} no lo incluye. ${p ? `Con ${esc(p.nombre)} (${precioPlan(p)}) tienes:` : ''}</p>
         ${p ? `<ul class="manlist">${p.ventajas.map(v => `<li><span>✓</span><span>${esc(v)}</span></li>`).join('')}</ul>` : ''}
         ${puede('administrar') ? '<div class="acts"><button class="btn" id="planver">Ver planes</button></div>' : ''}</div>`;
       if ($('planver')) $('planver').onclick = () => abrir('plan', null, true);
@@ -12908,6 +13022,7 @@ const PAGINAS = {
 let PAG_TAB = {};
 function cargarPagina(t) {
   const P = PAGINAS[t];
+  if (P.permiso && !P.permiso()) { ir('inicio'); return; }   // v2.121.0: páginas con su propio permiso (Organización)
   if (P.admin && !puede('administrar')) { ir('inicio'); return; }
   let sec = $('v-' + t);
   if (!sec) { document.querySelector('main').insertAdjacentHTML('beforeend', `<section id="v-${t}"></section>`); sec = $('v-' + t); }
@@ -12944,7 +13059,7 @@ document.addEventListener('click', e => {
 // Plan y suscripción: página comercial con lo que aporta cada plan y cada módulo
 const MOD_PLAN = [
   ['agenda', 'Agenda y «Tu día»', `Citas, ${TT('visita', 'p', '', 'l', 'l')} y el plan de cada jornada`], ['rutas', 'Rutas', 'Rutas optimizadas y planificación semanal'],
-  ['directorio', etiquetaContactos(), `Directorio de ${TT('medico', 'p', '', 'l', 'l')}, centros y fichas`], ['seguimiento', 'Calidad del dato', 'Duplicados y datos que faltan'],
+  ['directorio', etiquetaContactos(), `${TT('medico', 'p', '', 'l', 'C')}, centros y fichas`], ['seguimiento', 'Calidad del dato', 'Duplicados y datos que faltan'],
   ['ventas', 'Pedidos y llamadas', 'Ventas, compras, proveedores y televenta'], ['pacientes', 'Clientes', `${TT('paciente', 'p', '', 'l', 'C')} y empresas con su historial`],
   ['productos', 'Productos y stock', 'Catálogo, lotes, caducidades y almacenes'], ['analitica', 'Analítica', `Ventas, ranking de ${TT('medico', 'p', '', 'l', 'l')} y comisiones`],
   ['facturacion', 'Facturación', 'Facturas con VeriFactu, cobros y rectificativas']];
@@ -15292,10 +15407,14 @@ async function pintarOrganizaciones() {
       <div class="sm">Cada empresa trabaja aislada, con sus datos, sus usuarios, su numeración y su configuración.</div></div>
       <button class="btn" id="orgnueva">+ Nueva organización</button></div>
     ${error ? `<div class="vacio">No se han podido cargar: ${esc(error.message)}</div>` : `<div class="lista">${l.map(o => `<div class="item" style="cursor:default">
-      <span class="tx"><b>${esc(o.nombre)}</b><span class="sm">${esc(o.nif || 'Sin NIF')} · plan ${esc(o.plan || '—')} · ${num(o.usuarios)} usuarios · ${num(o.cuentas)} cuentas${o.pendiente ? ' · pendiente de registro: ' + esc(o.pendiente) : ''}</span>
+      <span class="tx"><b>${esc(o.nombre)}</b>${orgEstado(o)}<span class="sm">${esc(o.nif || 'Sin NIF')} · ${esc(orgPlanTxt(o))} · ${num(o.usuarios)} usuarios · ${num(o.cuentas)} cuentas${o.pendiente ? ' · pendiente de registro: ' + esc(o.pendiente) : ''}</span>
         <span class="sm">${(o.dominios || []).length ? 'Dominios: ' + o.dominios.map(esc).join(', ') : 'Sin dominio propio: su pantalla de acceso muestra la marca principal'}</span></span>
       <span class="acts" style="margin:0"><span class="sm">${o.creado_en ? fechaCorta(String(o.creado_en).slice(0, 10)) : ''}</span>
-        <button class="btn sec" type="button" data-orgdom="${o.id}">Dominios</button></span></div>`).join('')}</div>`}</div>`;
+        <button class="btn sec" type="button" data-orgdom="${o.id}">Dominios</button>
+        <button class="btn sec" type="button" data-orgplan="${o.id}">Plan</button>
+        <button class="btn sec" type="button" data-orgexp="${o.id}">Descargar datos</button>
+        ${!o.principal && (((o.plan_datos || {}).estado === 'prueba') || !o.activa) ? `<button class="btn sec" type="button" data-orgdel="${o.id}">Borrar empresa</button>` : ''}</span></div>`).join('')}</div>`}</div>`;
+  orgAcciones(c, l);
   // v2.103.0: los dominios de cada organización deciden la marca de su pantalla de acceso
   c.querySelectorAll('[data-orgdom]').forEach(b => b.onclick = async () => {
     const o = l.find(x => x.id === b.dataset.orgdom); if (!o) return;
@@ -15314,7 +15433,10 @@ async function pintarOrganizaciones() {
         <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
       <div class="g2"><div><label for="onom">Nombre de la empresa</label><input id="onom"></div>
         <div><label for="onif">NIF</label><input id="onif"></div>
-        <div><label for="oplan">Plan</label><select id="oplan"><option value="base">Base</option><option value="profesional" selected>Profesional</option><option value="premium">Premium</option></select></div></div>
+        <div><label for="oplan">Plan</label><select id="oplan">${PLANES.map(p => `<option value="${p.id}" ${p.id === 'empresa' ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div>
+        <div><label for="ousu">Usuarios contratados</label><input id="ousu" type="number" min="3" value="3"></div>
+        <div><label for="opago">Pago</label><select id="opago"><option value="mensual">Mensual</option><option value="anual">Anual</option></select></div>
+        <div><label class="chk"><input type="checkbox" id="oprueba" checked> Empresa de prueba (30 días)</label></div></div>
       <h3 style="margin-top:14px">Su administrador</h3>
       <div class="g2"><div><label for="oanom">Nombre</label><input id="oanom"></div>
         <div><label for="oamail">Correo</label><input id="oamail" type="email"></div>
@@ -15325,7 +15447,8 @@ async function pintarOrganizaciones() {
       const nombre = $('onom').value.trim(), email = $('oamail').value.trim(), pass = $('oapass').value, anom = $('oanom').value.trim();
       if (!nombre || !email || !anom || pass.length < 6) { toast('Completa el nombre, el administrador, su correo y la contraseña', true); return; }
       ev.target.disabled = true; ev.target.textContent = 'Creando…';
-      const { data: r, error: e1 } = await db.rpc('crear_organizacion', { p: { nombre, nif: $('onif').value.trim(), plan: $('oplan').value, email_admin: email } });
+      const { data: r, error: e1 } = await db.rpc('crear_organizacion', { p: { nombre, nif: $('onif').value.trim(), plan: $('oplan').value, usuarios: +$('ousu').value || 3, pago: $('opago').value,
+        prueba_dias: $('oprueba').checked ? 30 : 0, email_admin: email } });
       if (e1 || !r || !r.ok) {
         ev.target.disabled = false; ev.target.textContent = 'Crear organización';
         const txt = { permiso: 'No tienes permiso', nombre: 'Falta el nombre', email: 'El correo no es válido', email_existe: 'Ese correo ya tiene usuario' }[(r && r.error) || ''] || (e1 && e1.message) || '';
@@ -15722,3 +15845,429 @@ function volverTrasF5(v) {
     if (d && d.tagName === 'DIALOG') d.classList.toggle('desplazada', d.scrollTop > 4);
   }, true);
 })();
+
+// v2.114.0 · Agenda en escritorio: Día, Semana y Mes como selector segmentado y ‹ Hoy › en un solo bloque,
+// igual que en el móvil. Los botones conservan data-ag (el clic sigue igual); el orden lo pone la hoja de estilos
+function agruparAgendaEscritorio() {
+  if (ES_MOVIL() || TAB !== 'agenda') return;
+  const acts = document.querySelector('#v-agenda > .saludo .acts');
+  if (!acts || acts.querySelector(':scope > .agmodos')) return;
+  const hijos = [...acts.children];
+  const modos = hijos.filter(b => ['dia', 'semana', 'mes'].includes(b.dataset.ag));
+  const nav = hijos.filter(b => ['ant', 'hoy', 'sig'].includes(b.dataset.ag));
+  if (nav.length) {
+    const g = document.createElement('div'); g.className = 'agnav'; g.setAttribute('role', 'group'); g.setAttribute('aria-label', 'Moverse por la agenda');
+    nav.forEach(b => { b.classList.remove('btn', 'sec'); g.appendChild(b); });
+    const ant = g.querySelector('[data-ag=ant]'), sig = g.querySelector('[data-ag=sig]');
+    if (ant) { ant.innerHTML = svgIco('<path d="m15 18-6-6 6-6" />'); ant.setAttribute('aria-label', 'Anterior'); ant.title = 'Anterior'; }
+    if (sig) { sig.innerHTML = svgIco('<path d="m9 18 6-6-6-6" />'); sig.setAttribute('aria-label', 'Siguiente'); sig.title = 'Siguiente'; }
+    acts.appendChild(g);
+  }
+  if (modos.length) {
+    const g = document.createElement('div'); g.className = 'segs agmodos'; g.setAttribute('role', 'group'); g.setAttribute('aria-label', 'Vista');
+    modos.forEach(b => { b.classList.remove('btn'); b.classList.toggle('on', b.dataset.ag === AG_MODO); g.appendChild(b); });
+    acts.appendChild(g);
+  }
+}
+new MutationObserver(agruparAgendaEscritorio).observe(document.querySelector('main'), { childList: true, subtree: true });
+
+/* v2.115.0 · Justificante del pago: una foto (se reduce a 1600 px en JPEG antes de subirla) o un PDF de hasta 3 MB,
+   guardado en la tabla pedidos_justificantes. Lo ve quien ve el pedido. */
+const JUSTIF_MAX = 3000000;
+const aBase64 = blob => new Promise((ok, mal) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = mal; fr.readAsDataURL(blob); });
+async function leerJustificante(f) {
+  try {
+    if (f.type === 'application/pdf') {
+      if (f.size > JUSTIF_MAX) { toast('El PDF pesa más de 3 MB: haz una foto del justificante o reduce el PDF', true); return null; }
+      return { nombre: f.name, tipo: f.type, tamano: f.size, datos: await aBase64(f) };
+    }
+    if (!/^image\//.test(f.type)) { toast('Adjunta una foto o un PDF', true); return null; }
+    const url = URL.createObjectURL(f);
+    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+    const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.82));
+    if (!blob || blob.size > JUSTIF_MAX) { toast('No se ha podido preparar la foto', true); return null; }
+    return { nombre: f.name.replace(/\.[^.]+$/, '') + '.jpg', tipo: 'image/jpeg', tamano: blob.size, datos: await aBase64(blob) };
+  } catch (e) { toast('No se ha podido leer el archivo', true); return null; }
+}
+async function subirJustificantes(pedido, lista) {
+  // El pedido ya está guardado: si falla la subida se avisa, pero no se repite el guardado
+  for (const j of lista) {
+    const { error } = await db.from('pedidos_justificantes').insert({ pedido_id: pedido, nombre: j.nombre, tipo: j.tipo, tamano: j.tamano, datos: j.datos });
+    if (error) { toast('El pedido se ha guardado, pero no se ha podido subir «' + j.nombre + '». Añádelo desde el pedido.', true); return true; }
+  }
+  return true;
+}
+async function verJustificante(id) {
+  const { data, error } = await db.from('pedidos_justificantes').select('nombre,tipo,datos').eq('id', id).single();
+  if (error || !data) { toast('No se ha podido abrir el justificante', true); return; }
+  const bin = atob(data.datos), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([u8], { type: data.tipo }));
+  const w = window.open(url, '_blank');
+  if (!w) { const a = document.createElement('a'); a.href = url; a.download = data.nombre; a.click(); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+// Ver pedido · Pago: origen, referencia (editable por quien lleva la operativa) y justificantes (añadir, ver y quitar)
+async function pedidoPago(id) {
+  if (!$('dlg').open || $('pdpago')) return;
+  const [{ data }, { data: js }] = await Promise.all([RPC_ORIG('pedido_detalle', { p_id: id }),
+    db.from('pedidos_justificantes').select('id,nombre,tipo,tamano,creado_por,creado_en').eq('pedido_id', id).order('creado_en')]);
+  const p = data && data.pedido; if (!p || !$('dlg').open || $('pdpago')) return;
+  const edita = puede('administrar') || (VE_TODO() && nivelDe2('V') >= 2);
+  const acts = $('dbody').querySelector('.acts:last-of-type'); if (!acts) return;
+  const ref = $('pdops') || acts;
+  ref.insertAdjacentHTML('beforebegin', `<div class="blk" id="pdpago"><h3>Pago</h3>
+    ${p.origen === 'web' ? '<p class="sm"><span class="pill p-est">Pedido por la web</span></p>' : ''}
+    ${edita ? `<div class="g2"><div><label for="pdref">Referencia del pago</label><input id="pdref" value="${esc(p.pago_referencia || '')}" placeholder="Código de la transferencia, bizum…"></div>
+        <div style="align-self:end"><button type="button" class="btn sec" id="pdrefok">Guardar referencia</button></div></div>`
+      : `<p class="sm">Referencia: ${p.pago_referencia ? `<b>${esc(p.pago_referencia)}</b>` : 'sin referencia'}</p>`}
+    <div class="lista" id="pdjus">${(js || []).map(j => `<div class="item"><span class="tx"><b>📎 ${esc(j.nombre)}</b><span class="sm">${fechaCorta(String(j.creado_en).slice(0, 10))} · ${num(Math.round(j.tamano / 1024))} KB</span></span>
+      <button type="button" class="btn sec" data-jver="${j.id}">Ver</button>${j.creado_por === PERFIL.id || puede('administrar') ? `<button type="button" class="btn sec" data-jdel="${j.id}" aria-label="Quitar ${esc(j.nombre)}">Quitar</button>` : ''}</div>`).join('')
+      || '<div class="sm">Sin justificante.</div>'}</div>
+    <label class="btn sec" style="margin-top:8px;display:inline-flex">📎 Añadir justificante<input type="file" id="pdjusf" accept="image/*,application/pdf" data-fp="1" hidden></label></div>`);
+  const repinta = () => { const b = $('pdpago'); if (b) b.remove(); pedidoPago(id); };
+  if ($('pdrefok')) $('pdrefok').onclick = async ev => {
+    ev.target.disabled = true;
+    const { data: r, error } = await db.rpc('guardar_referencia_pago', { p_pedido: id, p_referencia: $('pdref').value });
+    ev.target.disabled = false;
+    toast(error || (r && r.ok === false) ? 'No se ha podido guardar la referencia' : 'Referencia guardada', !!(error || (r && r.ok === false)));
+  };
+  $('pdjusf').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    const j = await leerJustificante(f); if (!j) return;
+    const { error } = await db.from('pedidos_justificantes').insert({ pedido_id: id, nombre: j.nombre, tipo: j.tipo, tamano: j.tamano, datos: j.datos });
+    if (error) { toast('No se ha podido subir el justificante', true); return; }
+    toast('Justificante añadido'); repinta();
+  };
+  $('pdpago').querySelectorAll('[data-jver]').forEach(b => b.onclick = () => verJustificante(b.dataset.jver));
+  $('pdpago').querySelectorAll('[data-jdel]').forEach(b => b.onclick = async () => {
+    if (!await preguntar('¿Quitar este justificante del pedido?', { titulo: 'Quitar justificante', ok: 'Quitar' })) return;
+    const { error } = await db.from('pedidos_justificantes').delete().eq('id', b.dataset.jdel);
+    if (error) { toast('No se ha podido quitar', true); return; }
+    toast('Justificante quitado'); repinta();
+  });
+}
+
+
+/* v2.117.0 · Planes por usuario: Campo, Comercial, Empresa y A medida (precio por usuario y mes, IVA no incluido; con pago anual
+   se pagan 10 meses de 12). Mínimo 3 usuarios salvo A medida; se añaden o quitan cuando se quiera. El plan de cada empresa
+   (ajustes.plan: plan, usuarios contratados, pago, estado y, en prueba, prueba_hasta) solo se cambia desde la plataforma. */
+PLANES.splice(0, PLANES.length,
+  { id: 'campo', nombre: 'Campo', precio: 29, anual: 24, minimo: 3, incluidos: 3, bloque: [1, 29], medicos: 0,
+    para: `Equipos que salen a ver ${TT('medico', 'p', '', 'l', 'l')} cada día`,
+    modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento'],
+    ventajas: [`Cartera de ${TT('medico', 'p', '', 'l', 'l')} y centros`, `Agenda, «Tu día» y registro de ${TT('visita', 'p', '', 'l', 'l')}`,
+      'Rutas y planificación semanal', 'Muestras y material', 'Calidad del dato y duplicados'] },
+  // El nombre del plan va entre comillas dobles: no es el rol «Comercial» (la prueba de literales busca roles escritos a mano)
+  { id: 'comercial', nombre: "Comercial", precio: 42, anual: 35, minimo: 3, incluidos: 3, bloque: [1, 42], medicos: 0,
+    para: 'Equipos que venden y quieren medir resultados',
+    modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica'],
+    ventajas: ['Todo lo de Campo', 'Pedidos, televenta y clientes', 'Productos y stock por lotes', `Analítica de ventas y ${TT('visita', 'p', '', 'l', 'l')}`, 'Comisiones por tramos'] },
+  { id: 'empresa', nombre: 'Empresa', precio: 59, anual: 49, minimo: 3, incluidos: 3, bloque: [1, 59], medicos: 50,
+    para: 'Empresas con facturación propia y varios equipos',
+    modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
+    ventajas: ['Todo lo de Comercial', 'Facturación con VeriFactu y cobros', 'Compras, proveedores y trazabilidad', 'Zonas, supervisión del equipo y auditoría',
+      `Espacio ${TT('medico', 's', 'del', 'l', 'l')} (hasta 50)`] },
+  { id: 'medida', nombre: 'A medida', precio: null, anual: null, minimo: 50, incluidos: 50, bloque: [1, 0], medicos: null, presupuesto: true,
+    para: 'Redes comerciales grandes, desde 50 usuarios',
+    modulos: ['inicio', 'agenda', 'rutas', 'directorio', 'seguimiento', 'ventas', 'pacientes', 'productos', 'analitica', 'facturacion'],
+    ventajas: ['Todo lo de Empresa', 'Migración de datos', 'Conexión con tu programa de gestión', `Espacio ${TT('medico', 's', 'del', 'l', 'l')} sin límite`,
+      'Ver la plataforma como cada persona de tu equipo, para ayudarla', 'Soporte prioritario'] });
+const PUESTA_EN_MARCHA = 490;
+const precioPlan = p => p.presupuesto ? 'presupuesto a medida' : `${eurI(p.precio)} por usuario al mes, ${eurI(p.anual)} con pago anual`;
+// Usuarios contratados (A medida o sin dato: sin límite)
+const usuariosContratados = () => PLAN_ACTUAL.plan === 'medida' || PLAN_ACTUAL.usuarios == null ? Infinity : +PLAN_ACTUAL.usuarios;
+
+// Plan y suscripción: tu plan (usuarios contratados, pago, prueba), los cuatro planes y la comparativa por módulos
+pintarPaginaPlan = async function () {
+  const { data } = await RPC_ORIG('plan_uso', {});
+  const d = data || {}, pl = d.plan || {}; if (pl.plan) PLAN_ACTUAL = pl;
+  const act = planDe(pl.plan), contr = usuariosContratados(), usados = +d.usuarios || 0, anual = pl.pago === 'anual';
+  const pct = contr === Infinity ? 0 : Math.min(100, Math.round(usados / contr * 100));
+  // Con pago anual se pagan 10 meses de 12: la cuota mensual equivalente es precio × 10 / 12
+  const cuota = act.presupuesto || contr === Infinity ? null : contr * (anual ? act.precio * 10 / 12 : act.precio);
+  const mailto = asunto => 'mailto:?subject=' + encodeURIComponent(asunto + ' · ' + ((AJUSTES.marca || {}).nombre || ''));
+  const cont = $('cfgcuerpo'); if (!cont) return;
+  // El plan que se destaca es el siguiente al tuyo (con A medida, ninguno)
+  const siguiente = PLANES[PLANES.indexOf(act) + 1] || null;
+  // v2.120.0: «incluido» y «no incluido» como icono y raya suave, con su texto para lectores de pantalla
+  const celda = (p, v) => `<td class="${p.id === act.id ? 'act' : ''}">${v === '✓' ? `<span class="si" role="img" aria-label="Incluido">${svgIco(ICON_NOM.check)}</span>`
+    : v === '—' ? '<span class="no" role="img" aria-label="No incluido">—</span>' : v}</td>`;
+  cont.innerHTML = `${TAB === 'organizacion' ? '<p class="sm">Precio por usuario y mes, IVA no incluido. Con pago anual pagas 10 meses de 12.</p>' : '<div class="saludo"><div><h1>Plan y suscripción</h1><div class="fecha">Precio por usuario y mes, IVA no incluido. Con pago anual pagas 10 meses de 12.</div></div></div>'}
+    <div class="card" id="planact"><h2>Tu plan: ${esc(act.nombre)}</h2>
+      ${pl.estado === 'prueba' ? `<div class="banda-aviso">Estás en la prueba gratuita hasta el <b>${fechaCorta(pl.prueba_hasta)}</b>. Sin permanencia: si no sigues, te llevas tus datos.</div>` : ''}
+      <div class="kpis">
+        <div class="kpi"><b>${contr === Infinity ? 'Sin límite' : num(contr)}</b><span>Usuarios contratados</span></div>
+        <div class="kpi"><b>${num(usados)}</b><span>Usuarios en uso</span></div>
+        <div class="kpi"><b>${act.presupuesto ? 'A medida' : anual ? 'Anual' : 'Mensual'}</b><span>Pago</span></div>
+        ${cuota != null ? `<div class="kpi"><b>${eurI(cuota)}</b><span>Al mes, sin IVA</span></div>` : ''}
+        ${act.medicos !== 0 ? `<div class="kpi"><b>${num(d.medicos || 0)}${act.medicos ? ' / ' + act.medicos : ''}</b><span>${TT('medico', 'p', '', 'l', 'C')} con acceso</span></div>` : ''}
+      </div>
+      ${contr !== Infinity ? `<div class="barrauso" title="${num(usados)} de ${num(contr)}"><i style="width:${pct}%"></i></div>` : ''}
+      ${contr !== Infinity && usados > contr ? `<div class="banda-aviso" id="plansobre">Tienes ${usados - contr === 1 ? '1 usuario' : num(usados - contr) + ' usuarios'} más de ${num(contr)} contratados. Añádelos a tu plan o desactiva los que ya no usen la plataforma.</div>` : ''}
+      <div class="acts"><a class="btn sec" href="${mailto('Cambiar el número de usuarios')}">Añadir o quitar usuarios</a></div></div>
+    <div class="planes">${PLANES.map(p => `<div class="plan ${p.id === act.id ? 'actual' : ''} ${p === siguiente ? 'dest' : ''}" data-plan="${p.id}">
+      <h3>${esc(p.nombre)}</h3><div class="sm">${esc(p.para)}</div>
+      <div class="precio">${p.presupuesto ? '<b>A medida</b> <span class="sm">Presupuesto · desde 50 usuarios</span>'
+        : `<b>${eurI(p.precio)}</b> <span class="sm">por usuario al mes · ${eurI(p.anual)} con pago anual (${eurI(p.precio * 10)} al año)</span>`}</div>
+      <ul class="manlist">${p.ventajas.map(v => `<li><span>✓</span><span>${esc(v)}</span></li>`).join('')}</ul>
+      ${p.id === act.id ? '<button class="btn sec" disabled>Tu plan actual</button>'
+        : `<a class="btn ${p === siguiente ? '' : 'sec'}" href="${mailto(p.presupuesto ? 'Presupuesto del plan A medida' : 'Cambiar al plan ' + p.nombre)}">${p.presupuesto ? 'Pedir presupuesto' : 'Cambiar a ' + esc(p.nombre)}</a>`}</div>`).join('')}</div>
+    <div class="card" id="plancond"><h2>Condiciones</h2><ul class="manlist">
+      <li><span>✓</span><span>Mínimo 3 usuarios en Campo, Comercial y Empresa. Añades o quitas usuarios cuando quieras.</span></li>
+      <li><span>✓</span><span>Puesta en marcha (importar tus Excel, configurar la empresa y formar al equipo): incluida con pago anual; con pago mensual, ${eurI(PUESTA_EN_MARCHA)} una sola vez.</span></li>
+      <li><span>✓</span><span>Prueba de 30 días con tus propios datos, sin permanencia. Si no sigues, te llevas tus datos.</span></li>
+      <li><span>✓</span><span>Desarrollos y configuraciones a medida: presupuesto según lo que necesites.</span></li></ul></div>
+    <div class="card"><h2>Qué incluye cada plan</h2><div class="dgrid-wrap"><table class="planmat"><thead><tr><th>Módulo</th>${PLANES.map(p => `<th class="${p.id === act.id ? 'act' : ''}">${esc(p.nombre)}</th>`).join('')}</tr></thead>
+      <tbody>${MOD_PLAN.map(([m, n, desc]) => `<tr><td><b>${esc(n)}</b><span class="sm">${esc(desc)}</span></td>${PLANES.map(p => celda(p, p.modulos.includes(m) ? '✓' : '—')).join('')}</tr>`).join('')}
+        <tr><td><b>Espacio ${TT('medico', 's', 'del', 'l', 'l')}</b><span class="sm">Su informe y sus avisos</span></td>${PLANES.map(p => celda(p, p.medicos === 0 ? '—' : p.medicos ? 'Hasta ' + p.medicos : 'Sin límite')).join('')}</tr>
+        <tr><td><b>Ver la plataforma como cada persona</b><span class="sm">De tu equipo, para ayudarla</span></td>${PLANES.map(p => celda(p, p.id === 'medida' ? '✓' : '—')).join('')}</tr>
+        <tr><td><b>Precio por usuario</b><span class="sm">Al mes, IVA no incluido</span></td>${PLANES.map(p => celda(p, p.presupuesto ? 'A medida' : eurI(p.precio) + ' · ' + eurI(p.anual) + ' anual')).join('')}</tr>
+      </tbody></table></div></div>`;
+};
+
+
+// v2.117.0 · Organizaciones: plan de cada empresa, estado (prueba, terminada, desactivada), descargar sus datos y borrar las de prueba
+function orgPlanTxt(o) {
+  const pd = o.plan_datos || {}, p = planDe(pd.plan || o.plan);
+  return `plan ${p.nombre}${pd.plan === 'medida' || pd.usuarios == null ? '' : ` · ${num(pd.usuarios)} contratados`}${pd.pago === 'anual' ? ' · anual' : pd.plan === 'medida' ? '' : ' · mensual'}`;
+}
+function orgEstado(o) {
+  const pd = o.plan_datos || {};
+  if (o.bloqueada === 'desactivada') return '<span class="pill p-anu">Desactivada</span> ';
+  if (o.bloqueada === 'prueba_terminada') return `<span class="pill p-warn">Prueba terminada el ${fechaCorta(pd.prueba_hasta)}</span> `;
+  if (pd.estado === 'prueba') return `<span class="pill p-est">Prueba hasta el ${fechaCorta(pd.prueba_hasta)}</span> `;
+  return '';
+}
+function orgAcciones(c, l) {
+  const de = id => l.find(x => x.id === id);
+  // Plan: el de pago o una prueba (con su fecha de fin)
+  c.querySelectorAll('[data-orgplan]').forEach(b => b.onclick = () => {
+    const o = de(b.dataset.orgplan); if (!o) return;
+    const pd = o.plan_datos || {}, fin = pd.prueba_hasta || new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+    $('dbody').innerHTML = `<div class="fh"><div><h2>Plan de ${esc(o.nombre)}</h2><div class="sm">Solo la plataforma cambia el plan de una empresa</div></div>
+        <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
+      <div class="g2"><div><label for="opplan">Plan</label><select id="opplan">${PLANES.map(p => `<option value="${p.id}" ${p.id === (pd.plan || o.plan) ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div>
+        <div><label for="opusu">Usuarios contratados</label><input id="opusu" type="number" min="3" value="${esc(pd.usuarios == null ? '' : pd.usuarios)}" placeholder="Sin límite"></div>
+        <div><label for="oppago">Pago</label><select id="oppago"><option value="mensual">Mensual</option><option value="anual" ${pd.pago === 'anual' ? 'selected' : ''}>Anual</option></select></div>
+        <div><label for="opest">Estado</label><select id="opest"><option value="activo">De pago</option><option value="prueba" ${pd.estado === 'prueba' ? 'selected' : ''}>Prueba</option></select></div>
+        <div id="opfinw" class="${pd.estado === 'prueba' ? '' : 'hide'}"><label for="opfin">Prueba hasta</label><input id="opfin" type="date" value="${esc(fin)}"></div></div>
+      <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="opok">Guardar plan</button></div>`;
+    $('opest').onchange = () => $('opfinw').classList.toggle('hide', $('opest').value !== 'prueba');
+    $('opok').onclick = async ev => {
+      ev.target.disabled = true;
+      const { data: r, error } = await db.rpc('guardar_plan_organizacion', { p_org: o.id, p: { plan: $('opplan').value, usuarios: $('opusu').value === '' ? null : +$('opusu').value,
+        pago: $('oppago').value, estado: $('opest').value, prueba_hasta: $('opest').value === 'prueba' ? $('opfin').value : null } });
+      ev.target.disabled = false;
+      if (error || !r || !r.ok) {
+        toast(({ permiso: 'No tienes permiso', minimo: 'Mínimo 3 usuarios (salvo A medida)', prueba_hasta: 'Falta la fecha de fin de la prueba', plan: 'Plan no válido' })[(r && r.error) || ''] || 'No se ha podido guardar', true);
+        return;
+      }
+      $('dlg').close(); toast('Plan guardado'); pintarOrganizaciones();
+    };
+    $('dlg').showModal();
+  });
+  // Descargar todos sus datos (para entregárselos si deja la prueba)
+  c.querySelectorAll('[data-orgexp]').forEach(b => b.onclick = async () => {
+    const o = de(b.dataset.orgexp); if (!o) return;
+    b.disabled = true; const t = b.textContent; b.textContent = 'Preparando…';
+    const { data, error } = await RPC_ORIG('exportar_organizacion', { p_org: o.id });
+    b.disabled = false; b.textContent = t;
+    if (error || !data) { toast('No se han podido descargar sus datos', true); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
+    a.download = `datos_${o.nombre.replace(/[^\p{L}\p{N}]+/gu, '_')}_${hoyISO()}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    toast('Datos descargados');
+  });
+  // Borrar una empresa de prueba o desactivada (nunca con facturas): hay que escribir su nombre
+  c.querySelectorAll('[data-orgdel]').forEach(b => b.onclick = async () => {
+    const o = de(b.dataset.orgdel); if (!o) return;
+    if (o.facturas) { toast(`${o.nombre} tiene facturas emitidas: no se puede borrar (VeriFactu). Desactívala en su lugar.`, true); return; }
+    const txt = await pedirTexto(`Se borrarán ${o.nombre} y todos sus datos (${num(o.usuarios)} usuarios, ${num(o.cuentas)} cuentas, pedidos, agenda…). No se puede deshacer: descarga antes sus datos si hay que entregárselos. Escribe su nombre para confirmarlo.`,
+      '', { titulo: 'Borrar empresa', ok: 'Borrar' });
+    if (txt === null) return;
+    if (txt.trim() !== o.nombre) { toast('El nombre no coincide: no se ha borrado nada', true); return; }
+    const { data: r, error } = await db.rpc('borrar_organizacion', { p_org: o.id });
+    if (error || !r || !r.ok) {
+      toast(({ permiso: 'No tienes permiso', principal: 'La organización principal no se puede borrar', activa: 'Solo se borran empresas de prueba o desactivadas',
+        facturas: 'Tiene facturas emitidas: no se puede borrar' })[(r && r.error) || ''] || ('No se ha podido borrar' + (error ? ': ' + error.message : '')), true);
+      return;
+    }
+    toast(`${o.nombre} borrada` + (String(r.acceso || '').startsWith('no_borrado') ? '. Borra sus usuarios en Supabase → Authentication.' : ''));
+    pintarOrganizaciones();
+  });
+}
+
+// v2.117.0 · Al ir a una pantalla que no es una página propia (Perfil, Empresa, Plan), esas páginas se vacían: así nunca hay dos
+// contenedores #cfgcuerpo a la vez (pasaba al ir de «Plan y suscripción» a Configuración)
+const IR_V2117 = ir;
+ir = function (t, ...a) {
+  if (!(t in PAGINAS)) Object.keys(PAGINAS).forEach(o => { const v = $('v-' + o); if (v) v.innerHTML = ''; });
+  return IR_V2117(t, ...a);
+};
+
+
+/* v2.119.0 · Registro de llamada dentro del alta de cliente. El cliente nuevo de una llamada se da de alta siempre con la ficha
+   completa; su desplegable «Registro de llamada» guarda la llamada con el cliente o, si no compra, solo la llamada (sin cliente) con
+   lo apuntado de él en llamadas.datos (población, provincia, email…), para las métricas. */
+function llamadaAltaHTML(est) {
+  est = est || {};
+  return `<details class="blk kollam" id="kollam" ${est.motivo !== undefined ? 'open' : ''}><summary>Registro de llamada</summary>
+    <div class="sm">Si llama y no compra, guarda solo la llamada: no se crea el cliente, pero quedan sus datos para las métricas.</div>
+    <label>Motivo</label><div class="chipsw" id="kolmot"></div>
+    <label>Resultado</label><div class="chipsw" id="kolres"></div>
+    <div id="kolseg" class="${!est.resultado || est.resultado === 'Pedido hecho' ? 'hide' : ''}">
+      <div class="sm" style="margin:8px 0 4px">¿Cuándo volver a llamar?</div>
+      <div class="chipsw">${[['Mañana', 1], ['En 3 días', 3], ['En una semana', 7], ['En un mes', 30]].map(([t, d]) => `<button type="button" class="chipsel" data-kold="${d}">${t}</button>`).join('')}</div>
+      <div class="g2" style="margin-top:6px"><div><input id="kolpf" type="date" value="${esc(est.proxima_fecha || '')}" aria-label="Volver a llamar el"></div>
+        <div><input id="kolpa" value="${esc(est.proxima_accion || '')}" placeholder="p. ej. Enviarle el precio por WhatsApp" aria-label="Qué hacer"></div></div></div>
+    <div class="g2"><div><label for="kold">Tipo</label><select id="kold"><option ${est.direccion !== 'Saliente' ? 'selected' : ''}>Entrante</option><option ${est.direccion === 'Saliente' ? 'selected' : ''}>Saliente</option></select></div>
+      <div><label for="kolno">Nota de la llamada</label><input id="kolno" value="${esc(est.nota || '')}"></div></div>
+    <div class="acts" style="margin-top:8px"><button type="button" class="btn sec" id="kosolo">No compra: guardar solo la llamada</button></div>
+  </details>`;
+}
+let LL_ALTA = { motivo: '', resultado: '' };
+function llamadaAltaActivar(getMedico, est) {
+  est = est || {};
+  LL_ALTA = { motivo: est.motivo || '', resultado: est.resultado || '' };
+  catLlamadas().then(() => {
+    if (!$('kolmot')) return;
+    const chips = (cat, v, attr) => (CAT[cat] || []).map(x => `<button type="button" class="chipsel ${x.valor === v ? 'on' : ''} ${x.extra === 'neg' ? 'neg' : x.extra === 'pos' ? 'pos' : ''}" ${attr}="${esc(x.valor)}">${esc(x.valor)}</button>`).join('');
+    $('kolmot').innerHTML = chips('motivo_llamada', LL_ALTA.motivo, 'data-kom');
+    $('kolres').innerHTML = chips('resultado_llamada', LL_ALTA.resultado, 'data-kor');
+  });
+  $('kollam').onclick = e => {
+    const m = e.target.closest('[data-kom]'), r = e.target.closest('[data-kor]'), d = e.target.closest('[data-kold]');
+    if (m) { LL_ALTA.motivo = LL_ALTA.motivo === m.dataset.kom ? '' : m.dataset.kom; $('kolmot').querySelectorAll('[data-kom]').forEach(x => x.classList.toggle('on', x.dataset.kom === LL_ALTA.motivo)); }
+    if (r) {
+      LL_ALTA.resultado = LL_ALTA.resultado === r.dataset.kor ? '' : r.dataset.kor;
+      $('kolres').querySelectorAll('[data-kor]').forEach(x => x.classList.toggle('on', x.dataset.kor === LL_ALTA.resultado));
+      $('kolseg').classList.toggle('hide', !LL_ALTA.resultado || LL_ALTA.resultado === 'Pedido hecho');
+    }
+    if (d) { const f = new Date(); f.setDate(f.getDate() + +d.dataset.kold); $('kolpf').value = fechaLocal(f); $('kollam').querySelectorAll('[data-kold]').forEach(x => x.classList.toggle('on', x === d)); }
+  };
+}
+function llamadaAltaLeer() {
+  if (!$('kollam')) return null;
+  return { motivo: LL_ALTA.motivo, resultado: LL_ALTA.resultado, direccion: $('kold').value, nota: $('kolno').value.trim(),
+    proxima_fecha: $('kolpf').value, proxima_accion: $('kolpa').value.trim() };
+}
+async function llamadaAltaGuardar(ll, x, est) {
+  est = est || {};
+  const seguir = x.resultado && x.resultado !== 'Pedido hecho';
+  const { data: r, error } = await db.rpc('guardar_llamada', { p: { id: est.id || null, fecha: est.fecha || null, direccion: ll.direccion,
+    nombre: x.nombre || '', telefono: x.telefono || '', contacto_id: x.contacto_id || null, cliente_nuevo: null,
+    cuenta_id: x.medico ? x.medico.id : null, cuenta_texto: x.medico ? '' : (est.cuenta_texto || ''), motivo: ll.motivo, resultado: x.resultado || '',
+    proxima_accion: seguir ? ll.proxima_accion : '', proxima_fecha: seguir ? ll.proxima_fecha : '', nota: ll.nota,
+    pedido_id: null, llamada_origen: est.previa || null, ...(x.datos && Object.keys(x.datos).length ? { datos: x.datos } : {}) } });
+  if (error || (r && r.ok === false)) { toast('No se ha podido guardar la llamada' + (error ? ': ' + error.message : ''), true); return null; }
+  return r.id;
+}
+
+
+/* v2.121.0 · Página «Organización» (menú de usuario, arriba): marca, correo, copias, plan y facturación de la empresa, solo para el
+   Propietario (configurar_organizacion) y el Administrador de la plataforma (gestionar_plataforma). Empresa y Plan pasan a ser
+   pestañas suyas; Configuración se queda con lo del día a día. Y en escritorio, las ventanas de Configuración y de estas páginas
+   se abren dentro del área de contenido, no por encima. */
+// Las pestañas de facturación usan #fcuerpo, como el módulo Facturación: su pantalla se vacía para no tener dos (se rehace al volver)
+const facOrg = fn => () => { const v = $('v-facturacion'); if (v) v.innerHTML = ''; fac(fn)(); };
+const puedeOrganizacion = () => puede('configurar_organizacion') || puede('gestionar_plataforma');
+PAGINAS.organizacion = {
+  t: 'Organización', d: 'Marca, correo, copias de seguridad, plan y facturación de la empresa', permiso: puedeOrganizacion,
+  get tabs() {
+    const fact = planIncluye('facturacion');
+    return [['marca', 'Marca y logo', () => pintarMarca()], ['correo', 'Correo y firma', () => pintarCorreo()], ['copias', 'Copias de seguridad', () => pintarCopias()],
+      ['plan', 'Plan y suscripción', () => pintarPaginaPlan()],
+      ...(fact ? [['fiscal', 'Datos fiscales', facOrg(pintarEmpresa)], ['series', 'Series', facOrg(pintarSeries)], ['vf', 'VeriFactu', facOrg(pintarVerifactu)], ['pdf', 'Diseño del PDF', () => disenoPDF()]] : []),
+      ...(puede('gestionar_plataforma') ? [['orgs', 'Organizaciones', () => pintarOrganizaciones()]] : [])];
+  }
+};
+// Empresa y Plan (y los apartados de Configuración que se han movido) llevan a su pestaña de Organización
+const ORG_DESDE = { marca: 'marca', correo: 'correo', copias: 'copias', __empresa: 'marca', empresa: 'marca', plan: 'plan', fact: 'fiscal', fiscal: 'fiscal',
+  series: 'series', vf: 'vf', pdf: 'pdf', orgs: 'orgs' };
+const IR_V2121 = ir;
+ir = function (t, ...a) {
+  if (t === 'empresa') { PAG_TAB.organizacion = PAG_TAB.empresa || 'marca'; t = 'organizacion'; }
+  else if (t === 'plan') { PAG_TAB.organizacion = 'plan'; t = 'organizacion'; }
+  else if (t === 'config' && ORG_DESDE[CFG_SEC]) { PAG_TAB.organizacion = ORG_DESDE[CFG_SUB] || ORG_DESDE[CFG_SEC]; CFG_SEC = 'rutas'; t = 'organizacion'; }
+  if (t === 'organizacion' && !puedeOrganizacion()) t = 'inicio';
+  return IR_V2121(t, ...a);
+};
+// Configuración, sin lo que ahora está en Organización
+arbolConfig = (orig => function () {
+  return orig().map(([g, l]) => [g, l.filter(x => !['fact', 'marca', 'correo', 'copias', 'orgs'].includes(x.k))]).filter(g => g[1].length);
+})(arbolConfig);
+// Menú de usuario: una sola entrada «Organización» en lugar de Empresa y Plan
+function menuOrganizacion() {
+  const plan = document.querySelector('[data-u="plan"]'), emp = document.querySelector('[data-u="empresa"]');
+  if (!document.querySelector('[data-u="organizacion"]') && (emp || plan))
+    (emp || plan).insertAdjacentHTML('beforebegin', `<button data-u="organizacion" class="hide">${svgIco(ICON_NOM.building)} Organización</button>`);
+  [plan, emp].forEach(b => b && b.classList.add('hide'));
+  const o = document.querySelector('[data-u="organizacion"]'); if (o) o.classList.toggle('hide', !puedeOrganizacion());
+}
+mostrarApp = (orig => function (...a) { const r = orig(...a); menuOrganizacion(); return r; })(mostrarApp);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-u="organizacion"]'); if (!b) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  document.querySelectorAll('.umenu, #umenu').forEach(m => m.classList.add('hide'));
+  ir('organizacion');
+}, true);
+
+// Ventanas integradas: en escritorio, dentro de Configuración y de las páginas propias, una ventana ocupa el área de contenido
+// (sin fondo oscuro ni ventana flotante); al cerrarla vuelve el apartado. En el móvil las ventanas ya ocupan la pantalla.
+const ENCAJE_MIN = 900;
+function areaEncaje() {
+  if (innerWidth < ENCAJE_MIN) return null;
+  if (TAB === 'config') return $('cfgcuerpo-hub') || $('cfgcuerpo');
+  if (PAGINAS[TAB]) return document.querySelector(`#v-${TAB} .pagcuerpo`) || $('cfgcuerpo');
+  return null;
+}
+function colocarEncajada(d, area) {
+  const r = area.getBoundingClientRect();
+  Object.assign(d.style, { top: (r.top + scrollY) + 'px', left: (r.left + scrollX) + 'px', width: r.width + 'px' });
+  area.style.minHeight = d.offsetHeight + 'px';
+}
+['dlg', 'dlg2'].forEach(id => {
+  const d = $(id); if (!d) return;
+  const modal = d.showModal.bind(d);
+  d.showModal = function () {
+    const area = areaEncaje();
+    if (!area) return modal();
+    if (d.open) return;
+    d.classList.add('encajada'); d.__area = area;
+    area.classList.add('con-ventana');
+    d.show(); colocarEncajada(d, area);
+    if (!d.__ro) { d.__ro = new ResizeObserver(() => { if (d.open && d.__area) colocarEncajada(d, d.__area); }); d.__ro.observe(d); }
+    // Al abrir, el navegador lleva la vista al primer campo: se vuelve arriba del área para ver su cabecera
+    const tapa = () => Math.max(0, ...['body > header', 'header', '.top', 'nav.main'].map(q => { const e = document.querySelector(q); return e && getComputedStyle(e).position.match(/fixed|sticky/) ? e.getBoundingClientRect().bottom : 0; }));
+    const arriba = () => scrollTo({ top: Math.max(0, area.getBoundingClientRect().top + scrollY - tapa() - 12) });
+    arriba(); requestAnimationFrame(arriba);
+    const f = d.querySelector('input:not([type=hidden]), select, textarea'); if (f) setTimeout(() => { f.focus({ preventScroll: true }); arriba(); }, 30);
+  };
+  d.addEventListener('close', () => {
+    if (!d.classList.contains('encajada')) return;
+    d.classList.remove('encajada'); d.removeAttribute('style');
+    const area = d.__area; d.__area = null;
+    // El apartado vuelve a verse si ya no queda ninguna otra ventana encajada encima de él
+    if (area && !document.querySelector('dialog.encajada[open]')) { area.classList.remove('con-ventana'); area.style.minHeight = ''; }
+  });
+});
+const cerrarEncajadas = () => ['dlg2', 'dlg'].forEach(id => { const d = $(id); if (d && d.open && d.classList.contains('encajada')) d.close(); });
+// Escape cierra la de arriba; cambiar de apartado, de pestaña o de pantalla las cierra
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const d = ['dlg2', 'dlg'].map(id => $(id)).find(x => x && x.open && x.classList.contains('encajada'));
+  if (d) { e.preventDefault(); d.close(); }
+});
+document.addEventListener('click', e => { if (e.target.closest('.cfgnav [data-cfg], .pagtabs [data-ptab], #cfgsubs button, nav.main [data-t], #bnav [data-t], [data-u]')) cerrarEncajadas(); }, true);
+const IR_ENCAJE = ir;
+ir = function (...a) { cerrarEncajadas(); return IR_ENCAJE(...a); };
+addEventListener('resize', () => ['dlg', 'dlg2'].forEach(id => { const d = $(id); if (d && d.open && d.__area) { if (innerWidth < ENCAJE_MIN) d.close(); else colocarEncajada(d, d.__area); } }));
+// Si la app ya estaba a la vista al cargar este bloque (arranque con el perfil guardado), el menú se ajusta igualmente
+if (typeof PERFIL !== 'undefined' && PERFIL) menuOrganizacion();
+cargarAjustes = (orig => async function (...a) { const r = await orig(...a); if (PERFIL) menuOrganizacion(); return r; })(cargarAjustes);
