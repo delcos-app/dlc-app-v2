@@ -2417,6 +2417,197 @@ dialog.encajada .pdfprev iframe{height:calc(100vh - var(--alto-cab,0px) - 190px)
 #zonapac.escentro .solopac,#zonapac:not(.escentro) .solocen{display:none}
 .ctlin input[type=number]{max-width:110px}
 #ctcuerpo{margin-top:14px}
+/* ============================================================
+   v2.129.0 · Configuración y Organización: anchos coherentes
+   ============================================================ */
+/* Criterio (petición de Eric): todas las cajas ocupan el mismo ancho, el de la zona de contenido (antes unas llegaban al
+   borde y otras se paraban en 1.120 px), y dentro ningún campo ni selector va de punta a punta: tienen el ancho de lo que
+   se escribe en ellos. Las tablas, listas y rejillas siguen a todo el ancho. En el móvil no cambia nada. */
+@media (min-width:1100px){
+  #cfgcuerpo,.pagcuerpo,#fcuerpo{max-width:none!important}
+  :is(#cfgcuerpo,.pagcuerpo,dialog.encajada) :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]),select):not(.numw *):not(.selw *){max-width:440px}
+  :is(#cfgcuerpo,.pagcuerpo,dialog.encajada) textarea{max-width:720px}
+  /* Campos con selector propio de fecha o número: su caja tampoco se estira */
+  :is(#cfgcuerpo,.pagcuerpo,dialog.encajada) .selw{max-width:440px}
+  /* En una tabla, una fila de filtros o junto a un botón, el campo se adapta a su sitio */
+  :is(#cfgcuerpo,.pagcuerpo,dialog.encajada) :is(td,th,.dgrid,.filtros,.tbarra,.fpresp) :is(input,select){max-width:none}
+}
+/* v2.131.0 · Franja «Estás viendo X» del panel de delcos (maquetación básica; el diseño, de Branding) */
+:root{--alto-franja:0px}
+.orgvista{position:sticky;top:0;z-index:1200;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px var(--margen,16px);background:#FEF3E2;color:#7A2E0E;border-bottom:1px solid #F5C77E;font-size:14px}
+.con-vista .top{top:var(--alto-franja)}
+/* ============================================================
+   v2.132.0 · Menú lateral de escritorio
+   ============================================================ */
+/* Barra a la izquierda agrupada por áreas (Tu día, Cartera, Ventas, Resultados, Equipo y, aparte, Plataforma). Desplegada mide
+   252 px; plegada, 76 px con solo iconos y el nombre al pasar el ratón. La sección activa, en azul suave con una barra marino.
+   Deja sitio arriba a la franja «Estás viendo…» (--alto-franja). Solo en escritorio; el móvil sigue con su barra inferior. */
+@media (min-width:900px){
+  body.menulat{--anchomenu:252px}
+  body.menulat.menupleg{--anchomenu:76px}
+  body.menulat #app{padding-left:var(--anchomenu);transition:padding-left var(--t-medio) var(--ease-sal)}
+  body.menulat header{position:sticky;top:var(--alto-franja,0px);z-index:30}
+  body.menulat header .logo{display:none!important}
+  body.menulat nav.main{position:fixed!important;left:0;top:var(--alto-franja,0px);bottom:0;width:var(--anchomenu);z-index:45;margin:0;
+    background:#FFFFFF!important;border:0!important;border-right:1px solid var(--line)!important;box-shadow:none!important;
+    overflow:hidden auto;overscroll-behavior:contain;transition:width var(--t-medio) var(--ease-sal)}
+  body.menulat nav.main .in{display:flex!important;flex-direction:column;gap:2px;min-height:100%;max-width:none!important;margin:0!important;
+    padding:16px 12px 12px!important;overflow:visible!important}
+  body.menulat .mlmarca{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 6px 12px}
+  body.menulat .mlmarca img{width:36px;height:36px;border-radius:50%;flex:none;object-fit:cover}
+  body.menulat .mlmarca b{font:800 15px var(--f-titulo);letter-spacing:-.01em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.menulat .mlgrupo{margin-top:10px}
+  body.menulat .mlgrupo.vacio{display:none}
+  body.menulat .mlgrupo.fijo{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+  body.menulat .mltit{font:700 11px var(--f-texto);letter-spacing:.07em;text-transform:uppercase;color:#7A8CA0;padding:6px 10px;white-space:nowrap;overflow:hidden}
+  body.menulat .mlbs{display:flex;flex-direction:column;gap:2px}
+  body.menulat nav.main .in button[data-t],body.menulat .mlitem{position:relative;display:flex!important;align-items:center;gap:12px;width:100%;height:40px;
+    margin:0!important;padding:0 10px!important;border:0;border-radius:10px;background:none;color:#3B5168;font:600 14.5px var(--f-texto);
+    text-align:left;white-space:nowrap;cursor:pointer;transition:background-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal)}
+  body.menulat nav.main .in button[data-t].hide,body.menulat nav.main .in button[data-t].mloculto,body.menulat nav.main .in .mlitem.hide,
+  body.menulat nav.main .in button[data-t="seguimiento"]{display:none!important}
+  body.menulat nav.main .in button[data-t]::after{display:none!important}
+  body.menulat nav.main .in button[data-t] .navico,body.menulat .mlitem .ico{margin:0!important;opacity:.8;flex:none;width:18px;height:18px}
+  body.menulat nav.main .in button[data-t] .navico svg{width:18px;height:18px}
+  body.menulat nav.main .mllab{overflow:hidden;text-overflow:ellipsis}
+  body.menulat nav.main .in button[data-t]:hover,body.menulat .mlitem:hover{background:var(--hielo);color:var(--navy)}
+  body.menulat nav.main .in button[data-t]:active,body.menulat .mlitem:active{background:var(--sky-soft)}
+  body.menulat nav.main .in button[data-t][aria-selected=true]{background:var(--sky-soft);color:var(--navy)}
+  body.menulat nav.main .in button[data-t][aria-selected=true] .navico{opacity:1}
+  body.menulat nav.main .in button[data-t][aria-selected=true]::before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--navy)}
+  body.menulat nav.main .in button[data-t]:focus-visible,body.menulat .mlitem:focus-visible,body.menulat .mlplegar:focus-visible{outline:none;box-shadow:var(--foco)}
+  body.menulat .mlpie{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+  body.menulat .mlplegar{align-self:flex-end;width:36px;height:36px;margin-top:4px;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:var(--muted);cursor:pointer;
+    transition:background-color var(--t-rapido) var(--ease-sal),transform var(--t-medio) var(--ease-sal)}
+  body.menulat .mlplegar:hover{background:var(--hielo);color:var(--navy)}
+  body.menulat .mlplegar .ico{width:18px;height:18px}
+  /* Plegada: solo iconos, centrados, y separadores finos entre bloques */
+  body.menulat.menupleg nav.main .mllab,body.menulat.menupleg .mltit{display:none!important}
+  body.menulat.menupleg .mlmarca{justify-content:center;padding:0 0 12px}
+  body.menulat.menupleg .mlgrupo{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+  body.menulat.menupleg .mlgrupo:first-of-type{border-top:0}
+  body.menulat.menupleg nav.main .in button[data-t],body.menulat.menupleg .mlitem{justify-content:center;padding:0!important}
+  body.menulat.menupleg .mlplegar{align-self:center;transform:scaleX(-1)}
+  #mltip{position:fixed;z-index:60;transform:translateY(-50%);padding:6px 10px;border-radius:8px;background:var(--ink);color:#FFFFFF;font:600 13px var(--f-texto);
+    white-space:nowrap;pointer-events:none;opacity:0;transition:opacity var(--t-rapido) var(--ease-sal)}
+  #mltip.ver{opacity:1}
+  /* Personalizar menú: panel junto a la barra */
+  #mlpanel{position:fixed;z-index:60;left:calc(var(--anchomenu,252px) + 12px);bottom:16px;width:340px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:#FFFFFF;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sombra-3);animation:uiVentana var(--t-medio) var(--ease-sal)}
+  .mlph{padding:16px 16px 10px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line)}
+  .mlph b{font:800 16px var(--f-titulo);color:var(--ink)}
+  .mlpl{overflow:auto;padding:8px 10px}
+  .mlpg{padding:6px 0;border-bottom:1px solid #EDF2F7}.mlpg:last-child{border-bottom:0}
+  .mlpgh{display:flex;align-items:center;justify-content:space-between;padding:4px 6px}
+  .mlpgh b{font:700 11.5px var(--f-texto);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .mlpi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 6px;border-radius:8px;font-size:14px;color:var(--ink);cursor:pointer}
+  .mlpi:hover{background:var(--hielo)}
+  .mlpi input{width:18px;height:18px;margin:0;accent-color:var(--navy);flex:none}
+  .mlpi .mlpn{flex:1}
+  .mlpflechas{display:inline-flex;gap:2px}
+  .mlpflechas button{width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
+  .mlpflechas button:hover:not(:disabled){background:var(--sky-soft);color:var(--navy)}
+  .mlpflechas button:disabled{opacity:.3;cursor:default}
+  .mlpflechas .ico{width:16px;height:16px}
+  .mlpacts{display:flex;justify-content:space-between;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--hielo);border-radius:0 0 16px 16px}
+}
+@media (prefers-reduced-motion: reduce){body.menulat #app,body.menulat nav.main,body.menulat .mlplegar,#mltip,#mlpanel{transition:none!important;animation:none!important}}
+/* ============================================================
+   v2.134.0 · Portal del centro, productos del centro y extras
+   ============================================================ */
+/* Mi centro: los productos en una lista con filas (nombre y precio a la izquierda, unidades a la derecha); la fila con unidades
+   se marca. Nota, total y botones dentro del margen de la tarjeta; los pedidos, en filas con su estado. */
+#ctcuerpo .ancard{padding-bottom:16px}
+#ctcuerpo .ancard > :not(h2):not(.barrash):not(.leer){margin-left:16px;margin-right:16px}
+#ctprods{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FFFFFF}
+#ctprods > .ctlin{display:flex;align-items:center;gap:16px;min-height:64px;margin:0;padding:10px 12px 10px 16px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:#FFFFFF;
+  transition:background-color var(--t-rapido) var(--ease-sal)}
+#ctprods > .ctlin:last-child{border-bottom:0}
+#ctprods > .ctlin.con{background:var(--sky-soft)}
+#ctprods > .ctlin .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#ctprods > .ctlin .tx b{font-weight:600;color:var(--ink)}
+#ctprods > .ctlin .tx .sm{white-space:normal;overflow:visible;color:var(--muted)}
+#ctprods > .ctlin .numw{flex:none;width:148px}
+#ctprods > .ctlin .numw input{max-width:none}
+#ctped > label[for=ctnota]{margin-top:14px}
+#ctnota{width:calc(100% - 32px);max-width:720px}
+#ctped .nvtot{margin-top:14px;border-radius:12px}
+#ctped > .leer{margin-top:8px}
+:is(#ctcuerpo,#mdportal) .ancard > h2 + :not(.barrash){margin-top:8px}
+#ctlista .lista{display:flex;flex-direction:column;gap:6px;padding:0}
+#ctlista .lista > .item{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;border:1px solid var(--line);border-radius:12px;background:#FFFFFF}
+#ctlista .lista > .item .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#ctlista .lista > .item .tx .sm{white-space:normal}
+#ctlista .lista > .item .pill{flex:none}
+/* Pedir material y dudas (portal del médico y del centro): los campos ya no se salen por la derecha y los botones van dentro */
+#mdportal .ancard > :is(input,textarea,select,.selw,.numw){width:calc(100% - 32px)!important;max-width:none}
+#mdportal .ancard > .acts{margin:12px 16px 0!important}
+#mdportal .ancard > .g2{gap:12px}
+@media (max-width:760px){
+  #ctprods > .ctlin{gap:12px;padding:10px 10px 10px 14px}
+  #ctprods > .ctlin .numw{width:128px}
+  #ctnota{max-width:none}
+  #ctped .nvtot{flex-wrap:wrap;gap:10px}
+}
+/* Ficha del centro · Productos del centro: cada producto en una fila (casilla, nombre con su tarifa y precio para el centro);
+   antes la casilla se estiraba y tapaba el nombre */
+#fprodc .lista{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+#fprodc .lista > label.item{display:flex!important;align-items:center;gap:12px;min-height:56px;padding:8px 10px 8px 12px;border:1px solid var(--line);border-radius:12px;
+  background:#FFFFFF;cursor:pointer;transition:background-color var(--t-rapido) var(--ease-sal),border-color var(--t-rapido) var(--ease-sal)}
+#fprodc .lista > label.item:hover{border-color:var(--line-f)}
+#fprodc .lista > label.item:has(> input[type=checkbox]:checked){background:var(--sky-soft);border-color:#C9DDF1}
+#fprodc .lista > label.item > input[type=checkbox]{flex:none;width:20px!important;height:20px!important;min-height:0!important;margin:0;padding:0;accent-color:var(--navy)}
+#fprodc .lista > label.item > .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#fprodc .lista > label.item > .tx b{font-weight:600;color:var(--ink)}
+#fprodc .lista > label.item > :is(.numw,input[type=number]){flex:none;width:136px!important;max-width:136px!important}
+#fprodc .lista > label.item:not(:has(> input[type=checkbox]:checked)) > :is(.numw,input[type=number]){opacity:.55}
+/* Casillas con texto (label.chk): casilla de 20 px y el texto al lado. En «Extras» de Organizaciones cada extra es una opción
+   con borde que se marca al activarla (antes la casilla ocupaba todo el ancho y el texto quedaba debajo) */
+label.chk{display:flex;align-items:flex-start;gap:12px;cursor:pointer}
+label.chk > input[type=checkbox]{flex:none;width:20px!important;height:20px!important;min-height:0!important;margin:2px 0 0;padding:0;accent-color:var(--navy)}
+label.chk > span{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1.45}
+#dbody > label.chk{margin:0 0 10px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#FFFFFF;
+  transition:background-color var(--t-rapido) var(--ease-sal),border-color var(--t-rapido) var(--ease-sal)}
+#dbody > label.chk:hover{border-color:var(--line-f)}
+#dbody > label.chk:has(> input:checked){background:var(--sky-soft);border-color:#C9DDF1}
+#dbody > label.chk > span > b{font:700 15px var(--f-titulo);color:var(--ink)}
+#dbody > label.chk > span > .sm{color:var(--muted)}
+#dbody > .fh + label.chk{margin-top:4px}
+@media (prefers-reduced-motion: reduce){#ctprods > .ctlin,#fprodc .lista > label.item,#dbody > label.chk{transition:none}}
+/* ============================================================
+   v2.135.0 · Menú lateral: candado y Configuración activa
+   ============================================================ */
+/* El candado de las secciones que no entran en el plan es un icono de trazo (antes un emoji): al final de la fila con el menú
+   desplegado y, plegado, como insignia en la esquina del icono (antes empujaba el icono fuera del centro). «Configuración», en el
+   pie, se marca como las demás secciones cuando se está en ella. */
+:root{--ico-lock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E")}
+@media (min-width:900px){
+  body.menulat nav.main .in button[data-t] .cand{flex:none;width:13px;height:13px;margin:0 0 0 auto;font-size:0;color:transparent;background:#7A8CA0;
+    -webkit-mask:var(--ico-lock) center / contain no-repeat;mask:var(--ico-lock) center / contain no-repeat}
+  body.menulat.menupleg nav.main .in button[data-t] .cand{position:absolute;top:7px;left:calc(50% + 6px);width:11px;height:11px;margin:0;
+    box-shadow:none;background:#7A8CA0}
+  body.menulat nav.main .in button[data-t].bloq{opacity:1;color:#8597AB}
+  body.menulat nav.main .in button[data-t].bloq .navico{opacity:.55}
+  body.menulat .mlitem.activo{background:var(--sky-soft);color:var(--navy)}
+  body.menulat .mlitem.activo .ico{opacity:1}
+  body.menulat .mlitem.activo::before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--navy)}
+}
+/* ============================================================
+   v2.136.0 · Repaso del móvil
+   ============================================================ */
+/* Configuración → Rutas: punto de salida y de llegada uno debajo del otro (en dos columnas los campos se cortaban); elegir
+   imagen o archivo con el botón debajo (el texto se cortaba); pedido de compra con el producto en su fila y unidades y coste
+   debajo, cada uno con su ancho. */
+@media (max-width:760px){
+  #cfgcuerpo .cols[style*="1fr 1fr"]{grid-template-columns:1fr!important}
+  .filepick{grid-template-columns:44px 1fr;row-gap:10px}
+  .filepick .fpmini{width:44px;height:44px}
+  .filepick > .btn{grid-column:1 / -1;width:100%}
+  .fptx b{white-space:normal}
+  .lin .lrow.cprow{grid-template-columns:1fr 1fr;row-gap:10px}
+  .lin .lrow.cprow > :first-child{grid-column:1 / -1}
+  .lin .lrow.cprow > div:empty{display:none}
+}
 </style>
 </head>
 <body>
@@ -2553,6 +2744,6 @@ dialog.encajada .pdfprev iframe{height:calc(100vh - var(--alto-cab,0px) - 190px)
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.128.0"></script>
+<script src="./app.js?v=2.136.0"></script>
 </body>
 </html>

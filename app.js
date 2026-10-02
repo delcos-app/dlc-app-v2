@@ -14329,7 +14329,9 @@ async function disenoPDF() {
     c.onclick = () => disenoPDF();
   } else if (TAB === 'organizacion' && PAG_TAB.organizacion === 'pdf') {
     // v2.124.0: en el móvil el diseño es una ventana; al cerrarla, la pestaña no se queda vacía con el cargador girando
+    $('dlg').dataset.depagina = '1';   // v2.136.0: se cierra al cambiar de pantalla
     $('dlg').addEventListener('close', () => {
+      delete $('dlg').dataset.depagina;
       const area = document.querySelector('#v-organizacion .pagcuerpo');
       if (!area || TAB !== 'organizacion' || PAG_TAB.organizacion !== 'pdf') return;
       area.innerHTML = `<div class="card cfgpanel"><h2>Diseño del PDF de la factura</h2><p class="sm">Logo, colores, columnas y pie de las facturas, con vista previa.</p>
@@ -15440,10 +15442,13 @@ async function pintarOrganizaciones() {
       <span class="acts" style="margin:0"><span class="sm">${o.creado_en ? fechaCorta(String(o.creado_en).slice(0, 10)) : ''}</span>
         <button class="btn sec" type="button" data-orgdom="${o.id}">Dominios</button>
         <button class="btn sec" type="button" data-orgext="${o.id}">Extras</button>
+        <button class="btn ${o.id === (VISTA_ORG || {}).id ? 'sec' : ''}" type="button" data-orgver="${o.id}">${o.id === (VISTA_ORG || {}).id ? 'Estás dentro' : 'Entrar'}</button>
         <button class="btn sec" type="button" data-orgplan="${o.id}">Plan</button>
         <button class="btn sec" type="button" data-orgexp="${o.id}">Descargar datos</button>
         ${!o.principal && (((o.plan_datos || {}).estado === 'prueba') || !o.activa) ? `<button class="btn sec" type="button" data-orgdel="${o.id}">Borrar empresa</button>` : ''}</span></div>`).join('')}</div>`}</div>`;
   orgAcciones(c, l); orgExtras(c, l);
+  // v2.131.0: entrar en la organización para verla tal cual
+  c.querySelectorAll('[data-orgver]').forEach(b => b.onclick = () => { const o = l.find(x => x.id === b.dataset.orgver); if (o && o.id !== (VISTA_ORG || {}).id) entrarEnOrganizacion(o); });
   // v2.103.0: los dominios de cada organización deciden la marca de su pantalla de acceso
   c.querySelectorAll('[data-orgdom]').forEach(b => b.onclick = async () => {
     const o = l.find(x => x.id === b.dataset.orgdom); if (!o) return;
@@ -16259,7 +16264,8 @@ function areaEncaje() {
 // v2.122.0: la ventana va EN la página, en el sitio del apartado (antes flotaba encima con posición absoluta y su propio desplazamiento).
 // Se devuelve a <body> antes de cerrarse, para que los repintados del apartado no se la lleven por delante.
 function colocarEncajada(d, area) {
-  const cab = Math.max(0, ...['header', '.top', 'nav.main'].map(q => { const e = document.querySelector(q); return e && getComputedStyle(e).position.match(/fixed|sticky/) ? e.getBoundingClientRect().bottom : 0; }));
+  // v2.134.0: con el menú lateral, nav.main ocupa toda la altura y no es cabecera (daba el alto de la pantalla)
+  const cab = Math.max(0, ...['header', '.top', document.body.classList.contains('menulat') ? '' : 'nav.main'].filter(Boolean).map(q => { const e = document.querySelector(q); return e && getComputedStyle(e).position.match(/fixed|sticky/) ? e.getBoundingClientRect().bottom : 0; }));
   document.documentElement.style.setProperty('--alto-cab', cab + 'px');
 }
 function devolverEncajada(d) {
@@ -16271,6 +16277,9 @@ function devolverEncajada(d) {
   d.showModal = function () {
     const area = areaEncaje();
     if (!area) return modal();
+    // v2.129.0: los apartados que se pintan en la propia página (#dbody como panel) no abren ventana: antes quedaba abierta una
+    // ventana vacía de 46 px (la barra blanca) que seguía abierta al cambiar de pantalla
+    if (d.id === 'dlg' && typeof PANEL_ACTIVO !== 'undefined' && PANEL_ACTIVO && PANEL_ACTIVO.tipo === 'dbody') return;
     if (d.open) return;
     d.classList.add('encajada'); d.__area = area; d.__casa = d.__casa || d.parentNode;
     area.parentNode.insertBefore(d, area);
@@ -16947,3 +16956,305 @@ async function fichaProductosCentro(id) {
   };
 }
 abrirFicha = (orig => async function (id, ...a) { const r = await orig.call(this, id, ...a); fichaProductosCentro(id); return r; })(abrirFicha);
+
+
+/* v2.131.0 · Usuarios y roles con página propia; panel de delcos (solo quien gestiona la plataforma): organizaciones, accesos y
+   auditoría, y «Entrar» en cualquier organización para verla tal cual (franja «Estás viendo X · Salir»). Configuración se queda con
+   lo del día a día, con Inicio primero. */
+PAGINAS.usuarios = { t: 'Usuarios y roles', d: 'Personas de tu equipo, sus roles y sus permisos', admin: true,
+  tabs: [['usuarios', 'Usuarios', () => pintarUsuarios2()], ['roles', 'Roles y permisos', () => pintarRoles()]] };
+PAGINAS.delcos = { t: 'Panel delcos', d: 'Clientes de la plataforma, accesos y registro de cambios', permiso: () => puede('gestionar_plataforma'),
+  tabs: [['orgs', 'Organizaciones', () => pintarOrganizaciones()], ['accesos', 'Accesos', () => panelDeModulo('accesos')],
+         ['auditoria', 'Auditoría', () => panelDeModulo('auditoria')]] };
+// Organización (de cada empresa) ya no lleva la lista de organizaciones: está en el panel de delcos
+(() => {
+  const g = Object.getOwnPropertyDescriptor(PAGINAS.organizacion, 'tabs').get;
+  Object.defineProperty(PAGINAS.organizacion, 'tabs', { get() { return g.call(this).filter(x => x[0] !== 'orgs'); }, configurable: true });
+})();
+// Configuración: Inicio primero; Usuarios y roles, y Seguridad y registro, ya no están aquí
+arbolConfig = (orig => function () {
+  const g = orig().map(([n, l]) => [n, l.filter(x => !['equipo', 'seguridad', 'orgs'].includes(x.k))]).filter(x => x[1].length);
+  for (const grupo of g) {
+    const i = grupo[1].findIndex(x => x.k === 'inicio');
+    if (i >= 0) { const [it] = grupo[1].splice(i, 1); g[0][1].unshift(it); break; }
+  }
+  return g;
+})(arbolConfig);
+// Lo que antes se abría en Configuración lleva a su página
+ir = (orig => function (t, ...a) {
+  if (t === 'config' && CFG_SEC === 'equipo') { PAG_TAB.usuarios = CFG_SUB === 'roles' ? 'roles' : 'usuarios'; CFG_SEC = 'inicio'; CFG_SUB = null; t = 'usuarios'; }
+  if (t === 'config' && CFG_SEC === 'seguridad' && puede('gestionar_plataforma')) { PAG_TAB.delcos = CFG_SUB === 'accesos' ? 'accesos' : 'auditoria'; CFG_SEC = 'inicio'; CFG_SUB = null; t = 'delcos'; }
+  if (t === 'config' && CFG_SEC === 'orgs' && puede('gestionar_plataforma')) { PAG_TAB.delcos = 'orgs'; CFG_SEC = 'inicio'; t = 'delcos'; }
+  return orig.call(this, t, ...a);
+})(ir);
+
+// Menú: «Usuarios y roles» (quien administra) y «Panel delcos» (quien gestiona la plataforma)
+function menuPaginas2131() {
+  const nav = document.querySelector('nav.main .in'); if (!nav || ES_MEDICO()) return;
+  const pon = (t, txt, ve) => {
+    let b = nav.querySelector(`[data-t="${t}"]`);
+    if (!b && ve) { nav.insertAdjacentHTML('beforeend', `<button data-t="${t}" aria-selected="false">${txt}</button>`); b = nav.querySelector(`[data-t="${t}"]`); }
+    if (b) { b.classList.toggle('hide', !ve); if (!b.closest('.mlbs') && b !== nav.lastElementChild) nav.appendChild(b); }   // v2.132.0: si ya está en su bloque del menú lateral, se queda
+  };
+  pon('usuarios', 'Usuarios y roles', puede('administrar'));
+  pon('delcos', 'Panel delcos', puede('gestionar_plataforma'));
+}
+aplicarPermisosMenu = (orig => function (...a) { const r = orig.apply(this, a); menuPaginas2131(); franjaVista(); return r; })(aplicarPermisosMenu);
+
+// Franja «Estás viendo X · Salir» cuando el Administrador de delcos está dentro de otra organización
+let VISTA_ORG = null;
+async function franjaVista() {
+  if (!PERFIL || !puede('gestionar_plataforma')) { quitarFranja(); return; }
+  const { data } = await RPC_ORIG('vista_organizacion', {});
+  VISTA_ORG = data || null;
+  if (!VISTA_ORG) { quitarFranja(); return; }
+  let f = $('orgvista');
+  if (!f) { document.body.insertAdjacentHTML('afterbegin', '<div id="orgvista" class="orgvista" role="status"></div>'); f = $('orgvista'); }
+  f.innerHTML = `<span>Estás viendo <b>${esc(VISTA_ORG.nombre)}</b>${VISTA_ORG.bloqueada ? ` <span class="pill p-warn">${VISTA_ORG.bloqueada === 'desactivada' ? 'desactivada' : 'prueba terminada'}</span>` : ''} tal cual la ve esa empresa. Lo que hagas queda en su registro.</span>
+    <button type="button" class="btn sec" id="orgvistasal">Salir</button>`;
+  document.body.classList.add('con-vista');
+  document.documentElement.style.setProperty('--alto-franja', f.offsetHeight + 'px');
+  $('orgvistasal').onclick = async ev => {
+    ev.target.disabled = true;
+    const { data: r } = await db.rpc('salir_organizacion', {});
+    if (!r || !r.ok) { ev.target.disabled = false; toast('No se ha podido salir', true); return; }
+    location.reload();
+  };
+}
+function quitarFranja() {
+  const f = $('orgvista'); if (f) f.remove();
+  document.body.classList.remove('con-vista'); document.documentElement.style.setProperty('--alto-franja', '0px');
+}
+async function entrarEnOrganizacion(o) {
+  if (!await preguntar(`Vas a ver la plataforma como ${o.nombre}: sus datos, su configuración y su plan. Lo que cambies se guarda en su empresa y queda registrado. Para volver, «Salir» en la franja de arriba.`, { titulo: 'Entrar en ' + o.nombre, ok: 'Entrar' })) return;
+  const { data: r } = await db.rpc('entrar_organizacion', { p_org: o.id });
+  if (!r || !r.ok) { toast(r && r.motivo === 'permiso' ? 'Solo el Administrador de delcos puede entrar' : 'No se ha podido entrar', true); return; }
+  try { sessionStorage.removeItem('dlc-f5'); } catch (e) {}
+  location.reload();
+}
+setTimeout(() => { try { menuPaginas2131(); franjaVista(); } catch (e) {} }, 0);
+/* ---------------- v2.132.0 · Menú lateral de escritorio (elegido por Eric: barra a la izquierda, agrupada por áreas) ----------------
+   Los botones siguen siendo los de siempre (nav.main #nav [data-t]): aquí solo se reparten en bloques, se pliega la barra a iconos
+   (por defecto en pantallas de menos de 1440 px; se recuerda en el dispositivo) y cada persona ordena los bloques y oculta secciones
+   («Personalizar menú», guardado en preferencias.menu). Solo en escritorio (≥ 900 px); el móvil sigue con su barra inferior.
+   Un botón nuevo en #nav que no esté en ningún bloque sale en «Otros». «Plataforma» (panel de delcos) va siempre al final, fijo. */
+const MENU_GRUPOS = [
+  { id: 'dia', t: 'Tu día', items: ['inicio', 'agenda', 'rutas'] },
+  { id: 'cartera', t: 'Cartera', items: ['directorio', 'pacientes', 'seguimiento'] },
+  { id: 'ventas', t: 'Ventas', items: ['ventas', 'productos', 'facturacion'] },
+  { id: 'resultados', t: 'Resultados', items: ['analitica', 'informe'] },
+  { id: 'equipo', t: 'Equipo', items: ['usuarios'] }];
+const MENU_FIJO = { id: 'plataforma', t: 'Plataforma', items: ['delcos'] };
+const MENU_PLEGAR_BAJO = 1440;
+// Iconos de las secciones nuevas (v2.131.0): Usuarios y roles con la llave de accesos y el panel de delcos con el escudo
+Object.assign(ICO_NAV, { usuarios: 'key-round', delcos: 'shield' });
+const ICO_SUBIR = '<path d="m18 15-6-6-6 6"/>';
+const ICO_PLEGAR = '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>';
+const menuPrefs = () => ((typeof PERFIL !== 'undefined' && PERFIL && PERFIL.preferencias) || {}).menu || {};
+function menuGrupos() {
+  const p = menuPrefs(), conocidos = new Set([...MENU_GRUPOS.flatMap(g => g.items), ...MENU_FIJO.items]);
+  const gs = MENU_GRUPOS.map(g => ({ id: g.id, t: g.t, items: [...g.items] }));
+  gs.forEach(g => { const o = (p.items || {})[g.id]; if (Array.isArray(o)) g.items = [...o.filter(k => g.items.includes(k)), ...g.items.filter(k => !o.includes(k))]; });
+  const orden = Array.isArray(p.orden) ? p.orden : [];
+  gs.sort((a, b) => ((orden.indexOf(a.id) + 1) || 99) - ((orden.indexOf(b.id) + 1) || 99));
+  const otros = [...document.querySelectorAll('#nav button[data-t]')].map(b => b.dataset.t).filter(k => !conocidos.has(k));
+  if (otros.length) gs.push({ id: 'otros', t: 'Otros', items: otros });
+  return gs;
+}
+const menuEscritorio = () => innerWidth >= 900;
+const menuPlegado = () => { try { const v = localStorage.getItem('dlc-menu-plegado'); if (v === '1' || v === '0') return v === '1'; } catch (e) {} return innerWidth < MENU_PLEGAR_BAJO; };
+let MENU_FIRMA = '';
+function montarMenuLateral() {
+  const inn = $('nav'); if (!inn) return;
+  // Con una sola sección (portal del médico o del centro) no hace falta barra lateral: se queda la cabecera de siempre
+  const visibles = [...inn.querySelectorAll('button[data-t]')].filter(b => !b.classList.contains('hide') && b.dataset.t !== 'seguimiento' && b.style.display !== 'none' && (b.classList.contains('mloculto') || getComputedStyle(b).display !== 'none' || document.body.classList.contains('menulat')));
+  // v2.135.0: el portal nunca lleva barra lateral (al arrancar veía un instante dos secciones y la montaba)
+  const portal = (() => { try { return ES_MEDICO(); } catch (e) { return false; } })();
+  const lat = menuEscritorio() && typeof PERFIL !== 'undefined' && !!PERFIL && !portal && visibles.length > 1;
+  document.body.classList.toggle('menulat', lat);
+  if (!lat) return;
+  document.body.classList.toggle('menupleg', menuPlegado());
+  const ocultos = menuPrefs().ocultos || [];
+  const botones = [...inn.querySelectorAll('button[data-t]')];
+  // Firma: si no ha cambiado nada (botones, permisos, preferencias), no se rehace (evita bucles con el observador)
+  const firma = botones.map(b => b.dataset.t + (b.classList.contains('hide') ? '-' : '+') + b.textContent.trim()).join('|') + JSON.stringify(menuPrefs()) + document.body.classList.contains('menupleg');
+  if (firma === MENU_FIRMA && inn.querySelector('.mlmarca')) return;
+  MENU_FIRMA = firma;
+  if (!inn.querySelector('.mlmarca')) {
+    const logo = (document.querySelector('header .logo') || {}).src || './logo-app.png';
+    inn.insertAdjacentHTML('afterbegin', `<div class="mlmarca"><img src="${esc(logo)}" alt=""><b class="mllab"></b></div>`);
+  }
+  const marca = (typeof AJUSTES !== 'undefined' && AJUSTES && AJUSTES.marca) || {};
+  inn.querySelector('.mlmarca b').textContent = marca.nombre || document.title || '';
+  const grupos = [...menuGrupos(), MENU_FIJO];
+  grupos.forEach(g => {
+    let c = inn.querySelector(`.mlgrupo[data-g="${g.id}"]`);
+    if (!c) {
+      inn.insertAdjacentHTML('beforeend', `<div class="mlgrupo${g === MENU_FIJO ? ' fijo' : ''}" data-g="${g.id}"><div class="mltit">${esc(g.t)}</div><div class="mlbs"></div></div>`);
+      c = inn.querySelector(`.mlgrupo[data-g="${g.id}"]`);
+    }
+    inn.appendChild(c);
+    const bs = c.querySelector('.mlbs');
+    g.items.forEach(k => { const b = inn.querySelector(`button[data-t="${k}"]`); if (b) bs.appendChild(b); });
+  });
+  botones.forEach(b => {
+    b.classList.toggle('mloculto', ocultos.includes(b.dataset.t) && !MENU_FIJO.items.includes(b.dataset.t));
+    // El texto va en su propia etiqueta (se oculta al plegar) y el nombre sirve de aviso al pasar el ratón
+    const t = [...b.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (t.length) {
+      const txt = t.map(n => n.textContent).join('').trim(); t.forEach(n => n.remove());
+      const l = b.querySelector('.mllab'); if (l) l.textContent = txt; else b.insertAdjacentHTML('beforeend', `<span class="mllab">${esc(txt)}</span>`);
+    }
+    b.dataset.tip = (b.querySelector('.mllab') || b).textContent.trim();
+  });
+  inn.querySelectorAll('.mlgrupo').forEach(g => g.classList.toggle('vacio', ![...g.querySelectorAll('button[data-t]')]
+    .some(b => !b.classList.contains('hide') && !b.classList.contains('mloculto') && b.dataset.t !== 'seguimiento' && getComputedStyle(b).display !== 'none')));
+  if (!inn.querySelector('.mlpie')) {
+    inn.insertAdjacentHTML('beforeend', `<div class="mlpie">
+      <button type="button" class="mlitem" id="mlcfg" data-tip="Configuración">${svgIco(ICON_NOM.settings)}<span class="mllab">Configuración</span></button>
+      <button type="button" class="mlitem" id="mlpers" data-tip="Personalizar menú">${svgIco(ICON_NOM['sliders-horizontal'])}<span class="mllab">Personalizar menú</span></button>
+      <button type="button" class="mlplegar" id="mlplegar" aria-label="Plegar o desplegar el menú">${svgIco(ICO_PLEGAR)}</button></div>`);
+    $('mlcfg').onclick = () => ir('config');
+    $('mlpers').onclick = e => { e.stopPropagation(); menuPersonalizar(); };
+    $('mlplegar').onclick = () => {
+      const p = !document.body.classList.contains('menupleg');
+      try { localStorage.setItem('dlc-menu-plegado', p ? '1' : '0'); } catch (e) {}
+      document.body.classList.toggle('menupleg', p); menuTip(null); MENU_FIRMA = ''; montarMenuLateral();
+    };
+  }
+  inn.appendChild(inn.querySelector('.mlpie'));
+  const cfg = document.querySelector('#umenu [data-u="cfg"]');
+  $('mlcfg').classList.toggle('hide', !cfg || cfg.classList.contains('hide'));
+  $('mlplegar').dataset.tip = document.body.classList.contains('menupleg') ? 'Desplegar el menú' : 'Plegar el menú';
+}
+// Aviso con el nombre al pasar el ratón por un icono (barra plegada)
+function menuTip(b) {
+  let t = $('mltip');
+  if (!b || !document.body.classList.contains('menupleg') || !document.body.classList.contains('menulat')) { if (t) t.classList.remove('ver'); return; }
+  if (!t) { document.body.insertAdjacentHTML('beforeend', '<div id="mltip" role="tooltip"></div>'); t = $('mltip'); }
+  const r = b.getBoundingClientRect();
+  t.textContent = b.dataset.tip || ''; t.style.top = (r.top + r.height / 2) + 'px'; t.style.left = (r.right + 10) + 'px'; t.classList.add('ver');
+}
+document.addEventListener('mouseover', e => { const b = e.target.closest && e.target.closest('nav.main [data-tip]'); menuTip(b || null); });
+// Personalizar: ordenar los bloques y las secciones de cada bloque, y elegir cuáles se ven
+function menuPersonalizar() {
+  let caja = $('mlpanel'); if (caja) { caja.remove(); return; }
+  const p = menuPrefs(), estado = { orden: menuGrupos().filter(g => g.id !== 'otros').map(g => g.id), items: {}, ocultos: [...(p.ocultos || [])] };
+  menuGrupos().forEach(g => { estado.items[g.id] = [...g.items]; });
+  const boton = k => document.querySelector(`#nav button[data-t="${k}"]`);
+  const nombre = k => { const b = boton(k); return b ? (b.dataset.tip || b.textContent.trim()) : ''; };
+  const disponible = k => { const b = boton(k); return !!b && k !== 'seguimiento' && !b.classList.contains('hide') && (b.classList.contains('mloculto') || getComputedStyle(b).display !== 'none'); };
+  document.body.insertAdjacentHTML('beforeend', '<div id="mlpanel" role="dialog" aria-label="Personalizar menú"></div>');
+  caja = $('mlpanel');
+  const flechas = (attr, val, i, n, txt) => `<span class="mlpflechas">
+    <button type="button" ${attr}="${val}" data-d="-1" aria-label="Subir ${txt}" ${i ? '' : 'disabled'}>${svgIco(ICO_SUBIR)}</button>
+    <button type="button" ${attr}="${val}" data-d="1" aria-label="Bajar ${txt}" ${i < n - 1 ? '' : 'disabled'}>${svgIco(ICON_NOM['chevron-down'])}</button></span>`;
+  const pinta = () => {
+    const tit = id => (MENU_GRUPOS.find(x => x.id === id) || { t: 'Otros' }).t;
+    const bloques = estado.orden.filter(id => (estado.items[id] || []).some(disponible));
+    caja.innerHTML = `<div class="mlph"><b>Personalizar menú</b><span class="sm">Ordena los bloques y elige qué secciones ves. Solo cambia tu menú.</span></div>
+      <div class="mlpl">${bloques.map((id, i) => { const its = estado.items[id].filter(disponible);
+        return `<div class="mlpg"><div class="mlpgh"><b>${esc(tit(id))}</b>${flechas('data-gm', id, i, bloques.length, 'el bloque')}</div>
+          ${its.map((k, j) => `<label class="mlpi"><input type="checkbox" data-vk="${k}" ${estado.ocultos.includes(k) ? '' : 'checked'}><span class="mlpn">${esc(nombre(k))}</span>${flechas('data-im', id + '|' + k, j, its.length, nombre(k))}</label>`).join('')}</div>`; }).join('')}</div>
+      <div class="mlpacts"><button type="button" class="btn sec" id="mlpdef">Restablecer</button><button type="button" class="btn" id="mlpok">Guardar</button></div>`;
+  };
+  pinta();
+  caja.addEventListener('click', async e => {
+    e.stopPropagation();
+    const gm = e.target.closest('[data-gm]'), im = e.target.closest('[data-im]');
+    if (gm) {
+      const bloques = estado.orden.filter(id => (estado.items[id] || []).some(disponible)), i = bloques.indexOf(gm.dataset.gm), otro = bloques[i + +gm.dataset.d];
+      const a = estado.orden.indexOf(gm.dataset.gm), b = estado.orden.indexOf(otro); [estado.orden[a], estado.orden[b]] = [estado.orden[b], estado.orden[a]]; pinta(); return;
+    }
+    if (im) {
+      e.preventDefault();
+      const [gid, k] = im.dataset.im.split('|'), vis = estado.items[gid].filter(disponible), i = vis.indexOf(k), otro = vis[i + +im.dataset.d], l = estado.items[gid];
+      const a = l.indexOf(k), b = l.indexOf(otro); [l[a], l[b]] = [l[b], l[a]]; pinta(); return;
+    }
+    if (e.target.id === 'mlpdef') { estado.orden = MENU_GRUPOS.map(x => x.id); MENU_GRUPOS.forEach(x => { estado.items[x.id] = [...x.items]; }); estado.ocultos = []; pinta(); return; }
+    if (e.target.id === 'mlpok') {
+      const prefs = Object.assign({}, PERFIL.preferencias || {}, { menu: { orden: estado.orden, items: estado.items, ocultos: estado.ocultos } });
+      const { data, error } = await db.rpc('guardar_preferencias', { p: prefs });
+      if (error) { toast('No se ha podido guardar el menú', true); return; }
+      PERFIL.preferencias = data || prefs; caja.remove(); MENU_FIRMA = ''; montarMenuLateral(); toast('Menú guardado');
+    }
+  });
+  caja.addEventListener('change', e => { const v = e.target.closest('[data-vk]'); if (!v) return; const k = v.dataset.vk; estado.ocultos = v.checked ? estado.ocultos.filter(x => x !== k) : [...new Set([...estado.ocultos, k])]; });
+  setTimeout(() => document.addEventListener('click', function fuera(ev) {
+    if (!ev.target.closest('#mlpanel, #mlpers')) { const c = $('mlpanel'); if (c) c.remove(); document.removeEventListener('click', fuera); }
+  }), 0);
+}
+// Se monta al arrancar y se rehace si cambian los botones (permisos, módulos, portal), el tamaño de la pantalla o la sesión
+let MENU_RAF = 0;
+const menuRehacer = () => { if (MENU_RAF) return; MENU_RAF = requestAnimationFrame(() => { MENU_RAF = 0; montarMenuLateral(); }); };
+if ($('nav')) new MutationObserver(menuRehacer).observe($('nav'), { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+addEventListener('resize', menuRehacer);
+if ($('app')) new MutationObserver(menuRehacer).observe($('app'), { attributes: true, attributeFilter: ['class'] });
+menuRehacer();
+
+
+/* v2.133.0 · Entorno de pruebas: «Traer los datos de producción». Junto a «Volver a los datos de partida» (y para quien puede
+   usarlo), pide a la función «refrescar-pruebas» de Supabase que lance el proceso de GitHub que copia los datos actuales de
+   producción (solo los lee) y los deja como nuevos datos de partida. La franja enseña en qué punto está y recarga al terminar. */
+const MOTIVO_REFRESCO = { permiso: 'Solo la administración puede traer los datos de producción', responsable: 'Solo la persona responsable del entorno de pruebas puede hacerlo',
+  en_marcha: 'Ya se están copiando los datos de producción', github: 'No se ha podido lanzar la copia en GitHub', no_es_pruebas: 'Esto solo funciona en el entorno de pruebas' };
+let REFRESCO_VIGILA = null;
+async function estadoRefresco(recargarAlAcabar) {
+  const { data: e } = await RPC_ORIG_FROM('entorno_pruebas').select('*').eq('id', 1).single();
+  const el = $('prrefresco'); if (!el || !e) return null;
+  const fmt = x => new Date(x).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const enMarcha = ['pedido', 'copiando'].includes(e.refresco_estado);
+  el.textContent = enMarcha ? `· Copiando los datos de producción (${e.refresco_estado === 'pedido' ? 'empezando' : 'en marcha'}): tarda unos minutos`
+    : e.refresco_estado === 'error' ? '· La última copia de producción falló' + (e.refresco_error ? ': ' + e.refresco_error : '')
+    : e.refresco_error ? '· ' + e.refresco_error : '';
+  el.classList.toggle('falta', e.refresco_estado === 'error');
+  if ($('prtraer')) $('prtraer').disabled = enMarcha;
+  if (enMarcha && !REFRESCO_VIGILA) REFRESCO_VIGILA = setInterval(async () => {
+    const x = await estadoRefresco(true);
+    if (x && !['pedido', 'copiando'].includes(x.refresco_estado)) {
+      clearInterval(REFRESCO_VIGILA); REFRESCO_VIGILA = null;
+      if (x.refresco_estado === 'ok') { toast('Datos de producción copiados'); limpiarDatosLocales(); setTimeout(() => location.reload(), 800); }
+      else toast('La copia de producción ha fallado', true);
+    }
+  }, 20000);
+  return e;
+}
+if (EN_PRUEBAS) {
+  pintarFranjaPruebas = (orig => async function () {
+    await orig();
+    await new Promise(r => setTimeout(r, 120));
+    const b = $('prreset'); if (!b || $('prtraer')) return;   // sin «Volver…» (no es responsable) tampoco puede traer datos
+    b.insertAdjacentHTML('beforebegin', '<button class="btn sec" id="prtraer" title="Copia aquí los datos actuales de producción y los deja como nuevos datos de partida">⇣ Traer los datos de producción</button>');
+    const p = $('prpunto'); if (p && !$('prrefresco')) p.insertAdjacentHTML('afterend', ' <span class="prpunto" id="prrefresco"></span>');
+    estadoRefresco();
+    $('prtraer').onclick = async ev => {
+      if (!await preguntar('Se copiarán aquí los datos actuales de producción (producción no se toca) y pasarán a ser los nuevos datos de partida. Todo lo hecho en pruebas se perderá. Tarda unos minutos; puedes seguir usando la app mientras tanto.',
+        { titulo: '¿Traer los datos de producción?', ok: 'Sí, traerlos', peligro: true })) return;
+      ev.target.disabled = true;
+      const { data: r, error } = await db.functions.invoke('refrescar-pruebas', { body: {} });
+      let res = r;
+      if (error && error.context && typeof error.context.json === 'function') { try { res = await error.context.json(); } catch (e) {} }
+      if (!res || !res.ok) {
+        ev.target.disabled = false;
+        toast((res && MOTIVO_REFRESCO[res.motivo]) || 'No se ha podido lanzar la copia' + (error && !res ? ': falta la función «refrescar-pruebas» en Supabase' : ''), true);
+        return;
+      }
+      toast('Copia de producción en marcha: tarda unos minutos');
+      estadoRefresco();
+    };
+  })(pintarFranjaPruebas);
+  if ($('prreset')) pintarFranjaPruebas();
+}
+/* v2.134.0 · Portal del centro (diseño): en «Pedir reposición», la fila de un producto con unidades se marca en azul suave */
+document.addEventListener('input', e => {
+  const i = e.target.closest && e.target.closest('#ctprods [data-ctp]'); if (!i) return;
+  const f = i.closest('.ctlin'); if (f) f.classList.toggle('con', (+i.value || 0) > 0);
+});
+
+// v2.135.0 · Menú lateral: «Configuración» (pie del menú) se marca como sección activa cuando se está en Configuración
+function menuMarcarPie() { const b = $('mlcfg'); if (b) b.classList.toggle('activo', TAB === 'config'); }
+ir = (orig => function (...a) { const r = orig.apply(this, a); menuMarcarPie(); setTimeout(menuMarcarPie, 0); return r; })(ir);
+
+// v2.136.0 · Al cambiar de pantalla se cierra lo que va «en la página» (Diseño del PDF): en el móvil es una ventana y seguía
+// abierta encima de la pantalla siguiente (Usuarios, Panel delcos…)
+ir = (orig => function (...a) { const d = $('dlg'); if (d && d.open && (d.dataset.fija || d.dataset.depagina)) d.close(); return orig.apply(this, a); })(ir);
