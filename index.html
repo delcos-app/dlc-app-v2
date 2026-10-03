@@ -2608,6 +2608,139 @@ label.chk > span{display:flex;flex-direction:column;gap:3px;min-width:0;line-hei
   .lin .lrow.cprow > :first-child{grid-column:1 / -1}
   .lin .lrow.cprow > div:empty{display:none}
 }
+/* v2.137.0 · Entorno de pruebas: sin franja; un indicador pequeño junto al logo (los botones, en Organización → Entorno de pruebas) */
+#franjapruebas{display:none!important}
+.indpruebas{flex:0 0 auto;align-self:center;margin-left:8px;padding:2px 10px;border-radius:999px;background:#FEF3E2;color:#B45309;border:1px solid #F5C77E;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.6;cursor:pointer}
+.indpruebas:hover{background:#FDE7C4}
+/* ============================================================
+   v2.138.0 · Pastilla «Pruebas» en el menú lateral
+   ============================================================ */
+@media (min-width:900px){
+  body.menulat .mlmarca{position:relative}
+  body.menulat nav.main .mlmarca .indpruebas{flex:none;margin-left:auto;align-self:center;width:auto;height:auto;min-height:0;padding:2px 8px;border:1px solid #F5C77E;border-radius:999px;background:#FEF3E2;color:#B45309;font:700 10.5px var(--f-texto);letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+  body.menulat nav.main .mlmarca .indpruebas:hover{background:#FDE7C4}
+  body.menulat.menupleg nav.main .mlmarca .indpruebas{position:absolute;top:-2px;left:calc(50% + 10px);width:12px;height:12px;min-width:0;margin:0;padding:0;
+    border:2px solid #FFFFFF;border-radius:50%;background:#E0A400;font-size:0;color:transparent;overflow:hidden}
+}
+/* Tramos de comisión: cabecera con lo que es cada número (antes «0 · 100 · 1» sin explicar) y, en el móvil, los tres en una fila
+   sin los botones − y + (no cabían y se apilaban sin etiqueta) */
+.trcab{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:12px;margin:2px 0 6px;font-size:12px;font-weight:700;color:var(--muted)}
+#etramos > .g2{align-items:center}
+@media (max-width:760px){
+  .trcab,#etramos > .g2{grid-template-columns:1fr 1fr 1fr 36px!important;gap:6px!important}
+  #etramos > .g2 .numw .nb{display:none}
+  #etramos > .g2 > *{min-width:0;width:100%}
+  #etramos > .g2 > input{text-align:center}
+  #etramos > .g2 > .btn{width:36px;padding:0}
+}
+/* v2.139.0 · Pedidos, Oportunidades, Compras y Proveedores en el menú (sin pestañas dentro) y avisos de pedidos configurables */
+#pedsub{display:none!important}
+#operativa .fh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.opit{display:flex;align-items:center;gap:6px}.opit .tx{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer}
+.opit .opx{flex:0 0 auto}
+/* ============================================================
+   v2.140.0 · Filtros en la cabecera, Personalizar menú y repasos
+   ============================================================ */
+/* «Filtros y columnas» en la cabecera (escritorio): misma altura que la acción principal y el último por la derecha */
+@media (min-width:900px){
+  .saludo > .acts.htacts{flex-wrap:nowrap;align-items:center}
+  .saludo > .acts.htacts > .htbtn,#dircab .acts > #dirtools{white-space:nowrap}
+  #dircab .acts > .ai-hueco{display:none!important}
+}
+/* Actualizar de Inicio: al pulsarlo gira el icono, sin texto */
+.icogira svg{animation:giroIco .8s linear infinite}
+.icogira{opacity:1!important;cursor:progress}
+@keyframes giroIco{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.icogira svg{animation-duration:2s}}
+/* Duplicados: guía de la tarjeta de la derecha con título y texto (antes la negrita partía la frase en tres líneas) */
+.vacio.vguia{gap:6px}
+.vacio.vguia > b{font:700 15px var(--f-titulo);color:var(--ink)}
+.vacio.vguia > span{max-width:380px;line-height:1.5}
+/* Personalizar menú: tarjetas por bloque, asa para arrastrar, icono de la sección e interruptor; vista previa en vivo */
+#mlpanel.mlp2{width:360px;max-height:calc(100vh - 32px);padding:0;overflow:hidden}
+.mlp2 .mlph{flex-direction:row;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 14px 12px 18px}
+.mlp2 .mlph > div{display:flex;flex-direction:column;gap:3px}
+.mlp2 .mlph .sm{line-height:1.45}
+.mlp2 .mlph .x{flex:none;margin:-4px -2px 0 0}
+.mlp2 .mlpl{display:flex;flex-direction:column;gap:10px;padding:12px 12px 14px;background:var(--hielo)}
+.mlp2 .mlpg{position:relative;padding:4px 6px 6px;border:1px solid var(--line)!important;border-radius:14px;background:#FFFFFF;
+  transition:opacity var(--t-rapido) var(--ease-sal)}
+.mlp2 .mlpgh{display:flex;align-items:center;gap:6px;padding:4px 4px 2px 0}
+.mlp2 .mlpgh b{flex:1;font:700 11.5px var(--f-texto);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mlp2 .mlpcnt{font-size:12px;color:#7A8CA0;padding-right:6px}
+.mlp2 .mlpis{display:flex;flex-direction:column;gap:2px}
+.mlp2 .mlpi{display:flex;align-items:center;gap:8px;min-height:42px;padding:0 6px 0 0;border-radius:10px;cursor:default;position:relative;
+  transition:background-color var(--t-rapido) var(--ease-sal),opacity var(--t-rapido) var(--ease-sal)}
+.mlp2 .mlpi:hover{background:var(--hielo)}
+.mlp2 .mlpico{display:grid;place-items:center;width:30px;height:30px;flex:none;border-radius:8px;background:var(--sky-soft);color:var(--navy)}
+.mlp2 .mlpico svg{width:16px;height:16px}
+.mlp2 .mlpn{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mlp2 .mlpi.off .mlpico{background:#EEF2F6;color:#94A3B8}
+.mlp2 .mlpi.off .mlpn{color:#8597AB;font-weight:500}
+.mlp2 .mlpi > .vfswitch{margin:0;flex:0 0 auto;width:auto!important;display:inline-flex}
+.mlp2 .mlpi > .mlpn{display:block;flex:1 1 auto}
+.mlp2 .mlpasa{flex:none;display:grid;place-items:center;width:24px;height:32px;padding:0;border:0;border-radius:6px;background:none;color:#A6B4C3;cursor:grab;touch-action:none}
+.mlp2 .mlpasa svg{width:16px;height:16px}
+.mlp2 .mlpasa:hover{color:var(--navy);background:var(--sky-soft)}
+.mlp2 .mlpasa:active{cursor:grabbing}
+.mlp2 .mlpasa:focus-visible{outline:none;box-shadow:var(--foco)}
+.mlp2 .arrastrando{opacity:.4}
+.mlp2 .soltar-antes::before,.mlp2 .soltar-despues::after{content:"";position:absolute;left:8px;right:8px;height:3px;border-radius:3px;background:var(--sky);pointer-events:none}
+.mlp2 .soltar-antes::before{top:-2px}
+.mlp2 .soltar-despues::after{bottom:-2px}
+.mlp2 .mlpg.soltar-antes::before{top:-7px}
+.mlp2 .mlpg.soltar-despues::after{bottom:-7px}
+.mlp2 .mlpacts{align-items:center;border-radius:0}
+.mlp2 .mlpdef{display:inline-flex;align-items:center;gap:6px;border-color:transparent;background:none;color:var(--muted)}
+.mlp2 .mlpdef:hover{color:var(--navy);background:#FFFFFF}
+.mlp2 .mlpdef svg{width:15px;height:15px}
+@media (prefers-reduced-motion: reduce){.mlp2 .mlpg,.mlp2 .mlpi{transition:none}}
+/* ============================================================
+   v2.141.0 · Pedidos, Roles y permisos e Inicio al cargar
+   ============================================================ */
+/* Avisos de pedidos: título y engranaje dentro del margen de la tarjeta, con aire (pegaban al borde y a la esquina) */
+#operativa{padding:0 0 4px}
+#operativa > .fh{padding:14px 14px 10px 18px;margin:0}
+#operativa > .fh h2{margin:0;font:800 16px var(--f-titulo);color:var(--ink)}
+#operativa > .fh #opcfg{width:36px;height:36px;min-height:0;padding:0;display:grid;place-items:center;border-radius:10px}
+#operativa > .fh #opcfg svg{width:17px;height:17px}
+#operativa .opgrid{padding:0 18px 16px;gap:10px}
+#operativa > .sm{padding:0 18px 14px!important}
+/* Indicadores de Pedidos: una franja fina de cifras encima de la tabla (antes seis tarjetas grandes empujaban la tabla hacia abajo) */
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis{display:flex!important;flex-wrap:wrap;gap:0;margin:0;padding:10px 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--hielo)}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi{display:flex!important;align-items:baseline;gap:6px;min-height:0;height:auto;margin:0;padding:2px 16px!important;border:0;border-left:1px solid var(--line);border-radius:0;
+  background:none;box-shadow:none;transform:none}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi:first-child{padding-left:0!important;border-left:0}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi:hover{transform:none;box-shadow:none}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi > b{font:800 16px var(--f-titulo);color:var(--ink);margin:0}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi.ok > b{color:var(--ok)}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi > span{font-size:12.5px;color:var(--muted);margin:0}
+:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi .ai,:is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi .kico{display:none}
+@media (max-width:760px){
+  :is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis{padding:8px 12px;row-gap:6px}
+  :is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi{flex:1 1 45%;padding:2px 10px;border-left:0}
+  :is(#ptotales,#lltot,#vcuerpo > .panel > .kpis.vtot:not([id])).kpis > .kpi:first-child{padding-left:10px!important}
+}
+/* Roles y permisos: las dos tablas una debajo de la otra, a todo el ancho y con el mismo aspecto (lado a lado se cortaban las
+   columnas de los roles y los desplegables, y la página se desplazaba hacia los lados) */
+:is(#cfgcuerpo,.pagcuerpo):has(> #rolperm){display:flex!important;flex-direction:column;gap:16px}
+:is(#cfgcuerpo,.pagcuerpo):has(> #rolperm) > *{width:100%;max-width:none;margin:0}
+#rolperm > h2{padding:0!important;margin:0 0 4px}
+.rolmat select{min-width:128px;width:100%}
+.rolmat td:first-child{min-width:240px}
+.rolmat th{white-space:nowrap}
+/* Inicio al cargar: el esqueleto ya no lleva títulos de bloques (eran de bloques que cambian al llegar los datos y la pantalla
+   parecía cargarse desordenada); son barras neutras hasta que llega cada bloque */
+#v-inicio .cols .card:has(> .skel) > h2{width:38%;height:14px;margin:2px 0 14px;border-radius:6px;background:#E8EEF5;color:transparent!important;overflow:hidden}
+#v-inicio .cols .card:has(> .skel) > h2 *{display:none}
+/* ============================================================
+   v2.142.0 · Filtros en la cabecera también en el móvil
+   ============================================================ */
+/* En el móvil los botones de la cabecera bajan de línea si no caben (antes se desplazaban de lado y «Filtros y columnas» quedaba
+   cortado en Stock y lotes); los indicadores de Compras y Oportunidades usan la misma franja fina que Pedidos (v2.141.0) */
+@media (max-width:899px){
+  .saludo .acts.chips.htacts{flex-wrap:wrap;overflow:visible;row-gap:8px}
+}
 </style>
 </head>
 <body>
@@ -2744,6 +2877,6 @@ label.chk > span{display:flex;flex-direction:column;gap:3px;min-width:0;line-hei
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.136.0"></script>
+<script src="./app.js?v=2.142.0"></script>
 </body>
 </html>
