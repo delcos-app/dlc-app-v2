@@ -2741,6 +2741,216 @@ label.chk > span{display:flex;flex-direction:column;gap:3px;min-width:0;line-hei
 @media (max-width:899px){
   .saludo .acts.chips.htacts{flex-wrap:wrap;overflow:visible;row-gap:8px}
 }
+/* v2.141.0 · Agenda en una sola pantalla: métricas, hoy, semana y mes (maquetación básica; el diseño, de Branding) */
+/* v2.143.0 · Agenda en una sola pantalla: métricas, hoy, semana y mes (maquetación básica; el diseño, de Branding) */
+.agunida .agmodos,.agunida .agnav,.agunida [data-ag="ant"],.agunida [data-ag="sig"],.agunida [data-ag="hoy"],.agunida [data-ag="dia"],.agunida [data-ag="semana"],.agunida [data-ag="mes"],.agunida #agmeses{display:none!important}
+.agmet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.agm{display:flex;flex-direction:column;gap:1px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;min-width:0}
+.agmt{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.agmv{font-size:14px}.agmv b{font-size:18px;color:var(--navy)}
+.agms{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agsemmes{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:14px;margin-top:14px;align-items:start}
+.agsemmes .fh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.agsemgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:0 12px 12px}
+.agsd{display:flex;flex-direction:column;gap:4px;min-width:0;padding:6px;border-radius:10px;background:#F2F7FC}
+.agsd.hoy{box-shadow:inset 0 0 0 2px var(--navy)}.agsd.pasado{opacity:.72}
+.agsdh{display:flex;justify-content:space-between;gap:4px;background:none;border:0;padding:0;cursor:pointer;font-size:13px;color:inherit}
+.agsc{display:block;text-align:left;font-size:12px;background:#fff;border:0;border-left:3px solid var(--c);border-radius:6px;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:inherit}
+.agsc i{font-style:normal;color:var(--muted)}
+.agsmas{font-size:12px;background:none;border:0;color:#3F82C0;cursor:pointer;text-align:left;padding:0}
+.agsv{color:var(--muted);font-size:12px}
+.agmesgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 12px 12px}
+.agmd{font-size:11px;color:var(--muted);text-align:center}
+.agmc{aspect-ratio:1;border:0;border-radius:8px;background:#F2F7FC;cursor:pointer;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:inherit}
+.agmc.hoy{box-shadow:inset 0 0 0 2px var(--navy)}.agmc.pasado{opacity:.6}.agmc.con{background:#E3EEF9}
+.agpt{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:var(--navy);border-radius:999px;padding:0 5px;line-height:15px}
+.agpop{position:fixed;z-index:1500;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(11,37,64,.18);padding:10px;max-height:70vh;overflow:auto}
+.agpoph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+@media (max-width:1100px){.agsemmes{grid-template-columns:1fr}}
+@media (max-width:760px){.agmet{grid-template-columns:repeat(2,minmax(0,1fr))}.agsemgrid{grid-template-columns:1fr}}
+/* ============================================================
+   v2.144.0 · Acción principal de las páginas y Agenda (diseño)
+   ============================================================ */
+/* «+ Nuevo usuario» y «+ Nueva organización» en la cabecera (como «+ Nueva venta»); en el móvil, debajo del título y a la izquierda,
+   igual que en el resto de pantallas */
+@media (max-width:899px){
+  .saludo > .acts.htacts{justify-content:flex-start}
+}
+/* Agenda (decisión de Eric, 3/10/2026): a la izquierda la semana en una franja, «Tu día» y debajo «Sugerencias de hoy» (con su hueco
+   aunque no haya datos); a la derecha el calendario del mes, fijo al bajar. En el móvil, todo en una columna en ese orden. Se hace solo
+   con CSS: los envoltorios (.agdos, .agizq, .agder, .agsemmes) dejan de contar y cada bloque se coloca en la rejilla de la pantalla. */
+#v-agenda.agunida{display:flex;flex-direction:column}
+#v-agenda.agunida > .agdos,#v-agenda.agunida .agizq,#v-agenda.agunida .agder,#v-agenda.agunida > .agsemmes{display:contents}
+#v-agenda.agunida > .saludo{order:0}
+#v-agenda.agunida > #agmet{order:1}
+#v-agenda.agunida #agsemana{order:2}
+#v-agenda.agunida #agcuerpo{order:3}
+#v-agenda.agunida #agsug{order:4}
+#v-agenda.agunida #agpend{order:5}
+#v-agenda.agunida #agmes{order:6}
+#v-agenda.agunida :is(#agsemana,#agcuerpo,#agsug,#agpend,#agmes){margin:0 0 12px!important}
+#v-agenda.agunida #agpend:empty{display:none}
+#v-agenda.agunida #agsug{min-height:220px}
+@media (min-width:1100px){
+  #v-agenda.agunida{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,380px);column-gap:16px;align-items:start}
+  #v-agenda.agunida > *{grid-column:1 / -1}
+  #v-agenda.agunida :is(#agsemana,#agcuerpo,#agsug,#agpend){grid-column:1}
+  #v-agenda.agunida #agmes{grid-column:2;grid-row:3 / span 4;align-self:start;position:sticky;top:84px}
+}
+/* Métricas: cifra protagonista */
+#agmet{gap:10px;margin:0 0 14px}
+#agmet .agm{padding:12px 14px;gap:2px;border-radius:14px}
+#agmet .agmt{font:700 11px var(--f-texto);letter-spacing:.06em;color:var(--muted)}
+#agmet .agmv{font-size:13.5px;color:var(--muted)}
+#agmet .agmv b{font:800 22px var(--f-titulo);color:var(--ink);margin-right:2px}
+/* Cabeceras de semana y mes, con aire (no tenían padding) */
+:is(#agsemana,#agmes) > .fh{padding:14px 14px 10px 16px;margin:0;flex-wrap:wrap;row-gap:8px}
+:is(#agsemana,#agmes) > .fh h2{margin:0;font:800 15px var(--f-titulo);color:var(--ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+:is(#agsemana,#agmes) > .fh h2 .sm{font:500 12.5px var(--f-texto);color:var(--muted)}
+#agplansem{min-height:34px;padding:0 12px;font-size:13px;white-space:nowrap}
+/* La semana, rediseñada: una franja de 7 días; cada día con su fecha, cuántas hechas de cuántas y un punto por cita (del color de
+   su estado). Al pulsar un día se abren sus citas. */
+#agsemana .agsemgrid{grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:6px;padding:0 12px 12px}
+#agsemana .agsd{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:4px;min-height:74px;padding:8px 4px;
+  border:1px solid transparent;border-radius:12px;background:var(--hielo);opacity:1;cursor:pointer;transition:background-color var(--t-rapido) var(--ease-sal)}
+#agsemana .agsd:hover{background:var(--sky-soft)}
+#agsemana .agsd.pasado{opacity:.6}
+#agsemana .agsd.hoy{background:#FFFFFF;border-color:var(--navy);box-shadow:none}
+#agsemana .agsdh{flex:0 0 100%;display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;padding:0;font-size:12px;color:var(--muted)}
+#agsemana .agsdh b{font:700 13px var(--f-texto);color:var(--ink);white-space:nowrap}
+#agsemana .agsd.hoy .agsdh b{color:var(--navy)}
+#agsemana .agsdh span{font-size:11.5px}
+#agsemana .agsc{width:8px;height:8px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;background:var(--c);font-size:0;line-height:0;overflow:hidden}
+#agsemana .agsmas,#agsemana .agsv{flex:0 0 100%;text-align:center;font-size:11.5px}
+#agsemana .agsv{color:#A6B4C3}
+/* El mes: números limpios, días con citas en azul suave con su número de citas, hoy en marino */
+#agmes .agmesgrid{gap:4px;padding:0 12px 14px}
+#agmes .agmd{font:700 11px var(--f-texto);color:var(--muted);padding-bottom:2px}
+#agmes .agmc{position:relative;border-radius:10px;background:transparent;font:600 13px var(--f-texto);color:var(--ink);opacity:1;
+  transition:background-color var(--t-rapido) var(--ease-sal)}
+#agmes .agmc:hover{background:var(--hielo)}
+#agmes .agmc.pasado{color:#94A3B8}
+#agmes .agmc.con{background:var(--sky-soft)}
+#agmes .agmc.hoy{background:var(--navy);color:#FFFFFF;box-shadow:none}
+#agmes .agpt{font-size:9.5px;line-height:14px;padding:0 4px}
+#agmes .agmc.hoy .agpt{background:#FFFFFF;color:var(--navy)}
+@media (max-width:760px){
+  #agsemana .agsemgrid{gap:4px;padding:0 8px 10px}
+  #agsemana .agsd{min-height:64px;padding:6px 2px;gap:3px}
+  #agsemana .agsc{width:7px;height:7px}
+  #agsemana .agsdh b{font-size:12px}
+  #agmet .agmv b{font-size:19px}
+  /* Sugerencias: las filas «extra» (.lista > .extra las ponía en flex) bajan los botones como las demás */
+  #agsug .lista > .item.extra{display:grid!important}
+}
+/* El antiguo selector Día/Semana/Mes del móvil se quedaba como una barra vacía */
+#v-agenda.agunida > .segm,#v-agenda.agunida > .agnavm{display:none!important}
+@media (prefers-reduced-motion: reduce){#agsemana .agsd,#agmes .agmc{transition:none}}
+/* v2.145.0 · Rutas en una sola pantalla: propuestas del día a la izquierda y mis rutas a la derecha */
+.rgrid2{display:grid;gap:16px;grid-template-columns:1fr;align-items:start}
+@media(min-width:1100px){.rgrid2{grid-template-columns:minmax(0,1fr) 360px}}
+.rgrid2 > .card{margin:0}
+.rprops > .fh,.rmis > .fh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:14px 16px 6px}
+.rprops > .fh h2,.rmis > .fh h2{padding:0;margin:0}
+.rprops > .fh .sm{margin-top:2px}
+.rmis > .fh h2 .n{margin-left:8px}
+.rprop{display:grid;grid-template-columns:132px minmax(0,1fr);grid-template-areas:"croq tx" "croq acts" "lista lista";column-gap:16px;row-gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+.rpcroq{grid-area:croq;background:var(--hielo,#F2F7FC);border-radius:10px;display:flex;align-items:center;justify-content:center;align-self:start}
+.rptx{grid-area:tx;display:flex;flex-direction:column;gap:4px;min-width:0}
+.rpzona{font-family:Manrope,system-ui,sans-serif;font-size:16px;display:flex;align-items:center;gap:8px}
+.rpnum{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#17457A;color:#fff;font-size:12px;flex:none}
+.rpmot{display:flex;flex-wrap:wrap;gap:6px}
+.rpporque{color:#0E6B4C}
+.rpacts{grid-area:acts;margin:0;flex-wrap:wrap}
+.rplista{grid-area:lista;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rpit{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n x" "s x" "m x";gap:2px 10px;padding:9px 12px;border-top:1px solid var(--line)}
+.rpit:first-child{border-top:0}
+.rpit .lnkmed{grid-area:n;justify-self:start;text-align:left}
+.rpit .sm{grid-area:s}
+.rpit .rpmot{grid-area:m}
+.rpit .rpquitar{grid-area:x;align-self:center}
+.rmis .rmit .tx{min-width:0}
+.rmis .rmit .acts{flex-wrap:nowrap}
+.rmis .rguia{padding:4px 16px 16px}
+@media(max-width:620px){
+  .rprop{grid-template-columns:1fr;grid-template-areas:"tx" "croq" "acts" "lista"}
+  .rpcroq{justify-self:stretch}
+  .rpacts .btn{flex:1 1 auto}
+}
+/* ============================================================
+   v2.146.0 · Agenda: «Tu día» con el día elegido (opción C)
+   ============================================================ */
+/* Al pulsar un día de la semana o del mes, «Tu día» muestra ese día: título con la fecha y píldora «← Volver a hoy» al lado; el día
+   elegido, relleno en azul (opción C elegida por Eric). */
+#agcuerpo .tdhead > div:first-child.agtitdia{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+#agcuerpo .tdhead > div:first-child.agtitdia > .tdstats{flex:0 0 100%}
+#agahoy{min-height:30px;padding:0 12px 0 10px;font-size:12.5px;border-radius:999px;background:var(--sky-soft);border-color:transparent;color:var(--navy)}
+#agahoy::before{content:"←";margin-right:5px}
+#agahoy:hover{background:#D6E6F6}
+#agsemana .agsd.sel{background:var(--sky);border-color:var(--sky);opacity:1}
+#agsemana .agsd.sel .agsdh b,#agsemana .agsd.sel .agsdh span,#agsemana .agsd.sel .agsv,#agsemana .agsd.sel .agsmas{color:#FFFFFF}
+#agsemana .agsd.sel .agsc{box-shadow:0 0 0 1.5px #FFFFFF}
+#agmes .agmc.sel{background:var(--sky);color:#FFFFFF;opacity:1}
+#agmes .agmc.sel .agpt{background:#FFFFFF;color:var(--navy)}
+/* ============================================================
+   v2.147.0 · Agenda: «Tu día» sin citas, en una línea
+   ============================================================ */
+#agcuerpo > .vacio.vlinea{flex-direction:row;justify-content:center;align-items:center;gap:10px;padding:14px 16px 18px;font-size:14px;text-align:left}
+#agcuerpo > .vacio.vlinea::before{width:30px;height:30px;flex:none}
+#agcuerpo .tdhead .tdstats.hide{display:none!important}
+/* v2.148.0 · Analítica: indicadores por áreas con engranaje; filtros del Resumen y de Explorar en «Filtros y columnas» */
+#v-analitica.an-res .htpropios [data-anp="explorar"],#v-analitica.an-exp .htpropios [data-anp="resumen"],#tools[data-ansec="resumen"] .htpropios [data-anp="explorar"],#tools[data-ansec="explorar"] .htpropios [data-anp="resumen"]{display:none}
+#v-analitica.an-exp #anpers{display:none}
+.anresumen{margin:0 0 12px}
+.anarea{margin:0 0 18px}
+.anarea > h3{font-family:Manrope,system-ui,sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.ankgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.ankpi{background:var(--panel,#fff);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.ankcab{display:flex;align-items:center;gap:6px}
+.anktit{flex:1;min-width:0;font-size:13.5px;color:var(--muted);font-weight:600}
+.ankcfg{border:0;background:none;padding:4px;border-radius:8px;cursor:pointer;color:var(--muted);display:inline-grid;place-items:center}
+.ankcfg:hover{background:var(--sky-soft,#EAF3FB);color:var(--navy,#17457A)}
+.ankcfg .ico{width:16px;height:16px}
+.ankval{font-family:Manrope,system-ui,sans-serif;font-size:24px;line-height:1.15;color:var(--ink,#0B2540)}
+.ankval.txt{font-size:16px}
+.ankdel{font-size:13px;font-weight:650}
+.ankdel.up{color:#0E6B4C}.ankdel.down{color:#B42318}.ankdel.neutro,.ankdel.igual{color:var(--muted)}
+.ankdel .sm{font-weight:400}
+.ankfil{align-self:flex-start;font-size:12px;background:var(--hielo,#F2F7FC);border-radius:999px;padding:2px 8px;color:var(--navy,#17457A)}
+.ankpop{position:fixed;z-index:130;background:var(--panel,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(10,20,30,.18);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.ankpop label{margin-top:6px}
+.ankpop input,.ankpop select{width:100%}
+.ankpop .ankacts{margin:10px 0 0;justify-content:flex-end;flex-wrap:wrap}
+.anvista{display:flex;gap:12px;flex-wrap:wrap;padding:12px 14px 0}
+.anvista > div{min-width:180px}
+.anpers .anpf{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+.anpers .anpf .tx{flex:1;display:flex;flex-direction:column;min-width:0}
+@media(max-width:620px){.ankgrid{grid-template-columns:1fr 1fr;gap:8px}.ankpi{padding:10px 12px}.ankval{font-size:20px}.ankdel .sm{display:block}}
+/* ============================================================
+   v2.149.0 · Rutas: propuestas como tarjeta con croquis
+   ============================================================ */
+/* Rutas · propuestas como tarjeta con croquis (opción A elegida por Eric): croquis grande en azul a la izquierda, número y zona como
+   título y los tres botones en columna a la derecha; en el móvil, croquis arriba y botones en una fila sin partir el texto */
+.rprop{grid-template-columns:176px minmax(0,1fr) 168px;grid-template-areas:"croq tx acts" "lista lista lista";align-items:center;column-gap:20px;padding:18px}
+.rpcroq{width:176px;height:118px;background:var(--sky-soft);border-radius:14px;align-self:center}
+.rpcroq svg{width:100%;height:100%}
+.rpcroq polyline{stroke:#3F82C0;stroke-opacity:1;stroke-width:2.5}
+.rpzona{display:flex;align-items:center;gap:10px;font:800 18px var(--f-titulo);color:var(--ink)}
+.rpnum{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#FFFFFF;font:800 13px var(--f-titulo)}
+.rptx > .sm:first-of-type{font-size:13.5px;color:var(--muted)}
+.rpacts{flex-direction:column;align-items:stretch;gap:6px;align-self:center}
+.rpacts .btn{width:100%;min-height:38px;justify-content:center}
+@media (max-width:1099px){.rprop{grid-template-columns:150px minmax(0,1fr);grid-template-areas:"croq tx" "acts acts" "lista lista"}.rpcroq{width:150px;height:104px}.rpacts{flex-direction:row}.rpacts .btn{flex:1 1 0;width:auto}}
+@media (max-width:760px){
+  .rprop{grid-template-columns:1fr;grid-template-areas:"croq" "tx" "acts" "lista";padding:16px}
+  .rpcroq{width:100%;height:110px}
+  .rpacts{flex-direction:row;gap:6px}
+  .rpacts .btn{flex:1 1 0;min-width:0;padding:0 6px;font-size:13px;white-space:nowrap}
+}
+/* ============================================================
+   v2.150.0 · Agenda: al elegir un día solo cambia «Tu día»
+   ============================================================ */
+#agcuerpo.agcargando{opacity:.55;transition:opacity var(--t-rapido) var(--ease-sal)}
 </style>
 </head>
 <body>
@@ -2877,6 +3087,6 @@ label.chk > span{display:flex;flex-direction:column;gap:3px;min-width:0;line-hei
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.142.0"></script>
+<script src="./app.js?v=2.150.0"></script>
 </body>
 </html>
