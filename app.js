@@ -1256,7 +1256,10 @@ function km(a, b) {
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-const minutosEntre = (a, b) => (!a || !b || a[0] == null || b[0] == null) ? 0 : Math.max(6, Math.round(km(a, b) / 40 * 60) + 5);
+// v2.175.0 (decisión de Eric: autopista a 120 km/h): los primeros 30 km en línea recta a 40 km/h (ciudad) y lo que pase de 30 km a 100 km/h en línea
+// recta (la carretera es ~1,2 veces más larga: unos 120 km/h por autopista); antes, todo a 40
+const minutosEntre = (a, b) => { if (!a || !b || a[0] == null || b[0] == null) return 0; const d = km(a, b);
+  return Math.max(6, Math.round(Math.min(d, 30) / 40 * 60 + Math.max(d - 30, 0) / 100 * 60) + 5); };
 const hm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(Math.round(m) % 60).padStart(2, '0');
 
 async function planificar(rutaId, btn) {
@@ -19594,3 +19597,408 @@ async function moverCitaLocal(orden, id, acc) {
   if (b) b.focus({ preventScroll: true });
   if (!(await guardarOrden(orden))) cargarAgenda();
 }
+
+/* v2.173.0 · Panel delcos completo (SQL 108): Cobros y suscripciones, Altas desde la web y Estado de la plataforma, en el menú del panel.
+   Con el menú lateral, el panel ya no repite sus apartados como pestañas (aviso de Eric): el título dice dónde estás. Al entrar en una
+   empresa o salir de ella la app se recarga tapada («Abriendo …») hasta tener el menú, la marca y la pantalla de esa organización, para
+   que no se vea ni un instante lo de la otra. En «Tu día», la cita que se sube o se baja se desliza a su sitio y queda marcada un momento. */
+PANEL_SECCIONES.splice(1, 0, ['pd-cobros', 'cobros', 'Cobros y suscripciones', 'credit-card'], ['pd-altas', 'altas', 'Altas desde la web', 'rocket']);
+PANEL_SECCIONES.splice(5, 0, ['pd-estado', 'estado', 'Estado de la plataforma', 'shield-check']);
+const PANEL_DESC = { orgs: 'Las empresas que usan delcos: plan, dominios, extras y entrar a ayudarlas', cobros: 'Quién paga, quién está en prueba y qué recibos vienen',
+  altas: 'Empresas que se han dado de alta desde www.delcos.app', solicitudes: 'Presupuestos A medida y conversaciones sobre el contrato',
+  errores: 'Errores de la plataforma agrupados, de todas las empresas', estado: 'Versiones en uso, SQL aplicado y cifras generales',
+  accesos: 'Entradas y salidas de la plataforma', auditoria: 'Cambios hechos en el panel', equipo: 'Las personas de delcos con acceso al panel',
+  plantilla: 'Roles y catálogos que recibe cada empresa nueva' };
+(() => {
+  const nav = $('nav'); if (!nav) return;
+  PANEL_SECCIONES.forEach(([t, , txt, ico]) => {
+    if (!nav.querySelector(`[data-t="${t}"]`)) nav.insertAdjacentHTML('beforeend', `<button data-t="${t}" aria-selected="false" class="hide pdsec">${esc(txt)}</button>`);
+    ICO_NAV[t] = ico;
+  });
+  const g = MENU_GRUPOS.find(x => x.id === 'panel'); if (g) g.items = PANEL_SECCIONES.map(s => s[0]);
+  // Las pestañas del panel siguen el mismo orden que el menú (en el móvil son su navegación)
+  const desc = Object.getOwnPropertyDescriptor(PAGINAS.delcos, 'tabs');
+  Object.defineProperty(PAGINAS.delcos, 'tabs', { configurable: true, get() {
+    const base = desc.get ? desc.get.call(this) : desc.value;
+    if (!MODO_PLATAFORMA) return base;
+    const extra = { cobros: () => pintarCobrosDelcos(), altas: () => pintarAltasDelcos(), estado: () => pintarEstadoDelcos() };
+    return PANEL_SECCIONES.map(([, k, n]) => { const b = base.find(x => x[0] === k); return b ? [k, n, b[2]] : extra[k] ? [k, n, extra[k]] : null; }).filter(Boolean);
+  } });
+})();
+cargarPagina = (orig => function (t, ...a) {
+  const r = orig.call(this, t, ...a);
+  if (t === 'delcos' && MODO_PLATAFORMA) {
+    const sec = $('v-delcos'), tab = PAG_TAB.delcos || 'orgs', s = PANEL_SECCIONES.find(x => x[1] === tab);
+    if (sec && s) { const h = sec.querySelector('.saludo h1'), d = sec.querySelector('.saludo .fecha'); if (h) h.textContent = s[2]; if (d) d.textContent = PANEL_DESC[tab] || ''; }
+  }
+  return r;
+})(cargarPagina);
+
+const pdFecha = v => v ? new Date(String(v).length === 10 ? v + 'T12:00:00' : v).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const pdHace = v => { if (!v) return '—'; const m = Math.round((Date.now() - new Date(v)) / 60000);
+  return m < 60 ? `hace ${Math.max(1, m)} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} días`; };
+const pdKpis = l => `<div class="pdkpis">${l.map(([v, t, cls]) => `<div class="pdkpi${cls ? ' ' + cls : ''}"><b>${v}</b><span>${esc(t)}</span></div>`).join('')}</div>`;
+const pdEsqueleto = () => `<div class="card cfgpanel"><div class="pdkpis">${'<div class="pdkpi"><div class="skel" style="width:50%"></div><div class="skel" style="width:70%"></div></div>'.repeat(4)}</div><div class="skel"></div><div class="skel" style="width:80%"></div></div>`;
+
+// ---- Cobros y suscripciones: el estado de pago de cada empresa (de ajustes.plan, que mantiene el aviso de Stripe)
+function pdCobroEstado(o) {
+  const p = o.plan_datos || {};
+  if (o.bloqueada) return ['Bloqueada', 'p-anu', o.bloqueada === 'desactivada' ? 'Desactivada' : 'Prueba terminada'];
+  if (p.estado === 'cancelada') return ['Cancelada', 'p-anu', p.periodo_fin ? 'Acceso hasta el ' + pdFecha(p.periodo_fin) : ''];
+  if (p.estado === 'impago') { const d = p.impago_desde ? Math.round((Date.now() - new Date(p.impago_desde + 'T12:00:00')) / 864e5) : 0;
+    return ['Impago', 'p-urg', d >= 14 ? 'Solo lectura desde hace ' + (d - 14) + ' días' : 'Le quedan ' + (14 - d) + ' días de gracia']; }
+  if (p.en_prueba || p.estado === 'prueba') return ['En prueba', 'p-warn', (p.prueba_hasta || p.periodo_fin) ? 'Hasta el ' + pdFecha(p.prueba_hasta || p.periodo_fin) : ''];
+  if (!p.stripe_suscripcion) return [p.plan === 'medida' ? 'A medida' : 'Sin suscripción', 'p-per', p.plan === 'medida' ? 'Contrato con delcos' : 'Sin pago con tarjeta'];
+  return ['Al día', 'p-est', p.periodo_fin ? 'Próximo recibo: ' + pdFecha(p.periodo_fin) : ''];
+}
+function pdMensual(p) {
+  if (!p || !p.stripe_suscripcion || p.estado === 'cancelada' || p.plan === 'medida') return 0;
+  const pl = planDe(p.plan), u = Math.max(+p.usuarios || 0, pl.minimo || 3);
+  return (p.pago === 'anual' ? (pl.anual || pl.precio) : pl.precio) * u;
+}
+async function pintarCobrosDelcos() {
+  const c = $('cfgcuerpo'); if (!c) return;
+  c.innerHTML = pdEsqueleto();
+  const { data, error } = await RPC_ORIG('organizaciones_lista', {});
+  if (!$('cfgcuerpo') || PAG_TAB.delcos !== 'cobros') return;
+  const l = error ? [] : (data || []);
+  const est = l.map(o => ({ o, p: o.plan_datos || {}, e: pdCobroEstado(o) }));
+  const cuenta = n => est.filter(x => x.e[0] === n).length;
+  const mrr = est.filter(x => x.e[0] === 'Al día').reduce((t, x) => t + pdMensual(x.p), 0);
+  const stripe = id => `https://dashboard.stripe.com/${EN_PRUEBAS ? 'test/' : ''}customers/${encodeURIComponent(id)}`;
+  let filtro = 'todas';
+  const pinta = () => {
+    const f = est.filter(x => filtro === 'todas' || (filtro === 'atencion' ? ['Impago', 'Bloqueada'].includes(x.e[0]) || x.p.baja_al_final || x.p.cambio_previsto : x.e[0] === filtro));
+    $('pdcobl').innerHTML = f.length ? `<div class="tablawrap"><table class="pdtabla"><thead><tr><th>Empresa</th><th>Plan</th><th>Estado</th><th>Al mes</th><th>Pendiente</th><th></th></tr></thead><tbody>
+      ${f.map(({ o, p, e }) => { const avisos = [p.baja_al_final ? 'Se da de baja al final del periodo' : '', p.cambio_previsto ? 'Cambio previsto a ' + planDe(p.cambio_previsto.plan || p.plan).nombre + (p.cambio_previsto.usuarios ? ' · ' + p.cambio_previsto.usuarios + ' usuarios' : '') + (p.cambio_previsto.desde ? ' el ' + pdFecha(p.cambio_previsto.desde) : '') : '', p.compromiso_hasta ? 'Compromiso hasta el ' + pdFecha(p.compromiso_hasta) : ''].filter(Boolean);
+        return `<tr><td><b>${esc(o.nombre)}</b><div class="sm">${o.usuarios} usuarios activos${p.origen === 'web' ? ' · alta desde la web' : ''}</div></td>
+          <td>${esc(planDe(p.plan).nombre)}<div class="sm">${p.plan === 'medida' ? '' : (p.usuarios ? p.usuarios + ' contratados · ' : '') + (p.pago === 'anual' ? 'anual' : 'mensual')}</div></td>
+          <td><span class="pill ${e[1]}">${e[0]}</span><div class="sm">${esc(e[2])}</div></td>
+          <td class="num">${pdMensual(p) ? eur(pdMensual(p)) : '—'}</td>
+          <td>${avisos.map(a => `<div class="sm">${esc(a)}</div>`).join('') || '<span class="sm">—</span>'}</td>
+          <td>${p.stripe_cliente ? `<a class="btn sec" href="${stripe(p.stripe_cliente)}" target="_blank" rel="noopener">Ver en Stripe</a>` : ''}</td></tr>`; }).join('')}</tbody></table></div>`
+      : '<div class="vacio">No hay empresas en este grupo.</div>';
+  };
+  c.innerHTML = `<div class="card cfgpanel">
+    ${error ? `<div class="banda-peligro">No se han podido leer: ${esc(error.message)}</div>` : ''}
+    ${pdKpis([[cuenta('Al día'), 'al día'], [cuenta('En prueba'), 'en prueba'], [cuenta('Impago'), 'con impago', cuenta('Impago') ? 'mal' : ''],
+      [est.filter(x => x.p.baja_al_final).length, 'se dan de baja'], [eur(mrr), 'cobro mensual estimado (sin IVA)']])}
+    <div class="segs" id="pdcobf">${[['todas', 'Todas'], ['atencion', 'Requieren atención'], ['Al día', 'Al día'], ['En prueba', 'En prueba'], ['Impago', 'Impago']]
+      .map(([k, n]) => `<button type="button" data-pdf="${esc(k)}" class="${k === filtro ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <div id="pdcobl"></div>
+    <p class="sm">El estado llega solo desde Stripe con cada cobro. Las devoluciones y los datos de la tarjeta se miran en Stripe.</p></div>`;
+  c.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => { filtro = b.dataset.pdf; c.querySelectorAll('[data-pdf]').forEach(x => x.classList.toggle('on', x === b)); pinta(); });
+  pinta();
+}
+
+// ---- Altas desde la web: completadas (con su empresa y si ya ha entrado) y a medias (empezaron el pago y no lo terminaron)
+async function pintarAltasDelcos() {
+  const c = $('cfgcuerpo'); if (!c) return;
+  c.innerHTML = pdEsqueleto();
+  const { data, error } = await RPC_ORIG('altas_lista', {});
+  if (!$('cfgcuerpo') || PAG_TAB.delcos !== 'altas') return;
+  const l = error ? [] : (data || []);
+  const hechas = l.filter(a => a.estado === 'completada'), medias = l.filter(a => a.estado !== 'completada');
+  const sem = l.filter(a => Date.now() - new Date(a.creado_en) < 7 * 864e5);
+  const fila = a => { const d = a.datos || {};
+    const est = a.estado !== 'completada' ? ['A medias', 'p-warn', 'No terminó el pago · ' + pdHace(a.creado_en)]
+      : a.entro ? ['Dentro', 'p-est', 'Ya ha entrado en delcos'] : ['Invitada', 'p-per', a.invitado_en ? 'Invitación enviada ' + pdHace(a.invitado_en) : 'Falta la invitación'];
+    return `<div class="pdalta"><div class="pdaltacab"><b>${esc(a.organizacion || d.empresa || 'Sin nombre')}</b> <span class="pill ${est[1]}">${est[0]}</span>
+        <span class="pill p-per">${esc(planDe(d.plan).nombre)} · ${d.usuarios || 3} usuarios · ${d.pago === 'anual' ? 'anual' : 'mensual'}</span></div>
+      <div class="sm">${esc(d.nombre || '')}${d.email ? ` · <a href="mailto:${esc(d.email)}">${esc(d.email)}</a>` : ''}${d.telefono ? ` · <a href="tel:${esc(d.telefono)}">${esc(d.telefono)}</a>` : ''}${d.nif ? ' · ' + esc(d.nif) : ''}</div>
+      <div class="sm">${esc(est[2])} · empezó el ${pdFecha(a.creado_en)}</div></div>`; };
+  c.innerHTML = `<div class="card cfgpanel">
+    ${error ? `<div class="banda-peligro">No se han podido leer: ${esc(error.message)}</div>` : ''}
+    ${pdKpis([[hechas.length, 'completadas (90 días)'], [hechas.filter(a => a.entro).length, 'ya han entrado'], [medias.length, 'a medias (7 días)', medias.length ? 'aviso' : ''], [sem.length, 'esta semana']])}
+    ${medias.length ? `<h3 class="pdh3">A medias</h3><p class="sm">Rellenaron el formulario pero no terminaron de poner la tarjeta. Puede valer la pena escribirles. Se borran solas a los 7 días.</p>${medias.map(fila).join('')}` : ''}
+    <h3 class="pdh3">Completadas</h3>${hechas.map(fila).join('') || '<div class="vacio">Todavía no hay altas completadas desde la web.</div>'}</div>`;
+}
+
+// ---- Estado de la plataforma: SQL aplicado, versión publicada y versiones que usa cada empresa
+async function pintarEstadoDelcos() {
+  const c = $('cfgcuerpo'); if (!c) return;
+  c.innerHTML = pdEsqueleto();
+  const { data, error } = await RPC_ORIG('estado_plataforma', {});
+  if (!$('cfgcuerpo') || PAG_TAB.delcos !== 'estado') return;
+  const e = (!error && data) || {}, emp = e.empresas || {}, sql = e.sql || [], ver = e.versiones || [];
+  const ult = sql[0] || {};
+  const porVer = {}; ver.forEach(v => { (porVer[v.version] = porVer[v.version] || []).push(v); });
+  const versiones = Object.keys(porVer).sort((a, b) => b.localeCompare(a, 'es', { numeric: true }));
+  c.innerHTML = `<div class="card cfgpanel">
+    ${error ? `<div class="banda-peligro">No se ha podido leer: ${esc(error.message)}</div>` : ''}
+    ${pdKpis([[esc('v' + VERSION_APP), 'versión de esta app'], [ult.numero ? 'SQL ' + ult.numero : '—', ult.version_app ? 'base en ' + ult.version_app : 'base'],
+      [num(emp.activas || 0) + ' / ' + num(emp.total || 0), 'empresas activas'], [num(e.usuarios || 0), 'usuarios activos' + (e.portal ? ' · ' + num(e.portal) + ' del portal' : '')],
+      [num(e.errores || 0), 'errores sin resolver (15 días)', e.errores ? 'aviso' : '']])}
+    <h3 class="pdh3">Versiones en uso (30 días)</h3>
+    ${versiones.length ? versiones.map(v => `<div class="pdver"><div class="pdvercab"><b>v${esc(v.replace(/^v/, ''))}</b>${v.replace(/^v/, '') === VERSION_APP ? ' <span class="pill p-est">la actual</span>' : ' <span class="pill p-warn">anterior</span>'}
+        <span class="sm">${porVer[v].length} ${porVer[v].length === 1 ? 'empresa' : 'empresas'}</span></div>
+      <div class="sm">${porVer[v].map(x => `${esc(x.organizacion)} (${pdHace(x.ultima_vez)})`).join(' · ')}</div></div>`).join('')
+      : '<div class="vacio">Ninguna empresa ha abierto la app en los últimos 30 días.</div>'}
+    <h3 class="pdh3">Últimos SQL aplicados en esta base</h3>
+    <div class="tablawrap"><table class="pdtabla"><thead><tr><th>SQL</th><th>Versión</th><th>Qué cambia</th><th>Aplicado</th></tr></thead><tbody>
+      ${sql.map(s => `<tr><td class="num">${s.numero}</td><td>${esc(s.version_app || '')}</td><td class="sm">${esc(s.descripcion || '')}</td><td class="sm">${pdFecha(s.aplicado_en)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="sm">Esto es la base de ${EN_PRUEBAS ? '<b>pruebas</b>' : '<b>producción</b>'}. La de ${EN_PRUEBAS ? 'producción' : 'pruebas'} se mira desde su propio panel.</p></div>`;
+}
+
+// ---- Cambiar de organización sin heredar nada: la recarga va tapada hasta tener el menú, la marca y la pantalla de la organización nueva
+function prepararCambioOrg(destino) {
+  try { sessionStorage.setItem('dlc-cambio-org', destino || ''); sessionStorage.removeItem('dlc-f5'); localStorage.removeItem('app-marca'); } catch (e) {}
+}
+entrarEnOrganizacion = async function (o) {
+  if (!await preguntar(`Vas a ver la plataforma como ${o.nombre}: sus datos, su configuración y su plan. Lo que cambies se guarda en su empresa y queda registrado. Para volver, «Salir» en la franja de arriba.`, { titulo: 'Entrar en ' + o.nombre, ok: 'Entrar' })) return;
+  const { data: r } = await db.rpc('entrar_organizacion', { p_org: o.id });
+  if (!r || !r.ok) { toast(r && r.motivo === 'permiso' ? 'Solo el Administrador de delcos puede entrar' : 'No se ha podido entrar', true); return; }
+  prepararCambioOrg(o.nombre);
+  location.reload();
+};
+document.addEventListener('click', ev => { if (ev.target.closest('#orgvistasal')) prepararCambioOrg('Panel delcos'); }, true);
+(function terminarCambioOrg() {
+  let destino = null; try { destino = sessionStorage.getItem('dlc-cambio-org'); } catch (e) {}
+  const html = document.documentElement;
+  if (destino === null && !html.classList.contains('cambiando-org')) return;
+  const fin = () => { html.classList.remove('cambiando-org'); try { sessionStorage.removeItem('dlc-cambio-org'); } catch (e) {} };
+  const tope = setTimeout(fin, 9000);
+  let n = 0;
+  const t = setInterval(async () => {
+    if (++n > 80) { clearInterval(t); return; }
+    if (!(typeof PERFIL !== 'undefined' && PERFIL && !document.body.classList.contains('sin-sesion') && typeof RPC_ORIG === 'function')) {
+      if (!$('login').classList.contains('hide')) { clearInterval(t); clearTimeout(tope); fin(); }
+      return;
+    }
+    clearInterval(t);
+    try { await pagoCargarEstado(); } catch (e) {}
+    try { await franjaVista(); } catch (e) {}
+    try { aplicarModoPlataforma(); } catch (e) {}
+    if (MODO_PLATAFORMA && TAB !== 'delcos') ir('pd-orgs');
+    // Se espera a que la pantalla haya revelado sus datos (como mucho 3 s)
+    for (let i = 0; i < 30; i++) { await new Promise(r => setTimeout(r, 100)); if (!document.querySelector('main > section.preparando, main > section.cargando')) break; }
+    clearTimeout(tope); fin();
+  }, 60);
+})();
+try { const m = () => { try { localStorage.setItem('dlc-modo', MODO_PLATAFORMA ? 'plataforma' : 'empresa'); } catch (e) {} };
+  aplicarModoPlataforma = (orig => function (...a) { const r = orig.apply(this, a); m(); return r; })(aplicarModoPlataforma); } catch (e) {}
+
+// ---- «Tu día»: la cita movida se desliza a su sitio (FLIP) y queda resaltada un momento
+moverCitaLocal = (orig => async function (orden, id, acc) {
+  const idDe = it => { const b = it.querySelector('[data-td]'); return b ? b.dataset.td.split('|')[1] : null; };
+  const antes = new Map();
+  document.querySelectorAll('.tdlista .tdit').forEach(it => { const k = idDe(it); if (k) antes.set(k, it.getBoundingClientRect().top); });
+  const r = await orig.call(this, orden, id, acc);
+  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('.tdlista .tdit').forEach(it => {
+    const k = idDe(it); if (!k) return;
+    if (String(k) === String(id)) { it.classList.remove('tdmovida'); void it.offsetWidth; it.classList.add('tdmovida'); setTimeout(() => it.classList.remove('tdmovida'), 1300); }
+    const y0 = antes.get(k); if (quieto || y0 == null || !it.animate) return;
+    const dy = y0 - it.getBoundingClientRect().top;
+    if (Math.abs(dy) > 1) it.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.7,.2,1)' });
+  });
+  return r;
+})(moverCitaLocal);
+
+/* v2.173.0 · El próximo recibo con IVA en «Plan y suscripción» (petición de Eric por la sesión de la web: que la web, Stripe y la app digan lo mismo).
+   Durante la prueba: hoy 0 €, el primer recibo con IVA (con la puesta en marcha si el pago es mensual) y lo que viene después; fuera de ella, el
+   próximo recibo y su fecha. Se pinta al momento con la misma cuenta que la web (IVA = redondeo de base × 21 / 100) y, si la función «pagos»
+   devuelve el recibo de Stripe (acción datos, campo proximo), se cambia por ese (lleva descuentos y lo ya apuntado). */
+let PAGO_PROXIMO = null;
+db.functions.invoke = (orig => async function (fn, op, ...a) {
+  const r = await orig.call(this, fn, op, ...a);
+  try { if (fn === 'pagos' && op && op.body && op.body.accion === 'datos' && r && r.data && r.data.ok) { PAGO_PROXIMO = r.data.proximo || null; pintarProximoRecibo(); } } catch (e) {}
+  return r;
+})(db.functions.invoke.bind(db.functions));
+const ivaDe = x => Math.round(x * 21) / 100;
+function reciboCalculado(pl) {
+  const p = planDe(pl.plan), u = Math.max(+pl.usuarios || 0, p.minimo || 3), anual = pl.pago === 'anual';
+  const cuota = u * p.precio * (anual ? 10 : 1);
+  const puesta = pl.en_prueba && !anual ? PUESTA_EN_MARCHA : 0;
+  return { primero: cuota + puesta + ivaDe(cuota + puesta), despues: cuota + ivaDe(cuota), puesta, anual };
+}
+function pintarProximoRecibo() {
+  const c = $('cfgcuerpo'), pl = PLAN_ACTUAL || {}, h = c && c.querySelector('#planact h2');
+  if (!h || !pl.stripe_suscripcion || pl.plan === 'medida' || pl.baja_al_final || pl.estado === 'cancelada') return;
+  const k = reciboCalculado(pl), s = PAGO_PROXIMO;
+  const fecha = (s && s.fecha) || pl.periodo_fin, total = s && s.total != null ? s.total : k.primero;
+  const cada = k.anual ? 'al año' : 'al mes';
+  const txt = pl.en_prueba
+    ? `Hoy no pagas nada. El <b>${fechaCorta(fecha)}</b> llega el primer recibo: <b>${eur(total)} con IVA</b>${k.puesta ? `, que incluye la puesta en marcha (${eur(k.puesta)} + IVA, una sola vez)` : k.anual ? ' (la puesta en marcha va incluida)' : ''}.
+       Después, ${eur(k.despues)} ${cada} con IVA. Si te das de baja antes, no pagas nada.`
+    : `Próximo recibo: <b>${eur(total)} con IVA</b>${fecha ? `, el <b>${fechaCorta(fecha)}</b>` : ''}.`;
+  let el = $('pgrecibo');
+  if (!el) {
+    const prueba = $('pgprueba');
+    if (prueba) { prueba.id = 'pgrecibo'; el = prueba; } else { h.insertAdjacentHTML('afterend', '<div class="banda-info" id="pgrecibo"></div>'); el = $('pgrecibo'); }
+  }
+  el.innerHTML = txt;
+  el.dataset.origen = s && s.total != null ? 'stripe' : 'calculo';
+}
+pintarPaginaPlan = (orig => async function (...a) { const r = await orig.apply(this, a); try { pintarProximoRecibo(); } catch (e) {} return r; })(pintarPaginaPlan);
+
+/* v2.174.0 · Recibo con IVA como en la web (repaso de Web delcos): fecha larga («el 3 de noviembre»), importes enteros sin decimales (490 €), sin la
+   línea «Próximo recibo el …» que repetía la fecha y, bajo la cuota «Al mes, sin IVA», lo mismo con IVA. */
+const eurW = n => { const s = eur(n); return Math.round(+n * 100) % 100 === 0 ? s.replace(/,00(?=\s?€)/, '') : s; };
+const fechaDiaMes = f => f ? new Date(String(f).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : '';
+pintarProximoRecibo = function () {
+  const c = $('cfgcuerpo'), pl = PLAN_ACTUAL || {}, h = c && c.querySelector('#planact h2');
+  if (!h) return;
+  // La cuota del plan, también con IVA
+  c.querySelectorAll('#planact .kpi').forEach(k => {
+    const sp = k.querySelector(':scope > span'), b = k.querySelector(':scope > b');
+    if (!sp || !b || sp.textContent.trim() !== 'Al mes, sin IVA' || k.querySelector('.kpiiva')) return;
+    const v = parseFloat(b.textContent.replace(/[^\d,]/g, '').replace(',', '.'));
+    if (v > 0) k.insertAdjacentHTML('beforeend', `<span class="sm kpiiva">${eurW(v + ivaDe(v))} con IVA</span>`);
+  });
+  if (!pl.stripe_suscripcion || pl.plan === 'medida' || pl.baja_al_final || pl.estado === 'cancelada') return;
+  const k = reciboCalculado(pl), s = PAGO_PROXIMO;
+  const fecha = (s && s.fecha) || pl.periodo_fin, total = s && s.total != null ? s.total : k.primero;
+  const cada = k.anual ? 'al año' : 'al mes';
+  const txt = pl.en_prueba
+    ? `Hoy no pagas nada. El <b>${fechaDiaMes(fecha)}</b> llega el primer recibo: <b>${eurW(total)} con IVA</b>${k.puesta ? `, que incluye la puesta en marcha (${eurW(k.puesta)} + IVA, una sola vez)` : k.anual ? ' (la puesta en marcha va incluida)' : ''}.
+       Después, ${eurW(k.despues)} ${cada} con IVA. Si te das de baja antes, no pagas nada.`
+    : `Próximo recibo: <b>${eurW(total)} con IVA</b>${fecha ? `, el <b>${fechaDiaMes(fecha)}</b>` : ''}.`;
+  let el = $('pgrecibo');
+  if (!el) {
+    const prueba = $('pgprueba');
+    if (prueba) { prueba.id = 'pgrecibo'; el = prueba; } else { h.insertAdjacentHTML('afterend', '<div class="banda-info" id="pgrecibo"></div>'); el = $('pgrecibo'); }
+  }
+  el.innerHTML = txt;
+  el.dataset.origen = s && s.total != null ? 'stripe' : 'calculo';
+  // La fecha ya la dice el aviso: fuera la línea suelta «Próximo recibo el …»
+  c.querySelectorAll('#planact > p.sm').forEach(p => { if (/^Próximo recibo el /.test(p.textContent.trim())) p.remove(); });
+};
+
+/* v2.174.0 · Agenda (avisos de Eric, gestionando el lunes desde el domingo):
+   - «Añadir a mi agenda» de la ficha propone el día que se está viendo en la Agenda (antes, siempre hoy) y la cita aparece al momento (antes solo
+     se refrescaba Inicio y había que pulsar F5).
+   - El aviso naranja de «Tu día» explica por qué sale: el horario de consulta de la ficha, la hora a la que llegarías y cómo quitarlo (al pasar el
+     ratón y con la «i»). Si una parada queda a más de 4 h de la anterior, el aviso dice que revises su ubicación (una dirección mal situada lo
+     descuadra todo), y un fin estimado pasada la medianoche ya no sale como «06:27». */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-agendar]');
+  if (!b) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const dia = TAB === 'agenda' && AG_FECHA && AG_FECHA >= hoyISO() ? AG_FECHA : hoyISO();
+  const f = await pedirFecha('¿Qué día quieres visitarle?', dia, { titulo: 'Añadir a mi agenda', ok: 'Añadir' });
+  if (!f) return;
+  const r = await escribir('guardar_cita', { p: {
+    cuenta_id: b.dataset.agendar, fecha: f, estado: 'Planificada', origen: 'Ficha',
+    op_id: 'c-' + b.dataset.agendar + '-' + f
+  }});
+  if (r.error) { toast('No se ha podido: ' + r.error.message, true); return; }
+  toast('Añadido a tu agenda el ' + fechaDiaMes(f));
+  if (TAB === 'agenda') cargarAgenda();
+  cargarInicio();
+}, true);
+
+let EST_ULT = null;
+estimarDiaBase = (orig => function (citas, fecha) {
+  const r = orig.call(this, citas, fecha);
+  try {
+    const sal = salidaUsuario();
+    let pos = sal && sal.lat != null ? [+sal.lat, +sal.lon] : null;
+    (citas || []).forEach(c => {
+      const xy = xyCita(c), inf = TD_INFO[c.id];
+      if (inf) { inf.llegada = r.est[c.id]; inf.fecha = fecha; }
+      if (xy && pos && inf && CITA_ABIERTA.includes(c.estado) && minutosEntre(pos, xy) > 240)
+        inf.lejos = Math.round(km(pos, xy));
+      if (xy) pos = xy;
+    });
+  } catch (e) {}
+  EST_ULT = r;
+  return r;
+})(estimarDiaBase);
+const DIA_NOMBRE = f => new Date(String(f).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' });
+function explicarAviso(inf) {
+  const quien = TT('medico', 's', 'el', 'l', 'l');
+  if (inf.lejos) return `Esta parada queda a unos ${num(inf.lejos)} km de la anterior (o de tu punto de salida), así que la hora estimada se va muy tarde. Suele ser una dirección mal situada: revisa la ubicación en su ficha o tu punto de salida en Mi perfil.`;
+  const v = inf.ventanas && inf.ventanas.length ? txtVentanas(inf.ventanas) : '';
+  const dia = inf.fecha ? DIA_NOMBRE(inf.fecha) : 'ese día';
+  if (inf.ventanas && !inf.ventanas.length) return `Según su ficha, ${quien} no pasa consulta los ${dia}. Si sí pasa, añade ese día en «Horario de consulta» de su ficha.`;
+  return `Según su ficha, ${quien} pasa consulta los ${dia} de ${v}${inf.llegada != null ? `, y siguiendo el orden de tu día llegarías hacia las ${hm(inf.llegada)}` : ''}. Para quitar el aviso: pon una hora a la cita, cámbiala de orden o corrige el horario en su ficha. Es solo un aviso: la cita se guarda igual.`;
+}
+pintarTuDia = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  try {
+    document.querySelectorAll('.tdlista .tdit').forEach(it => {
+      const av = it.querySelector('.tdaviso'); if (!av || av.dataset.expl) return;
+      const id = (it.querySelector('[data-td]') || { dataset: {} }).dataset.td; const k = id ? id.split('|')[1] : null;
+      const inf = k && TD_INFO[k]; if (!inf) return;
+      if (inf.lejos) av.textContent = `Ubicación a ${num(inf.lejos)} km de la parada anterior: revisa la dirección`;
+      const t = explicarAviso(inf);
+      av.dataset.expl = '1'; av.title = t;
+      av.insertAdjacentHTML('beforeend', ` <button type="button" class="tdavi" aria-label="Por qué sale este aviso">i</button>`);
+      av.querySelector('.tdavi').onclick = ev => { ev.stopPropagation(); appVentana({ titulo: 'Por qué sale este aviso', msg: t, ok: 'Entendido', cancel: false }); };
+    });
+    if (EST_ULT && EST_ULT.fin >= 24 * 60) document.querySelectorAll('#agcuerpo .tdstats span, .tdstats span').forEach(s => {
+      if (/^Fin estimado/.test(s.textContent.trim()) && !s.dataset.dia) { s.dataset.dia = '1'; s.insertAdjacentHTML('beforeend', ' <span class="sm">(día siguiente: revisa los avisos)</span>'); }
+    });
+  } catch (e) {}
+  return r;
+})(pintarTuDia);
+
+/* v2.175.0 · Con pago anual, la tarjeta de la cuota enseña lo que se cobra (repaso de Web delcos): «2950 € · Al año, sin IVA · 3569,50 € con IVA»,
+   igual que el aviso del recibo (antes, el equivalente mensual). */
+pintarProximoRecibo = (orig => function (...a) {
+  const c = $('cfgcuerpo'), pl = PLAN_ACTUAL || {};
+  if (c && pl.pago === 'anual' && pl.plan !== 'medida') c.querySelectorAll('#planact .kpi').forEach(k => {
+    const sp = k.querySelector(':scope > span'), b = k.querySelector(':scope > b');
+    if (!sp || !b || sp.textContent.trim() !== 'Al mes, sin IVA') return;
+    const p = planDe(pl.plan), base = Math.max(+pl.usuarios || 0, p.minimo || 3) * p.precio * 10;
+    b.textContent = eurW(base); sp.textContent = 'Al año, sin IVA';
+    const iv = k.querySelector('.kpiiva'); if (iv) iv.remove();
+    k.insertAdjacentHTML('beforeend', `<span class="sm kpiiva">${eurW(base + ivaDe(base))} con IVA</span>`);
+  });
+  return orig.apply(this, a);
+})(pintarProximoRecibo);
+
+/* v2.175.0 · Avisos de «Tu día» que ayudan (aviso de Eric: «Llegarías hacia las 06:26 y la cita es a las 10:30» preparando el lunes). Si con el orden
+   actual el día no cabe en la jornada (acaba después de la hora de vuelta o, sin ella, de las 21:00), un solo aviso arriba dice qué hacer («Ordenar
+   por cercanía» o pasar citas a otro día) y se quitan los avisos sueltos de hora y horario, que en ese caso no dicen nada útil; las horas estimadas
+   que caen fuera de la jornada salen como «—». Los de ubicación lejana se quedan. Y en el móvil, volver a pulsar «⋯» cierra su menú. */
+pintarTuDia = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  try {
+    const lista = document.querySelector('#agcuerpo .tdlista'), e = lista && TD_CITAS ? estimarDia(TD_CITAS, AG_FECHA) : null;
+    const viejo = $('tdnocabe'); if (viejo) viejo.remove();
+    if (!lista || !e || AG_FECHA < hoyISO()) return r;
+    const limite = isFinite(e.tope) ? e.tope : 21 * 60;
+    const conAviso = Object.values(TD_INFO).filter(i => i.aviso && !i.lejos).length;
+    if (!(e.fin > limite) && conAviso < 3) return r;
+    const noCabe = e.fin > limite;
+    const fuera = Object.values(TD_INFO).filter(i => i.llegada != null && i.llegada >= limite).length;
+    const finTxt = e.fin >= 24 * 60 ? `pasada la medianoche (hacia las ${hm(e.fin)} del día siguiente)` : `hacia las ${hm(e.fin)}`;
+    lista.classList.add('tdnocabe');
+    lista.insertAdjacentHTML('beforebegin', `<div class="banda-aviso" id="tdnocabe">${noCabe ? `<b>Este día no cabe en una jornada.</b> Con este orden acabarías ${finTxt}${fuera ? ` y ${fuera === 1 ? 'una cita queda' : fuera + ' citas quedan'} fuera de la jornada` : ''}.` : `<b>El orden de las citas no encaja con sus horas:</b> ${conAviso} no llegan a su hora o a su horario de consulta.`}
+      Antes de mirar cada cita: ${$('tdordenar') ? '<button type="button" class="btn sec" id="tdnocord">Ordenar por cercanía</button> o ' : ''}pasa a otro día las citas de la zona más lejana (⋯ → Aplazar).</div>`);
+    if ($('tdnocord')) $('tdnocord').onclick = () => $('tdordenar') && $('tdordenar').click();
+    lista.querySelectorAll('.tdit').forEach(it => {
+      const id = (it.querySelector('[data-td]') || { dataset: {} }).dataset.td, k = id ? id.split('|')[1] : null, inf = k && TD_INFO[k];
+      if (!inf) return;
+      const av = it.querySelector('.tdaviso'); if (av && !inf.lejos) av.remove();
+      const h = it.querySelector('.tdh'); if (h && /^~/.test(h.textContent) && inf.llegada >= limite) { h.textContent = '—'; h.title = 'Con este orden, fuera de la jornada'; }
+    });
+  } catch (err) {}
+  return r;
+})(pintarTuDia);
+// Cita con hora fija que el orden deja tarde: el aviso dice qué hacer, y la «i» habla del orden (no del horario de consulta)
+estimarDiaBase = (orig => function (citas, fecha) {
+  const r = orig.call(this, citas, fecha);
+  Object.values(TD_INFO).forEach(i => { if (i.aviso && /^Llegarías hacia/.test(i.aviso) && !/súbela/.test(i.aviso)) { i.orden = true; i.aviso += ': súbela en la lista u ordena por cercanía'; } });
+  return r;
+})(estimarDiaBase);
+explicarAviso = (orig => function (inf) {
+  if (inf.orden && !inf.lejos) return 'La cita tiene hora fija, pero está colocada después de otras sin hora: siguiendo el orden de la lista no llegarías a tiempo. Súbela con las flechas hasta su sitio o pulsa «Ordenar por cercanía», que respeta las horas fijas. Es solo un aviso: la cita se guarda igual.';
+  return orig.call(this, inf);
+})(explicarAviso);
+// «⋯»: pulsar el mismo botón con su menú abierto lo cierra (antes lo volvía a abrir)
+let TDM_BOTON = null;
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'), m = document.querySelector('.tdmenu');
+  if (b && m && m.__de === b) { m.remove(); e.stopImmediatePropagation(); e.preventDefault(); return; }
+  TDM_BOTON = b;
+}, true);
+new MutationObserver(ms => ms.forEach(x => x.addedNodes.forEach(n => { if (n.classList && n.classList.contains('tdmenu')) n.__de = TDM_BOTON; })))
+  .observe(document.body, { childList: true });
+// Hora y fecha en el móvil (aviso de Eric: «se abre el propio y el nativo»): en pantallas táctiles el toque lo recoge el envoltorio (.selw), que abre el
+// selector de delcos, y el campo no toma el foco (iOS abría su rueda al enfocarlo, también al abrirse una ventana con el campo dentro)
+document.addEventListener('focusin', e => {
+  if (e.target && e.target.matches && e.target.matches('.selw input') && window.matchMedia && matchMedia('(pointer: coarse)').matches) e.target.blur();
+}, true);
