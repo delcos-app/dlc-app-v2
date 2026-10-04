@@ -11198,7 +11198,8 @@ const PLANES = [
 ];
 let PLAN_ACTUAL = { plan: 'medida' };   // v2.117.0: hasta que llega el de la base, el completo
 const planDe = id => PLANES.find(p => p.id === id) || PLANES[3];
-const planIncluye = mod => !(mod in MODULO_AREA) || planDe(PLAN_ACTUAL.plan).modulos.includes(mod);
+// v2.165.0: sin Facturación en el plan pero con facturas, se entra en solo consulta (facConsulta, al final)
+const planIncluye = mod => !(mod in MODULO_AREA) || planDe(PLAN_ACTUAL.plan).modulos.includes(mod) || (mod === 'facturacion' && facConsulta());
 const planMinimo = mod => PLANES.find(p => p.modulos.includes(mod));
 Promise.resolve(RPC_ORIG('plan_uso', {})).then(r => { if (r && r.data && r.data.plan) { PLAN_ACTUAL = r.data.plan; if (PERFIL) aplicarPermisosMenu(); } }, () => {});
 
@@ -18796,3 +18797,595 @@ async function escribirRpc(fn, payload) {
     } else if (++intentos > 90) clearInterval(t);
   }, 2000);
 })();
+
+
+/* v2.162.0 · Suscripciones y pagos con Stripe (decisiones de Eric, 4/10/2026). «Plan y suscripción» ya no manda correos: «Contratar»
+   abre el pago seguro de Stripe (tarjeta o domiciliación), «Cambiar a…» y «Añadir o quitar usuarios» cambian la suscripción con
+   prorrateo y «Gestionar el pago» abre el portal de Stripe (tarjeta, recibos, cancelar). Todo pasa por la función de Supabase
+   «pagos»; Stripe avisa a «stripe-webhook» y la base (aplicar_suscripcion, SQL 102) activa o cambia el plan. Si un cobro falla, aviso
+   arriba durante 14 días y después la empresa queda en solo lectura (la base no deja crear, cambiar ni borrar) hasta que pague. */
+const PAGO_PLANES = ['campo', 'comercial', 'empresa'];
+let PAGO_ESTADO = null;   // la respuesta de plan_uso (plan, usuarios, solo_lectura)
+
+async function pagoLlamar(cuerpo, boton) {
+  if (boton) { boton.disabled = true; boton.dataset.txt = boton.textContent; boton.textContent = 'Abriendo…'; }
+  try {
+    const { data, error } = await db.functions.invoke('pagos', { body: cuerpo });
+    let d = data;
+    if (error) { try { d = await error.context.json(); } catch (e) { d = { ok: false, error: error.message }; } }
+    if (!d || !d.ok) { toast('No se ha podido: ' + ((d && d.error) || 'error del pago'), true); return null; }
+    return d;
+  } finally { if (boton) { boton.disabled = false; boton.textContent = boton.dataset.txt; } }
+}
+
+// Ventana para elegir plan, forma de pago y usuarios, con el total
+function elegirPago(planIni) {
+  const pl = PLAN_ACTUAL || {}, conSus = !!pl.stripe_suscripcion, usados = +((PAGO_ESTADO || {}).usuarios || 0);
+  const est = { plan: PAGO_PLANES.includes(planIni) ? planIni : (PAGO_PLANES.includes(pl.plan) ? pl.plan : 'comercial'),
+    pago: pl.pago === 'anual' ? 'anual' : 'mensual', usuarios: Math.max(3, usados, +pl.usuarios || 0) };
+  const pinta = () => {
+    const p = planDe(est.plan), anual = est.pago === 'anual';
+    const base = anual ? p.precio * 10 * est.usuarios : p.precio * est.usuarios;
+    const puesta = !anual && !conSus ? PUESTA_EN_MARCHA : 0;
+    const iva = Math.round((base + puesta) * 21) / 100;
+    $('dbody').innerHTML = `<div class="fh"><div><h2>${conSus ? 'Cambiar la suscripción' : 'Contratar delcos'}</h2>
+        <div class="sm">Precios por usuario, IVA no incluido. ${conSus ? 'El cambio se prorratea en el próximo recibo.' : 'El pago se hace en la página segura de Stripe.'}</div></div>
+        <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
+      <label>Plan</label><div class="segs pgplan" role="group">${PAGO_PLANES.map(k => `<button type="button" data-pgp="${k}" class="${est.plan === k ? 'on' : ''}" aria-pressed="${est.plan === k}">${esc(planDe(k).nombre)} · ${eurI(planDe(k).precio)}</button>`).join('')}</div>
+      <label style="margin-top:12px">Pago</label><div class="segs" role="group">
+        <button type="button" data-pga="mensual" class="${anual ? '' : 'on'}" aria-pressed="${!anual}">Mensual</button>
+        <button type="button" data-pga="anual" class="${anual ? 'on' : ''}" aria-pressed="${anual}">Anual · pagas 10 meses de 12</button></div>
+      <label for="pgusu" style="margin-top:12px">Usuarios</label><input id="pgusu" type="number" min="${Math.max(3, usados)}" value="${est.usuarios}" class="numw">
+      <span class="sm">${usados ? `Ahora usáis ${num(usados)}. ` : ''}Mínimo ${Math.max(3, usados)}.</span>
+      <div class="pgres">
+        <div><span>${num(est.usuarios)} × ${eurI(anual ? p.precio * 10 : p.precio)} ${anual ? 'al año' : 'al mes'}</span><b>${eurI(base)}</b></div>
+        ${puesta ? `<div><span>Puesta en marcha (una vez; incluida con pago anual)</span><b>${eurI(puesta)}</b></div>` : ''}
+        <div><span>IVA 21 %</span><b>${eurI(iva)}</b></div>
+        <div class="pgtot"><span>${conSus ? 'Nuevo importe' : 'Primer cobro'}</span><b>${eurI(base + puesta + iva)}</b></div></div>
+      <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button>
+        <button class="btn" id="pgok">${conSus ? 'Confirmar el cambio' : 'Ir al pago seguro'}</button></div>`;
+    $('dbody').querySelectorAll('[data-pgp]').forEach(b => b.onclick = () => { est.plan = b.dataset.pgp; pinta(); });
+    $('dbody').querySelectorAll('[data-pga]').forEach(b => b.onclick = () => { est.pago = b.dataset.pga; pinta(); });
+    $('pgusu').onchange = () => { est.usuarios = Math.max(3, usados, Math.floor(+$('pgusu').value || 0)); pinta(); };
+    $('pgok').onclick = async ev => {
+      const d = await pagoLlamar({ accion: conSus ? 'cambiar' : 'checkout', plan: est.plan, pago: est.pago, usuarios: est.usuarios }, ev.target);
+      if (!d) return;
+      if (d.url) { location.href = d.url; return; }
+      $('dlg').close(); toast('Cambio hecho: en unos segundos verás el plan nuevo'); pagoEsperarActivo();
+    };
+  };
+  pinta(); $('dlg').showModal();
+}
+async function pagoPortal(boton) { const d = await pagoLlamar({ accion: 'portal' }, boton); if (d && d.url) location.href = d.url; }
+
+// «Plan y suscripción»: los botones reales en lugar de correos
+pintarPaginaPlan = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'); if (!c) return r;
+  const pl = PLAN_ACTUAL || {}, conSus = !!pl.stripe_suscripcion, puedePagar = puedeOrganizacion();
+  c.querySelectorAll('.plan[data-plan]').forEach(card => {
+    const k = card.dataset.plan, a2 = card.querySelector('a.btn[href^="mailto"]');
+    if (!a2 || !PAGO_PLANES.includes(k)) return;
+    if (!puedePagar) { a2.remove(); return; }
+    const b = document.createElement('button'); b.type = 'button'; b.className = a2.className; b.dataset.pgplan = k;
+    b.textContent = conSus ? 'Cambiar a ' + planDe(k).nombre : 'Contratar ' + planDe(k).nombre;
+    a2.replaceWith(b); b.onclick = () => elegirPago(k);
+  });
+  const acts = c.querySelector('#planact .acts');
+  if (acts) {
+    const usu = acts.querySelector('a.btn[href^="mailto"]'); if (usu) usu.remove();
+    if (puedePagar && pl.plan !== 'medida') acts.insertAdjacentHTML('beforeend', conSus
+      ? '<button type="button" class="btn sec" id="pgusu2">Añadir o quitar usuarios</button><button type="button" class="btn sec" id="pgportal">Gestionar el pago</button>'
+      : '<button type="button" class="btn" id="pgelegir">Elegir plan y pagar</button>');
+    if ($('pgusu2')) $('pgusu2').onclick = () => elegirPago(pl.plan);
+    if ($('pgportal')) $('pgportal').onclick = ev => pagoPortal(ev.target);
+    if ($('pgelegir')) $('pgelegir').onclick = () => elegirPago();
+  }
+  const act = c.querySelector('#planact h2');
+  if (act && pl.estado === 'impago') act.insertAdjacentHTML('afterend', `<div class="banda-peligro">No hemos podido cobrar el último recibo${pl.impago_desde ? ' (desde el ' + fechaCorta(pl.impago_desde) + ')' : ''}.
+    Actualiza el método de pago con «Gestionar el pago»; si en 14 días no se puede cobrar, la cuenta queda en solo lectura.</div>`);
+  if (act && pl.estado === 'cancelada') act.insertAdjacentHTML('afterend', `<div class="banda-aviso">Suscripción cancelada: puedes usar la plataforma hasta el
+    <b>${fechaCorta(pl.periodo_fin)}</b> y descargar tus datos. Para seguir, vuelve a contratar.</div>`);
+  if (act && conSus && pl.periodo_fin && pl.estado === 'activo') act.insertAdjacentHTML('afterend', `<p class="sm">Próximo recibo el ${fechaCorta(pl.periodo_fin)}.</p>`);
+  return r;
+})(pintarPaginaPlan);
+
+// Aviso arriba si hay un cobro pendiente o la cuenta está en solo lectura
+function pagoAviso() {
+  const e = PAGO_ESTADO || {}, pl = e.plan || {}; let el = $('pagoaviso');
+  const msg = e.solo_lectura ? 'Tu empresa está en <b>solo lectura</b> porque hay un pago pendiente. Puedes consultar y exportar; para volver a trabajar, actualiza el pago.'
+    : pl.estado === 'impago' ? 'No hemos podido cobrar tu suscripción. Actualiza el método de pago antes de 14 días para no quedarte en solo lectura.' : '';
+  if (!msg) { if (el) el.remove(); return; }
+  const main = document.querySelector('main'); if (!main) return;
+  if (!el) { main.insertAdjacentHTML('afterbegin', '<div id="pagoaviso" class="banda-peligro" role="alert"></div>'); el = $('pagoaviso'); }
+  el.innerHTML = msg + (puedeOrganizacion() ? ' <button type="button" class="btn sec" id="pgavbtn">Gestionar el pago</button>' : ' Avisa a quien gestiona la cuenta de tu empresa.');
+  if ($('pgavbtn')) $('pgavbtn').onclick = ev => pagoPortal(ev.target);
+}
+async function pagoCargarEstado() {
+  const { data } = await RPC_ORIG('plan_uso', {});
+  if (!data) return;
+  PAGO_ESTADO = data; if (data.plan && data.plan.plan) PLAN_ACTUAL = data.plan;
+  pagoAviso();
+}
+// Al volver de Stripe: se espera a que llegue el aviso y el plan quede activo
+async function pagoEsperarActivo() {
+  for (let i = 0; i < 20; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    await pagoCargarEstado();
+    const pl = PLAN_ACTUAL || {};
+    if (pl.stripe_suscripcion && pl.estado === 'activo') { toast('Suscripción activa: plan ' + planDe(pl.plan).nombre); if (TAB === 'plan' || TAB === 'organizacion') ir(TAB); return; }
+  }
+  toast('El pago está hecho; la suscripción aparecerá en unos minutos');
+}
+(function pagoArranque() {
+  let n = 0;
+  const t = setInterval(() => {
+    if (typeof PERFIL !== 'undefined' && PERFIL && !document.body.classList.contains('sin-sesion') && typeof RPC_ORIG === 'function') {
+      clearInterval(t);
+      const q = new URLSearchParams(location.search), res = q.get('pago');
+      if (res) { history.replaceState(null, '', location.pathname + location.hash); }
+      if (res === 'ok') { toast('Pago recibido: activando tu suscripción…'); pagoEsperarActivo(); }
+      else if (res === 'cancelado') toast('Has salido del pago sin completarlo');
+      pagoCargarEstado();
+    } else if (++n > 90) clearInterval(t);
+  }, 1500);
+})();
+// En solo lectura, los fallos al guardar se explican (y no cuentan como errores de la plataforma)
+toast = (orig => function (msg, err) {
+  if (err && PAGO_ESTADO && PAGO_ESTADO.solo_lectura) msg = 'Tu empresa está en solo lectura hasta que se actualice el pago (Plan y suscripción)';
+  return orig.call(this, msg, err);
+})(toast);
+registrarError = (orig => function (tipo, mensaje, detalle) {
+  if (PAGO_ESTADO && PAGO_ESTADO.solo_lectura && /row-level security|violates row-level/i.test(String(mensaje))) return;
+  return orig.call(this, tipo, mensaje, detalle);
+})(registrarError);
+// Organizaciones (panel delcos): impago y cancelada a la vista
+orgEstado = (orig => function (o) {
+  const pd = o.plan_datos || {};
+  if (o.bloqueada === 'cancelada') return '<span class="pill p-anu">Cancelada</span> ';
+  if (pd.estado === 'impago') return `<span class="pill p-urg">Impago desde el ${fechaCorta(pd.impago_desde)}</span> `;
+  return orig(o) + (pd.stripe_suscripcion ? '<span class="pill p-est">Stripe</span> ' : '');
+})(orgEstado);
+
+/* v2.163.0 · Compras y Proveedores son del plan Empresa (y A medida): en Campo y Comercial salen con candado y explican cómo
+   conseguirlos, igual que Facturación. Con el plan A medida no se contrata ni se cambia en línea (presupuesto: lo lleva delcos). */
+const PLAN_SECCIONES = { compras: ['empresa', 'medida'], proveedores: ['empresa', 'medida'] };
+const planIncluyeSeccion = t => !(t in PLAN_SECCIONES) || PLAN_SECCIONES[t].includes(PLAN_ACTUAL.plan);
+function candadoSecciones() {
+  Object.keys(PLAN_SECCIONES).forEach(t => document.querySelectorAll(`nav.main [data-t="${t}"], .bmasgrid [data-bm="${t}"]`).forEach(b => {
+    const bloq = !planIncluyeSeccion(t);
+    b.classList.toggle('bloq', bloq);
+    const c = b.querySelector('.cand');
+    if (bloq && !c && b.matches('nav.main [data-t]')) b.insertAdjacentHTML('beforeend', '<span class="cand">🔒</span>');
+    if (!bloq && c) c.remove();
+  }));
+}
+aplicarPermisosMenu = (orig => function (...a) { const r = orig.apply(this, a); try { candadoSecciones(); } catch (e) {} return r; })(aplicarPermisosMenu);
+avisoPlan = (orig => function (mod) {
+  if (!(mod in PLAN_SECCIONES)) return orig.call(this, mod);
+  const p = planDe(PLAN_SECCIONES[mod][0]), n = TITULO_PEDSEC[mod] ? TITULO_PEDSEC[mod][0] : mod;
+  $('dbody').innerHTML = `<div class="fh"><div><h2>${esc(n)}</h2><div class="sm">No está incluido en tu plan ${esc(planDe(PLAN_ACTUAL.plan).nombre)}</div></div>
+    <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
+    <p>Está disponible desde el plan <b>${esc(p.nombre)}</b> (${precioPlan(p)}).</p>
+    <ul class="manlist">${p.ventajas.map(v => `<li><span>✓</span><span>${esc(v)}</span></li>`).join('')}</ul>
+    <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Ahora no</button>${puedeOrganizacion() ? '<button class="btn" id="vplan">Ver planes</button>' : ''}</div>`;
+  $('dlg').showModal();
+  if ($('vplan')) $('vplan').onclick = () => { $('dlg').close(); CFG_SEC = 'plan'; ir('config'); };
+})(avisoPlan);
+ir = (orig => function (t, ...a) {
+  if (t in PLAN_SECCIONES && PERFIL && !ES_MEDICO() && !planIncluyeSeccion(t)) { avisoPlan(t); return; }
+  return orig.call(this, t, ...a);
+})(ir);
+abrirMasMovil = (orig => function (...a) {
+  const r = orig.apply(this, a);
+  document.querySelectorAll('.bmasgrid [data-bm]').forEach(b => { const t = b.dataset.bm; if (!planIncluyeSeccion(t)) {
+    b.classList.add('bloq'); b.onclick = () => { const s = $('bmas'); if (s) s.classList.add('hide'); document.body.classList.remove('masabierto'); avisoPlan(t); }; } });
+  return r;
+})(abrirMasMovil);
+// A medida (como la empresa principal): sin botones de contratar ni de cambiar en línea, salvo que ya pague con Stripe
+pintarPaginaPlan = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'), pl = PLAN_ACTUAL || {};
+  if (c && pl.plan === 'medida' && !pl.stripe_suscripcion) c.querySelectorAll('[data-pgplan], #pgelegir, #pgusu2').forEach(b => b.remove());
+  return r;
+})(pintarPaginaPlan);
+setTimeout(() => { try { candadoSecciones(); } catch (e) {} }, 0);
+
+/* v2.164.0 · Lo que no entra en el plan no sale en el menú (petición de Eric): al bajar de plan, los módulos con candado se quitan
+   solos del menú lateral y del «Más» del móvil, y en «Personalizar menú» salen con candado y el interruptor apagado y sin poder
+   encenderlo. No se toca lo que cada uno eligió: al volver a un plan que los incluye, reaparecen como estaban. */
+const fueraDePlan = b => !!b && b.classList.contains('bloq');
+const PLAN_NOMBRE = () => { try { return planDe(PLAN_ACTUAL.plan).nombre; } catch (e) { return ''; } };
+montarMenuLateral = (orig => function (...a) {
+  const r = orig.apply(this, a);
+  if (!document.body.classList.contains('menulat')) return r;
+  const inn = $('nav'); if (!inn) return r;
+  // (solo se toca la clase si cambia: el observador del menú vuelve a llamar aquí con cada cambio de clase)
+  const ocultos = menuPrefs().ocultos || [];
+  inn.querySelectorAll('button[data-t]').forEach(b => {
+    if (fueraDePlan(b)) { if (!b.classList.contains('mlplan')) b.classList.add('mlplan'); if (!b.classList.contains('mloculto')) b.classList.add('mloculto'); }
+    else if (b.classList.contains('mlplan')) { b.classList.remove('mlplan'); if (!ocultos.includes(b.dataset.t)) b.classList.remove('mloculto'); }
+  });
+  inn.querySelectorAll('.mlgrupo').forEach(g => g.classList.toggle('vacio', ![...g.querySelectorAll('button[data-t]')]
+    .some(b => !b.classList.contains('hide') && !b.classList.contains('mloculto') && b.dataset.t !== 'seguimiento' && getComputedStyle(b).display !== 'none')));
+  return r;
+})(montarMenuLateral);
+abrirMasMovil = (orig => function (...a) {
+  const r = orig.apply(this, a);
+  document.querySelectorAll('.bmasgrid [data-bm].bloq').forEach(b => b.remove());
+  return r;
+})(abrirMasMovil);
+// «Personalizar menú»: candado, interruptor apagado y bloqueado, y la cuenta «N de M» sin lo que no entra
+function personalizarCandados() {
+  const caja = $('mlpanel'); if (!caja) return;
+  caja.querySelectorAll('.mlpi[data-k]').forEach(f => {
+    const b = document.querySelector(`#nav button[data-t="${f.dataset.k}"]`); if (!fueraDePlan(b)) return;
+    f.classList.add('off', 'fueraplan'); f.title = `No está incluido en tu plan ${PLAN_NOMBRE()}`;
+    const v = f.querySelector('[data-vk]'); if (v) { v.checked = false; v.disabled = true; }
+    if (!f.querySelector('.mlpcand')) f.querySelector('.mlpn').insertAdjacentHTML('afterend', `<span class="mlpcand" aria-label="No incluido en tu plan"></span>`);
+  });
+  caja.querySelectorAll('.mlpg').forEach(g => {
+    const fs = [...g.querySelectorAll('.mlpi[data-k]')], c = g.querySelector('.mlpcnt');
+    if (c) c.textContent = `${fs.filter(f => !f.classList.contains('off')).length} de ${fs.filter(f => !f.classList.contains('fueraplan')).length}`;
+  });
+}
+menuPersonalizar = (orig => function (...a) {
+  const r = orig.apply(this, a);
+  const caja = $('mlpanel');
+  if (caja && !caja.__candados) {
+    caja.__candados = true; personalizarCandados();
+    new MutationObserver(() => personalizarCandados()).observe(caja, { childList: true });
+    caja.addEventListener('change', () => personalizarCandados());
+  }
+  return r;
+})(menuPersonalizar);
+
+/* v2.165.0 · Bajar de plan con orden (decisiones de Eric, 4/10/2026):
+   - A medida: no se baja desde la app; lo hace delcos desde su panel y no antes de la fecha de compromiso del contrato.
+   - Las bajadas (plan menor, menos usuarios o de anual a mensual) se programan para el final del periodo pagado; las subidas, al momento.
+     Antes de confirmar se enseña lo que se deja de tener. «Plan y suscripción» dice el cambio previsto (con «Anular el cambio») y la baja pedida.
+   - Sin Facturación en el plan pero con facturas emitidas: Facturación en solo consulta (verlas y descargarlas, no emitir; la base lo impide). */
+function facConsulta() {
+  try { return !!(PAGO_ESTADO && PAGO_ESTADO.facturas) && !['empresa', 'medida'].includes((PLAN_ACTUAL || {}).plan); } catch (e) { return false; }
+}
+const facSinPlan = () => { try { return !['empresa', 'medida'].includes((PLAN_ACTUAL || {}).plan); } catch (e) { return false; } };
+function marcarFacPlan() {
+  document.body.classList.toggle('facsolo', facSinPlan());
+  try { aplicarPermisosMenu(); } catch (e) {}
+}
+pagoCargarEstado = (orig => async function (...a) { const r = await orig.apply(this, a); marcarFacPlan(); return r; })(pagoCargarEstado);
+// En solo consulta, la pantalla lo dice arriba y Organización no enseña lo de emitir (datos fiscales, series, VeriFactu, PDF)
+cargarFacturacion = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const v = $('v-facturacion');
+  if (v && facConsulta() && !v.querySelector('#facconsulta')) {
+    const sub = v.querySelector('.subnav');
+    if (sub) sub.insertAdjacentHTML('afterend', `<div id="facconsulta" class="banda-info">Tu plan ${esc(planDe(PLAN_ACTUAL.plan).nombre)} no incluye Facturación:
+      puedes consultar y descargar las facturas que ya emitiste y registrar sus cobros, pero no emitir nuevas.</div>`);
+  }
+  return r;
+})(cargarFacturacion);
+(() => {
+  const d = Object.getOwnPropertyDescriptor(PAGINAS.organizacion, 'tabs'); if (!d || !d.get) return;
+  Object.defineProperty(PAGINAS.organizacion, 'tabs', { configurable: true, get() {
+    const t = d.get.call(this);
+    return facConsulta() ? t.filter(x => !['fiscal', 'series', 'vf', 'pdf'].includes(x[0])) : t;
+  } });
+})();
+
+// Lo que se deja de tener al pasar de un plan a otro (para avisar antes)
+function perdidasPlan(de, a, datos) {
+  const pd = planDe(de), pa = planDe(a), extras = (datos && datos.extras) || [], l = [];
+  if (de === a) return l;
+  const nombreMod = m => (MOD_PLAN.find(x => x[0] === m) || [m, m])[1];
+  pd.modulos.filter(m => !pa.modulos.includes(m) && m in MODULO_AREA).forEach(m => l.push(m === 'facturacion'
+    ? `Facturación: ${datos && datos.facturas ? 'tus facturas quedan en solo consulta (verlas, descargarlas y cobrarlas, no emitir nuevas)' : 'no podrás emitir facturas'}` : nombreMod(m)));
+  Object.keys(PLAN_SECCIONES).forEach(s => { if (PLAN_SECCIONES[s].includes(de) && !PLAN_SECCIONES[s].includes(a)) l.push(TITULO_PEDSEC[s] ? TITULO_PEDSEC[s][0] : s); });
+  Object.keys(PLAN_EXTRAS).forEach(x => {
+    if (!PLAN_EXTRAS[x].includes(de) || PLAN_EXTRAS[x].includes(a) || extras.includes(x)) return;
+    if (x === 'oportunidades') l.push('Oportunidades');
+    if (x === 'portal') l.push(`Portal ${TT('medico', 's', 'del', 'l', 'l')} y del centro${datos && +datos.medicos ? ` (${num(datos.medicos)} con acceso lo perderán)` : ''}`);
+  });
+  if (de === 'medida' && a === 'empresa' && datos && +datos.medicos > 50) l.push(`Portal: el plan Empresa admite hasta 50 accesos y ahora hay ${num(datos.medicos)}`);
+  if (de === 'medida') l.push('Ver la plataforma como cada persona de tu equipo', 'Soporte prioritario');
+  return l;
+}
+const rangoPlan = k => ['campo', 'comercial', 'empresa', 'medida'].indexOf(k);
+// Igual que la función «pagos»: plan menor, menos usuarios o de anual a mensual
+const esBajada = (de, a) => rangoPlan(a.plan) < rangoPlan(de.plan)
+  || (rangoPlan(a.plan) === rangoPlan(de.plan) && (+a.usuarios < +de.usuarios || (de.pago === 'anual' && a.pago === 'mensual')));
+
+// Ventana de contratar o cambiar (la de la v2.162.0, con la bajada al final del periodo y lo que se pierde)
+elegirPago = function (planIni) {
+  const pl = PLAN_ACTUAL || {}, conSus = !!pl.stripe_suscripcion, usados = +((PAGO_ESTADO || {}).usuarios || 0);
+  if (pl.plan === 'medida') { toast('Con el plan A medida, los cambios se hacen con delcos'); return; }
+  const est = { plan: PAGO_PLANES.includes(planIni) ? planIni : (PAGO_PLANES.includes(pl.plan) ? pl.plan : 'comercial'),
+    pago: pl.pago === 'anual' ? 'anual' : 'mensual', usuarios: Math.max(3, usados, +pl.usuarios || 0) };
+  const actual = { plan: pl.plan, pago: pl.pago === 'anual' ? 'anual' : 'mensual', usuarios: +pl.usuarios || 0 };
+  const pinta = () => {
+    const p = planDe(est.plan), anual = est.pago === 'anual';
+    const base = anual ? p.precio * 10 * est.usuarios : p.precio * est.usuarios;
+    const puesta = !anual && !conSus ? PUESTA_EN_MARCHA : 0;
+    const iva = Math.round((base + puesta) * 21) / 100;
+    const baja = conSus && esBajada(actual, est), fin = pl.periodo_fin ? fechaCorta(pl.periodo_fin) : 'el final del periodo pagado';
+    const pierde = conSus ? perdidasPlan(pl.plan, est.plan, Object.assign({}, PAGO_ESTADO || {}, { extras: pl.extras })) : [];
+    $('dbody').innerHTML = `<div class="fh"><div><h2>${conSus ? 'Cambiar la suscripción' : 'Contratar delcos'}</h2>
+        <div class="sm">Precios por usuario, IVA no incluido. ${!conSus ? 'El pago se hace en la página segura de Stripe.' : baja ? '' : 'El cambio se aplica ya y se prorratea en el próximo recibo.'}</div></div>
+        <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
+      <label>Plan</label><div class="segs pgplan" role="group">${PAGO_PLANES.map(k => `<button type="button" data-pgp="${k}" class="${est.plan === k ? 'on' : ''}" aria-pressed="${est.plan === k}">${esc(planDe(k).nombre)} · ${eurI(planDe(k).precio)}</button>`).join('')}</div>
+      <label style="margin-top:12px">Pago</label><div class="segs" role="group">
+        <button type="button" data-pga="mensual" class="${anual ? '' : 'on'}" aria-pressed="${!anual}">Mensual</button>
+        <button type="button" data-pga="anual" class="${anual ? 'on' : ''}" aria-pressed="${anual}">Anual · pagas 10 meses de 12</button></div>
+      <label for="pgusu" style="margin-top:12px">Usuarios</label><input id="pgusu" type="number" min="${Math.max(3, usados)}" value="${est.usuarios}" class="numw">
+      <span class="sm">${usados ? `Ahora usáis ${num(usados)}. ` : ''}Mínimo ${Math.max(3, usados)}.</span>
+      ${baja ? `<div class="banda-aviso" id="pgbaja">El cambio se aplicará el <b>${esc(fin)}</b>, al acabar lo que ya has pagado. Hasta entonces sigues con
+        ${esc(planDe(pl.plan).nombre)}${pierde.length ? ` y después dejarás de tener:<ul id="pgpierde">${pierde.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '.'}</div>` : ''}
+      <div class="pgres">
+        <div><span>${num(est.usuarios)} × ${eurI(anual ? p.precio * 10 : p.precio)} ${anual ? 'al año' : 'al mes'}</span><b>${eurI(base)}</b></div>
+        ${puesta ? `<div><span>Puesta en marcha (una vez; incluida con pago anual)</span><b>${eurI(puesta)}</b></div>` : ''}
+        <div><span>IVA 21 %</span><b>${eurI(iva)}</b></div>
+        <div class="pgtot"><span>${!conSus ? 'Primer cobro' : baja ? 'Importe desde el ' + esc(fin) : 'Nuevo importe'}</span><b>${eurI(base + puesta + iva)}</b></div></div>
+      <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button>
+        <button class="btn" id="pgok">${!conSus ? 'Ir al pago seguro' : baja ? 'Programar el cambio' : 'Confirmar el cambio'}</button></div>`;
+    $('dbody').querySelectorAll('[data-pgp]').forEach(b => b.onclick = () => { est.plan = b.dataset.pgp; pinta(); });
+    $('dbody').querySelectorAll('[data-pga]').forEach(b => b.onclick = () => { est.pago = b.dataset.pga; pinta(); });
+    $('pgusu').onchange = () => { est.usuarios = Math.max(3, usados, Math.floor(+$('pgusu').value || 0)); pinta(); };
+    $('pgok').onclick = async ev => {
+      const d = await pagoLlamar({ accion: conSus ? 'cambiar' : 'checkout', plan: est.plan, pago: est.pago, usuarios: est.usuarios }, ev.target);
+      if (!d) return;
+      if (d.url) { location.href = d.url; return; }
+      $('dlg').close();
+      if (d.previsto) { toast(`Cambio programado para el ${fechaCorta(d.previsto)}`); await pagoCargarEstado(); if (TAB === 'plan' || TAB === 'organizacion') ir(TAB); return; }
+      toast('Cambio hecho: en unos segundos verás el plan nuevo'); pagoEsperarActivo();
+    };
+  };
+  pinta(); $('dlg').showModal();
+};
+
+// «Plan y suscripción»: cambio previsto (con «Anular el cambio»), baja pedida y compromiso de A medida
+pintarPaginaPlan = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'), pl = PLAN_ACTUAL || {}, h = c && c.querySelector('#planact h2'); if (!h) return r;
+  const cp = pl.cambio_previsto;
+  if (cp && cp.plan) h.insertAdjacentHTML('afterend', `<div class="banda-info" id="pgprevisto">El <b>${fechaCorta(cp.desde)}</b> pasarás al plan
+    <b>${esc(planDe(cp.plan).nombre)}</b> con ${num(cp.usuarios)} usuarios y pago ${cp.pago === 'anual' ? 'anual' : 'mensual'}.
+    ${puedeOrganizacion() ? '<button type="button" class="btn sec" id="pganular">Anular el cambio</button>' : ''}</div>`);
+  if (pl.baja_al_final && pl.estado === 'activo') h.insertAdjacentHTML('afterend', `<div class="banda-aviso" id="pgbajafin">Has pedido la baja: puedes usar la plataforma
+    hasta el <b>${fechaCorta(pl.periodo_fin)}</b>. Si quieres seguir, entra en «Gestionar el pago» y renueva la suscripción.</div>`);
+  if (pl.plan === 'medida' && pl.compromiso_hasta) h.insertAdjacentHTML('afterend', `<p class="sm" id="pgcomp">Contrato A medida hasta el ${fechaCorta(pl.compromiso_hasta)}. Para cambiarlo, habla con delcos.</p>`);
+  if ($('pganular')) $('pganular').onclick = async ev => {
+    const d = await pagoLlamar({ accion: 'anular_cambio' }, ev.target); if (!d) return;
+    toast('Cambio anulado: sigues con tu plan'); await pagoCargarEstado(); ir(TAB);
+  };
+  return r;
+})(pintarPaginaPlan);
+
+// Panel delcos → Organizaciones → Plan: fecha de compromiso (A medida), lo que pierde al bajar y aviso si paga con Stripe
+orgAcciones = (orig => function (c, l) {
+  const r = orig.apply(this, arguments);
+  c.querySelectorAll('[data-orgplan]').forEach(b => {
+    const f = b.onclick; if (!f || b.__p2165) return; b.__p2165 = true;
+    b.onclick = (...x) => {
+      f.apply(b, x);
+      const o = l.find(y => y.id === b.dataset.orgplan); if (!o || !$('opplan')) return;
+      const pd = o.plan_datos || {}, de = pd.plan || o.plan;
+      $('opest').closest('.g2').insertAdjacentHTML('beforeend', `<div id="opcompw"><label for="opcomp">Compromiso hasta (A medida)</label>
+        <input id="opcomp" type="date" value="${esc(pd.compromiso_hasta || '')}"><span class="sm">Antes de esa fecha no se puede bajar de A medida.</span></div>`);
+      $('opest').closest('.g2').insertAdjacentHTML('afterend', `${pd.stripe_suscripcion ? '<div class="banda-aviso" id="opstripe">Esta empresa paga con Stripe: este cambio no se pasa a Stripe. Para que cuadre el cobro, cámbialo también allí.</div>' : ''}<div id="opperd"></div>`);
+      const pinta = () => {
+        $('opcompw').classList.toggle('hide', $('opplan').value !== 'medida');
+        const p = perdidasPlan(de, $('opplan').value, { extras: pd.extras || [], facturas: +o.facturas > 0 });
+        const bloq = de === 'medida' && $('opplan').value !== 'medida' && pd.compromiso_hasta && pd.compromiso_hasta > hoyISO();
+        $('opperd').innerHTML = bloq ? `<div class="banda-peligro">Tiene compromiso A medida hasta el ${fechaCorta(pd.compromiso_hasta)}: no se puede bajar antes.</div>`
+          : rangoPlan($('opplan').value) < rangoPlan(de) && p.length ? `<div class="banda-aviso">Al pasar a ${esc(planDe($('opplan').value).nombre)} dejará de tener:<ul>${p.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+      };
+      $('opplan').addEventListener('change', pinta); pinta();
+      $('opok').onclick = async ev => {
+        ev.target.disabled = true;
+        const p = { plan: $('opplan').value, usuarios: $('opusu').value === '' ? null : +$('opusu').value, pago: $('oppago').value, estado: $('opest').value,
+          prueba_hasta: $('opest').value === 'prueba' ? $('opfin').value : null };
+        if (p.plan === 'medida') p.compromiso_hasta = $('opcomp').value || null;
+        const { data: res, error } = await db.rpc('guardar_plan_organizacion', { p_org: o.id, p });
+        ev.target.disabled = false;
+        if (error || !res || !res.ok) {
+          toast(({ permiso: 'No tienes permiso', minimo: 'Mínimo 3 usuarios (salvo A medida)', prueba_hasta: 'Falta la fecha de fin de la prueba', plan: 'Plan no válido',
+            compromiso: `Tiene compromiso A medida hasta el ${fechaCorta(res && res.hasta)}` })[(res && res.error) || ''] || 'No se ha podido guardar', true);
+          return;
+        }
+        $('dlg').close(); toast('Plan guardado'); pintarOrganizaciones();
+      };
+    };
+  });
+  return r;
+})(orgAcciones);
+
+/* v2.166.0 · «Darme de baja» en Plan y suscripción (petición de Eric): abre directamente la pantalla de cancelar de Stripe y, al confirmar,
+   vuelve sola a delcos (?pago=baja) con el aviso de hasta cuándo se puede usar. Con la baja pedida, «Seguir con la suscripción» la deshace. */
+const PAGO_VUELTA_BAJA = new URLSearchParams(location.search).get('pago') === 'baja';   // se lee antes de que el arranque limpie la dirección
+async function pagoEsperarBaja() {
+  for (let i = 0; i < 15; i++) {
+    await pagoCargarEstado();
+    const pl = PLAN_ACTUAL || {};
+    if (pl.baja_al_final || pl.estado === 'cancelada') {
+      toast(`Baja registrada: puedes usar delcos hasta el ${fechaCorta(pl.periodo_fin)}`);
+      if (TAB === 'plan' || TAB === 'organizacion') ir(TAB); return;
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  toast('Baja pedida: en unos minutos lo verás en Plan y suscripción');
+}
+if (PAGO_VUELTA_BAJA) {
+  let n = 0;
+  const t = setInterval(() => {
+    if (typeof PERFIL !== 'undefined' && PERFIL && !document.body.classList.contains('sin-sesion')) { clearInterval(t); pagoEsperarBaja(); }
+    else if (++n > 90) clearInterval(t);
+  }, 1500);
+}
+pintarPaginaPlan = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'), pl = PLAN_ACTUAL || {}; if (!c || !puedeOrganizacion() || !pl.stripe_suscripcion) return r;
+  const acts = c.querySelector('#planact .acts');
+  if (acts && pl.estado === 'activo' && !pl.baja_al_final && !$('pgdarbaja'))
+    acts.insertAdjacentHTML('beforeend', '<button type="button" class="btn sec" id="pgdarbaja">Darme de baja</button>');
+  const bf = $('pgbajafin');
+  if (bf) {
+    bf.innerHTML = `Has pedido la baja: puedes usar la plataforma hasta el <b>${fechaCorta(pl.periodo_fin)}</b>.
+      <button type="button" class="btn sec" id="pgseguir">Seguir con la suscripción</button>`;
+  }
+  if ($('pgdarbaja')) $('pgdarbaja').onclick = async ev => { const d = await pagoLlamar({ accion: 'baja' }, ev.target); if (d && d.url) location.href = d.url; };
+  if ($('pgseguir')) $('pgseguir').onclick = async ev => {
+    const d = await pagoLlamar({ accion: 'reanudar' }, ev.target); if (!d) return;
+    toast('Seguimos: tu suscripción continúa'); await pagoCargarEstado(); ir(TAB);
+  };
+  return r;
+})(pintarPaginaPlan);
+
+/* v2.167.0 · Al volver de Stripe (pago, baja o el portal) se abre «Plan y suscripción», no Inicio (petición de Eric). Stripe vuelve a
+   …/?pago=…#plan o a …/#plan: la primera pantalla tras entrar es la del plan. */
+let PAGO_IR_PLAN = location.hash === '#plan' || new URLSearchParams(location.search).has('pago');
+const pagoAlPlan = () => {
+  PAGO_IR_PLAN = false;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+};
+ir = (orig => function (t, ...a) {
+  if (PAGO_IR_PLAN && PERFIL) { pagoAlPlan(); if (!ES_MEDICO() && puedeOrganizacion()) t = 'plan'; }
+  return orig.call(this, t, ...a);
+})(ir);
+// Si la app ya había entrado antes de llegar aquí, se va ahora
+if (PAGO_IR_PLAN && typeof PERFIL !== 'undefined' && PERFIL) setTimeout(() => { if (PAGO_IR_PLAN) ir('plan'); }, 0);
+setTimeout(() => { PAGO_IR_PLAN = false; }, 30000);
+
+/* v2.167.0 · «Pedir presupuesto» dentro de delcos (petición de Eric: nada de abrir el correo ni llevar al cliente fuera). Un formulario con
+   la imagen de la plataforma: el contacto ya relleno, qué buscan (opciones que se marcan, sin cerrar nada: siempre hay «Cuéntanos con tus
+   palabras»), tamaño, cuándo y cómo prefieren que les contactemos. Se guarda (pedir_presupuesto, SQL 104), delcos recibe un aviso al
+   momento y la empresa ve en «Plan y suscripción» en qué punto está. Con A medida, el mismo formulario sirve para hablar del contrato.
+   En el panel de delcos, pestaña «Solicitudes» con su estado y una nota. */
+const PRESU_NECESITA = [
+  ['usuarios', 'Más de 50 usuarios'], ['migracion', 'Migrar nuestros datos'], ['conexion', 'Conectar con nuestro programa (ERP, CRM, contabilidad…)'],
+  ['portal', 'Portal para muchos profesionales o centros'], ['desarrollo', 'Algo hecho a nuestra medida'], ['formacion', 'Formación del equipo'],
+  ['soporte', 'Soporte prioritario'], ['otro', 'Otra cosa']];
+const PRESU_CUANDO = ['Lo antes posible', 'Este trimestre', 'Más adelante', 'Solo me estoy informando'];
+const PRESU_ESTADO = { 'Nueva': 'Recibida', 'En curso': 'En curso', 'Cerrada': 'Atendida' };
+function pedirPresupuesto(tipo) {
+  tipo = tipo === 'contrato' ? 'contrato' : 'presupuesto';
+  const est = { contacto: 'correo' }, usados = +((PAGO_ESTADO || {}).usuarios || 0), med = +((PAGO_ESTADO || {}).medicos || 0);
+  const tit = tipo === 'contrato' ? 'Hablar de tu contrato A medida' : 'Pide tu plan A medida';
+  $('dbody').innerHTML = `<div class="fh"><div><h2>${tit}</h2>
+      <div class="sm">Cuéntanos qué necesitáis y te respondemos en un día laborable. No te comprometes a nada.</div></div>
+      <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
+    <div class="presu">
+      <section><h3>Qué buscáis <span class="sm">(marca lo que encaje; no hace falta acertar)</span></h3>
+        <div class="presuops">${PRESU_NECESITA.map(([k, t]) => `<label class="presuop"><input type="checkbox" value="${k}"><span>${esc(t)}</span></label>`).join('')}</div>
+        <div id="presuprogw" class="hide"><label for="presuprog">¿Con qué programa?</label><input id="presuprog" placeholder="Por ejemplo: Holded, Sage, A3, Salesforce…"></div>
+        <label for="presumsg">Cuéntanos con tus palabras</label>
+        <textarea id="presumsg" rows="4" placeholder="Qué queréis conseguir, cómo trabajáis hoy, qué os falta… Todo nos ayuda a proponeros lo mejor."></textarea></section>
+      <section><h3>Vuestro equipo</h3>
+        <div class="g2"><div><label for="presuusu">Usuarios aproximados</label><input id="presuusu" type="number" min="1" class="numw" value="${Math.max(50, usados)}">
+            <span class="sm">Ahora sois ${num(usados)}.</span></div>
+          <div><label for="presumed">${TT('medico', 'p', '', 'l', 'C')} o centros con portal</label><input id="presumed" type="number" min="0" class="numw" value="${med || ''}" placeholder="Opcional"></div>
+          <div><label for="presucuando">¿Cuándo os gustaría empezar?</label><select id="presucuando">${PRESU_CUANDO.map(x => `<option>${esc(x)}</option>`).join('')}</select></div></div></section>
+      <section><h3>Cómo te contactamos</h3>
+        <div class="g2"><div><label for="presunom">Nombre</label><input id="presunom" value="${esc(PERFIL.nombre || '')}"></div>
+          <div><label for="presumail">Correo</label><input id="presumail" type="email" value="${esc(PERFIL.email || '')}"></div>
+          <div><label for="presutel">Teléfono</label><input id="presutel" type="tel" placeholder="Opcional" value="${esc(PERFIL.telefono || '')}"></div>
+          <div><label for="presuhora">Mejor momento</label><input id="presuhora" placeholder="Por ejemplo: mañanas de 9 a 13"></div></div>
+        <label>Prefieres</label><div class="segs" role="group" id="presucont">${[['correo', 'Correo'], ['llamada', 'Llamada'], ['video', 'Videollamada']]
+          .map(([k, t]) => `<button type="button" data-pc="${k}" class="${k === 'correo' ? 'on' : ''}" aria-pressed="${k === 'correo'}">${t}</button>`).join('')}</div></section>
+    </div>
+    <div class="acts" style="justify-content:flex-end"><button class="btn sec" data-cerrar>Cancelar</button><button class="btn" id="presuok">Enviar solicitud</button></div>`;
+  const ops = () => [...$('dbody').querySelectorAll('.presuop input:checked')].map(x => x.value);
+  $('dbody').querySelectorAll('.presuop input').forEach(x => x.onchange = () => {
+    x.closest('.presuop').classList.toggle('on', x.checked);
+    $('presuprogw').classList.toggle('hide', !ops().includes('conexion'));
+  });
+  $('dbody').querySelectorAll('[data-pc]').forEach(b => b.onclick = () => {
+    est.contacto = b.dataset.pc; $('dbody').querySelectorAll('[data-pc]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+  });
+  $('presuok').onclick = async ev => {
+    const necesita = ops(), mensaje = $('presumsg').value.trim();
+    if (!necesita.length && !mensaje) { toast('Marca qué buscáis o cuéntanoslo con tus palabras', true); $('presumsg').focus(); return; }
+    if (!$('presumail').value.trim() && !$('presutel').value.trim()) { toast('Déjanos un correo o un teléfono para contestarte', true); return; }
+    const datos = { necesita, necesita_txt: necesita.map(k => (PRESU_NECESITA.find(x => x[0] === k) || [k, k])[1]), programa: $('presuprog').value.trim() || null,
+      mensaje, usuarios: +$('presuusu').value || null, portal: +$('presumed').value || null, cuando: $('presucuando').value,
+      nombre: $('presunom').value.trim(), correo: $('presumail').value.trim(), telefono: $('presutel').value.trim() || null,
+      horario: $('presuhora').value.trim() || null, contacto: est.contacto, plan_actual: (PLAN_ACTUAL || {}).plan || null };
+    ev.target.disabled = true;
+    const { data: r, error } = await RPC_ORIG('pedir_presupuesto', { p: { tipo, datos } });
+    ev.target.disabled = false;
+    if (error || !r || !r.ok) {
+      toast(({ demasiadas: 'Ya nos has enviado varias hoy: te contestamos enseguida', vacia: 'Cuéntanos qué buscáis', permiso: 'No puedes enviar solicitudes' })[(r && r.error) || ''] || 'No se ha podido enviar', true);
+      return;
+    }
+    $('dbody').innerHTML = `<div class="fh"><div><h2>Solicitud enviada</h2></div><button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
+      <div class="presuok"><div class="presuokic">${svgIco(ICON_NOM.check)}</div>
+        <p><b>Gracias, ${esc(nombrePila(datos.nombre || PERFIL.nombre || ''))}.</b> Ya la tenemos: te ${est.contacto === 'correo' ? 'escribimos' : est.contacto === 'llamada' ? 'llamamos' : 'proponemos una videollamada'}
+          en un día laborable${datos.correo ? ` (${esc(datos.correo)})` : ''}.</p>
+        <p class="sm">Puedes ver en qué punto está en Plan y suscripción.</p></div>
+      <div class="acts" style="justify-content:flex-end"><button class="btn" data-cerrar>Entendido</button></div>`;
+    $('dlg').addEventListener('close', () => { if (TAB === 'plan' || TAB === 'organizacion') ir(TAB); }, { once: true });
+  };
+  $('dlg').showModal();
+}
+// «Plan y suscripción»: botones al formulario (en lugar de correos) y la última solicitud con su estado
+pintarPaginaPlan = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'); if (!c || !c.querySelector('#planact')) return r;
+  const pl = PLAN_ACTUAL || {};
+  c.querySelectorAll('a[href^="mailto"]').forEach(x => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = x.className;
+    b.textContent = x.closest('.plan[data-plan="medida"]') ? 'Pedir presupuesto' : 'Hablar con delcos';
+    b.dataset.presu = x.closest('.plan[data-plan="medida"]') && pl.plan !== 'medida' ? 'presupuesto' : 'contrato';
+    x.replaceWith(b);
+  });
+  const comp = $('pgcomp');
+  if (pl.plan === 'medida' && !c.querySelector('[data-presu]') && !puede('gestionar_plataforma')) {
+    const acts = c.querySelector('#planact .acts');
+    if (acts) acts.insertAdjacentHTML('beforeend', '<button type="button" class="btn sec" data-presu="contrato">Hablar con delcos</button>');
+  }
+  if (comp) comp.textContent = comp.textContent.replace(' Para cambiarlo, habla con delcos.', '');
+  c.querySelectorAll('[data-presu]').forEach(b => b.onclick = () => pedirPresupuesto(b.dataset.presu));
+  try {
+    const { data } = await db.from('solicitudes_plan').select('creado_en,estado,tipo').order('creado_en', { ascending: false }).limit(1);
+    const s = (data || [])[0], h = c.querySelector('#planact h2');
+    if (s && h && !$('presuest') && (s.estado !== 'Cerrada' || Date.now() - new Date(s.creado_en) < 30 * 864e5))
+      h.insertAdjacentHTML('afterend', `<div class="banda-info" id="presuest">Tu solicitud ${s.tipo === 'contrato' ? 'sobre el contrato' : 'de presupuesto'} del
+        ${fechaCorta(s.creado_en.slice(0, 10))}: <b>${esc(PRESU_ESTADO[s.estado] || s.estado)}</b>.${s.estado === 'Nueva' ? ' Te contestamos en un día laborable.' : ''}</div>`);
+  } catch (e) {}
+  return r;
+})(pintarPaginaPlan);
+
+// Panel delcos → Solicitudes
+async function pintarSolicitudesPlan() {
+  const c = $('cfgcuerpo'); if (!c) return;
+  c.innerHTML = `<div class="card cfgpanel"><div class="skel" style="width:40%"></div><div class="skel"></div></div>`;
+  const { data, error } = await RPC_ORIG('solicitudes_plan_lista', {});
+  if (!$('cfgcuerpo')) return;
+  const l = error ? [] : (data || []);
+  const f = v => new Date(v).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+  const cont = { correo: 'Por correo', llamada: 'Por teléfono', video: 'Videollamada' };
+  c.innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Solicitudes de las empresas</h2>
+    <p class="sm">Presupuestos A medida y conversaciones sobre el contrato. Llegan también como aviso. Cambia el estado cuando las atiendas: la empresa lo ve en su Plan.</p>
+    ${error ? `<div class="banda-peligro">No se han podido leer: ${esc(error.message)}</div>` : ''}
+    <div class="presulista">${l.map((s, i) => { const d = s.datos || {};
+      return `<div class="presufila${s.estado === 'Cerrada' ? ' cerrada' : ''}">
+        <div class="presucab"><b>${esc(s.organizacion)}</b> <span class="pill p-est">${esc(planDe(s.plan).nombre)}</span>
+          <span class="pill ${s.estado === 'Nueva' ? 'p-warn' : s.estado === 'En curso' ? 'p-est' : 'p-anu'}">${esc(s.estado)}</span>
+          <span class="sm">${s.tipo === 'contrato' ? 'Contrato A medida' : 'Presupuesto A medida'} · ${f(s.creado_en)}</span></div>
+        ${(d.necesita_txt || []).length ? `<div class="chips">${d.necesita_txt.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}
+        ${d.programa ? `<div class="sm">Programa: <b>${esc(d.programa)}</b></div>` : ''}
+        ${d.mensaje ? `<p class="presumsg">${esc(d.mensaje)}</p>` : ''}
+        <div class="sm">${d.usuarios ? num(d.usuarios) + ' usuarios' : ''}${d.portal ? ' · ' + num(d.portal) + ' con portal' : ''}${d.cuando ? ' · ' + esc(d.cuando) : ''}</div>
+        <div class="sm">${esc(d.nombre || s.persona || '')}${d.correo ? ` · <a href="mailto:${esc(d.correo)}">${esc(d.correo)}</a>` : ''}${d.telefono ? ` · <a href="tel:${esc(d.telefono)}">${esc(d.telefono)}</a>` : ''}
+          · ${esc(cont[d.contacto] || '')}${d.horario ? ' (' + esc(d.horario) + ')' : ''}</div>
+        <div class="presuges"><select data-psest="${i}" aria-label="Estado">${['Nueva', 'En curso', 'Cerrada'].map(e => `<option ${s.estado === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+          <input data-psnota="${i}" placeholder="Nota interna (qué se ha hablado, próximos pasos…)" value="${esc(s.nota || '')}">
+          <button type="button" class="btn sec" data-psok="${i}">Guardar</button></div></div>`; }).join('')
+      || '<div class="vacio">Todavía no ha llegado ninguna solicitud.</div>'}</div></div>`;
+  c.querySelectorAll('[data-psok]').forEach(b => b.onclick = async () => {
+    const i = +b.dataset.psok, s = l[i];
+    const { data: r } = await RPC_ORIG('marcar_solicitud_plan', { p_id: s.id, p_estado: c.querySelector(`[data-psest="${i}"]`).value, p_nota: c.querySelector(`[data-psnota="${i}"]`).value });
+    toast(r && r.ok ? 'Solicitud actualizada' : 'No se ha podido guardar', !(r && r.ok));
+    if (r && r.ok) pintarSolicitudesPlan();
+  });
+}
+if (PAGINAS.delcos && !PAGINAS.delcos.tabs.some(t => t[0] === 'solicitudes')) PAGINAS.delcos.tabs.splice(1, 0, ['solicitudes', 'Solicitudes', () => pintarSolicitudesPlan()]);
