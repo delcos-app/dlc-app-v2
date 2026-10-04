@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Empieza con delcos</title>
+<!-- v2.169.0 · El alta de empresas se hace en la web de delcos (decisión de Eric): esta dirección lleva allí, con el plan y el pago que traiga.
+     Desde el entorno de pruebas (apptest), al alta de pruebas (?pruebas=1). -->
+<meta name="robots" content="noindex">
+<script>
+(function () {
+  var q = new URLSearchParams(location.search), pruebas = /^apptest\./i.test(location.hostname);
+  if (pruebas) q.set('pruebas', '1');
+  var s = q.toString();
+  location.replace('https://www.delcos.app/empezar.html' + (s ? '?' + s : ''));
+})();
+</script>
+</head>
+<body style="font-family:system-ui,sans-serif;color:#0B2540;padding:24px">
+<p>Te llevamos a <a href="https://www.delcos.app/empezar.html">www.delcos.app/empezar.html</a> para poner delcos en marcha.</p>
+</body>
+</html>
