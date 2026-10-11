@@ -1063,8 +1063,8 @@ async function vaciarCola() {
 }
 
 window.addEventListener('online', () => { pintarConexion(); vaciarCola(); });
-window.addEventListener('offline', pintarConexion);
-setInterval(vaciarCola, 60000);
+window.addEventListener('offline', () => pintarConexion());
+setInterval(() => vaciarCola(), 60000);
 
 /* ---------------- agenda ---------------- */
 
@@ -4380,7 +4380,8 @@ async function arrancar() {
 
   const { data: { session } } = await db.auth.getSession();
   marca('sesión comprobada');
-  if (!session) { localStorage.removeItem(PKEY); mostrarLogin(); return; }
+  if (!session) { if (!navigator.onLine && guardado && APP_VISIBLE) return;   // v2.259.0: sin conexión se sigue con el perfil guardado
+    localStorage.removeItem(PKEY); mostrarLogin(); return; }
 
   const rolesListos = cargarRoles().catch(() => false);
   let { data: perfil, error } = await db.from('perfiles').select('*,capacidades').eq('id', session.user.id).single();
@@ -6673,7 +6674,7 @@ function estimarDiaBase(citas, fecha) {
       const ya = fecha === hoyISO() ? Math.ceil(minAhora / 5) * 5 : 0;
       lleg = it.fija != null ? Math.max(it.fija, ya) : t;
       if (xy) pos = xy;
-    } else if (xy) { const mismo = !primera && pos[0] === xy[0] && pos[1] === xy[1]; lleg = t + (mismo ? 0 : minutosEntre(pos, xy) + cfg.parada); pos = xy; }
+    } else if (xy) { const mismo = !primera && pos[0] === xy[0] && pos[1] === xy[1]; lleg = t + (mismo ? 0 : tdMinutos(pos, xy) + cfg.parada); pos = xy; }
     primera = false;
     let ini = inicioPosible(it, lleg, dura);
     const info = { ventanas: it.ventanas };
@@ -6688,7 +6689,7 @@ function estimarDiaBase(citas, fecha) {
     TD_INFO[c.id] = info;
     t = ini + dura;
   });
-  return { est, fin: t + minutosEntre(pos, [sal.lat, sal.lon]), tope: minHora(cfg.tope) };
+  return { est, fin: t + tdMinutos(pos, [sal.lat, sal.lon]), tope: minHora(cfg.tope) };
 }
 
 function ordenarPorCercania(citas) { return conHor(horDeCitas(citas), () => ordenarPorCercaniaBase(citas)); }
@@ -7147,7 +7148,7 @@ document.addEventListener('click', e => {
 /* ---------------- aviso: falta el horario de atención ---------------- */
 
 async function faltaHorario(id) {
-  const { data } = await db.rpc('ficha_cuenta', { p_id: id });
+  const { data } = navigator.onLine ? await db.rpc('ficha_cuenta', { p_id: id }) : await rpcCache('ficha_cuenta', { p_id: id }, 'ficha-' + id);
   const cons = (data && data.consultas) || [];
   return data && data.medico && data.medico.tipo !== 'Centro' && !cons.some(c => c.dias && Object.keys(c.dias).some(k => c.dias[k]));
 }
@@ -7203,7 +7204,7 @@ async function visitaAvisoHorario(id) {
 
 /* Parte base; abrirVisita le añade el resto */
 async function abrirVisitaBase(id) {
-  const [{ data, error }, { data: clas }] = await Promise.all([db.rpc('ficha_cuenta', { p_id: id }), db.rpc('clasificadores_actividad', { p_cuenta: id })]);   // v2.179.0: con la ficha, marca los resultados que no tocan en su estado
+  const [{ data, error }, { data: clas }] = (VISITA_OP = null, await visitaDatos(id));   // v2.259.0: sin red, con la copia guardada   // v2.179.0: con la ficha, marca los resultados que no tocan en su estado
   if (error) { toast('No se ha podido abrir: ' + error.message, true); return; }
   const m = data.medico, cons = data.consultas || [];
   const grupos = (clas || []).filter(c => (c.valores || []).length);
@@ -7271,12 +7272,12 @@ async function abrirVisitaBase(id) {
       cuenta_id: id, ubicacion_id: $('vc').value || null, fecha: $('vf').value,
       resultados, detalles, nota: $('vn').value.trim(),
       proxima_accion: $('vpa').value.trim(), proxima_fecha: $('vpf').value || null,
-      op_id: 'v-' + id + '-' + Date.now()
+      op_id: VISITA_OP || (VISITA_OP = 'v-' + id + '-' + Date.now())
     }});
     ev.target.disabled = false; ev.target.textContent = `Guardar ${TT('visita', 's', '', 'l', 'l')}`;
     if (err) { toast('No se ha podido guardar: ' + err.message, true); return; }
     $('dlg').close();
-    toast(`${TT('visita', 's', '', 'l', 'C', 'registrado')}` + (r && r.estado ? ' · estado: ' + r.estado : ''));
+    if (!(r && r.encolada)) toast(`${TT('visita', 's', '', 'l', 'C', 'registrado')}` + (r && r.estado ? ' · estado: ' + r.estado : ''));
     // v2.87.0: si estaba marcada como urgente y la visita se ha hecho, se pregunta si se quita la marca
     const hecha = marcados.some(k => idx[k].c === res.clave && idx[k].v.extra !== 'neg');
     if (m.urgente && hecha) {
@@ -17664,9 +17665,9 @@ registrarError = (orig => function (tipo, mensaje, detalle) {
   return orig.call(this, tipo, mensaje, detalle);
 })(registrarError);
 async function escribirRpc(fn, payload) {
-  const r = await db.rpc(fn, payload);
+  const r = navigator.onLine ? await db.rpc(fn, payload) : { error: { message: 'Failed to fetch' } };
   if (r && r.error && esErrorRed(r.error)) {
-    colaGuardar(colaLeer().concat([{ fn, payload, etiqueta: TT('visita', 's', '', 'l', 'C'), t: Date.now() }]));
+    colaPoner({ fn, payload: marcarSinConexion(fn, payload), etiqueta: TT('visita', 's', '', 'l', 'C'), t: Date.now() });
     pintarConexion();
     setTimeout(() => toast('Sin conexión: queda guardado en este dispositivo y se enviará al recuperarla'), 1500);
     return { data: { encolada: true }, error: null };
@@ -19628,7 +19629,7 @@ escribirRpc = (orig => async function (fn, payload, ...a) {
   const r = await orig.call(this, fn, payload, ...a);
   if (va.fotos.length && r && !r.error) {
     if (r.data && r.data.id) subirFotosVisita(r.data.id, va.fotos);
-    else setTimeout(() => toast('Sin conexión: las fotos no se han guardado. Añádelas desde su historial cuando vuelva la conexión', true), 2600);
+    else fotosGuardarPendientes(payload.p.op_id, va.fotos);   // v2.259.0: se suben con la visita
   }
   return r;
 })(escribirRpc);
@@ -19733,6 +19734,7 @@ abrirVisitaBase = (orig => async function (id, ...r) {
   const res = await orig.call(this, id, ...r);
   const d = $('dbody'), nota = $('vn');
   if (!d || !nota || !$('vguardar') || $('vmuestras') || !VISITA_ACTUAL || VISITA_ACTUAL.id !== id) return res;
+  if (!navigator.onLine) return res;   // v2.259.0: sin red no hay muestras con firma (y db.from tardaba más de 10 s en rendirse)
   try { const { data: ct } = await db.from('cuentas').select('tipo').eq('id', id).maybeSingle(); if (ct && ct.tipo === 'Centro') return res; } catch (e) {}   // v2.203.0
   const { data: l } = await db.rpc('muestras_de_cuenta', { p_cuenta: id });
   if (!Array.isArray(l) || !l.length || !$('vn') || $('vmuestras')) return res;
@@ -19894,6 +19896,7 @@ verPedido = (orig => async function (id, ...a) {
       <p>Lo sirve <b>${esc(d.nombre)}</b>${p.distribuidor_codigo ? ` · código del cliente <b>${esc(p.distribuidor_codigo)}</b>` : ''} · ${p.factura_distribuidor ? 'lo factura el distribuidor' : 'lo facturamos nosotros'}</p>
       ${p.estado === 'Confirmado' ? `<div class="acts" style="justify-content:flex-start;margin-top:6px">${d.email ? `<a class="btn sec" id="pdmaild" href="mailto:${esc(d.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}">Preparar correo al distribuidor</a>` : '<span class="sm">El distribuidor no tiene correo: añádelo en sus datos.</span>'}
         <span class="sm" id="pdmailest">${p.transfer_enviado_en ? 'Correo preparado el ' + fechaCorta(String(p.transfer_enviado_en).slice(0, 10)) : 'Correo sin preparar'}</span></div>` : '<p class="sm">Al validarlo podrás preparar el correo al distribuidor.</p>'}</div>`);
+    trfPoner(id, p, d, data);   // v2.265.0
     if ($('pdmaild')) $('pdmaild').addEventListener('click', async () => {
       const { data: m } = await db.rpc('marcar_transfer_enviado', { p_id: id });
       if (m && m.ok && $('pdmailest')) $('pdmailest').textContent = 'Correo preparado el ' + fechaCorta(hoyISO());
@@ -20366,6 +20369,7 @@ let PROMO_PRODS = null;   // [{ id, nombre }] de los productos que se promociona
 // v2.199.0: la cobertura por producto va en los planes Comercial, Empresa y A medida (decisión de Eric, como en la web)
 PLAN_SECCIONES.cobertura = ['comercial', 'empresa', 'medida'];
 async function productosPromocionados() {
+  if (!navigator.onLine) return PROMO_PRODS || [];   // v2.259.0: sin red, la última lista leída
   try {
     const { data, error } = await db.from('productos').select('id,nombre,estado').eq('promocionado', true).order('nombre');
     if (!error) PROMO_PRODS = (data || []).filter(p => (p.estado || 'Activo') !== 'Descatalogado').map(p => ({ id: p.id, nombre: p.nombre }));
@@ -25108,3 +25112,1018 @@ revelar = (orig => function (el, max, desde) {
   if (el && el.id === 'fbody') max = Math.max(max || 0, 5000);
   return orig.call(this, el, max, desde);
 })(revelar);
+
+
+/* ============================================================
+   v2.257.0 · Filtro por profesional en Clientes y uso de TomTom en el Panel delcos (pendientes repasados con Eric, 11/10/2026).
+   - Clientes: el filtro por profesional (al llegar desde su ficha) se aplicaba pero no se veía en la pantalla: ahora es un filtro
+     rápido marcado en la barra, con su «✕» para quitarlo. «Columnas» abría y cerraba el panel según estuviera: ahora siempre lo abre.
+   - Panel delcos → Estado de la plataforma: cuántas consultas de rutas (TomTom) se han hecho hoy frente al tope de todas las empresas,
+     en el mes, y por empresa frente a su cupo (rutas_uso_resumen, SQL 138).
+   ============================================================ */
+plSync = (orig => function (tab, ...x) {
+  const r = orig.call(this, tab, ...x);
+  if (tab !== 'pacientes') return r;
+  const rap = document.querySelector('#v-pacientes > .pltool .plrap'); if (!rap) return r;
+  let b = rap.querySelector('[data-plmed]');
+  if (!PAC.medico) { if (b) b.remove(); return r; }
+  const txt = `${TT('medico', 's', '', 'l', 'C')}: ${PAC.medicoNombre || '—'}`;
+  if (!b) { rap.insertAdjacentHTML('afterbegin', '<button type="button" class="plchip on plmed" data-plmed title="Quitar este filtro"><span></span><i aria-hidden="true">✕</i></button>'); b = rap.querySelector('[data-plmed]'); }
+  const s = b.querySelector('span'); if (s.textContent !== txt) s.textContent = txt;
+  return r;
+})(plSync);
+document.addEventListener('click', e => {
+  const b = e.target.closest('#v-pacientes [data-plmed]'); if (!b) return;
+  // Solo se vuelve a pedir la lista (volver a pintar los filtros dejaba los de antes en el panel lateral, con los mismos id)
+  e.stopPropagation(); PAC.medico = null; PAC.medicoNombre = ''; PAC.pagina = 0;
+  const m = $('pacmedx'); if (m && m.parentElement && m.parentElement.parentElement) m.parentElement.parentElement.remove();
+  listaPacientes();
+}, true);
+PL.pacientes.columnas = () => {
+  const abrir = () => { const c = $('tools') && $('tools').querySelector('.t2abrir'); if (c) c.click(); };
+  const t = $('tools');
+  if (t && t.classList.contains('abierto') && t.querySelector('.t2abrir')) return abrir();
+  const b = document.querySelector('#v-pacientes .htbtn'); if (!b) return;
+  b.click(); setTimeout(abrir, 80);
+};
+
+// ---- Uso del servicio de rutas en Estado de la plataforma
+pintarEstadoDelcos = (orig => async function (...a) {
+  const p = Promise.resolve(RPC_ORIG('rutas_uso_resumen', {})).catch(() => ({}));
+  await orig.apply(this, a);
+  const { data: u } = (await p) || {};
+  const c = $('cfgcuerpo'); if (!c || PAG_TAB.delcos !== 'estado' || !u || !u.ok) return;
+  const card = c.querySelector('.card.cfgpanel'), pie = card && [...card.querySelectorAll(':scope > p.sm')].pop(); if (!card) return;
+  const cfg = u.config || {}, glob = +cfg.global || 2000, emp = u.empresas || [];
+  const html = `<h3 class="pdh3">Servicio de rutas (TomTom)</h3>
+    ${pdKpis([[num(u.hoy || 0) + ' / ' + num(glob), 'consultas hoy, entre todas las empresas', (u.hoy || 0) >= glob * 0.8 ? 'aviso' : ''],
+      [num(u.mes || 0), 'consultas este mes'], [cfg.activo === false ? 'Apagado' : 'Activo', 'servicio', cfg.activo === false ? 'aviso' : ''],
+      [num(+cfg.por_usuario || 30), 'por usuario activo y día']])}
+    ${emp.length ? `<div class="tablawrap"><table class="pdtabla"><thead><tr><th>Empresa</th><th class="num">Hoy</th><th class="num">Cupo diario</th><th class="num">Este mes</th></tr></thead><tbody>
+      ${emp.map(x => `<tr><td>${esc(x.nombre)}</td><td class="num" style="${x.hoy >= x.cupo ? 'color:var(--warn);font-weight:700' : ''}">${num(x.hoy)}</td><td class="num">${num(x.cupo)}</td><td class="num">${num(x.mes)}</td></tr>`).join('')}</tbody></table></div>`
+      : '<div class="vacio">Ninguna empresa ha usado el servicio de rutas este mes.</div>'}`;
+  if (pie) pie.insertAdjacentHTML('beforebegin', html); else card.insertAdjacentHTML('beforeend', html);
+})(pintarEstadoDelcos);
+
+
+
+/* ============================================================
+   v2.258.0 · «Tu día» con tiempos reales, sin gastar de más (decisión de Eric, 11/10/2026: la opción más eficiente).
+   Las horas de «Tu día» se estimaban en línea recta. Ahora, solo HOY y con dos o más paradas abiertas con ubicación:
+   - Si «Tu día en el mapa» (Rutas) ya ha pedido la ruta del día con el mismo orden, sus tiempos con tráfico se usan aquí sin
+     ninguna consulta más (misma clave en RM_MEM, 10 minutos en memoria: TomTom no deja guardarlos).
+   - Si no, se piden solo en momentos con intención: al pulsar «Empezar jornada» o «Calcular con tráfico» en la cabecera de
+     «Tu día». Mover una cita a mano no gasta: se vuelve a la estimación hasta que se pida otra vez.
+   - La cabecera dice si las horas son «con tráfico real» o estimadas.
+   ============================================================ */
+let TD_REAL = null, TD_CALC = false;   // { k, mapa: Map('a>b' → minutos), t } · TD_CALC: calculando la clave (sin volver a entrar)
+const tdClaveXY = (a, b) => a && b && a[0] != null && b[0] != null ? `${(+a[0]).toFixed(5)},${(+a[1]).toFixed(5)}>${(+b[0]).toFixed(5)},${(+b[1]).toFixed(5)}` : '';
+const tdRealVigente = () => TD_REAL && Date.now() - TD_REAL.t < 600000;
+// Con tiempos reales del día, cada tramo conocido usa su tiempo con tráfico; el resto, la estimación de siempre (minutosEntre es
+// una constante: estimarDiaBase llama a tdMinutos, cambiado en su sitio)
+function tdMinutos(a, b) {
+  if (tdRealVigente()) { const m = TD_REAL.mapa.get(tdClaveXY(a, b)); if (m != null) return m; }
+  return minutosEntre(a, b);
+}
+// El plan del mapa se calcula siempre con la estimación (así su clave es la misma en Rutas y en «Tu día»)
+rmPlan = (orig => function (...a) {
+  if (a[2]) return orig.apply(this, a);
+  const r0 = TD_REAL; TD_REAL = null;
+  try { return orig.apply(this, a); } finally { TD_REAL = r0; }
+})(rmPlan);
+// La ruta de hoy con los mismos puntos y salida que «Tu día en el mapa»
+function tdRutaDia(citas, fecha) {
+  if (fecha !== hoyISO() || !Array.isArray(citas)) return null;
+  if (citas.filter(c => CITA_ABIERTA.includes(c.estado) && xyCita(c)).length < 2) return null;
+  let P0; TD_CALC = true; try { P0 = rmPlan(citas, fecha); } finally { TD_CALC = false; }
+  if (P0.puntos.length < 2 || P0.puntos.length > 30) return null;
+  const salida = P0.segs.length ? `${fecha}T${hm(Math.max(0, P0.segs[0].a))}:00` : null;
+  return { puntos: P0.puntos, salida, k: JSON.stringify([P0.puntos, salida]) };
+}
+function tdPonerReal(ruta, res) {
+  if (!ruta || !res || !res.ok || !res.tramos || res.tramos.length !== ruta.puntos.length - 1) return false;
+  const mapa = new Map(); res.tramos.forEach((tr, i) => mapa.set(tdClaveXY(ruta.puntos[i], ruta.puntos[i + 1]), Math.round(+tr.min || 0)));
+  TD_REAL = { k: ruta.k, mapa, t: Date.now() };
+  return true;
+}
+// Antes de estimar el día de hoy: si el mapa ya tiene la ruta de este orden, se usa (sin consulta)
+estimarDia = (orig => function (citas, fecha, ...x) {
+  // Solo la estimación de «Tu día» (TD_CITAS); las demás (mapa, planificador) siguen como estaban
+  if (TD_CALC || citas !== TD_CITAS) return orig.call(this, citas, fecha, ...x);
+  const ruta = tdRutaDia(citas, fecha);
+  if (!ruta) { if (TD_REAL && fecha === hoyISO()) TD_REAL = null; return orig.call(this, citas, fecha, ...x); }
+  if (!(tdRealVigente() && TD_REAL.k === ruta.k)) {
+    TD_REAL = null;
+    const m = RM_MEM.get(ruta.k);
+    if (m && Date.now() - m.t < 600000) tdPonerReal(ruta, m.r);
+  }
+  return orig.call(this, citas, fecha, ...x);
+})(estimarDia);
+// Pedir los tiempos con tráfico (una consulta) y volver a pintar «Tu día»
+async function tdTrafico(mudo) {
+  const ruta = tdRutaDia(TD_CITAS, AG_FECHA); if (!ruta) return;
+  const b = $('tdtrafico'); if (b) { b.disabled = true; b.textContent = 'Calculando…'; }
+  const res = await rmRuta(ruta.puntos, ruta.salida);
+  if (tdPonerReal(ruta, res)) { if (agN()) repintarDiaSuave(); }
+  else {
+    if (!mudo) toast((RM_MOTIVO[res && res.motivo] || RM_MOTIVO.servicio) + ': las horas siguen siendo aproximadas', true);
+    const b2 = $('tdtrafico'); if (b2) { b2.disabled = false; b2.textContent = 'Calcular con tráfico'; }
+  }
+}
+empezarJornada = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  try { if (AG_FECHA === hoyISO()) tdTrafico(true); } catch (e) {}
+  return r;
+})(empezarJornada);
+// En la cabecera de «Tu día» (hoy): si las horas van con tráfico real o el botón para calcularlas
+function tdMarcaTrafico() {
+  const st = document.querySelector('#agcuerpo .tdhead .tdstats'); if (!st) return;
+  st.querySelectorAll('.tdtraf').forEach(x => x.remove());
+  const ruta = tdRutaDia(TD_CITAS, AG_FECHA); if (!ruta || AG_VISTA) return;
+  const real = tdRealVigente() && TD_REAL.k === ruta.k;
+  st.insertAdjacentHTML('beforeend', real
+    ? '<span class="tdtraf tdtrafok" title="Horas calculadas por las calles y con el tráfico de ahora (TomTom)">Con tráfico real</span>'
+    : '<span class="tdtraf"><button type="button" class="kcfg" id="tdtrafico" title="Una consulta al servicio de rutas: horas por las calles y con el tráfico de ahora">Calcular con tráfico</button></span>');
+  const b = $('tdtrafico'); if (b) b.onclick = () => tdTrafico(false);
+}
+pintarTuDia = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  if (agConCinta()) tdMarcaTrafico();
+  return r;
+})(pintarTuDia);
+
+// ---- Filtros rápidos que no desaparecen (aviso intermitente de la batería: en Contactos, en el móvil, un filtro aparecía tarde
+// cuando sus opciones llegaban después de entrar). Un filtro rápido cuyo desplegable aún no tiene opciones se ve desactivado en su
+// sitio, en vez de esconderse y aparecer luego empujando el buscador.
+plSync = (orig => function (tab, ...x) {
+  const r = orig.call(this, tab, ...x);
+  const sec = $('v-' + tab); if (!sec || !sec.classList.contains('plantilla')) return r;
+  sec.querySelectorAll(':scope > .pltool [data-plr]').forEach(b => {
+    const s = plSel(b.dataset.plr); if (!s || !s.options) return;
+    const w = s.closest('#fcomwrap'); if (w && w.classList.contains('hide')) return;
+    const nada = s.options.length <= 1;
+    if (nada) {
+      if (b.classList.contains('hide')) b.classList.remove('hide');
+      if (!b.classList.contains('plnada')) b.classList.add('plnada');
+      const t = b.dataset.plt || plEtiq(b.dataset.plr); if (t && b.textContent !== t) b.textContent = t;
+    } else if (b.classList.contains('plnada') && !(BLQ[tab] && b.dataset.plr === '#plg-' + tab)) b.classList.remove('plnada');
+  });
+  return r;
+})(plSync);
+
+
+
+/* ============================================================
+   v2.259.0 · Visita sin conexión (pendiente de la auditoría del 8/10, cerrado el 11/10/2026). Antes, sin cobertura la ventana
+   «Registrar visita» ni se abría; si la red caía al guardar, la visita podía rechazarse al reenviarla otro día (por la fecha) y
+   perderse sin aviso, o duplicarse al repetir. Ahora:
+   - La visita se abre sin conexión con la última copia de la ficha (la misma de la ficha) y de sus resultados, y los catálogos
+     quedan guardados en el móvil.
+   - Al guardar sin conexión: a la cola con «sin conexión» (el servidor no la rechaza por la fecha), con el mismo op_id aunque se
+     repita, y las fotos se guardan en el móvil (IndexedDB) y se suben solas cuando se envía la visita.
+   - «Tu día» marca la cita «Registrada en el móvil · pendiente de enviar» y quita «Registrar».
+   - La cola se envía de una en una (sin dos envíos a la vez); lo que el servidor rechaza no se pierde: queda en «sin enviar», con
+     aviso y la opción de reintentar o descartar; el tiempo agotado cuenta como fallo de red.
+   - Sin conexión, la app arranca con el perfil guardado aunque no pueda comprobar la sesión.
+   - Las muestras con firma siguen necesitando conexión (el límite legal se comprueba en el servidor): la ventana lo avisa.
+   ============================================================ */
+let VISITA_OP = null;   // op_id de la ventana abierta (el mismo si se pulsa Guardar dos veces)
+esErrorRed = (orig => function (e) {
+  return orig(e) || /ha tardado demasiado|tiempo agotado|timeout|timed out/i.test(String((e && (e.message || e)) || ''));
+})(esErrorRed);
+function colaPoner(op) {
+  try { colaGuardar(colaLeer().concat([op])); return true; }
+  catch (e) { toast('El móvil no tiene espacio para guardar este cambio sin conexión', true); return false; }
+}
+// Ficha y resultados de la visita: de la red y, sin ella, de la copia guardada
+async function visitaDatos(id) {
+  const [f, c] = await Promise.all([rpcCache('ficha_cuenta', { p_id: id }, 'ficha-' + id), rpcCache('clasificadores_actividad', { p_cuenta: id }, 'clasact-' + id)]);
+  let clas = c && c.data;
+  if (clas && !c.cache) { try { guardarCache('clasact', clas); } catch (e) {} }
+  if (!clas) { const g = leerCache('clasact'); clas = g && g.d; }
+  return [{ data: f && f.data, error: f && f.data ? null : { message: navigator.onLine ? 'no se ha podido leer la ficha' : 'sin conexión y sin copia de esta ficha en el móvil' } }, { data: clas || [] }];
+}
+// Catálogos guardados en el móvil (resultado por defecto de la visita, «No estaba»…)
+cargarCatalogos = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  try {
+    const vacio = Object.values(CAT).every(v => !v || !v.length);
+    if (!vacio) localStorage.setItem('dlc-cat', JSON.stringify(CAT));
+    else { const g = JSON.parse(localStorage.getItem('dlc-cat') || 'null'); if (g) Object.keys(CAT).forEach(k => { if (g[k] && g[k].length) CAT[k] = g[k]; }); }
+  } catch (e) {}
+  return r;
+})(cargarCatalogos);
+// Aviso en la ventana de la visita sin conexión
+abrirVisitaBase = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  if (!navigator.onLine && $('dlg').open && $('vguardar') && !$('dbody').querySelector('.vsinred')) {
+    const fh = $('dbody').querySelector('.fh');
+    const html = `<div class="banda-aviso vsinred"><b>Sin conexión.</b> ${esc(TT('visita', 's', 'la', 'l', 'C'))} se guarda en este móvil y se envía sola al recuperar la conexión. Las muestras con firma necesitan conexión.</div>`;
+    if (fh) fh.insertAdjacentHTML('afterend', html); else $('dbody').insertAdjacentHTML('afterbegin', html);
+  }
+  return r;
+})(abrirVisitaBase);
+
+// ---- Fotos de una visita guardada sin conexión: en el móvil hasta que la visita se envía
+const FOTOS_IDB = 'delcos-fotos';
+function fotosIDB() {
+  return new Promise((ok, mal) => { const r = indexedDB.open(FOTOS_IDB, 1); r.onupgradeneeded = () => r.result.createObjectStore('pend'); r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); });
+}
+async function fotosGuardarPendientes(op, fotos) {
+  if (!op || !fotos || !fotos.length) return;
+  try {
+    const b = await fotosIDB();
+    await new Promise((ok, mal) => { const t = b.transaction('pend', 'readwrite'); t.objectStore('pend').put(fotos, op); t.oncomplete = ok; t.onerror = () => mal(t.error); });
+    setTimeout(() => toast('Sin conexión: las fotos quedan en el móvil y se subirán con ' + TT('visita', 's', 'la', 'l', 'l')), 2600);
+  } catch (e) { setTimeout(() => toast('Sin conexión: no se han podido guardar las fotos en el móvil. Añádelas desde su historial', true), 2600); }
+}
+async function fotosEnviarPendientes(op, id) {
+  try {
+    const b = await fotosIDB();
+    const fotos = await new Promise(ok => { const r = b.transaction('pend').objectStore('pend').get(op); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); });
+    if (!fotos || !fotos.length) return;
+    if (await subirFotosVisita(id, fotos)) await new Promise(ok => { const t = b.transaction('pend', 'readwrite'); t.objectStore('pend').delete(op); t.oncomplete = ok; t.onerror = ok; });
+  } catch (e) {}
+}
+
+// ---- La cola: de una en una, sin perder lo que el servidor rechaza
+const COLA_KO = 'dlc-cola-ko';
+const colaKo = () => { try { return JSON.parse(localStorage.getItem(COLA_KO) || '[]'); } catch (e) { return []; } };
+function colaKoPoner(op, motivo) { try { localStorage.setItem(COLA_KO, JSON.stringify(colaKo().concat([Object.assign({}, op, { motivo, falla: Date.now() })]))); } catch (e) {} }
+let COLA_ENVIANDO = false;
+vaciarCola = async function () {
+  if (!navigator.onLine || COLA_ENVIANDO) return;
+  let c = colaLeer(); if (!c.length) return;
+  COLA_ENVIANDO = true;
+  const habia = c.length; let fallidos = 0;
+  try {
+    pintarConexion();
+    while (c.length) {
+      const op = c[0];
+      let data = null, error = null;
+      try { ({ data, error } = await db.rpc(op.fn, op.payload)); } catch (e) { error = e; }
+      if (error && esErrorRed(error)) break;                                              // sigue sin red: luego
+      if (error && /jwt|token/i.test(String(error.message || ''))) { try { await db.auth.refreshSession(); } catch (e) {} break; }
+      if (error || (data && data.ok === false)) { colaKoPoner(op, error ? error.message : (data.error || 'rechazado')); fallidos++; }
+      else if (op.fn === 'registrar_actividad' && data && data.id && op.payload && op.payload.p && op.payload.p.op_id) await fotosEnviarPendientes(op.payload.p.op_id, data.id);
+      c = colaLeer().slice(1); colaGuardar(c);
+    }
+  } finally { COLA_ENVIANDO = false; }
+  pintarConexion();
+  if (fallidos) toast(`${fallidos === 1 ? 'Un cambio guardado sin conexión no se ha podido enviar' : fallidos + ' cambios guardados sin conexión no se han podido enviar'}: pulsa el aviso de arriba para verlos`, true);
+  if (colaLeer().length < habia) { invalidarCache(); cargarInicio(); if (TAB === 'agenda') cargarAgenda(); }
+};
+// El aviso de conexión también dice lo que no se ha podido enviar (y al pulsarlo, se ve y se decide)
+pintarConexion = (orig => function (...a) {
+  const r = orig.apply(this, a);
+  const el = $('conex'), ko = colaKo().length;
+  if (el && navigator.onLine && !colaLeer().length && ko) { el.className = 'conex err'; el.textContent = `${ko} ${ko === 1 ? 'cambio sin enviar' : 'cambios sin enviar'} · ver`; }
+  return r;
+})(pintarConexion);
+document.addEventListener('click', async e => {
+  if (!e.target.closest('#conex.err')) return;
+  const l = colaKo(); if (!l.length) return;
+  const txt = l.map(o => `· ${o.etiqueta || o.fn} del ${new Date(o.t || o.falla).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}: ${o.motivo || 'rechazado'}`).join('\n');
+  const k = await elegirOpcion('Cambios sin enviar', `Se guardaron sin conexión y el servidor no los ha aceptado:\n\n${txt}`,
+    [{ k: 'reint', t: 'Volver a intentarlo' }, { k: 'desc', t: 'Descartarlos', cls: 'sec' }, { k: 'nada', t: 'Cerrar', cls: 'sec' }]);
+  if (k === 'reint') { colaGuardar(colaLeer().concat(l.map(o => { const x = Object.assign({}, o); delete x.motivo; delete x.falla; return x; }))); localStorage.removeItem(COLA_KO); pintarConexion(); vaciarCola(); }
+  else if (k === 'desc' && await preguntar('Se borran del móvil y no se enviarán.', { titulo: '¿Descartar los cambios sin enviar?', ok: 'Descartar', peligro: true })) { localStorage.removeItem(COLA_KO); pintarConexion(); }
+});
+
+// ---- «Tu día»: las citas con la visita guardada en el móvil, marcadas y sin «Registrar»
+function tdMarcarPendientes() {
+  const pend = colaLeer().filter(o => o.fn === 'registrar_actividad' && o.payload && o.payload.p && o.payload.p.fecha === AG_FECHA);
+  document.querySelectorAll('#agcuerpo .tdu[data-tdu]').forEach(t => {
+    const c = (TD_CITAS || []).find(x => String(x.id) === t.dataset.tdu); if (!c) return;
+    const p = pend.some(o => o.payload.p.cuenta_id === c.cuenta_id);
+    if (t.classList.contains('tdpend') !== p) t.classList.toggle('tdpend', p);
+    const m = t.querySelector('.tdpendm');
+    if (p && !m) { const pie = t.querySelector('.tdu-pie'); if (pie) pie.insertAdjacentHTML('afterbegin', `<span class="tdpendm">Registrada en el móvil · pendiente de enviar</span>`); }
+    if (!p && m) m.remove();
+    t.querySelectorAll('[data-td^="visita|"]').forEach(b => { if (b.classList.contains('hide') !== p) b.classList.toggle('hide', p); });
+  });
+}
+pintarTuDia = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  if (agConCinta()) tdMarcarPendientes();
+  return r;
+})(pintarTuDia);
+escribirRpc = (orig => async function (fn, payload, ...a) {
+  const r = await orig.call(this, fn, payload, ...a);
+  if (fn === 'registrar_actividad' && r && r.data && r.data.encolada) setTimeout(() => { if (TAB === 'agenda') tdMarcarPendientes(); }, 0);
+  return r;
+})(escribirRpc);
+
+
+
+
+/* ============================================================
+   v2.260.0 · Distribuidores en Configuración (pantalla que faltaba, auditoría del 8/10/2026). Hasta ahora solo se podían añadir
+   desde el editor del pedido y no se podían corregir ni retirar. Ahora, en Configuración → Datos → Distribuidores (administración):
+   la lista con su correo y teléfono, añadir, editar (nombre, correo para pedidos, teléfono y nota) y dejar de usar o volver a usar
+   (no se borran: los pedidos antiguos siguen diciendo quién los sirvió). Los que no se usan no salen al hacer un pedido.
+   ============================================================ */
+arbolCfgUnico = (orig => function (...a) {
+  const g = orig.apply(this, a);
+  if (!puede('administrar') || !puedeModulo('ventas')) return g;
+  let dat = g.find(x => x[0] === 'Datos');
+  if (!dat) { dat = ['Datos', []]; g.push(dat); }
+  if (!dat[1].some(x => x.k === 'distribuidores'))
+    dat[1].push({ k: 'distribuidores', t: 'Distribuidores', ic: 'package', d: 'Quién sirve pedidos por vosotros: correo, teléfono y si se usa', r: () => pintarDistribuidores() });
+  return g;
+})(arbolCfgUnico);
+CFG_CLAVES.distribuidores = 'distribuidores mayoristas almacenes pedidos transfer servir correo';
+let DIS_TODOS = null;
+async function pintarDistribuidores() {
+  const c = $('cfgcuerpo'); if (!c) return;
+  cargando(c, 'Cargando los distribuidores…');
+  const { data, error } = await db.from('distribuidores').select('id,nombre,email,telefono,nota,activo').order('nombre');
+  if (!$('cfgcuerpo') || CFG_KEY !== 'distribuidores') return;
+  if (error) { c.innerHTML = `<div class="card"><p class="sm">No se han podido leer los distribuidores: ${esc(error.message)}</p></div>`; return; }
+  DIS_TODOS = data || [];
+  const fila = d => `<div class="ajfila disfila${d.activo ? '' : ' disoff'}" data-disid="${d.id}">
+      <div><b>${esc(d.nombre)}${d.activo ? '' : ' <span class="pill">No se usa</span>'}</b>
+        <span class="sm">${[d.email, d.telefono].filter(Boolean).map(esc).join(' · ') || 'Sin correo ni teléfono'}${d.nota ? ' · ' + esc(d.nota) : ''}</span></div>
+      <div class="ajctl"><button type="button" class="btn sec" data-dised="${d.id}">Editar</button>
+        <button type="button" class="btn sec" data-disact="${d.id}">${d.activo ? 'Dejar de usar' : 'Volver a usar'}</button></div></div>`;
+  const act = DIS_TODOS.filter(d => d.activo), off = DIS_TODOS.filter(d => !d.activo);
+  c.innerHTML = `<div class="card disw">
+      <div class="discab"><p class="sm">Mayoristas o depósitos que sirven pedidos a vuestros clientes. Al hacer un pedido se elige si lo servís vosotros o uno de ellos; el suyo no descuenta stock de vuestro almacén.</p>
+        <button type="button" class="btn" id="disnuevo">+ Nuevo distribuidor</button></div>
+      ${DIS_TODOS.length ? act.map(fila).join('') + (off.length ? `<h3 class="dissub">Que ya no se usan</h3>` + off.map(fila).join('') : '')
+        : '<p class="vacio" id="disvacio">Todavía no hay distribuidores.</p>'}</div>`;
+  $('disnuevo').onclick = () => editarDistribuidor(null);
+  c.querySelectorAll('[data-dised]').forEach(b => b.onclick = () => editarDistribuidor(DIS_TODOS.find(d => d.id === b.dataset.dised)));
+  c.querySelectorAll('[data-disact]').forEach(b => b.onclick = async () => {
+    const d = DIS_TODOS.find(x => x.id === b.dataset.disact); if (!d) return;
+    if (d.activo && !await preguntar('No saldrá al hacer pedidos nuevos. Los pedidos que ya sirvió siguen diciendo que fue él.', { titulo: `¿Dejar de usar ${d.nombre}?`, ok: 'Dejar de usar' })) return;
+    b.disabled = true;
+    const { error } = await db.from('distribuidores').update({ activo: !d.activo }).eq('id', d.id);
+    if (error) { b.disabled = false; toast('No se ha podido cambiar: ' + error.message, true); return; }
+    toast(d.activo ? 'Ya no se usa' : 'Se vuelve a usar');
+    await cargarDistribuidores(true).catch(() => []);
+    pintarDistribuidores();
+  });
+}
+function editarDistribuidor(d) {
+  const nuevo = !d; d = d || {};
+  $('dlg2body').innerHTML = `<div class="fh"><div><h2>${nuevo ? 'Nuevo distribuidor' : 'Editar distribuidor'}</h2><div class="sm">Mayorista o depósito que sirve pedidos a vuestros clientes</div></div>
+      <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
+    <label for="dsn">Nombre</label><input id="dsn" placeholder="p. ej. Cofares" value="${esc(d.nombre || '')}">
+    <div class="g2"><div><label for="dse">Correo para pedidos</label><input id="dse" type="email" value="${esc(d.email || '')}"></div>
+      <div><label for="dst">Teléfono</label><input id="dst" inputmode="tel" value="${esc(d.telefono || '')}"></div></div>
+    <label for="dsnota">Nota</label><input id="dsnota" placeholder="Horario de pedidos, persona de contacto…" value="${esc(d.nota || '')}">
+    <div class="acts" style="justify-content:flex-end"><button type="button" class="btn sec" data-cerrar2>Cancelar</button><button type="button" class="btn" id="dsok">${nuevo ? 'Añadir' : 'Guardar'}</button></div>`;
+  $('dlg2').showModal();
+  $('dsok').onclick = async () => {
+    const nombre = $('dsn').value.trim(); if (!nombre) { toast('Escribe el nombre', true); return; }
+    const email = $('dse').value.trim() || null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('El correo no parece válido', true); return; }
+    const fila = { nombre, email, telefono: $('dst').value.trim() || null, nota: $('dsnota').value.trim() || null };
+    $('dsok').disabled = true;
+    const { error } = nuevo ? await db.from('distribuidores').insert(fila) : await db.from('distribuidores').update(fila).eq('id', d.id);
+    if (error) { $('dsok').disabled = false; toast((nuevo ? 'No se ha podido añadir: ' : 'No se ha podido guardar: ') + error.message, true); return; }
+    $('dlg2').close(); toast(nuevo ? 'Distribuidor añadido' : 'Guardado');
+    await cargarDistribuidores(true).catch(() => []);
+    if (CFG_KEY === 'distribuidores' && $('cfgcuerpo')) pintarDistribuidores();
+  };
+}
+
+
+
+
+/* ============================================================
+   v2.261.0 · Leer lotes, números de serie y UDI con la cámara (grupo 4 del plan del 11/10/2026). En el móvil o la tableta, los campos
+   de lote (entrada de stock y recepción de compras) y de número de serie o UDI (cirugías, equipos y equipos de un pedido) llevan un
+   botón de cámara. Se lee el código (DataMatrix, QR, Code 128, EAN…) y, si es GS1 (el de las cajas y la UDI), se separa: el lote
+   (10), el número de serie (21), la caducidad (17) y la fabricación (11); en una entrada de stock también se rellenan las fechas si
+   están vacías. En los números de serie de varias unidades la cámara sigue abierta y va llenando las siguientes (sin repetir).
+   Usa el lector del navegador (BarcodeDetector) y, si no lo tiene (iPhone), una librería que se carga solo al abrir la cámara.
+   ============================================================ */
+const ESC_CAMPOS = [['#mvl', 'lote'], ['[data-r="lote"]', 'lote'], ['[data-cser]', 'serie'], ['[data-pqs]', 'serie'], ['#eqs', 'serie']];
+const ESC_PUEDE = () => !!(window.ESC_FORZAR || (PANTALLA_TACTIL && navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+// GS1: (01) GTIN, (10) lote, (11) fabricación, (17) caducidad, (21) serie… con paréntesis o con el separador GS
+const GS1_FIJOS = { '00': 18, '01': 14, '02': 14, '11': 6, '12': 6, '13': 6, '15': 6, '16': 6, '17': 6, '20': 2 };
+const GS1_VAR = ['10', '21', '22', '30', '37', '90', '91', '92', '93', '94', '95', '96', '97', '98', '99'];
+function gs1Fecha(s) {
+  if (!/^\d{6}$/.test(s || '')) return '';
+  const a = 2000 + +s.slice(0, 2), m = +s.slice(2, 4); let d = +s.slice(4, 6);
+  if (m < 1 || m > 12) return '';
+  if (!d) d = new Date(a, m, 0).getDate();   // día 00 = último del mes
+  return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+function leerGS1(txt) {
+  let s = String(txt || '').trim().replace(/^\](d2|C1|Q3|e0)/, '');
+  const r = {};
+  if (/^\(\d{2,4}\)/.test(s)) {
+    const re = /\((\d{2,4})\)([^(]*)/g; let m;
+    while ((m = re.exec(s))) r[m[1]] = m[2].trim();
+  } else {
+    s = s.replace(/^è|^\u001d/, '');
+    if (!/^(01|02|00)\d/.test(s)) return null;
+    let i = 0;
+    while (i < s.length) {
+      const ai = s.slice(i, i + 2); i += 2;
+      if (GS1_FIJOS[ai]) { r[ai] = s.slice(i, i + GS1_FIJOS[ai]); i += GS1_FIJOS[ai]; if (s[i] === '\u001d') i++; continue; }
+      if (GS1_VAR.includes(ai)) { const f = s.indexOf('\u001d', i); r[ai] = s.slice(i, f < 0 ? s.length : f); i = f < 0 ? s.length : f + 1; continue; }
+      break;   // identificador que no se conoce: lo que queda no se puede separar con seguridad
+    }
+  }
+  if (!r['01'] && !r['10'] && !r['21']) return null;
+  return { gtin: r['01'] || '', lote: r['10'] || '', serie: r['21'] || '', cad: gs1Fecha(r['17']), fab: gs1Fecha(r['11']) };
+}
+// Qué se escribe en el campo: el lote o el número de serie si el código los trae; si no, el código tal cual
+function valorEscaneado(txt, modo) {
+  const g = leerGS1(txt);
+  if (g && modo === 'lote' && g.lote) return { v: g.lote, g };
+  if (g && modo === 'serie' && g.serie) return { v: g.serie, g };
+  return { v: String(txt || '').replace(/[\u0000-\u001f]/g, '').trim(), g };
+}
+function escModo(inp) { const c = ESC_CAMPOS.find(([sel]) => inp.matches(sel)); return c ? c[1] : ''; }
+// El botón de la cámara se pone en el mismo momento que el campo (sin aparecer después)
+function escPoner(raiz) {
+  if (!ESC_PUEDE()) return;
+  (raiz || document).querySelectorAll(ESC_CAMPOS.map(c => c[0] + ':not([data-escok])').join(',')).forEach(inp => {
+    if (inp.tagName !== 'INPUT') return;
+    inp.dataset.escok = '1';
+    const w = document.createElement('span'); w.className = 'escw';
+    inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+    w.insertAdjacentHTML('beforeend', `<button type="button" class="escbtn" data-esc aria-label="Leer el código con la cámara" title="Leer el código con la cámara">${icono('camera')}</button>`);
+  });
+}
+let ESC_PEND = false;
+new MutationObserver(() => { if (ESC_PEND) return; ESC_PEND = true; queueMicrotask(() => { ESC_PEND = false; escPoner(); }); })
+  .observe(document.body, { childList: true, subtree: true });
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-esc]'); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const inp = b.parentNode.querySelector('input'); if (inp) abrirEscaner(inp);
+}, true);
+
+// La ventana de la cámara
+let ESC = null;   // { inp, modo, stream, det, zx, vivo, leidos:Set, n }
+function escGrupo(inp) {
+  const k = inp.dataset.cser != null ? `[data-cser="${inp.dataset.cser}"]` : inp.dataset.pqs != null ? `[data-pqs="${inp.dataset.pqs}"]` : '';
+  if (!k) return [inp];
+  const caja = inp.closest('.cirser, .cirusa, .dlgficha, dialog') || document;
+  return [...caja.querySelectorAll(k)];
+}
+async function cargarZXing() {
+  if (window.ZXing) return window.ZXing;
+  await new Promise((ok, mal) => { const s = document.createElement('script'); s.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js'; s.crossOrigin = 'anonymous'; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+  return window.ZXing;
+}
+function escTexto(t) { const p = $('escest'); if (p && p.textContent !== t) p.textContent = t; }
+async function abrirEscaner(inp) {
+  let d = $('escaner');
+  if (!d) { document.body.insertAdjacentHTML('beforeend', '<dialog id="escaner" class="escdlg" aria-label="Leer un código"></dialog>'); d = $('escaner'); }
+  const modo = escModo(inp), grupo = escGrupo(inp);
+  d.innerHTML = `<div class="escvid"><video id="escv" playsinline muted></video><div class="escmarco"></div></div>
+    <div class="escpie"><p id="escest" class="sm">Abriendo la cámara…</p>
+      <div class="acts" style="justify-content:flex-end;margin:0"><button type="button" class="btn sec" id="escfin">${grupo.length > 1 ? 'Terminar' : 'Escribirlo a mano'}</button></div></div>`;
+  ESC = { inp, modo, grupo, vivo: true, leidos: new Set(grupo.map(x => x.value.trim()).filter(Boolean)), n: 0 };
+  $('escfin').onclick = () => cerrarEscaner();
+  d.oncancel = e => { e.preventDefault(); cerrarEscaner(); };
+  d.showModal();
+  try {
+    ESC.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+  } catch (e) {
+    cerrarEscaner();
+    toast(/NotAllowed|Permission/i.test(e && e.name) ? 'No se puede usar la cámara: permite el acceso en el navegador' : 'No se ha podido abrir la cámara', true);
+    return;
+  }
+  if (!ESC || !ESC.vivo) { ESC && ESC.stream && ESC.stream.getTracks().forEach(t => t.stop()); return; }
+  const v = $('escv'); v.srcObject = ESC.stream; try { await v.play(); } catch (e) {}
+  escTexto(modo === 'lote' ? 'Apunta al código de la caja: se lee el número de lote' : grupo.length > 1 ? `Apunta al código de cada unidad · ${ESC.leidos.size} de ${grupo.length}` : 'Apunta al código de la unidad: se lee el número de serie o la UDI');
+  if ('BarcodeDetector' in window) {
+    try {
+      const fmts = await BarcodeDetector.getSupportedFormats();
+      ESC.det = new BarcodeDetector(fmts && fmts.length ? { formats: fmts } : undefined);
+      const vuelta = async () => {
+        if (!ESC || !ESC.vivo) return;
+        try { const r = await ESC.det.detect(v); if (r && r.length) escLeido(r[0].rawValue); } catch (e) {}
+        if (ESC && ESC.vivo) setTimeout(vuelta, 180);
+      };
+      vuelta(); return;
+    } catch (e) { /* sigue con la librería */ }
+  }
+  try {
+    const Z = await cargarZXing(); if (!ESC || !ESC.vivo) return;
+    ESC.zx = new Z.BrowserMultiFormatReader();
+    ESC.zx.decodeFromStream(ESC.stream, v, res => { if (res && ESC && ESC.vivo) escLeido(res.getText()); });
+  } catch (e) { escTexto('Este navegador no puede leer códigos: escríbelo a mano'); }
+}
+function escPonerValor(inp, v) {
+  inp.value = v; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+}
+// Un código leído: al campo (y las fechas si es una entrada de stock); en varias unidades, a la siguiente vacía
+function escLeido(txt) {
+  if (!ESC || !ESC.vivo || !txt) return;
+  const { v, g } = valorEscaneado(txt, ESC.modo); if (!v) return;
+  if (ESC.grupo.length > 1) {
+    if (ESC.leidos.has(v)) { escTexto(`Esa unidad ya está leída · ${ESC.leidos.size} de ${ESC.grupo.length}`); return; }
+    const libre = [ESC.inp, ...ESC.grupo].find(x => !x.value.trim());
+    if (!libre) { cerrarEscaner(); return; }
+    escPonerValor(libre, v); ESC.leidos.add(v); ESC.n++;
+    try { navigator.vibrate && navigator.vibrate(60); } catch (e) {}
+    if (!ESC.grupo.some(x => !x.value.trim())) { const n = ESC.n; cerrarEscaner(); toast(`${ESC_ULT_N(n)} leídas`); return; }
+    escTexto(`Leída: ${v} · ${ESC.leidos.size} de ${ESC.grupo.length}. Apunta a la siguiente`);
+    return;
+  }
+  escPonerValor(ESC.inp, v);
+  if (g && ESC.modo === 'lote') {
+    const caja = ESC.inp.closest('.rcl');
+    const cad = caja ? caja.querySelector('[data-r="cad"]') : ESC.inp.id === 'mvl' ? $('mvc') : null;
+    const fab = caja ? caja.querySelector('[data-r="fab"]') : ESC.inp.id === 'mvl' ? $('mvf') : null;
+    if (g.cad && cad && !cad.value) escPonerValor(cad, g.cad);
+    if (g.fab && fab && !fab.value) escPonerValor(fab, g.fab);
+  }
+  try { navigator.vibrate && navigator.vibrate(60); } catch (e) {}
+  cerrarEscaner();
+  toast(ESC_ULT_TXT(v, g));
+}
+const ESC_ULT_N = n => n === 1 ? 'Una unidad' : `${n} unidades`;
+const ESC_ULT_TXT = (v, g) => 'Leído: ' + v + (g && g.cad ? ' · caduca el ' + fechaCorta(g.cad) : '');
+function cerrarEscaner() {
+  if (ESC) {
+    ESC.vivo = false;
+    try { ESC.zx && ESC.zx.reset(); } catch (e) {}
+    try { ESC.stream && ESC.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    ESC = null;   // sin devolver el foco al campo: en el móvil abriría el teclado
+  }
+  const d = $('escaner'); if (d && d.open) d.close();
+}
+
+
+
+
+/* ============================================================
+   v2.262.0 · Facturas y Oportunidades ordenadas de verdad (punto 3 del plan del 11/10/2026). Las dos listas traen ya todo el periodo
+   elegido (la base filtra por fechas, búsqueda y estado) y se paginaban en la pantalla, pero al pulsar una columna solo se ordenaban
+   las filas de la página que se veía. Ahora el orden se aplica a toda la lista del periodo antes de paginar y se vuelve a la primera
+   página: es lo más eficiente (los datos ya están en el móvil; no hace falta otra consulta ni cambiar la base). Si algún día una
+   empresa tiene miles de facturas en un mismo periodo, se pasaría la paginación a la base.
+   ============================================================ */
+const ORD_MEM = {
+  facts: { fn: 'facturas_lista', campos: ['numero', 'fecha', 'cliente', 'nif', 'base', 'cuota_iva', 'total', 'vencimiento', 'estado_cobro'] },
+  llam: { fn: 'llamadas_lista', campos: ['fecha', x => x.cliente || x.nombre, 'importe_estimado', x => x.medico || x.cuenta_texto, x => x.resultado || (x.pedido_id ? 'Pedido hecho' : ''), 'proxima_fecha', 'usuario'] }
+};
+Object.keys(ORD_MEM).forEach(t => { ORD_SRV[t] = (i, n) => (ORD_MEM[t].campos[i] != null && !htCeldaNoOrdenable(n)) ? 'c' + i : null; });
+function ordMemValor(x, c) { const v = typeof c === 'function' ? c(x) : x[c]; return v == null || v === '' ? null : v; }
+function ordMemComparar(a, b) {
+  if (a == null || b == null) return (a == null) - (b == null);   // vacíos al final
+  if (typeof a === 'number' || (typeof a === 'string' && /^-?\d+(\.\d+)?$/.test(a) && /^-?\d+(\.\d+)?$/.test(String(b)))) return (+a) - (+b);
+  return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
+}
+function ordMemOrdenar(tipo, l) {
+  const o = HT_ORDEN[tipo], cfg = ORD_MEM[tipo]; if (!o || !cfg || !Array.isArray(l)) return l;
+  const c = cfg.campos[o.i]; if (c == null) return l;
+  const vacio = v => v == null;
+  return l.map((x, k) => [x, k]).sort((p, q) => {
+    const a = ordMemValor(p[0], c), b = ordMemValor(q[0], c);
+    if (vacio(a) || vacio(b)) return (vacio(a) - vacio(b)) || (p[1] - q[1]);   // los vacíos siempre al final
+    return o.dir * ordMemComparar(a, b) || (p[1] - q[1]);
+  }).map(p => p[0]);
+}
+// La lista llega ordenada de la base según la columna elegida
+db.rpc = (orig => async function (fn, args, ...r) {
+  const res = await orig.call(this, fn, args, ...r);
+  const tipo = Object.keys(ORD_MEM).find(t => ORD_MEM[t].fn === fn);
+  if (tipo && res && Array.isArray(res.data) && HT_ORDEN[tipo]) return Object.assign({}, res, { data: ordMemOrdenar(tipo, res.data) });
+  return res;
+})(db.rpc);
+// Pulsar la columna vuelve a pintar la lista entera desde la primera página
+document.addEventListener('click', e => {
+  const c = e.target.closest('.dgrid > .dh > *'); if (!c || e.target.closest('input, button, select, .res')) return;
+  const tipo = htTipo(c.closest('.dgrid')); if (!ORD_MEM[tipo]) return;
+  if (tipo === 'facts' && $('fcob')) { FACPAG = 0; $('fcob').dispatchEvent(new Event('change')); }
+  if (tipo === 'llam' && $('llfres')) { LLPAG = 0; $('llfres').dispatchEvent(new Event('change')); }
+});
+
+
+
+
+/* ============================================================
+   v2.263.0 · Liquidaciones por persona (punto 4 del plan del 11/10/2026; auditoría del manual).
+   - «Calcular el periodo» buscaba a quién liquidar por el NOMBRE (dos personas con el mismo nombre se confundían) y solo a quien
+     tenía el esquema abierto hoy. Ahora va por la persona (su id) y liquida a todos los que tuvieron un esquema vigente algún día
+     de ese mes (también a quien dejó de cobrar a mitad de mes).
+   - Además, volver a calcular un mes devolvía a «Borrador» las liquidaciones ya aprobadas o pagadas (y las descongelaba). Ahora
+     solo se recalculan las que siguen en borrador; las aprobadas y pagadas no se tocan.
+   - La lista de liquidaciones se puede ver por persona y por mes, con el total de lo que se ve.
+   ============================================================ */
+let LIQ_FIL = { u: '', p: '' };
+function liqMesFin(per) { const [a, m] = per.split('-').map(Number); return `${per}-${String(new Date(a, m, 0).getDate()).padStart(2, '0')}`; }
+calcularLiquidaciones = async function () {
+  const per = $('liqper') && $('liqper').value; if (!per) return;
+  const ini = per + '-01', fin = liqMesFin(per), esq = new Set(ESQUEMAS.map(e => e.id));
+  const [{ data: asg, error }, { data: ya }] = await Promise.all([
+    db.from('asignaciones_comision').select('usuario_id,esquema_id,desde,hasta'),
+    RPC_ORIG('liquidaciones_lista', { p_periodo: per })]);
+  if (error) { toast('No se han podido leer las asignaciones: ' + error.message, true); return; }
+  const cerradas = new Set((ya || []).filter(l => l.estado !== 'Borrador').map(l => l.usuario_id));
+  const ids = [...new Set((asg || []).filter(a => esq.has(a.esquema_id) && (!a.desde || a.desde <= fin) && (!a.hasta || a.hasta >= ini)).map(a => a.usuario_id))];
+  if (!ids.length) { toast('Nadie tuvo un esquema de comisión en ' + periodoTxt(per), true); return; }
+  const calc = ids.filter(u => !cerradas.has(u));
+  if (!calc.length) { toast(`Las liquidaciones de ${periodoTxt(per)} ya están aprobadas o pagadas: no se recalculan`); return; }
+  const b = $('liqcalc'); if (b) b.disabled = true;
+  let mal = 0;
+  for (const u of calc) { const { data: r, error: e } = await db.rpc('liquidar', { p_usuario: u, p_periodo: per, p_estado: 'Borrador' }); if (e || (r && r.ok === false)) mal++; }
+  if (b) b.disabled = false;
+  const n = calc.length - mal;
+  toast(`${n === 1 ? 'Calculada 1 liquidación' : 'Calculadas ' + n + ' liquidaciones'} de ${periodoTxt(per)}` +
+    (cerradas.size ? ` · ${cerradas.size === 1 ? '1 ya aprobada o pagada se deja' : cerradas.size + ' ya aprobadas o pagadas se dejan'} como estaba${cerradas.size === 1 ? '' : 'n'}` : '') +
+    (mal ? ` · ${mal} sin calcular` : ''), !!mal);
+  LIQ_FIL.p = per;
+  pintarComisiones();
+};
+// La lista, con filtros de persona y mes y el total de lo que se ve
+pintarComisionesBase = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('admcuerpo'), boton = $('liqcalc'); if (!c || !boton) return r;
+  const lista = boton.closest('.acts') && boton.closest('.acts').nextElementSibling;
+  if (!lista || !lista.classList.contains('lista') || $('liqfil')) return r;
+  const { data } = await db.rpc('liquidaciones_lista', { p_periodo: null });   // la misma de la pantalla (en memoria): se pinta en el mismo momento
+  if (!$('admcuerpo') || !lista.isConnected) return r;
+  const l = data || [];
+  const personas = [...new Map(l.map(x => [x.usuario_id, x.nombre])).entries()].sort((x, y) => String(x[1]).localeCompare(String(y[1]), 'es'));
+  const meses = [...new Set(l.map(x => x.periodo))].sort().reverse();
+  if (LIQ_FIL.u && !personas.some(p => p[0] === LIQ_FIL.u)) LIQ_FIL.u = '';
+  if (LIQ_FIL.p && !meses.includes(LIQ_FIL.p)) LIQ_FIL.p = '';
+  const fila = x => `<div class="item" style="cursor:default" data-liqu="${x.usuario_id}" data-liqp="${x.periodo}">
+      <span class="ic ${x.estado === 'Pagada' ? 'o' : ''}">${x.estado === 'Borrador' ? '○' : '✓'}</span>
+      <span class="tx"><b>${esc(x.nombre)}</b><span class="sm">${periodoTxt(x.periodo)} · ${num(x.unidades)} unidades · ${eur(x.importe)} · ${esc(x.estado)}</span></span>
+      <span class="acts" style="margin:0">
+        ${x.estado === 'Borrador' ? `<button class="btn sec" data-liq="${x.usuario_id}|${x.periodo}|Aprobada">Aprobar</button>` : ''}
+        ${x.estado === 'Aprobada' ? `<button class="btn sec" data-liq="${x.usuario_id}|${x.periodo}|Pagada">Marcar pagada</button>` : ''}
+      </span></div>`;
+  const pinta = () => {
+    const v = l.filter(x => (!LIQ_FIL.u || x.usuario_id === LIQ_FIL.u) && (!LIQ_FIL.p || x.periodo === LIQ_FIL.p));
+    const tot = v.reduce((n, x) => n + (+x.importe || 0), 0), uds = v.reduce((n, x) => n + (+x.unidades || 0), 0);
+    const pend = v.filter(x => x.estado !== 'Pagada').reduce((n, x) => n + (+x.importe || 0), 0);
+    $('liqres').textContent = v.length ? `${num(v.length)} ${v.length === 1 ? 'liquidación' : 'liquidaciones'} · ${num(uds)} unidades · ${eur(tot)}${pend && pend !== tot ? ' · ' + eur(pend) + ' sin pagar' : ''}` : '';
+    lista.innerHTML = v.map(fila).join('') || `<div class="vacio">${l.length ? 'Sin liquidaciones con estos filtros.' : 'Sin liquidaciones todavía.'}</div>`;
+    lista.querySelectorAll('[data-liq]').forEach(b => b.onclick = async () => {
+      const [u, p, estado] = b.dataset.liq.split('|');
+      if (!await preguntar(`La liquidación quedará ${estado === 'Aprobada' ? 'aprobada y congelada' : 'marcada como pagada'}.`,
+        { titulo: '¿' + (estado === 'Aprobada' ? 'Aprobar' : 'Marcar pagada') + '?', ok: estado === 'Aprobada' ? 'Aprobar' : 'Marcar pagada' })) return;
+      await db.rpc('liquidar', { p_usuario: u, p_periodo: p, p_estado: estado });
+      toast('Liquidación ' + estado.toLowerCase()); pintarComisiones();
+    });
+  };
+  lista.insertAdjacentHTML('beforebegin', `<div class="liqfil" id="liqfil">
+      <div><label for="liqfu">Persona</label><select id="liqfu"><option value="">Todas</option>${personas.map(([id, n]) => `<option value="${id}" ${id === LIQ_FIL.u ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+      <div><label for="liqfp">Mes</label><select id="liqfp"><option value="">Todos</option>${meses.map(m => `<option value="${m}" ${m === LIQ_FIL.p ? 'selected' : ''}>${esc(periodoTxt(m))}</option>`).join('')}</select></div>
+      <p class="sm" id="liqres"></p></div>`);
+  $('liqfu').onchange = e => { LIQ_FIL.u = e.target.value; pinta(); };
+  $('liqfp').onchange = e => { LIQ_FIL.p = e.target.value; pinta(); };
+  pinta();
+  return r;
+})(pintarComisionesBase);
+
+
+
+
+/* ============================================================
+   v2.264.0 · Tabla por meses con filtros, papel de los estados y desactivar una empresa (puntos 4 y 5 del plan del 11/10/2026;
+   necesita el SQL 141).
+   - Analítica → Explorar → «Tabla por meses»: aplica también los filtros de la pantalla (profesional, comercial, producto y
+     reporting), como el Ranking, y cuenta igual que él (con el descuento de línea).
+   - Configuración → Datos → «Estados comerciales»: el papel de cada estado (Inicial, En avance, Con interés, Ya es cliente,
+     Ya no interesa) se puede cambiar. Del papel dependen los avisos, los indicadores y los resultados de visita que se ofrecen.
+   - Panel delcos → Organizaciones: «Desactivar» y «Volver a activar» cada empresa (sus usuarios no pueden entrar mientras está
+     desactivada; sus datos no se tocan). Desactivada, se puede borrar si no tiene facturas.
+   ============================================================ */
+// La tabla por meses con los filtros de la pantalla
+db.rpc = (orig => function (fn, args, ...r) {
+  if (fn === 'analitica_tabla' && TAB === 'analitica' && args && !('p_producto' in args) && $('aprod')) {
+    args = Object.assign({}, args, {
+      p_medico: AN_MED ? AN_MED.id : null, p_comercial: ($('acom') && $('acom').value) || null,
+      p_producto: $('aprod').value || null, p_reporting: ($('arep') && $('arep').value) || null });
+  }
+  return orig.call(this, fn, args, ...r);
+})(db.rpc);
+
+// Estados comerciales: el papel de cada uno
+const PAPELES_ESTADO = [
+  ['inicial', 'Inicial', 'El de las fichas nuevas. Solo hay uno.'],
+  ['avance', 'En avance', 'Ya hay contacto, pero todavía sin interés claro.'],
+  ['interes', 'Con interés', 'Interesado: se le sigue de cerca.'],
+  ['positivo', 'Ya es cliente', 'El objetivo: ya compra o trabaja con vosotros.'],
+  ['negativo', 'Ya no interesa', 'No le interesa o se ha perdido.']];
+arbolCfgUnico = (orig => function (...a) {
+  const g = orig.apply(this, a);
+  if (!(puedeCatalogos() || puede('administrar'))) return g;
+  let dat = g.find(x => x[0] === 'Datos');
+  if (!dat) { dat = ['Datos', []]; g.push(dat); }
+  if (!dat[1].some(x => x.k === 'estados')) {
+    const i = dat[1].findIndex(x => x.k === 'cat');
+    dat[1].splice(i < 0 ? 0 : i + 1, 0, { k: 'estados', t: 'Estados comerciales', ic: 'target', d: 'El papel de cada estado: inicial, en avance, con interés, ya es cliente o ya no interesa', r: () => pintarEstadosPapel() });
+  }
+  return g;
+})(arbolCfgUnico);
+CFG_CLAVES.estados = 'estados comerciales papel inicial avance interés interes cliente activo positivo perdido negativo embudo';
+async function pintarEstadosPapel() {
+  const c = $('cfgcuerpo'); if (!c) return;
+  cargando(c, 'Cargando los estados…');
+  const { data: ce } = await db.from('clasificadores').select('id').eq('papel', 'estado_comercial').limit(1);
+  const { data: est, error } = ce && ce[0] ? await db.from('valores_clasificador').select('id,valor,orden,activo,papel').eq('clasificador_id', ce[0].id).order('orden')
+    : { data: [], error: null };
+  if (!$('cfgcuerpo') || CFG_KEY !== 'estados') return;
+  if (error) { c.innerHTML = `<div class="card"><p class="sm">No se han podido leer los estados: ${esc(error.message)}</p></div>`; return; }
+  const l = (est || []).filter(v => v.activo !== false);
+  const opc = v => PAPELES_ESTADO.map(([k, t]) => `<option value="${k}" ${v.papel === k ? 'selected' : ''}>${t}</option>`).join('');
+  c.innerHTML = `<div class="card estw">
+      <p class="sm">Cada estado tiene un papel. Con él, la plataforma sabe qué ficha es nueva, cuál avanza, cuál ya es cliente y cuál se ha perdido:
+        de ahí salen los avisos, los indicadores de Inicio y qué resultados se ofrecen al registrar ${esc(TT('visita', 's', 'una', 'l', 'l'))}. El nombre de cada estado se cambia en «Textos personalizados».</p>
+      ${l.length ? l.map(v => `<div class="ajfila estfila" data-estid="${v.id}"><div><b>${esc(v.valor)}</b>
+          <span class="sm">${esc((PAPELES_ESTADO.find(p => p[0] === v.papel) || [, , 'Sin papel: no cuenta en avisos ni indicadores'])[2])}</span></div>
+        <div class="ajctl"><select data-estpapel="${v.id}" aria-label="Papel de ${esc(v.valor)}" ${v.papel === 'inicial' ? 'title="Para cambiarlo, marca otro estado como Inicial"' : ''}>${v.papel ? '' : '<option value="" selected>Sin papel</option>'}${opc(v)}</select></div></div>`).join('')
+        : '<p class="vacio">Todavía no hay estados comerciales.</p>'}</div>`;
+  c.querySelectorAll('[data-estpapel]').forEach(s => s.onchange = async () => {
+    const v = l.find(x => x.id === s.dataset.estpapel), nuevo = s.value;
+    if (!v || !nuevo || nuevo === v.papel) return;
+    if (v.papel === 'inicial') { s.value = v.papel; toast('Para cambiar el estado inicial, marca otro estado como «Inicial»', true); return; }
+    const ant = l.find(x => x.papel === 'inicial' && x.id !== v.id);
+    if (nuevo === 'inicial' && ant && !await preguntar(`Las fichas nuevas empezarán en «${v.valor}». «${ant.valor}» pasará a «En avance».`, { titulo: '¿Cambiar el estado inicial?', ok: 'Cambiar' })) { s.value = v.papel || ''; return; }
+    s.disabled = true;
+    const { data: r, error } = await db.rpc('guardar_papel_estado', { p_id: v.id, p_papel: nuevo });
+    if (error || !r || !r.ok) {
+      s.disabled = false; s.value = v.papel || '';
+      toast(({ permiso: 'No tienes permiso para cambiarlo', sin_inicial: 'Para cambiar el estado inicial, marca otro estado como «Inicial»', papel: 'Ese papel no existe' })[(r && r.error) || ''] || ('No se ha podido cambiar' + (error ? ': ' + error.message : '')), true);
+      return;
+    }
+    toast('Papel cambiado');
+    invalidarCache(); try { await cargarCatalogos(); } catch (e) {}
+    pintarEstadosPapel();
+  });
+}
+
+// Panel delcos → Organizaciones: desactivar o volver a activar
+orgAcciones = (orig => function (c, l) {
+  const r = orig.apply(this, arguments);
+  c.querySelectorAll('[data-orgdom]').forEach(b => {
+    const o = l.find(x => x.id === b.dataset.orgdom); if (!o || o.principal || b.parentNode.querySelector('[data-orgact]')) return;   // la propia (principal), nunca
+    const del = b.parentNode.querySelector('[data-orgdel]');
+    const html = `<button class="btn sec" type="button" data-orgact="${o.id}">${o.activa === false ? 'Volver a activar' : 'Desactivar'}</button>`;
+    if (del) del.insertAdjacentHTML('beforebegin', html); else b.parentNode.insertAdjacentHTML('beforeend', html);
+  });
+  c.querySelectorAll('[data-orgact]').forEach(b => b.onclick = async () => {
+    const o = l.find(x => x.id === b.dataset.orgact); if (!o) return;
+    const activar = o.activa === false;
+    if (!await preguntar(activar ? `Sus ${num(o.usuarios)} usuarios podrán volver a entrar.`
+      : `Sus ${num(o.usuarios)} usuarios no podrán entrar hasta que la vuelvas a activar. Sus datos no se tocan.`,
+      { titulo: activar ? `¿Volver a activar ${o.nombre}?` : `¿Desactivar ${o.nombre}?`, ok: activar ? 'Volver a activar' : 'Desactivar', peligro: !activar })) return;
+    b.disabled = true;
+    const { data: x, error } = await db.rpc('activar_organizacion', { p_org: o.id, p_activa: activar });
+    if (error || !x || !x.ok) {
+      b.disabled = false;
+      toast(({ permiso: 'No tienes permiso', principal: 'La organización principal no se puede desactivar', organizacion: 'No se encuentra esa empresa' })[(x && x.error) || ''] || ('No se ha podido cambiar' + (error ? ': ' + error.message : '')), true);
+      return;
+    }
+    toast(activar ? `${o.nombre} vuelve a estar activa` : `${o.nombre} desactivada`);
+    pintarOrganizaciones();
+  });
+  return r;
+})(orgAcciones);
+
+
+
+
+/* ============================================================
+   v2.265.0 · Transfer completo con el distribuidor (grupo 4 del plan del 11/10/2026; necesita el SQL 142).
+   - Ver pedido → bloque «Distribuidor»: en qué punto está el transfer (Enviado, Aceptado, Servido o Incidencia, con su nota) y
+     «Descargar transfer», un PDF con el cliente, su código en el distribuidor y las líneas con referencia y código de barras.
+   - Configuración → Datos → Distribuidores: cada distribuidor con sus transfers (cuántos sin enviar, en marcha, servidos y con
+     incidencia); al pulsar uno se abre el pedido.
+   ============================================================ */
+const TRF_EST = [['Enviado', 'Enviado'], ['Aceptado', 'Aceptado'], ['Servido', 'Servido'], ['Incidencia', 'Incidencia']];
+const trfPill = e => e ? `<span class="pill ${e === 'Servido' ? 'p-trfok' : e === 'Incidencia' ? 'p-urg' : 'p-per'}">${esc(e)}</span>` : '<span class="pill">Sin enviar</span>';
+// En el bloque del distribuidor del pedido (se llama en el mismo momento en que se pinta el bloque)
+function trfPoner(id, p, d, data) {
+  const caja = $('pddist'); if (!caja || $('pdtrf') || !$('pdmailest')) return;
+  caja.insertAdjacentHTML('beforeend', `<div class="pdtrf" id="pdtrf"><span class="sm">Estado del transfer</span>
+      <div class="segs" role="group" aria-label="Estado del transfer">${TRF_EST.map(([k, t]) => `<button type="button" data-trf="${k}" class="${p.transfer_estado === k ? 'on' : ''}" aria-pressed="${p.transfer_estado === k}">${t}</button>`).join('')}</div>
+      <button type="button" class="btn sec" id="pdtrfpdf">Descargar transfer</button>
+      <p class="sm" id="pdtrfnota">${p.transfer_nota ? 'Nota: ' + esc(p.transfer_nota) : ''}</p></div>`);
+  caja.querySelectorAll('[data-trf]').forEach(b => b.onclick = async () => {
+    const e = b.dataset.trf; let nota = null;
+    if (e === 'Incidencia') { nota = await pedirTexto('Qué ha pasado (falta de stock, dirección, código del cliente…)', p.transfer_nota || '', { titulo: 'Incidencia en el transfer', ok: 'Guardar' }); if (nota === null) return; }
+    const { data: r, error } = await db.rpc('estado_transfer', { p_id: id, p_estado: e, p_nota: nota });
+    if (error || !r || !r.ok) { toast(({ permiso: 'No tienes permiso para cambiarlo' })[(r && r.error) || ''] || ('No se ha podido cambiar' + (error ? ': ' + error.message : '')), true); return; }
+    p.transfer_estado = e; if (nota !== null) p.transfer_nota = nota || null;
+    caja.querySelectorAll('[data-trf]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+    $('pdtrfnota').textContent = p.transfer_nota ? 'Nota: ' + p.transfer_nota : '';
+    if (!p.transfer_enviado_en && $('pdmailest')) { p.transfer_enviado_en = new Date().toISOString(); $('pdmailest').textContent = 'Enviado el ' + fechaCorta(hoyISO()); }
+    toast('Transfer: ' + e.toLowerCase());
+  });
+  $('pdtrfpdf').onclick = () => trfPDF(p, d, data).catch(e => toast('No se ha podido preparar el PDF: ' + (e.message || e), true));
+  // Preparar el correo deja el transfer «Enviado» si no tenía estado
+  if ($('pdmaild')) $('pdmaild').addEventListener('click', () => {
+    if (p.transfer_estado) return; p.transfer_estado = 'Enviado';
+    const b = caja.querySelector('[data-trf="Enviado"]'); if (b) { b.classList.add('on'); b.setAttribute('aria-pressed', 'true'); }
+  });
+}
+async function trfPDF(p, d, data) {
+  const J = await cargarJsPDF(), doc = new J({ unit: 'mm', format: 'a4' });
+  const l = (data && data.lineas) || [], cli = (data && data.contacto) || {};
+  const ids = [...new Set(l.map(x => x.producto_id).filter(Boolean))];
+  const { data: pr } = ids.length ? await db.from('productos').select('id,referencia,codigo_barras').in('id', ids) : { data: [] };
+  const pm = new Map((pr || []).map(x => [x.id, x]));
+  let y = 18; const t = (s, x, yy, o) => doc.text(String(s || ''), x, yy, o);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); t(`Transfer · Pedido ${p.numero || ''}`, 15, y); y += 7;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); t(`${nombreApp()} · ${fechaCorta(String(p.fecha || hoyISO()).slice(0, 10))}`, 15, y); y += 10;
+  doc.setFont('helvetica', 'bold'); t('Distribuidor', 15, y); t('Cliente', 110, y); y += 5; doc.setFont('helvetica', 'normal');
+  const izq = [d.nombre, d.email, d.telefono].filter(Boolean);
+  const der = [cli.nombre || p.cuenta_texto, p.distribuidor_codigo ? 'Código en el distribuidor: ' + p.distribuidor_codigo : '', [cli.direccion, cli.cp, cli.municipio].filter(Boolean).join(', '), cli.nif ? 'NIF: ' + cli.nif : ''].filter(Boolean);
+  for (let i = 0; i < Math.max(izq.length, der.length); i++) { if (izq[i]) t(izq[i], 15, y); if (der[i]) doc.text(doc.splitTextToSize(der[i], 85), 110, y); y += 5; }
+  y += 6; doc.setFont('helvetica', 'bold'); t('Producto', 15, y); t('Referencia', 105, y); t('Código de barras', 140, y); t('Uds.', 195, y, { align: 'right' });
+  doc.setDrawColor(200); doc.line(15, y + 2, 195, y + 2); y += 8; doc.setFont('helvetica', 'normal');
+  l.forEach(x => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    const m = pm.get(x.producto_id) || {};
+    doc.text(doc.splitTextToSize(String(x.producto || ''), 86), 15, y); t(m.referencia || '—', 105, y); t(m.codigo_barras || '—', 140, y); t(num(x.unidades), 195, y, { align: 'right' });
+    y += 7;
+  });
+  doc.line(15, y - 3, 195, y - 3); y += 4;
+  doc.setFont('helvetica', 'bold'); t(`Total: ${num(l.reduce((n, x) => n + (+x.unidades || 0), 0))} unidades`, 195, y, { align: 'right' }); y += 8;
+  doc.setFont('helvetica', 'normal'); t(p.factura_distribuidor ? 'Lo factura el distribuidor.' : `Lo factura ${nombreApp()}.`, 15, y); y += 6;
+  if (p.nota) doc.text(doc.splitTextToSize('Nota: ' + p.nota, 180), 15, y);
+  doc.save(`transfer_${String(p.numero || p.id).replace(/[^\w-]+/g, '_')}.pdf`);
+}
+// Distribuidores: los transfers de cada uno
+pintarDistribuidores = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'); if (!c || CFG_KEY !== 'distribuidores') return r;
+  c.querySelectorAll('.disfila[data-disid] .ajctl').forEach(x => {
+    if (x.querySelector('[data-distrf]')) return;
+    x.insertAdjacentHTML('afterbegin', `<button type="button" class="btn sec" data-distrf="${x.closest('.disfila').dataset.disid}">Transfers</button>`);
+  });
+  c.querySelectorAll('[data-distrf]').forEach(b => b.onclick = () => verTransfers(b.dataset.distrf));
+  return r;
+})(pintarDistribuidores);
+async function verTransfers(dist) {
+  const d = (DIS_TODOS || []).find(x => x.id === dist) || {};
+  $('dlg2body').innerHTML = `<div class="fh"><div><h2>Transfers · ${esc(d.nombre || '')}</h2><div class="sm">Pedidos que sirve este distribuidor (los 200 últimos)</div></div>
+      <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div><div id="trfcuerpo"></div>`;
+  cargando($('trfcuerpo'), 'Cargando los transfers…');
+  $('dlg2').showModal();
+  const { data, error } = await db.rpc('transfers_distribuidor', { p_dist: dist });
+  const caja = $('trfcuerpo'); if (!caja) return;
+  if (error) { caja.innerHTML = `<p class="vacio">No se han podido leer: ${esc(error.message)}</p>`; return; }
+  const s = (data && data.resumen) || {}, l = (data && data.pedidos) || [];
+  caja.innerHTML = `<div class="trfres">${[['Sin enviar', s.sin_enviar], ['Enviados', s.enviado], ['Aceptados', s.aceptado], ['Servidos', s.servido], ['Con incidencia', s.incidencia]]
+      .map(([t, n]) => `<span class="${t === 'Con incidencia' && n ? 'warn' : ''}"><b>${num(n || 0)}</b> ${t}</span>`).join('')}</div>
+    ${l.length ? `<div class="lista trflista">${l.map(x => `<button type="button" class="item" data-trfped="${x.id}">
+        <span class="tx"><b>${esc(x.numero || 'Pedido')} · ${esc(x.cliente || '—')}</b><span class="sm">${fechaCorta(String(x.fecha).slice(0, 10))} · ${num(x.unidades)} uds · ${eurI(x.base)}${x.transfer_nota ? ' · ' + esc(x.transfer_nota) : ''}</span></span>
+        ${trfPill(x.transfer_estado)}</button>`).join('')}</div>` : '<p class="vacio">Todavía no hay pedidos de este distribuidor.</p>'}`;
+  caja.querySelectorAll('[data-trfped]').forEach(b => b.onclick = () => { $('dlg2').close(); verPedido(b.dataset.trfped); });
+}
+
+
+
+
+/* ============================================================
+   v2.266.0 · Presentaciones de producto en la visita (grupo 4 del plan del 11/10/2026; necesita el SQL 143).
+   - Ficha del producto (administración): «Material para presentar», imágenes o PDF (fichas técnicas, estudios, catálogo).
+   - «Registrar visita»: bajo «Productos presentados», «Presentar» con los productos que tienen material; se ve a pantalla completa
+     (con flechas y teclado) y el producto queda marcado como presentado (cuenta en la cobertura del ciclo).
+   - El material se descarga al enseñarlo y se queda en memoria mientras la app está abierta; sin conexión, solo lo ya visto.
+   ============================================================ */
+const PRES_MAX = 8 * 1024 * 1024;
+let PRES_MAT = null, PRES_T = 0;           // [{id, producto_id, nombre, tipo, orden}] · cuándo se leyó
+const PRES_DATOS = new Map();               // id → datos (base64) ya descargados
+async function presMateriales(forzar) {
+  if (PRES_MAT && !forzar && Date.now() - PRES_T < 300000) return PRES_MAT;
+  if (!navigator.onLine) return PRES_MAT || [];
+  try {
+    const { data, error } = await db.from('producto_materiales').select('id,producto_id,nombre,tipo,orden').order('orden').order('creado_en');
+    if (!error) { PRES_MAT = data || []; PRES_T = Date.now(); }
+  } catch (e) {}
+  return PRES_MAT || [];
+}
+// La lista de material se pide a la vez que los productos promocionados (así «Presentar» sale con ellos, no después)
+productosPromocionados = (orig => async function (...a) {
+  const [r] = await Promise.all([orig.apply(this, a), presMateriales()]);
+  return r;
+})(productosPromocionados);
+abrirVisitaBase = (orig => async function (id, ...r) {
+  const res = await orig.call(this, id, ...r);
+  try {
+    const v = $('vprods'); if (!v || $('vpres') || !PRES_MAT || !PRES_MAT.length) return res;
+    const con = [...v.querySelectorAll('[data-vprod]')].filter(b => PRES_MAT.some(m => m.producto_id === b.dataset.vprod));
+    if (!con.length) return res;
+    v.insertAdjacentHTML('afterend', `<div class="vpres" id="vpres"><span class="sm">Presentar</span>${con.map(b => `<button type="button" class="chip" data-vpres="${b.dataset.vprod}">▶ ${esc(b.textContent.trim())}</button>`).join('')}</div>`);
+    $('vpres').querySelectorAll('[data-vpres]').forEach(b => b.onclick = () => presentarProducto(b.dataset.vpres));
+  } catch (e) {}
+  return res;
+})(abrirVisitaBase);
+function presBlob(m, datos) {
+  const bin = atob(String(datos).replace(/^data:[^,]*,/, '')), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([u], { type: m.tipo }));
+}
+let PRES = null;   // { l, i, urls }
+async function presentarProducto(prod) {
+  const l = (PRES_MAT || []).filter(m => m.producto_id === prod); if (!l.length) return;
+  // Enseñarlo lo marca como presentado
+  const chip = document.querySelector(`#vprods [data-vprod="${prod}"]`);
+  if (chip && chip.getAttribute('aria-pressed') !== 'true') chip.click();
+  presAbrir(chip ? chip.textContent.trim() : 'Presentación', l, 0);
+}
+// La ventana a pantalla completa (desde la visita o desde la ficha del producto)
+function presAbrir(titulo, l, i) {
+  let d = $('presenta');
+  if (!d) { document.body.insertAdjacentHTML('beforeend', '<dialog id="presenta" class="presdlg" aria-label="Presentación"></dialog>'); d = $('presenta'); }
+  d.innerHTML = `<div class="prescab"><b>${esc(titulo)}</b><span class="sm" id="presn"></span><button type="button" class="x" id="prescerrar" aria-label="Cerrar">✕</button></div>
+    <div class="prescuerpo" id="prescuerpo"></div>
+    <button type="button" class="presnav ant" id="presant" aria-label="Anterior">‹</button><button type="button" class="presnav sig" id="pressig" aria-label="Siguiente">›</button>`;
+  PRES = { l, i, urls: [] };
+  $('prescerrar').onclick = () => presCerrar();
+  $('presant').onclick = () => presIr(-1); $('pressig').onclick = () => presIr(1);
+  d.oncancel = e => { e.preventDefault(); presCerrar(); };
+  d.onkeydown = e => { if (e.key === 'ArrowRight') presIr(1); if (e.key === 'ArrowLeft') presIr(-1); };
+  d.showModal();
+  presPintar();
+}
+function presIr(n) { if (!PRES) return; const i = PRES.i + n; if (i < 0 || i >= PRES.l.length) return; PRES.i = i; presPintar(); }
+async function presPintar() {
+  const P = PRES; if (!P) return;
+  const m = P.l[P.i], caja = $('prescuerpo'); if (!caja) return;
+  $('presn').textContent = P.l.length > 1 ? `${P.i + 1} de ${P.l.length} · ${m.nombre}` : m.nombre;
+  $('presant').disabled = P.i === 0; $('pressig').disabled = P.i === P.l.length - 1;
+  let datos = PRES_DATOS.get(m.id);
+  if (!datos) {
+    cargando(caja, 'Cargando…');
+    if (!navigator.onLine) { caja.innerHTML = '<p class="vacio">Sin conexión: este material se podrá ver cuando vuelva la conexión.</p>'; return; }
+    const { data, error } = await db.from('producto_materiales').select('datos').eq('id', m.id).maybeSingle();
+    if (PRES !== P || P.l[P.i] !== m) return;
+    if (error || !data) { caja.innerHTML = `<p class="vacio">No se ha podido cargar: ${esc((error && error.message) || 'no está')}</p>`; return; }
+    datos = data.datos; PRES_DATOS.set(m.id, datos);
+  }
+  if (PRES !== P || P.l[P.i] !== m) return;
+  const url = presBlob(m, datos); P.urls.push(url);
+  caja.innerHTML = m.tipo === 'application/pdf'
+    ? `<iframe class="prespdf" src="${url}" title="${esc(m.nombre)}"></iframe>`
+    : `<img class="presimg" src="${url}" alt="${esc(m.nombre)}">`;
+}
+function presCerrar() {
+  if (PRES) PRES.urls.forEach(u => URL.revokeObjectURL(u));
+  PRES = null;
+  const d = $('presenta'); if (d && d.open) d.close();
+}
+
+// Ficha del producto: el material para presentar
+editorProducto = (orig => function (p, ...r) {
+  const x = orig.call(this, p, ...r);
+  setTimeout(async () => {
+    if (!puede('administrar') || !$('dbody') || !$('prok') || $('prmat') || !p || !p.id) return;
+    const ref = $('dbody').querySelector('.acts:last-of-type'); if (!ref) return;
+    const l = (await presMateriales(true)).filter(m => m.producto_id === p.id);
+    if (!$('dbody') || $('prmat') || !$('prok')) return;
+    ref.insertAdjacentHTML('beforebegin', `<div class="blk" id="prmat"><h3>Material para presentar</h3>
+      <p class="sm">Imágenes o PDF (fichas técnicas, estudios, catálogo) que se enseñan a pantalla completa al registrar ${esc(TT('visita', 's', 'una', 'l', 'l'))}. Hasta 8 MB cada uno.</p>
+      <div class="prmatl" id="prmatl"></div>
+      <label class="btn sec prmatadd">+ Añadir imagen o PDF<input type="file" id="prmatf" accept="image/*,application/pdf" multiple hidden></label></div>`);
+    const pinta = lista => {
+      $('prmatl').innerHTML = lista.length ? lista.map(m => `<div class="prmati"><span>${m.tipo === 'application/pdf' ? 'PDF' : 'Imagen'} · ${esc(m.nombre)}</span>
+          <button type="button" class="lnk" data-prmatver="${m.id}">Ver</button><button type="button" class="lnk" data-prmatdel="${m.id}" aria-label="Quitar ${esc(m.nombre)}">Quitar</button></div>`).join('')
+        : '<p class="sm">Todavía no tiene material.</p>';
+      $('prmatl').querySelectorAll('[data-prmatver]').forEach(b => b.onclick = async () => {
+        await presMateriales(); presentarSolo(p, b.dataset.prmatver);
+      });
+      $('prmatl').querySelectorAll('[data-prmatdel]').forEach(b => b.onclick = async () => {
+        const m = lista.find(y => y.id === b.dataset.prmatdel); if (!m) return;
+        if (!await preguntar(`Se quita «${m.nombre}» del material de este producto.`, { titulo: '¿Quitar el material?', ok: 'Quitar', peligro: true })) return;
+        const { error } = await db.from('producto_materiales').delete().eq('id', m.id);
+        if (error) { toast('No se ha podido quitar: ' + error.message, true); return; }
+        PRES_DATOS.delete(m.id); pinta((await presMateriales(true)).filter(y => y.producto_id === p.id)); toast('Material quitado');
+      });
+    };
+    pinta(l);
+    $('prmatf').onchange = async e => {
+      const fs = [...e.target.files]; e.target.value = '';
+      let n = 0, orden = l.length;
+      for (const f of fs) {
+        let a = null;
+        if (f.type === 'application/pdf') {
+          if (f.size > PRES_MAX) { toast(`«${f.name}» pesa más de 8 MB`, true); continue; }
+          a = { nombre: f.name, tipo: f.type, tamano: f.size, datos: await aBase64(f) };
+        } else if (/^image\//.test(f.type)) a = await leerJustificante(f);
+        else { toast(`«${f.name}» no es una imagen ni un PDF`, true); continue; }
+        if (!a) continue;
+        const { error } = await db.from('producto_materiales').insert({ producto_id: p.id, nombre: a.nombre, tipo: a.tipo, tamano: a.tamano, datos: a.datos, orden: orden++ });
+        if (error) { toast(`No se ha podido subir «${f.name}»: ${error.message}`, true); continue; }
+        n++;
+      }
+      if (n) toast(n === 1 ? 'Material añadido' : `${n} archivos añadidos`);
+      if ($('prmatl')) pinta((await presMateriales(true)).filter(y => y.producto_id === p.id));
+    };
+  }, 160);
+  return x;
+})(editorProducto);
+// Ver un material desde la ficha del producto (sin marcar nada como presentado)
+function presentarSolo(p, idm) {
+  const l = (PRES_MAT || []).filter(m => m.producto_id === p.id); if (!l.length) return;
+  presAbrir(p.nombre || 'Material', l, Math.max(0, l.findIndex(m => m.id === idm)));
+}

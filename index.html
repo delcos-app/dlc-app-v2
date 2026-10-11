@@ -4176,6 +4176,73 @@ body.modo-plataforma.menulat #v-delcos .pagtabs{display:none}
 
 /* v2.254.0 · Rutas, paso 1 en el ordenador: la caja tiene alto fijo (la lista se desplaza dentro) y la barra de abajo no se mueve al filtrar */
 @media (min-width:761px){.rnsel{height:640px}}
+
+/* v2.257.0 · Filtro por profesional en Clientes: su «✕» */
+.plchip.plmed i{font-style:normal;margin-left:6px;opacity:.75}
+
+/* v2.258.0 · «Tu día»: horas con tráfico real o botón para calcularlas */
+.tdtraf{display:inline-flex;align-items:center}
+.tdtrafok{color:var(--ok);font-weight:650}
+
+/* v2.259.0 · Visita sin conexión: aviso en la ventana, cita pendiente de enviar en «Tu día» y cambios sin enviar */
+.vsinred{margin:0 0 12px}
+.tdpendm{display:inline-flex;align-items:center;gap:6px;font:650 12.5px var(--f-texto);color:#8A5A00;background:#FFF4E0;border-radius:999px;padding:3px 10px;margin-right:auto}
+.conex.err{background:#FDECEC;color:#9B1C1C;cursor:pointer}
+
+/* v2.260.0 · Distribuidores en Configuración */
+.discab{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.discab p{margin:0;flex:1 1 320px;min-width:0}
+.dissub{font:700 11px var(--f-titulo);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 2px}
+.disoff b{color:var(--muted)}
+
+/* v2.261.0 · Leer códigos con la cámara: botón dentro del campo y ventana de la cámara */
+.escw{position:relative;display:block;min-width:0}
+.escw > input{width:100%;padding-right:46px}
+.escbtn{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:38px;height:38px;min-height:0;padding:0;border:0;border-radius:8px;
+  background:var(--hielo,#F2F7FC);color:var(--navy,#17457A);display:grid;place-items:center;cursor:pointer}
+.escbtn svg{width:18px;height:18px}
+.escdlg{padding:0;border:0;border-radius:16px;width:min(520px,calc(100vw - 24px));max-width:none;overflow:hidden;background:var(--card,#fff)}
+.escdlg::backdrop{background:rgba(11,37,64,.6)}
+.escvid{position:relative;background:#0B2540;aspect-ratio:4/3;max-height:62vh}
+.escvid video{width:100%;height:100%;object-fit:cover;display:block}
+.escmarco{position:absolute;inset:22% 14%;border:2px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 999px rgba(11,37,64,.35)}
+.escpie{display:grid;gap:10px;padding:14px 16px 16px}
+.escpie p{margin:0;min-height:2.6em}
+
+/* v2.263.0 · Liquidaciones por persona y mes */
+.liqfil{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:0 16px 8px}
+.liqfil > div{min-width:0;flex:0 1 220px}
+.liqfil select{width:100%}
+.liqfil p{margin:0 0 8px;flex:1 1 220px;font-variant-numeric:tabular-nums}
+
+/* v2.264.0 · Estados comerciales: el papel de cada uno */
+.estw > p.sm{margin:0 0 6px}
+.estfila select{min-width:170px}
+
+/* v2.265.0 · Transfer completo: estado en el pedido y transfers de cada distribuidor */
+.pdtrf{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:10px}
+.pdtrf p{flex-basis:100%;margin:0}
+.trfres{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 12px;font-variant-numeric:tabular-nums}
+.trfres .warn b{color:var(--warn,#B4540A)}
+.trflista .item{width:100%;text-align:left}
+.p-trfok{background:var(--ok-bg,#E6F4EC);color:var(--ok,#1E7B4A)}
+
+/* v2.266.0 · Presentaciones de producto: «Presentar» en la visita, ventana a pantalla completa y material en el producto */
+.vpres{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:6px 0 4px}
+.presdlg{padding:0;border:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;background:#0B2540;color:#fff;overflow:hidden}
+.presdlg::backdrop{background:#0B2540}
+.prescab{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:rgba(11,37,64,.85);z-index:2}
+.prescab .sm{color:#C9DCEF;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prescab .x{color:#fff}
+.prescuerpo{position:absolute;inset:56px 0 0;display:grid;place-items:center}
+.prescuerpo .vacio{color:#fff}
+.presimg{max-width:100%;max-height:100%;object-fit:contain}
+.prespdf{width:100%;height:100%;border:0;background:#fff}
+.presnav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:64px;border:0;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font-size:30px;z-index:2;min-height:0;padding:0}
+.presnav.ant{left:10px}.presnav.sig{right:10px}.presnav:disabled{opacity:.25}
+.prmati{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.prmati span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prmatadd{margin-top:8px;display:inline-flex}
 </style>
 </head>
 <body>
@@ -4312,6 +4379,6 @@ try{var co=sessionStorage.getItem('dlc-cambio-org');if(co!==null||localStorage.g
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.256.0"></script>
+<script src="./app.js?v=2.266.0"></script>
 </body>
 </html>
