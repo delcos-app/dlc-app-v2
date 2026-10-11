@@ -379,7 +379,6 @@ async function buscar(reiniciar) {
   if (!filas.length) { $('lista').innerHTML = `<div class="vacio">Ningún registro cumple estos filtros.</div>`; $('thead').innerHTML = ''; }
   else { cabeceraTabla(); $('lista').innerHTML = filas.map(filaTabla).join(''); }
 
-  $('mas').classList.add('hide');
   paginador($('dirpag'), data.total, F.pagina, p => {
     F.pagina = p; buscar(false);
     $('tabla').scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -1076,171 +1075,12 @@ const lunesDe = iso => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getD
 const EST_COL = { Planificada: 'var(--navy)', Visitada: 'var(--ok)', Pendiente: 'var(--warn)', Reprogramada: 'var(--sky)', Descartada: 'var(--muted)' };
 
 /* Agenda: pinta la vista base (día, semana o mes) y le añade, en orden, lo que antes eran 8 capas separadas. */
-async function cargarAgenda() {
-  // Se recuerda el desplazamiento para no saltar arriba al repintar la misma vista
-  const y = window.scrollY, mismo = TAB === 'agenda' && $('agcuerpo') && $('agcuerpo').children.length;
-  // La vista «Equipo» se pinta primero como semana y después se sustituye
-  const modo = AG_MODO;
-  if (modo === 'equipo') AG_MODO = 'semana';
-
-  await pintarAgendaBase();
-
-  // Día: sugerencias para hoy y días futuros, y «Tu día»
-  if (TAB === 'agenda' && AG_MODO === 'dia' && AG_FECHA >= hoyISO()) sugerenciasAgenda();
-  if (TAB === 'agenda' && AG_MODO === 'dia') await pintarTuDia();
-
-  // Semana en cuadrícula y «Reprogramar todas» para los pendientes de días anteriores
-  if (TAB === 'agenda') {
-    if (AG_MODO === 'semana') await pintarSemanaAgenda();
-    const pend = $('agpend');
-    if (pend && pend.querySelector('h2') && !$('agrepro')) {
-      pend.querySelector('p.sm').insertAdjacentHTML('afterend', '<div class="acts" style="padding:0 16px 8px"><button class="btn" id="agrepro">Reprogramar todas</button></div>');
-      $('agrepro').onclick = async () => {
-        const { data } = await RPC_ORIG('pendientes_ruta', {});
-        reprogramarCitas(data || [], 'Pendientes de días anteriores', `${(data || []).length} sin visitar`);
-      };
-    }
-  }
-
-  // Ver la agenda de otra persona y vista «Equipo» (quien ve todo el equipo)
-  AG_MODO = modo;
-  if (TAB === 'agenda') {
-    const acts = $('v-agenda').querySelector('.saludo .acts');
-    if (acts && VE_TODO() && !$('agvista')) {
-      if (!COMS.length) await cargarComerciales();
-      acts.insertAdjacentHTML('afterbegin', `<select id="agvista" aria-label="Agenda de" title="Ver la agenda de otra persona">
-          <option value="">Mi agenda</option>${COMS.filter(u => u.id !== PERFIL.id).map(u => `<option value="${u.id}" ${AG_VISTA && AG_VISTA.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}</select>
-        <button class="btn ${modo === 'equipo' ? '' : 'sec'}" data-ag="equipo">Equipo</button>`);
-      $('agvista').onchange = e => verAgendaDe(e.target.value);
-      if (modo === 'equipo') acts.querySelectorAll('[data-ag="semana"]').forEach(b => b.classList.add('sec'));
-    }
-    if (AG_VISTA && $('agtit')) $('agtit').textContent += ' · agenda de ' + AG_VISTA.nombre;
-    if (modo === 'equipo') { $('agtit').textContent = 'Cumplimiento del equipo'; await pintarEquipo(); }
-  }
-
-  // Se marca la vista pintada (para repintar sin parpadeo) y se abre el plan semanal si se pidió
-  const c = $('agcuerpo');
-  if (c) c.dataset.modo = AG_MODO + '|' + (AG_MODO === 'dia' ? AG_FECHA : lunesDe(AG_FECHA || hoyISO())) + '|' + agUid();
-  if (ABRIR_PLAN_SEMANA && AG_MODO === 'semana' && $('semplan')) { ABRIR_PLAN_SEMANA = false; $('semplan').click(); }
-
-  // Mes: selector de meses a la vista y varios meses seguidos
-  if (TAB === 'agenda' && AG_MODO === 'mes') {
-    const acts = $('v-agenda').querySelector('.saludo .acts');
-    if (acts && !$('agmeses')) {
-      acts.insertAdjacentHTML('beforeend', `<select id="agmeses" aria-label="Meses a la vista" title="Meses a la vista">
-        ${[1, 2, 3, 6].map(n => `<option value="${n}" ${AG_MESES === n ? 'selected' : ''}>${n} ${n === 1 ? 'mes' : 'meses'}</option>`).join('')}</select>`);
-      $('agmeses').onchange = e => { AG_MESES = +e.target.value; cargarAgenda(); };
-    }
-    if (AG_MESES > 1) {
-      const base = AG_FECHA.slice(0, 7), bloques = [];
-      for (let i = 0; i < AG_MESES; i++) {
-        const d = new Date(base + '-01T12:00:00'); d.setMonth(d.getMonth() + i);
-        await pintarMesAgenda(fechaLocal(d).slice(0, 7));
-        const w = document.createElement('div'); w.className = 'mesbloque';
-        while ($('agcuerpo').firstChild) w.appendChild($('agcuerpo').firstChild);
-        bloques.push(w);
-      }
-      bloques.forEach(w => $('agcuerpo').appendChild(w));
-      $('agcuerpo').classList.add('varios');
-      const fin = new Date(base + '-01T12:00:00'); fin.setMonth(fin.getMonth() + AG_MESES - 1);
-      $('agtit').textContent = periodoTxt(base) + ' – ' + periodoTxt(fechaLocal(fin).slice(0, 7));
-    }
-  }
-
-  // Día propio: aviso si falta el punto de salida
-  if (TAB === 'agenda' && AG_MODO === 'dia' && !AG_VISTA) avisoSinSalida($('agcuerpo'));
-  if (mismo && TAB === 'agenda') window.scrollTo(0, y);
-}
 
 /* Vista base de la agenda (día, semana o mes); cargarAgenda le añade el resto */
-async function pintarAgendaBase() {
-  if (!AG_FECHA) AG_FECHA = hoyISO();
-  const desde = AG_MODO === 'dia' ? AG_FECHA : lunesDe(AG_FECHA);
-  const hasta = AG_MODO === 'dia' ? AG_FECHA : isoMas(desde, 6);
-  // Si se vuelve a pintar la misma vista, se conserva lo que había mientras llegan los datos (sin parpadeo)
-  const prev = $('agcuerpo');
-  const clave = AG_MODO + '|' + desde + '|' + (typeof agUid === 'function' ? agUid() : '');
-  const previo = prev && prev.dataset.modo === clave ? prev.innerHTML : null;
-
-  $('v-agenda').innerHTML = `
-    <div class="saludo"><div><h1>Agenda</h1><div class="fecha" id="agtit">…</div></div>
-      <div class="acts" style="margin:0">
-        <button class="btn sec" data-ag="ant">←</button>
-        <button class="btn sec" data-ag="hoy">Hoy</button>
-        <button class="btn sec" data-ag="sig">→</button>
-        <button class="btn ${AG_MODO === 'dia' ? '' : 'sec'}" data-ag="dia">Día</button>
-        <button class="btn ${AG_MODO === 'semana' ? '' : 'sec'}" data-ag="semana">Semana</button>
-        <button class="btn ${AG_MODO === 'mes' ? '' : 'sec'}" data-ag="mes">Mes</button>
-        <button class="btn" data-ag="nueva">+ Nueva cita</button>
-      </div></div>
-    <div class="card" id="agcuerpo" ${previo ? `data-modo="${esc(clave)}"` : ''}>${previo || '<div class="skel"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:85%"></div>'}</div>
-    <div class="card" id="agpend"></div>`;
-
-  $('agtit').textContent = AG_MODO === 'dia'
-    ? fechaLarga(new Date(AG_FECHA + 'T00:00:00')).replace(/^./, c => c.toUpperCase())
-    : `Semana del ${fechaCorta(desde)} al ${fechaCorta(hasta)}`;
-
-  if (AG_MODO === 'mes') { $('agtit').textContent = periodoTxt(AG_FECHA.slice(0, 7)); pintarMesAgenda(AG_FECHA.slice(0, 7)); return; }
-
-  const [rc, rp] = await Promise.all([
-    rpcCache('agenda_rango', { p_desde: desde, p_hasta: hasta, p_usuario: agUsuarioFiltro() }, 'agenda-' + desde),
-    rpcCache('pendientes_ruta', {}, 'pendientes')
-  ]);
-  const citas = rc.data, pend = rp.data;
-  if (!citas) { $('agcuerpo').innerHTML = '<div class="vacio">Sin conexión y sin copia guardada de estos días.</div>'; return; }
-  if (rc.cache) avisoCache($('agcuerpo'), rc.fecha);
-
-  const porDia = {};
-  (citas || []).forEach(c => { (porDia[c.fecha] = porDia[c.fecha] || []).push(c); });
-  const dias = AG_MODO === 'dia' ? [AG_FECHA] : Array.from({ length: 7 }, (_, i) => isoMas(desde, i));
-
-  // «Tu día» y la semana en cuadrícula se pintan después con su propio formato
-  if (AG_MODO !== 'dia' && AG_MODO !== 'semana') $('agcuerpo').innerHTML = dias.map(f => {
-    const lista = porDia[f] || [];
-    const hechas = lista.filter(c => c.estado === 'Visitada').length;
-    return `<h2 style="padding:14px 16px 0">${fechaLarga(new Date(f + 'T00:00:00')).replace(/^./, c => c.toUpperCase())}
-        ${lista.length ? `<span class="n">${hechas}/${lista.length}</span>` : ''}</h2>
-      ${lista.length ? `<div class="lista">${lista.map(c => `
-        <div class="item" style="cursor:default">
-          <span class="ic" style="background:${EST_COL[c.estado]}20;color:${EST_COL[c.estado]}">${c.hora ? esc(c.hora).slice(0, 5) : '·'}</span>
-          <span class="tx"><b>${c.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${esc(c.nombre)}</b>
-            <span class="sm">${esc(c.centro_nombre || '')} · <b style="color:${EST_COL[c.estado]}">${esc(c.estado)}</b>${puede('administrar') && c.usuario ? ' · ' + esc(c.usuario) : ''}</span></span>
-          <span class="acts" style="margin:0">
-            <button class="btn sec" data-cita="ficha|${c.cuenta_id}">Ficha</button>
-            ${c.estado !== 'Visitada' ? `<button class="btn sec" data-cita="visita|${c.cuenta_id}">Registrar</button>
-              <button class="btn sec" data-cita="hora|${c.id}|${esc(c.hora || '')}">Hora</button>
-              <button class="btn sec" data-cita="repro|${c.id}">Mover</button>
-              <button class="btn sec" data-cita="desc|${c.id}">Descartar</button>
-              ${c.fecha >= hoyISO() ? `<button class="btn sec dang" data-cita="borrar|${c.id}">Borrar</button>` : ''}` : ''}
-          </span></div>`).join('')}</div>`
-      : '<div class="vacio">Sin citas este día.</div>'}`;
-  }).join('');
-
-  const pendientes = pend || [];
-  $('agpend').innerHTML = pendientes.length
-    ? `<h2>Pendientes de rutas anteriores<span class="n">${pendientes.length}</span></h2>
-       <p class="sm">Los planificaste y no se visitaron. Puedes moverlos a hoy o descartarlos.</p>
-       <div class="lista">${pendientes.map(p => `<div class="item" style="cursor:default">
-         <span class="ic w">!</span>
-         <span class="tx"><b>${esc(p.nombre)}</b><span class="sm">${fechaCorta(p.fecha)} · ${esc(p.centro_nombre || '')}</span></span>
-         <span class="acts" style="margin:0">
-           <button class="btn sec" data-cita="hoy|${p.id}">Mover a hoy</button>
-           <button class="btn sec" data-cita="desc|${p.id}">Descartar</button></span></div>`).join('')}</div>`
-    : '';
-}
 
 document.addEventListener('click', async e => {
-  const b = e.target.closest('[data-ag]');
-  if (b) {
-    const k = b.dataset.ag;
-    if (k === 'hoy') AG_FECHA = hoyISO();
-    if (k === 'ant') AG_FECHA = isoMas(AG_FECHA, AG_MODO === 'dia' ? -1 : AG_MODO === 'semana' ? -7 : -30);
-    if (k === 'sig') AG_FECHA = isoMas(AG_FECHA, AG_MODO === 'dia' ? 1 : AG_MODO === 'semana' ? 7 : 30);
-    if (k === 'dia' || k === 'semana' || k === 'mes') AG_MODO = k;
-    if (k === 'nueva') { nuevaCita(null, AG_FECHA); return; }
-    cargarAgenda();
-    return;
-  }
+  const b = e.target.closest('[data-ag="nueva"]');
+  if (b) { nuevaCita(null, AG_FECHA); return; }
   const c = e.target.closest('[data-cita]');
   if (!c) return;
   const [acc, id, extra] = c.dataset.cita.split('|');
@@ -2268,7 +2108,6 @@ $('mapaBtn').addEventListener('click', () => {
   $('mapaBtn').textContent = MODO_MAPA ? 'Ver lista' : 'Ver mapa';
   $('mapawrap').classList.toggle('hide', !MODO_MAPA);
   $('lista').classList.toggle('hide', MODO_MAPA);
-  $('mas').classList.add('hide');
   $('dirpag').classList.toggle('hide', MODO_MAPA);
   if (MODO_MAPA) pintarMapa();
 });
@@ -2495,7 +2334,6 @@ function cabeceraTabla() {
   }).join('');
   $('thead').style.minWidth = ancho + 'px';
   $('lista').style.minWidth = ancho + 'px';
-  $('scrollhint').classList.toggle('hide', ancho <= $('tabla').clientWidth + 4);
 }
 
 /* arrastrar el borde de una columna */
@@ -2994,41 +2832,7 @@ async function cargarRutasPaso2() {
 
 // (v2.183.0: aquí iba la primera versión de cargarRutasBase; se redefine entera más abajo)
 
-async function listaRutas() {
-  const { data, error } = await db.rpc('rutas_visibles');
-  if (error) { $('rcuerpo').innerHTML = `<div class="card"><div class="vacio">No se ha podido cargar: ${esc(error.message)}</div></div>`; return; }
-  RUTAS = data || [];
-  if (!RUTAS.length) {
-    $('rcuerpo').innerHTML = `<div class="card"><div class="vacio">
-      Todavía no tienes rutas. Créala con <b>+ Nueva ruta</b>, con una lista de ${TT('medico', 'p', '', 'l', 'l', 'concreto')}
-      o por criterios que se recalculan solos.<br><br>
-      También puedes usar las <b>propuestas automáticas</b> de la pestaña de al lado.</div></div>`;
-    return;
-  }
-  $('rcuerpo').innerHTML = `<div class="card"><h2>Mis rutas<span class="n">${RUTAS.length}</span></h2>
-    <div class="lista">${RUTAS.map(r => `<div class="item" style="cursor:default">
-      <span class="ic ${r.tipo === 'Urgente' ? 'w' : ''}">${r.tipo === 'Urgente' ? '★' : '◉'}</span>
-      <span class="tx"><b>${esc(r.nombre)}</b><span class="sm">
-        ${r.dinamica ? 'Por criterios' : r.n_fijos + ` ${TT('medico', 'p', '', 'l', 'l')}`} · ${r.visitados} visitados${r.desde ? ' desde ' + fechaCorta(r.desde) : ''}
-        ${r.mia ? '' : ' · de ' + esc(r.duenyo)}</span></span>
-      <span class="acts" style="margin:0">
-        <button class="btn" data-ruta="${r.id}">Planificar</button>
-        <button class="btn sec" data-rver="${r.id}">Ver ${TT('medico', 'p', '', 'l', 'l')}</button>
-        ${r.mia || puede('administrar') ? `<button class="btn sec" data-redit="${r.id}">Editar</button>
-          <button class="btn sec" data-rdup="${r.id}">Duplicar</button>
-          <button class="btn sec" data-rdel="${r.id}">Eliminar</button>` : ''}</span></div>`).join('')}</div></div>`;
-
-  $('rcuerpo').querySelectorAll('[data-redit]').forEach(b => b.onclick = () => editorRuta(b.dataset.redit));
-  $('rcuerpo').querySelectorAll('[data-rver]').forEach(b => b.onclick = () => verMedicosRuta(b.dataset.rver));
-  $('rcuerpo').querySelectorAll('[data-rdup]').forEach(b => b.onclick = () => duplicarRuta(b.dataset.rdup));
-  $('rcuerpo').querySelectorAll('[data-rdel]').forEach(b => b.onclick = async () => {
-    const r = RUTAS.find(x => x.id === b.dataset.rdel);
-    if (!await preguntar(`Se elimina "${r.nombre}".\nLos ${TT('medico', 'p', '', 'l', 'l')} y sus ${TT('visita', 'p', '', 'l', 'l')} no se borran.`,
-      { titulo: '¿Eliminar la ruta?', ok: 'Eliminar', peligro: true })) return;
-    await db.rpc('guardar_ruta', { p: { id: r.id, activa: false } });
-    toast('Ruta eliminada'); cargarRutas();
-  });
-}
+// v2.242.0: aquí iba listaRutas (nadie la usaba)
 
 async function duplicarRuta(id) {
   const r = RUTAS.find(x => x.id === id); if (!r) return;
@@ -3062,42 +2866,7 @@ async function verMedicosRuta(id) {
 
 /* ---------------- propuestas automáticas ---------------- */
 
-async function listaPropuestas() {
-  const { data, error } = await db.rpc('propuestas_rutas', { lim: 60 });
-  if (error) { $('rcuerpo').innerHTML = `<div class="card"><div class="vacio">${esc(error.message)}</div></div>`; return; }
-  PROPUESTAS = data;
-  const dn = { L: 'lunes', M: 'martes', X: 'miércoles', J: 'jueves', V: 'viernes' }[data.dia] || 'hoy';
-  const bloques = [
-    ['hoy', '📅', `Atienden ${dn}`, `Con día de atención conocido y sin ${TT('visita', 's', '', 'l', 'l')} reciente`],
-    ['pendientes', '⏳', 'Pendientes de rutas anteriores', 'Planificados y no visitados'],
-    ['urgentes', '❗', 'Urgentes sin visitar', 'Marcados como urgentes'],
-    ['interesados', '🔥', `${TT('medico', 'p', '', 'l', 'C', 'interesado')} sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`, 'Para no perder el interés'],
-    ['sin_visitar', '🆕', 'Sin visitar nunca', `${TT('visita', 'p', 'primer', 'C', 'l')}, agrupados por zona`]
-  ].filter(([k]) => (data[k] || []).length);
-
-  $('rcuerpo').innerHTML = bloques.length ? `<div class="card">
-    <h2>Propuestas de hoy</h2><p class="sm">Calculadas con tus datos. Planifícalas o guárdalas como ruta.</p>
-    <div class="lista">${bloques.map(([k, ic, t, s]) => `<div class="item" style="cursor:default">
-      <span class="ic">${ic}</span>
-      <span class="tx"><b>${t}</b><span class="sm">${s} · <b>${num(data[k].length)}</b> ${TT('medico', 'p', '', 'l', 'l')}</span></span>
-      <span class="acts" style="margin:0">
-        <button class="btn" data-prop="${k}">Planificar</button>
-        <button class="btn sec" data-propg="${k}|${esc(t)}">Guardar como ruta</button></span></div>`).join('')}</div></div>`
-    : '<div class="card"><div class="vacio">Ahora mismo no hay propuestas: todo al día.</div></div>';
-
-  $('rcuerpo').querySelectorAll('[data-prop]').forEach(b => b.onclick = e => planDesdeLista(PROPUESTAS[b.dataset.prop], b.dataset.prop, e.target));
-  $('rcuerpo').querySelectorAll('[data-propg]').forEach(b => b.onclick = async () => {
-    const [k, t] = b.dataset.propg.split('|');
-    const nombre = await pedirTexto('Nombre de la ruta', t, { titulo: 'Guardar como ruta', ok: 'Guardar' });
-    if (!nombre) return;
-    const { error } = await db.rpc('guardar_ruta', { p: {
-      nombre, tipo: k === 'urgentes' ? 'Urgente' : 'Normal', desde: hoyISO(),
-      codigos: PROPUESTAS[k].map(m => m.id), reglas: null
-    }});
-    if (error) { toast('No se ha podido guardar: ' + error.message, true); return; }
-    toast('Guardada como ruta fija'); RSEC = 'mis'; cargarRutas();
-  });
-}
+// v2.242.0: aquí iba listaPropuestas (nadie la usaba)
 
 /* ---------------- editor de ruta ---------------- */
 
@@ -3416,38 +3185,8 @@ async function cercaDeMi(btn) {
 /* ---------------- agenda: crear cita, hora y mes ---------------- */
 
 
-async function cambiarHoraCita(id, hora) {
-  const h = await appVentana({ titulo: 'Hora de la cita', ok: 'Guardar', campo: { valor: hora || '', tipo: 'time' } });
-  if (h === null) return;
-  const { error } = await db.from('agenda').update({ hora: h || null }).eq('id', id);
-  if (error) { toast('No se ha podido: ' + error.message, true); return; }
-  toast('Hora actualizada'); cargarAgenda();
-}
+// v2.242.0: aquí iba la primera versión de cambiarHoraCita (se redefine entera más abajo)
 
-async function pintarMesAgenda(mes) {
-  const { data } = await db.rpc('agenda_mes', { p_mes: mes, p_usuario: agUsuarioFiltro() });
-  const porDia = {};
-  (data || []).forEach(d => porDia[d.fecha] = d);
-  const primero = new Date(mes + '-01T00:00:00');
-  const dias = new Date(primero.getFullYear(), primero.getMonth() + 1, 0).getDate();
-  const hueco = (primero.getDay() + 6) % 7;
-
-  $('agcuerpo').innerHTML = `<h2 style="padding:14px 16px 0">${periodoTxt(mes)}</h2>
-    <div class="mes">
-      ${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span class="mesdow">${d}</span>`).join('')}
-      ${Array.from({ length: hueco }, () => '<span></span>').join('')}
-      ${Array.from({ length: dias }, (_, i) => {
-        const f = mes + '-' + String(i + 1).padStart(2, '0');
-        const d = porDia[f];
-        return `<button class="mesdia ${f === hoyISO() ? 'hoy' : ''}" data-mesdia="${f}">
-          <b>${i + 1}</b>${d ? `<span class="mespunto">${d.visitadas}/${d.citas}</span>` : ''}</button>`;
-      }).join('')}
-    </div>`;
-  $('agcuerpo').querySelectorAll('[data-mesdia]').forEach(b => b.onclick = () => {
-    AG_FECHA = b.dataset.mesdia; AG_MODO = 'dia'; cargarAgenda();
-  });
-  $('agpend').innerHTML = '';
-}
 
 
 
@@ -5352,66 +5091,6 @@ function editorProducto(p) {
 /* ---------------- agenda: sugerencias para el día ---------------- */
 
 
-async function sugerenciasAgenda() {
-  if (!$('agsug')) $('agcuerpo').insertAdjacentHTML('afterend', '<div class="card sug" id="agsug"></div>');
-  const fecha = AG_FECHA, esHoy = fecha === hoyISO();
-  $('agsug').innerHTML = skelCard(esHoy ? 'Sugerencias para hoy' : 'Sugerencias para este día');
-  const [{ data: pr }, { data: pi }, { data: ya }, { data: toca }] = await Promise.all([
-    db.rpc('propuestas_rutas', { lim: 40 }),
-    rpcCache('panel_inicio', { lim: 6 }, 'inicio').then(r => ({ data: r.data })),
-    rpcCache('agenda_rango', { p_desde: fecha, p_hasta: fecha, p_usuario: agUsuarioFiltro() }, 'agenda-' + fecha),
-    db.rpc('toca_actividad', { p_usuario: agUid() === PERFIL.id && VE_TODO() ? null : agUid(), lim: 60 })
-  ]);
-  let cen = [];
-  try { ({ data: cen } = await RPC_ORIG('sugerencias_centros', { p_fecha: fecha, p_usuario: agUid() === PERFIL.id ? null : agUid() })); } catch (e) { cen = []; }
-  if (!$('agsug') || AG_FECHA !== fecha) return;
-  if (!$('agsug') || AG_FECHA !== fecha) return;
-  const conCita = new Set((ya || []).map(c => c.cuenta_id));
-  const libre = l => (l || []).filter(m => !conCita.has(m.id || m.cuenta_id));
-  const acciones = libre((pi && pi.acciones) || []).filter(a => a.proxima_fecha <= fecha);
-  const grupos = [
-    esHoy ? ['hoy', 'Atienden hoy y hace más de 14 días que no se visitan', libre(pr && pr.hoy)] : null,
-    ['acciones', 'Acciones pendientes para este día o atrasadas', acciones.map(a => ({ id: a.cuenta_id, nombre: a.nombre, especialidad: a.especialidad, extra: (a.proxima_accion || 'Seguimiento') + ' · ' + fechaCorta(a.proxima_fecha) }))],
-    ['toca', `Les toca ${TT('visita', 's', '', 'l', 'l')} según su frecuencia objetivo`, libre(toca).map(m => Object.assign({}, m, { extra: [m.estado_comercial, m.dias_sin_visita != null ? m.dias_sin_visita + ` días sin ${TT('visita', 's', '', 'l', 'l')}` : 'nunca visitado', m.municipio].filter(Boolean).join(' · ') }))],
-    ['urgentes', 'Urgentes sin visitar', libre(pr && pr.urgentes)],
-    ['interesados', `${TT('medico', 'p', '', 'l', 'C', 'interesado')} sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`, libre(pr && pr.interesados)]
-  ].filter(g => g && g[2].length);
-
-  const centros = cen || [];
-  $('agsug').innerHTML = `<h2>${esHoy ? 'Sugerencias para hoy' : 'Sugerencias para ' + fechaCorta(fecha)}</h2>
-    <p class="sm">${TT('medico', 'p', '', 'l', 'C')} que conviene ver. Añádelos a la agenda o planifica una ruta con ellos.</p>
-    ${centros.length ? `<h3>En tus centros de este día</h3>
-      <p class="sm">Aprovecha que estás allí: ${TT('medico', 'p', '', 'l', 'l')} del mismo centro o a menos de 200 m. Visítalos o pregunta en recepción los datos que faltan.</p>
-      ${centros.map(g => `<div class="sgcen"><div class="sgcencab">📍 <b>${esc(g.centro_nombre || 'Centro')}</b>${g.municipio ? ` <span class="sm">${esc(g.municipio)}</span>` : ''}
-          ${g.centro_sin_horario ? `<span class="pill p-warn" title="Pregunta el horario en recepción y añádelo desde la ficha de ${TT('medico', 's', 'un', 'l', 'l')} del centro">Falta el horario del centro</span>` : ''}</div>
-        <div class="lista">${(g.medicos || []).map((m, i) => `<div class="item ${i >= 4 ? 'extra' : ''}" style="cursor:default">
-          <span class="ic ${m.visitar ? 'w' : ''}" title="${m.visitar ? 'Conviene visitarlo' : 'Faltan datos en su ficha'}">${m.visitar ? '★' : '✎'}</span>
-          <span class="tx"><b>${m.sin_reporting ? '<span class="pill p-sr">Sin reporting</span> ' : ''}${esc(m.nombre)}</b>
-            <span class="sm">${esc([m.especialidad, m.metros > 30 ? `a ${m.metros} m · ${m.centro || ''}` : ''].filter(Boolean).join(' · '))}</span>
-            <span class="sm">${m.visitar ? `<b>${esc(m.visitar)}</b>` : ''}${m.falta && m.falta.length ? `${m.visitar ? ' · ' : ''}<span class="sgfalta">Falta: ${esc(m.falta.join(', '))}</span>` : ''}</span></span>
-          <span class="acts" style="margin:0"><button class="btn sec" data-sgf="${m.id}">Ficha</button>
-            ${m.falta && m.falta.length ? `<button class="btn sec" data-sged="${m.id}">Completar</button>` : ''}
-            ${m.visitar ? `<button class="btn sec" data-sgc="${m.id}">+ Cita</button>` : ''}</span></div>`).join('')}
-          ${(g.medicos || []).length > 4 ? `<button class="vermas" type="button" data-vermas>Ver los ${num(g.medicos.length - 4)} restantes</button>` : ''}</div></div>`).join('')}` : ''}
-    ${grupos.map(([k, t, l]) => `<h3>${esc(t)} <span>${l.some(m => m.lat) && k !== 'acciones'
-        ? `<button class="btn sec" data-sgruta="${k}">Planificar ruta</button>` : ''}</span></h3>
-      <div class="lista">${l.map((m, i) => `<div class="item ${i >= 5 ? 'extra' : ''}" style="cursor:default">
-        <span class="ic ${k === 'urgentes' || k === 'acciones' ? 'w' : ''}">${k === 'hoy' ? '📅' : k === 'urgentes' ? '!' : k === 'acciones' ? '↻' : '🔥'}</span>
-        <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${esc(m.extra || [m.especialidad, m.centro_nombre, m.municipio].filter(Boolean).join(' · '))}</span></span>
-        <span class="acts" style="margin:0"><button class="btn sec" data-sgf="${m.id}">Ficha</button>
-          <button class="btn sec" data-sgc="${m.id}">+ Cita</button></span></div>`).join('')}
-        ${l.length > 5 ? `<button class="vermas" type="button" data-vermas>Ver los ${num(l.length - 5)} restantes</button>` : ''}</div>`).join('')
-      || (centros.length ? '' : '<div class="vacio">No hay sugerencias: tu agenda está al día.</div>')}`;
-  $('agsug').querySelectorAll('[data-sged]').forEach(b => b.onclick = () => abrirEditor(b.dataset.sged));
-  $('agsug').querySelectorAll('[data-sgf]').forEach(b => b.onclick = () => abrirFicha(b.dataset.sgf));
-  $('agsug').querySelectorAll('[data-sgc]').forEach(b => b.onclick = () => nuevaCita(b.dataset.sgc, fecha));
-  $('agsug').querySelectorAll('[data-sgruta]').forEach(b => b.onclick = async e => {
-    const lista = libre(b.dataset.sgruta === 'toca' ? toca : pr[b.dataset.sgruta]);
-    ir('rutas');
-    await new Promise(r => setTimeout(r, 60));
-    planDesdeLista(lista, b.dataset.sgruta, e.currentTarget);
-  });
-}
 
 /* ---------------- ayudas nuevas ---------------- */
 
@@ -5435,7 +5114,6 @@ Object.assign(AYUDA, {
     `Al registrar ${TT('visita', 's', 'el', 'l', 'l')} desde la ficha, la cita pasa a «Visitada».`,
     'En la vista de día verás <b>sugerencias</b>: quién atiende ese día, acciones pendientes, urgentes e interesados.']]
 });
-ANCLAS_AYUDA.push(['#agsug > h2', 'agenda']);
 
 
 /* ============================================================
@@ -5960,7 +5638,7 @@ async function asignarCartera(id) {
 /* ---------------- rutas: plan desde ahora, ruta en curso, pausar y reanudar ---------------- */
 
 const RPKEY = () => 'dlc-ruta-pausa-' + (PERFIL ? PERFIL.id : '');
-const rutaPausada = () => { try { return JSON.parse(localStorage.getItem(RPKEY()) || 'null'); } catch (e) { return null; } };
+// v2.242.0: aquí iba rutaPausada (nadie la usaba)
 
 
 
@@ -6039,7 +5717,7 @@ ANCLAS_AYUDA.push(['#v-pacientes .saludo h1', 'pacientes'], ['#v-productos .salu
 /* ---------------- ajustes generales (envío) ---------------- */
 
 let AJUSTES = {};
-const envioCfg = () => Object.assign({ precio_con_iva: 0, iva: 21, por_defecto: false }, AJUSTES.envio || {});
+// v2.242.0: aquí iba envioCfg (nadie la usaba)
 async function cargarAjustes() {
   const { data } = await db.rpc('ajustes_lista');
   AJUSTES = data || {};
@@ -6565,78 +6243,6 @@ function proximoDiaConsulta(dias, desde) {
 
 let TD_CITAS = [];
 
-async function pintarTuDia() {
-  const fecha = AG_FECHA, esHoy = fecha === hoyISO(), pasado = fecha < hoyISO();
-  const r = await rpcCache('agenda_rango', { p_desde: fecha, p_hasta: fecha, p_usuario: agUsuarioFiltro() }, 'agenda-' + fecha);
-  if (AG_FECHA !== fecha || AG_MODO !== 'dia') return;
-  const todas = r.data || [];
-  const mias = todas.filter(c => c.usuario_id === agUid());
-  const otras = todas.filter(c => c.usuario_id !== agUid());
-  TD_CITAS = mias;
-  const { est, fin, tope } = estimarDia(mias, fecha);
-  const j = jornadaActiva();
-  const n = e => mias.filter(c => e.includes(c.estado)).length;
-  const activas = mias.filter(c => !['Descartada', 'Aplazada'].includes(c.estado));
-  const abiertas = n(CITA_ABIERTA);
-  const pasaTope = abiertas && fin > tope;
-  const conSitio = mias.filter(c => CITA_ABIERTA.includes(c.estado) && xyCita(c)).length;
-
-  $('agcuerpo').innerHTML = `
-    <div class="tdhead">
-      <div><h2 style="padding:0">${esHoy ? 'Tu día' : pasado ? 'Lo que pasó este día' : 'Tu agenda de este día'}</h2>
-        <div class="tdstats">
-          <span><b>${num(activas.length)}</b> citas</span>
-          <span><b style="color:var(--ok)">${n(['Visitada'])}</b> visitadas</span>
-          ${n(['No estaba']) ? `<span><b style="color:var(--warn)">${n(['No estaba'])}</b> no estaban</span>` : ''}
-          <span><b>${abiertas}</b> por hacer</span>
-          ${abiertas && !pasado ? `<span>Fin estimado <b style="color:${pasaTope ? 'var(--warn)' : 'var(--navy)'}">${hm(fin)}</b>${pasaTope ? ' · pasa de la hora de vuelta' : ''}</span>` : ''}
-        </div></div>
-      <div class="acts" style="margin:0">
-        ${!pasado && conSitio > 1 ? '<button class="btn sec" id="tdordenar" title="Ordena las citas abiertas para recorrer menos kilómetros. Las que tienen hora fija se respetan.">Ordenar por cercanía</button>' : ''}
-        ${esHoy && !j && abiertas && agUid() === PERFIL.id ? '<button class="btn" id="tdempezar">▶ Empezar jornada</button>' : ''}
-        ${esHoy && j && agUid() === PERFIL.id ? '<button class="btn dang" id="tdterminar">Terminar jornada</button>' : ''}
-        ${pasado && abiertas ? '<button class="btn" id="tdrepro">Reprogramar pendientes</button>' : ''}
-      </div>
-    </div>
-    ${esHoy && j ? `<div class="tdjornada">● Jornada en curso desde hace ${durTxt(Date.now() - j.inicio)}. Registra cada ${TT('visita', 's', '', 'l', 'l')} al terminarla.</div>` : ''}
-    ${mias.length ? `<div class="lista tdlista">${mias.map((c, i) => {
-      const abierta = CITA_ABIERTA.includes(c.estado);
-      const hora = c.hora ? esc(String(c.hora).slice(0, 5)) : (abierta && est[c.id] != null && !pasado ? '~' + hm(est[c.id]) : '·');
-      const idxAb = mias.filter(x => CITA_ABIERTA.includes(x.estado)).indexOf(c);
-      return `<div class="item tdit ${abierta ? '' : 'cerrada'}" data-tdf="${c.cuenta_id}" role="button" tabindex="0">
-        <span class="tdnum">${i + 1}</span>
-        <span class="tx"><b><span class="tdh" title="${c.hora ? 'Hora fijada' : 'Hora estimada según el orden'}" style="background:color-mix(in srgb, ${EST_COL[c.estado] || 'var(--muted)'} 12%, transparent);color:${EST_COL[c.estado]}">${hora}</span>${c.urgente ? '<span class="pill p-urg">Urgente</span> ' : ''}${esc(c.nombre)}</b>
-          <span class="sm">${esc([c.centro_nombre, c.municipio].filter(Boolean).join(' · ') || 'Sin centro')}${!xyCita(c) && abierta ? ' · <span style="color:var(--warn)">sin ubicación</span>' : ''}</span>
-          <span class="sm">${pillCita(c.estado)}${textoOrigenCita(c)}${c.nota ? ' · ' + esc(c.nota) : ''}</span>
-          ${abierta && TD_INFO[c.id] && TD_INFO[c.id].aviso ? `<span class="sm tdaviso">${esc(TD_INFO[c.id].aviso)}</span>`
-            : abierta && TD_INFO[c.id] && TD_INFO[c.id].ventanas && TD_INFO[c.id].ventanas.length ? `<span class="sm tdvent">Consulta ${esc(txtVentanas(TD_INFO[c.id].ventanas))}${TD_INFO[c.id].espera ? ` · esperas ${TD_INFO[c.id].espera} min` : ''}</span>` : ''}</span>
-        <span class="acts tdacts" style="margin:0">
-          ${abierta && !pasado ? `
-            <span class="tdord">
-              <button class="kmv" data-td="sube|${c.id}" aria-label="Subir" ${idxAb <= 0 ? 'disabled' : ''}>${ICO.arriba}</button>
-              <button class="kmv" data-td="baja|${c.id}" aria-label="Bajar" ${idxAb >= abiertas - 1 ? 'disabled' : ''}>${ICO.abajo}</button></span>` : ''}
-          ${abierta && puedeRegistrarEnDia(c.fecha) ? `<button class="btn tdreg" data-td="visita|${c.id}" aria-label="Registrar ${TT('visita', 's', '', 'l', 'l')}" title="Registrar ${TT('visita', 's', '', 'l', 'l')}"><span class="tdreg-t">Registrar ${TT('visita', 's', '', 'l', 'l')}</span><span class="tdreg-i">+</span></button>` : ''}
-          ${c.estado === 'No estaba' && !pasado ? `<button class="btn sec" data-td="nueva|${c.id}">Nueva cita</button>` : ''}
-          <button class="btn sec tdmas" data-td="mas|${c.id}" aria-label="Más acciones">⋯</button>
-        </span></div>`;
-    }).join('')}</div>` : `<div class="vacio">${esHoy ? 'No tienes citas hoy. Planifica una ruta en Rutas o cita a alguien de las sugerencias.' : 'Sin citas este día.'}</div>`}
-    ${otras.length ? `<h3 class="tdotros">Citas de otras personas · ${otras.length}</h3>
-      <div class="lista">${otras.map(c => `<div class="item" style="cursor:default"><span class="ic">${c.hora ? esc(String(c.hora).slice(0, 5)) : '·'}</span>
-        <span class="tx"><b>${esc(c.nombre)}</b><span class="sm">${esc(c.usuario || '')} · ${pillCita(c.estado)}</span></span></div>`).join('')}</div>` : ''}`;
-
-  if ($('tdempezar')) $('tdempezar').onclick = empezarJornada;
-  if ($('tdterminar')) $('tdterminar').onclick = terminarJornada;
-  if ($('tdrepro')) $('tdrepro').onclick = () => reprogramarCitas(mias.filter(c => CITA_ABIERTA.includes(c.estado)), 'Pendientes del ' + fechaCorta(fecha), 'Sin visitar ese día');
-  if ($('tdordenar')) $('tdordenar').onclick = async () => {
-    const nuevo = ordenarPorCercania(mias);
-    const nf = ordenarPorCercania.fuera || 0;
-    if (await guardarOrden(nuevo)) { toast(nf ? `Ordenadas · ${nf} no caben en su horario o en el tuyo y quedan al final` : 'Citas ordenadas por cercanía'); repintarDiaSuave(); }
-  };
-  $('agcuerpo').querySelectorAll('[data-tdf]').forEach(el => {
-    const abrir = e => { if (e.target.closest('button, a, .tdmenu')) return; abrirFicha(el.dataset.tdf); };
-    el.onclick = abrir; el.onkeydown = e => { if (e.key === 'Enter') abrir(e); };
-  });
-}
 
 // (v2.183.0: aquí iba la primera versión de menuCita; se redefine entera más abajo)
 document.addEventListener('pointerdown', e => {
@@ -7474,8 +7080,6 @@ async function pintarEquipo() {
       ${puede('administrar') ? '<button class="btn sec" id="eqfrec">⚙ Frecuencia objetivo</button>' : ''}</div>
     <div class="filtros" style="border:0;padding:4px 16px 10px"><div id="eqper"></div></div>
     <div id="eqtabla"></div>`;
-  if ($('agpend')) $('agpend').innerHTML = '';
-  if ($('agsug')) $('agsug').remove();
   if ($('eqfrec')) $('eqfrec').onclick = editorFrecuencia;
   const pinta = async () => {
     cargando($('eqtabla'), 'Calculando…');
@@ -8213,43 +7817,7 @@ function editorServicio(s) {
 
 RSEC = 'inicio';
 
-async function resumenRutas() {
-  const hoy = hoyISO();
-  const [{ data: rutas }, { data: pr }, citasHoy] = await Promise.all([db.rpc('rutas_visibles'), db.rpc('propuestas_rutas', { lim: 60 }), citasDelDia(hoy)]);
-  RUTAS = rutas || [];
-  const j = jornadaActiva();
-  const abiertas = citasHoy.filter(c => CITA_ABIERTA.includes(c.estado)).length;
-  const hechas = citasHoy.filter(c => c.estado === 'Visitada').length;
-  const grupos = [['hoy', '📅', 'Atienden hoy', 'y no se visitan desde hace 14 días'], ['urgentes', '❗', 'Urgentes sin visitar', ''],
-    ['interesados', '🔥', `${TT('medico', 'p', '', 'l', 'C', 'interesado')} sin ${TT('visita', 's', '', 'l', 'l')} en 20 días`, ''], ['sin_visitar', '🆕', `Nunca visitad${terminoDe('medico').g === 'f' ? 'a' : 'o'}s`, 'con ubicación']];
-  PROPUESTAS = pr || {};
-  $('rcuerpo').innerHTML = `
-    <div class="rgrid">
-      <div class="card"><h2>Hoy</h2>
-        ${j ? `<p><b style="color:var(--ok)">● Jornada en curso</b> · ${hechas} visitadas, ${abiertas} por hacer</p>`
-          : (hechas + abiertas) ? `<p>Tienes <b>${hechas + abiertas}</b> citas hoy: ${hechas} visitadas y ${abiertas} por hacer.</p>`
-          : '<p>No tienes citas hoy. Elige una propuesta o una de tus rutas y pásala a tu agenda.</p>'}
-        <div class="acts"><button class="btn" id="rrdia">Ver mi día</button><button class="btn sec" id="rrsem">Planificar la semana</button></div></div>
-      <div class="card"><h2>Propuestas para hoy</h2><p class="sm">Calculadas con tus datos. Al pulsar se prepara el plan.</p>
-        <div class="lista">${grupos.map(([k, ic, t, s]) => { const n = ((pr || {})[k] || []).filter(m => m.lat).length; return `<button class="item" data-rrprop="${k}" ${n ? '' : 'disabled style="opacity:.5"'}>
-          <span class="ic">${ic}</span><span class="tx"><b>${t}</b><span class="sm">${n} ${TT('medico', 'p', '', 'l', 'l')}${s ? ' ' + s : ''}</span></span><span class="n">${n}</span></button>`; }).join('')}</div></div>
-      <div class="card"><h2>Mis rutas<span class="n">${RUTAS.length}</span></h2>
-        ${RUTAS.length ? `<div class="lista">${RUTAS.slice(0, 6).map(r => `<button class="item" data-ruta="${r.id}"><span class="ic">➤</span>
-          <span class="tx"><b>${esc(r.nombre)}</b><span class="sm">${r.tipo === 'criterios' ? 'Por criterios' : 'Lista fija'}${r.n != null ? ' · ' + num(r.n) + ` ${TT('medico', 'p', '', 'l', 'l')}` : ''}</span></span></button>`).join('')}</div>
-          ${RUTAS.length > 6 ? '<button class="verlo" data-rs="mis">Ver todas</button>' : ''}`
-        : `<div class="rguia"><p><b>Aún no tienes rutas.</b> Una ruta es una lista de ${TT('medico', 'p', '', 'l', 'l')} que visitas a menudo. Tres pasos:</p>
-            <ol><li><b>+ Nueva ruta</b>: elige ${TT('medico', 'p', '', 'l', 'l', 'concreto')} o unos criterios (municipio, estado, días de atención).</li>
-              <li><b>Planificar</b>: la app ordena las paradas y calcula las horas con tu horario.</li>
-              <li><b>Guardar en mi agenda</b> o <b>Empezar</b>: el plan pasa a «Tu día».</li></ol>
-            <div class="acts"><button class="btn" id="rrnueva">+ Crear mi primera ruta</button></div></div>`}</div>
-    </div>`;
-  $('rrdia').onclick = () => { AG_MODO = 'dia'; AG_FECHA = hoy; ir('agenda'); };
-  $('rrsem').onclick = () => { AG_MODO = 'semana'; AG_FECHA = hoy; ir('agenda'); setTimeout(() => $('semplan') && $('semplan').click(), 900); };
-  if ($('rrnueva')) $('rrnueva').onclick = () => editorRuta(null);
-  $('rcuerpo').querySelectorAll('[data-rrprop]').forEach(b => b.onclick = () => planDesdeLista((pr || {})[b.dataset.rrprop] || [], b.dataset.rrprop, b));
-  $('rcuerpo').querySelectorAll('[data-ruta]').forEach(b => b.onclick = () => planificar(b.dataset.ruta, b));
-  $('rcuerpo').querySelectorAll('[data-rs]').forEach(b => b.onclick = () => { RSEC = b.dataset.rs; cargarRutas(); });
-}
+// v2.242.0: aquí iba resumenRutas (nadie la usaba)
 
 /* ---------------- Inicio: mi semana, ventas, alertas y equipo ---------------- */
 
@@ -8294,14 +7862,6 @@ volverAMiSesion = (orig => async function () {
 
 let ABRIR_PLAN_SEMANA = false;
 
-// «Hoy» lleva siempre a «Tu día» de hoy (en el mes, al mes actual)
-document.addEventListener('click', e => {
-  const b = e.target.closest('#v-agenda [data-ag="hoy"]');
-  if (!b) return;
-  e.stopImmediatePropagation();
-  AG_FECHA = hoyISO(); if (AG_MODO !== 'mes') AG_MODO = 'dia';
-  cargarAgenda();
-}, true);
 
 // Desde Rutas: «Planificar la semana» abre el planificador cuando la semana ya está pintada
 document.addEventListener('click', e => {
@@ -9299,7 +8859,6 @@ function pintarCerca() {
         <span class="sm">${esc(m.especialidad || '')} · ${esc(m.centro_nombre || '')} ${esc(m.municipio || '')}</span></span>
       <span class="tcell cercaest"><span class="pill p-est">${esc(m.estado_comercial)}</span></span>
     </button>`).join('') : `<div class="vacio">No hay ${TT('medico', 'p', '', 'l', 'l')} con ubicación a menos de 10 km.</div>`;
-  $('mas').classList.add('hide');
   $('dirpag').classList.remove('hide');
   paginador($('dirpag'), l.length, pag, p => { CERCA.pagina = p; pintarCerca(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
     () => { CERCA.pagina = 0; pintarCerca(); });
@@ -9505,7 +9064,6 @@ async function pintarLlamadas() {
 
 /* ---------------- Agenda: ver varios meses ---------------- */
 
-let AG_MESES = 1;
 
 /* ---------------- «Seguimiento» pasa a «Calidad del dato» ---------------- */
 
@@ -10147,7 +9705,6 @@ mejorarCampos = (orig => function (raiz) {
 
 /* ---------------- barra de herramientas ordenada en el móvil ---------------- */
 
-const MODOS_AG = ['dia', 'semana', 'mes', 'equipo'];
 function ordenarCabeceraMovil(sec) {
   if (!ES_MOVIL() || !sec) return;
   const sal = sec.querySelector(':scope > .saludo'); if (!sal || sal.dataset.movil) return;
@@ -10161,21 +9718,6 @@ function ordenarCabeceraMovil(sec) {
     // v2.95.0: el «+» es el icono de la biblioteca, no un carácter
     principal.dataset.txt = principal.textContent.replace('+', '').trim(); principal.innerHTML = svgIco(ICON_NOM.plus);
     sec.appendChild(principal);
-  }
-  // Agenda: modos en un selector segmentado y la navegación junto a la fecha
-  const modos = hijos.filter(b => MODOS_AG.includes(b.dataset.ag));
-  if (modos.length) {
-    const seg = document.createElement('div'); seg.className = 'segm';
-    modos.forEach(b => { b.classList.remove('btn', 'sec'); b.classList.toggle('on', b.dataset.ag === AG_MODO); seg.appendChild(b); });
-    sal.after(seg);
-    const nav = hijos.filter(b => ['ant', 'hoy', 'sig'].includes(b.dataset.ag));
-    if (nav.length) {
-      const fila = document.createElement('div'); fila.className = 'agnavm';
-      nav.forEach(b => { b.classList.add('chip'); fila.appendChild(b); });
-      const ant = fila.querySelector('[data-ag=ant]'), sig = fila.querySelector('[data-ag=sig]');
-      if (ant) ant.textContent = '‹'; if (sig) sig.textContent = '›';
-      seg.after(fila);
-    }
   }
   // El resto, como fila de controles compactos del mismo tamaño
   // Se mantiene la fila aunque quede vacía: otras partes añaden controles después (vista de agenda, equipo…)
@@ -11154,51 +10696,11 @@ function irEnlace(e) {
 }
 // (v2.183.0: aquí iba la primera versión de panelNotificaciones; se redefine entera más abajo)
 
-function panelNotificacionesPaso1(l) {
-  const b = $('notcfg');
-  if (b) b.onclick = () => { $('dlg').close(); CFG_SEC = 'notif'; window.__CFG_DIRECTO = true; ir('config'); };
-}
+// v2.242.0: aquí iba panelNotificacionesPaso1 (nadie la usaba)
 
-function panelNotificacionesPaso2(l) {
-  $('dbody').querySelectorAll('.notit').forEach((b, i) => {
-    const x = l[i], e = x && EXPLICA_NOTIF[x.tipo]; if (!e || b.querySelector('.notacc')) return;
-    b.querySelector('.tx').insertAdjacentHTML('beforeend', `<span class="notacc">${esc(e[1])}</span>`);
-  });
-}
+// v2.242.0: aquí iba panelNotificacionesPaso2 (nadie la usaba)
 
-function panelNotificacionesBase(l) {
-  const ico = t => (TIPOS_NOTIF.find(x => x[0] === t) || [])[1] || '🔔';
-  $('dbody').innerHTML = `<div class="fh"><div><h2>Notificaciones</h2><div class="sm">${NOTIF_N ? NOTIF_N + ' sin leer' : 'Estás al día'}</div></div>
-    <button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
-    <div class="notlista">${l.map(x => `<button class="notit ${x.leida_en ? '' : 'nuevo'}" data-nid="${x.id}" data-nen="${esc(x.enlace || '')}">
-      <span class="ic">${ico(x.tipo)}</span><span class="tx"><b>${esc(x.titulo)}</b><span class="sm">${esc(x.cuerpo || '')}</span>
-      <span class="sm">${new Date(x.creado_en).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</span></span></button>`).join('') || '<div class="vacio">No tienes notificaciones.</div>'}</div>
-    <div class="acts" style="justify-content:space-between;flex-wrap:wrap"><button class="btn sec" id="notcfg">⚙ Elegir qué notificaciones recibo</button>
-      <span class="acts" style="margin:0;flex-wrap:wrap">
-        ${NOTIF_N ? '<button class="btn sec" id="notleer">Marcar todas como leídas</button>' : ''}
-        ${l.some(x => x.leida_en) ? '<button class="btn sec" id="notlimpiar">Borrar las leídas</button>' : ''}
-        ${l.length ? '<button class="btn sec dang" id="notvaciar">Vaciar todas</button>' : ''}</span></div>`;
-  $('dlg').showModal();
-  $('dbody').querySelectorAll('[data-nid]').forEach(b => b.onclick = async () => {
-    await db.rpc('leer_notificacion', { p_id: b.dataset.nid }); $('dlg').close(); irEnlace(b.dataset.nen); refrescarCampana();
-  });
-  if ($('notleer')) $('notleer').onclick = async () => { await db.rpc('leer_notificaciones'); $('dlg').close(); refrescarCampana(); };
-  // v2.87.0: limpiar las notificaciones propias (las leídas o todas)
-  const borrarNotif = async soloLeidas => {
-    let q = db.from('notificaciones').delete().eq('usuario_id', PERFIL.id);
-    if (soloLeidas) q = q.not('leida_en', 'is', null);
-    const { error } = await q;
-    if (error) { toast('No se han podido borrar', true); return; }
-    toast(soloLeidas ? 'Notificaciones leídas borradas' : 'Notificaciones vaciadas');
-    $('dlg').close(); refrescarCampana();
-  };
-  if ($('notlimpiar')) $('notlimpiar').onclick = () => borrarNotif(true);
-  if ($('notvaciar')) $('notvaciar').onclick = async () => {
-    const op = await elegirOpcion('Vaciar notificaciones', 'Se borran todas tus notificaciones, también las que no has leído.', [{ k: 'no', t: 'Cancelar', cls: 'sec' }, { k: 'si', t: 'Vaciar' }]);
-    if (op === 'si') borrarNotif(false);
-  };
-  $('notcfg').onclick = () => { $('dlg').close(); CFG_SEC = 'notif'; ir('config'); };
-}
+// v2.242.0: aquí iba panelNotificacionesBase (nadie la usaba)
 setInterval(refrescarCampana, 60000);
 
 function pintarNotif() {
@@ -11634,10 +11136,7 @@ function marcarUbicado(box, i, lat, lon, texto) {
   if (est) est.innerHTML = `<b style="color:var(--ok)">✓ Ubicado</b> ${esc(texto || '')} <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}" target="_blank" rel="noopener">Ver en el mapa</a>`;
   const d = box.closest('dialog'); if (d) d.dataset.sucio = '1';
 }
-async function geocodificar(q) {
-  const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=' + encodeURIComponent(q));
-  const j = await r.json(); return j[0] || null;
-}
+// v2.242.0: aquí iba la primera versión de geocodificar (se redefine entera más abajo)
 async function geoInversa(lat, lon) {
   try { const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lon}`); return await r.json(); } catch (e) { return null; }
 }
@@ -12664,15 +12163,7 @@ function htAplicarColumnas(g) {
   g.querySelectorAll(':scope > .dh, :scope > .dr').forEach(f => [...f.children].forEach((c, i) => c.classList.toggle('htno', ocultas.includes(i))));
 }
 // Filtros automáticos por columna (columnas con pocos valores distintos) y búsqueda dentro de la tabla
-function htAplicarFiltros(g) {
-  const st = HT_ESTADO[htTipo(g)] || { texto: '', facetas: {} };
-  const t = (st.texto || '').toLowerCase();
-  g.querySelectorAll(':scope > .dr').forEach(f => {
-    const celdas = [...f.children];
-    const ok = (!t || f.textContent.toLowerCase().includes(t)) && Object.entries(st.facetas || {}).every(([i, v]) => !v || (celdas[i] && celdas[i].textContent.trim() === v));
-    f.classList.toggle('htfuera', !ok);
-  });
-}
+// v2.242.0: aquí iba la primera versión de htAplicarFiltros (se redefine entera más abajo)
 function htActivos(sec) {
   const g = sec.querySelector('.dgrid'); const st = g ? HT_ESTADO[htTipo(g)] || {} : {};
   let n = Object.values(st.facetas || {}).filter(Boolean).length + (st.texto ? 1 : 0);
@@ -13098,17 +12589,6 @@ pintarMarca = (orig => async function (...a) {
 
 /* ---------------- agenda: día a la izquierda, sugerencias y pendientes a la derecha ---------------- */
 
-function agendaDosColumnas() {
-  if (TAB !== 'agenda' || AG_MODO !== 'dia' || innerWidth < 1400) return;
-  const cuerpo = $('agcuerpo'), lado = [$('agsug'), $('agpend')].filter(Boolean);
-  if (!cuerpo || !lado.length || cuerpo.parentElement.classList.contains('agizq')) return;
-  const w = document.createElement('div'); w.className = 'agdos';
-  const izq = document.createElement('div'); izq.className = 'agizq';
-  const der = document.createElement('div'); der.className = 'agder';
-  cuerpo.parentNode.insertBefore(w, cuerpo); izq.appendChild(cuerpo); w.appendChild(izq); w.appendChild(der);
-  lado.forEach(x => der.appendChild(x));
-}
-cargarAgenda = (orig => async function (...a) { await orig(...a); agendaDosColumnas(); })(cargarAgenda);
 
 /* ---------------- manual: columna de lectura con índice ---------------- */
 
@@ -13164,7 +12644,7 @@ const CACHE_MOD = {};   // módulo → { clave, t, esc }
 const ESTADO_MOD = {
   inicio: () => '', ventas: () => PEDSEC, productos: () => PSEC, facturacion: () => FSEC,
   analitica: () => (typeof ASEC !== 'undefined' ? ASEC : ''), pacientes: () => '',
-  agenda: () => [AG_MODO, AG_FECHA, AG_VISTA ? AG_VISTA.id : '', AG_MESES].join('|')
+  agenda: () => [AG_MODO, AG_FECHA, AG_VISTA ? AG_VISTA.id : ''].join('|')
 };
 let VIA_IR = null;
 function usarCache(t) {
@@ -13854,15 +13334,7 @@ function resumirAyuda(pop) {
   };
 }
 // Texto explicativo de una tarjeta → ayuda «i» junto a su título
-function textoAAyuda(card) {
-  if (!card || card.dataset.txayuda) return;
-  const p = card.querySelector(':scope > p.sm, :scope > p'); const h = card.querySelector(':scope > h2, :scope > h3, :scope > .fh h2, :scope > div > h2');
-  if (!p || !h || p.textContent.trim().length < 30) return;
-  card.dataset.txayuda = '1';
-  const b = document.createElement('button'); b.type = 'button'; b.className = 'ai'; b.setAttribute('aria-label', 'Ayuda');
-  b.dataset.ayudaTit = h.textContent.trim(); b.dataset.ayudaTxt = p.textContent.trim(); b.textContent = 'i';
-  h.appendChild(b); p.remove();
-}
+// v2.242.0: aquí iba textoAAyuda (nadie la usaba)
 
 /* ---------------- 3. Facturación: Series, Registro y VeriFactu ---------------- */
 
@@ -14165,11 +13637,6 @@ function pintarBotonesRuta(fecha) {
     rc.onclick = () => rutaCompleta();
   } else if (rc) rc.remove();
 }
-cargarAgenda = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  if (TAB === 'agenda' && AG_MODO === 'dia') await prepararParadas(AG_FECHA);
-  return r;
-})(cargarAgenda);
 
 
 /* ============================================================
@@ -15082,33 +14549,6 @@ consultaDeLaVisita = (orig => function (cons) {
 })(consultaDeLaVisita);
 abrirFicha = (orig => async function (...a) { try { return await orig.apply(this, a); } finally { FICHA_CENTRO = null; } })(abrirFicha);
 accionCita = (orig => function (k, c, ...r) { if (k === 'ficha') FICHA_CENTRO = c.centro_nombre || null; return orig(k, c, ...r); })(accionCita);
-// Al pulsar una cita de «Tu día» (antes de que se abra su ficha) se recuerda su centro
-document.addEventListener('click', e => {
-  const it = e.target.closest('.tdlista [data-tdf]'); if (!it || e.target.closest('button, a, .tdmenu')) return;
-  const c = (TD_CITAS || [])[[...it.parentElement.querySelectorAll(':scope > [data-tdf]')].indexOf(it)];
-  FICHA_CENTRO = c && c.cuenta_id === it.dataset.tdf ? c.centro_nombre || null : null;
-}, true);
-pintarTuDia = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  const lista = $('agcuerpo') && $('agcuerpo').querySelector('.tdlista'); if (!lista) return r;
-  const items = [...lista.querySelectorAll(':scope > [data-tdf]')], citas = TD_CITAS || [];
-  if (items.length !== citas.length) return r;
-  // Tramos de citas seguidas con el mismo centro (al menos dos)
-  let i = 0;
-  while (i < citas.length) {
-    const cen = citas[i].centro_nombre ? clasNorm(citas[i].centro_nombre) : '';
-    let j = i + 1;
-    while (cen && j < citas.length && clasNorm(citas[j].centro_nombre || '') === cen) j++;
-    if (cen && j - i > 1) {
-      const c = citas[i], n = j - i;
-      items[i].insertAdjacentHTML('beforebegin', `<div class="tdcentro">${svgIco(ICON_NOM['building-2'])}<b>${esc(c.centro_nombre)}</b>
-        <span class="sm">${esc(c.municipio || '')}${c.municipio ? ' · ' : ''}${n} citas</span></div>`);
-      for (let k = i; k < j; k++) items[k].classList.add('tdengrupo');
-    }
-    i = j;
-  }
-  return r;
-})(pintarTuDia);
 
 
 // Barra inferior del móvil y barra de «Entrar como» desde el primer momento
@@ -15588,30 +15028,6 @@ function volverTrasF5(v) {
   }, true);
 })();
 
-// v2.114.0 · Agenda en escritorio: Día, Semana y Mes como selector segmentado y ‹ Hoy › en un solo bloque,
-// igual que en el móvil. Los botones conservan data-ag (el clic sigue igual); el orden lo pone la hoja de estilos
-function agruparAgendaEscritorio() {
-  if (ES_MOVIL() || TAB !== 'agenda') return;
-  const acts = document.querySelector('#v-agenda > .saludo .acts');
-  if (!acts || acts.querySelector(':scope > .agmodos')) return;
-  const hijos = [...acts.children];
-  const modos = hijos.filter(b => ['dia', 'semana', 'mes'].includes(b.dataset.ag));
-  const nav = hijos.filter(b => ['ant', 'hoy', 'sig'].includes(b.dataset.ag));
-  if (nav.length) {
-    const g = document.createElement('div'); g.className = 'agnav'; g.setAttribute('role', 'group'); g.setAttribute('aria-label', 'Moverse por la agenda');
-    nav.forEach(b => { b.classList.remove('btn', 'sec'); g.appendChild(b); });
-    const ant = g.querySelector('[data-ag=ant]'), sig = g.querySelector('[data-ag=sig]');
-    if (ant) { ant.innerHTML = svgIco('<path d="m15 18-6-6 6-6" />'); ant.setAttribute('aria-label', 'Anterior'); ant.title = 'Anterior'; }
-    if (sig) { sig.innerHTML = svgIco('<path d="m9 18 6-6-6-6" />'); sig.setAttribute('aria-label', 'Siguiente'); sig.title = 'Siguiente'; }
-    acts.appendChild(g);
-  }
-  if (modos.length) {
-    const g = document.createElement('div'); g.className = 'segs agmodos'; g.setAttribute('role', 'group'); g.setAttribute('aria-label', 'Vista');
-    modos.forEach(b => { b.classList.remove('btn'); b.classList.toggle('on', b.dataset.ag === AG_MODO); g.appendChild(b); });
-    acts.appendChild(g);
-  }
-}
-new MutationObserver(agruparAgendaEscritorio).observe(document.querySelector('main'), { childList: true, subtree: true });
 
 /* v2.115.0 · Justificante del pago: una foto (se reduce a 1600 px en JPEG antes de subirla) o un PDF de hasta 3 MB,
    guardado en la tabla pedidos_justificantes. Lo ve quien ve el pedido. */
@@ -16101,7 +15517,7 @@ abrirFicha = (orig => async function (id, ...a) { const r = await orig.call(this
    1 cliente (buscar o ficha nueva, con lo que ya sabemos de él), 2 qué quiere (productos y unidades, médico de referencia, cómo llegó),
    3 cómo termina (pedido o motivo de no compra y cuándo volver a llamar). Con el extra «Oportunidades» de la organización, cada venta
    queda registrada con su día y hora, lo que quería y cuánto, se cierre con pedido o no; sin él, el recorrido lleva al pedido. */
-function hayOportunidades() { return ((typeof PLAN_ACTUAL !== 'undefined' && PLAN_ACTUAL && PLAN_ACTUAL.extras) || []).includes('oportunidades'); }
+// v2.242.0: aquí iba la primera versión de hayOportunidades (se redefine entera más abajo)
 function extraNombre(k) { return { oportunidades: 'Oportunidades', portal: 'Portal' }[k] || k; }
 async function catOportunidades() {
   await catLlamadas();
@@ -16424,7 +15840,7 @@ function orgExtras(c, l) {
 /* v2.126.0 · Portal del médico (extra «Portal» de la organización). En «Mi informe», además: la constancia de sus pacientes solo en
    cifras (sin ninguna fila por paciente), pedir material de lo que la empresa permite y escribir dudas a su comercial. En la ficha,
    quien la lleva entrega el material y contesta. En Configuración → Portal del médico, qué material se puede pedir y cuánto. */
-function hayExtra(k) { return ((typeof PLAN_ACTUAL !== 'undefined' && PLAN_ACTUAL && PLAN_ACTUAL.extras) || []).includes(k); }
+// v2.242.0: aquí iba la primera versión de hayExtra (se redefine entera más abajo)
 const MOTIVO_PORTAL = { permiso: 'No tienes permiso', extra: 'Tu empresa no tiene el portal activado', material: 'Ese material ya no se puede pedir',
   cantidad: 'Esa cantidad supera el máximo', vacio: 'Escribe el mensaje', cerrada: 'Ya estaba cerrado', no_existe: 'Ya no existe' };
 const motivoPortal = r => MOTIVO_PORTAL[(r && r.motivo) || ''] || 'No se ha podido hacer';
@@ -17318,94 +16734,8 @@ ir = (orig => function (t, ...a) {
   if (t === 'agenda' && IR_DESDE_MENU) { AG_MODO = 'dia'; AG_FECHA = hoyISO(); }   // la Agenda del menú abre siempre hoy
   return orig.call(this, t, ...a);
 })(ir);
-cargarAgenda = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  const v = $('v-agenda'); if (!v || TAB !== 'agenda') return r;
-  const unida = agUnida();
-  v.classList.toggle('agunida', unida);
-  if (!unida) {
-    // Semana o mes detallados: vuelta a la agenda de hoy
-    const acts = v.querySelector('.saludo .acts');
-    if (acts && !$('agvolver') && AG_MODO !== 'equipo') {
-      acts.insertAdjacentHTML('afterbegin', '<button class="btn sec" id="agvolver" type="button">← Agenda de hoy</button>');
-      $('agvolver').onclick = () => { AG_MODO = 'dia'; AG_FECHA = hoyISO(); cargarAgenda(); };
-    }
-    return r;
-  }
-  if ($('agtit')) $('agtit').textContent = 'Hoy · ' + fechaLarga(new Date(AG_FECHA + 'T00:00:00'));
-  // Hoy y las sugerencias, uno al lado del otro desde 1100 px (la vista de día de antes lo hacía desde 1400)
-  if (innerWidth >= 1100 && !document.querySelector('#v-agenda .agdos')) {
-    const cuerpo = $('agcuerpo'), lado = [$('agsug'), $('agpend')].filter(Boolean);
-    if (cuerpo && lado.length) {
-      const w = document.createElement('div'); w.className = 'agdos';
-      const izq = document.createElement('div'); izq.className = 'agizq';
-      const der = document.createElement('div'); der.className = 'agder';
-      cuerpo.parentNode.insertBefore(w, cuerpo); izq.appendChild(cuerpo); w.appendChild(izq); w.appendChild(der); lado.forEach(x => der.appendChild(x));
-    }
-  }
-  agMetricas();
-  await agSemanaMes();
-  return r;
-})(cargarAgenda);
 
-async function agMetricas() {
-  const v = $('v-agenda'); if (!v) return;
-  let m = $('agmet');
-  if (!m) { const s = v.querySelector('.saludo'); if (!s) return; s.insertAdjacentHTML('afterend', '<div class="agmet" id="agmet" aria-label="Tus números"></div>'); m = $('agmet'); }
-  const { data: d } = await RPC_ORIG('agenda_metricas', { p_usuario: AG_VISTA ? AG_VISTA.id : null });
-  if (!$('agmet') || !d) return;
-  const n1 = x => num(x == null ? 0 : x), dec = x => (x == null ? '0' : String(x).replace('.', ','));
-  const h = d.hoy || {}, s = d.semana || {}, c = d.cierres || {}, p = d.pendientes || {};
-  m.innerHTML = [
-    ['Hoy', `<b>${n1(h.visitadas)}</b> de ${n1(h.citas)} citas`, `media ${dec(d.media_dia)} ${TT('visita', 'p', '', 'l', 'l')}/día`],
-    ['Semana', `<b>${n1(s.visitas)}</b> ${TT('visita', 'p', '', 'l', 'l')}`, `media ${dec(s.media)}/semana`],
-    ['Cierres con éxito', `<b>${n1(c.hoy)}</b> hoy`, `media ${dec(c.media_dia)}/día`],
-    ['Pendientes', `<b>${n1((p.urgentes || 0) + (p.sin_visita || 0))}</b> por visitar`, `${n1(p.urgentes)} urgentes · ${n1(p.sin_visita)} sin ${TT('visita', 's', '', 'l', 'l')} en 60 días`]
-  ].map(([t, a, b]) => `<div class="agm"><span class="agmt">${t}</span><span class="agmv">${a}</span><span class="agms">${b}</span></div>`).join('');
-}
 
-async function agSemanaMes() {
-  if (!agUnida()) return;
-  const hoy = hoyISO(), lun = lunesDe(hoy), dom = isoMas(lun, 6), mes = hoy.slice(0, 7);
-  const ini = mes + '-01', fin = isoMas(fechaLocal(new Date(new Date(ini + 'T12:00:00').getFullYear(), new Date(ini + 'T12:00:00').getMonth() + 1, 1)), -1);
-  const desde = lun < ini ? lun : ini, hasta = dom > fin ? dom : fin;
-  const { data } = await rpcCache('agenda_rango', { p_desde: desde, p_hasta: hasta, p_usuario: agUsuarioFiltro() }, 'agenda-unida-' + desde + '-' + hasta);
-  if (!agUnida()) return;
-  const porDia = {};
-  (data || []).filter(x => !['Descartada', 'Aplazada'].includes(x.estado)).forEach(x => { (porDia[x.fecha] = porDia[x.fecha] || []).push(x); });
-  Object.values(porDia).forEach(l => l.sort((a, b) => String(a.hora || '99').localeCompare(String(b.hora || '99'))));
-  const hora = x => x.hora ? String(x.hora).slice(0, 5) : '';
-  const corto = n => String(n || '').replace(/^(Dra?\.|Sra?\.|D\.)\s*/i, '');
-  // Semana en curso
-  const semana = Array.from({ length: 7 }, (_, i) => isoMas(lun, i));
-  const semHTML = `<div class="card agsem" id="agsemana"><div class="fh"><h2>Esta semana <span class="sm">${fechaCorta(lun)} – ${fechaCorta(dom)}</span></h2>
-      <button type="button" class="btn sec" id="agplansem">Planificar la semana</button></div>
-    <div class="agsemgrid">${semana.map((f, i) => { const l = porDia[f] || [], hechas = l.filter(x => x.estado === 'Visitada').length;
-      return `<div class="agsd ${f === hoy ? 'hoy' : ''} ${f < hoy ? 'pasado' : ''}" data-agdia="${f}">
-        <button type="button" class="agsdh" data-agdia="${f}"><b>${AG_DIAS_TXT[i]} ${+f.slice(8)}</b>${l.length ? `<span>${hechas}/${l.length}</span>` : ''}</button>
-        ${l.slice(0, 4).map(x => `<button type="button" class="agsc" data-agficha="${x.cuenta_id}" style="--c:${EST_COL[x.estado] || '#6B7F95'}">${hora(x) ? `<i>${hora(x)}</i> ` : ''}${esc(corto(x.nombre))}</button>`).join('')}
-        ${l.length > 4 ? `<button type="button" class="agsmas" data-agdia="${f}">+${l.length - 4} más</button>` : ''}
-        ${!l.length ? '<span class="agsv">—</span>' : ''}</div>`; }).join('')}</div></div>`;
-  // Mes con puntos
-  const d1 = new Date(ini + 'T12:00:00'), hueco = (d1.getDay() + 6) % 7, nd = +fin.slice(8);
-  const celdas = Array(hueco).fill('').concat(Array.from({ length: nd }, (_, i) => `${mes}-${String(i + 1).padStart(2, '0')}`));
-  const mesHTML = `<div class="card agmes" id="agmes"><div class="fh"><h2>${periodoTxt(mes).replace(/^./, c => c.toUpperCase())}</h2></div>
-    <div class="agmesgrid">${AG_DIAS_TXT.map(x => `<span class="agmd">${x}</span>`).join('')}${celdas.map(f => {
-      if (!f) return '<span></span>';
-      const l = porDia[f] || [];
-      return `<button type="button" class="agmc ${f === hoy ? 'hoy' : ''} ${f < hoy ? 'pasado' : ''} ${l.length ? 'con' : ''}" data-agdia="${f}" aria-label="${fechaCorta(f)}: ${l.length} citas">
-        <span>${+f.slice(8)}</span>${l.length ? `<i class="agpt">${l.length > 9 ? '9+' : l.length}</i>` : ''}</button>`; }).join('')}</div></div>`;
-  ['agsemana', 'agmes', 'agsemmes'].forEach(id => { const x = $(id); if (x) x.remove(); });
-  const html = `<div class="agsemmes" id="agsemmes">${semHTML}${mesHTML}</div>`;
-  const dos = document.querySelector('#v-agenda .agdos');
-  if (dos) dos.insertAdjacentHTML('afterend', html);
-  else if ($('agcuerpo')) $('agcuerpo').insertAdjacentHTML('afterend', html);
-  else return;
-  $('agplansem').onclick = () => { AG_MODO = 'semana'; AG_FECHA = hoy; cargarAgenda(); };
-  const cont = $('agsemmes');
-  cont.querySelectorAll('[data-agficha]').forEach(b => b.onclick = ev => { ev.stopPropagation(); abrirFicha(b.dataset.agficha); });
-  cont.querySelectorAll('button[data-agdia]').forEach(b => b.onclick = ev => { ev.stopPropagation(); agVerDia(b.dataset.agdia, porDia[b.dataset.agdia] || [], b); });
-}
 
 // (v2.183.0: aquí iba la primera versión de agVerDia; se redefine entera más abajo)
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.agpop, [data-agdia]')) document.querySelectorAll('.agpop').forEach(x => x.remove()); }, true);
@@ -17706,30 +17036,9 @@ cargarRutasPaso2 = (orig => async function (...a) {
 /* v2.146.0 · Agenda: al pulsar un día de la semana o del mes, «Tu día» pasa a ese día (petición de Eric: antes se abría un desplegable).
    El título de «Tu día» es la fecha elegida y al lado está «Volver a hoy»; el día elegido queda marcado en la semana y en el mes.
    Las cifras de arriba, la semana y el mes siguen siendo los de hoy. */
-// v2.150.0: al elegir un día solo se repintan «Tu día» y sus sugerencias (antes se recargaba toda la Agenda); las cifras, la semana
-// y el mes no cambian. Si la Agenda no está en su vista de una pantalla, se carga entera como antes.
-agVerDia = async function (f) {
-  document.querySelectorAll('.agpop').forEach(x => x.remove());
-  if (!f) return;
-  const v = $('v-agenda'), c = $('agcuerpo');
-  if (!v || !c || !v.classList.contains('agunida') || AG_MODO !== 'dia') { AG_MODO = 'dia'; AG_FECHA = f; return cargarAgenda(); }
-  AG_FECHA = f;
-  agMarcarDia();
-  c.classList.add('agcargando');
-  const sug = $('agsug');
-  if (f >= hoyISO()) { if (sug) sug.style.display = ''; sugerenciasAgenda(); } else if (sug) sug.style.display = 'none';
-  try { await pintarTuDia(); } finally { if ($('agcuerpo')) $('agcuerpo').classList.remove('agcargando'); }
-  if (AG_FECHA !== f) return;
-  agMarcarDia(); agDiaVacio();
-  const cc = $('agcuerpo'); if (!cc) return;
-  const top = cc.getBoundingClientRect().top;
-  if (top < 80 || top > innerHeight * 0.6) scrollTo({ top: scrollY + top - 90, behavior: 'smooth' });
-};
 function agMarcarDia() {
   const v = $('v-agenda'); if (!v || !v.classList.contains('agunida')) return;
   const hoy = hoyISO(), otro = AG_FECHA !== hoy;
-  v.querySelectorAll('#agsemmes [data-agdia].sel').forEach(x => x.classList.remove('sel'));
-  if (otro) v.querySelectorAll(`#agsemana .agsd[data-agdia="${AG_FECHA}"], #agmes .agmc[data-agdia="${AG_FECHA}"]`).forEach(x => x.classList.add('sel'));
   if ($('agtit')) $('agtit').textContent = 'Hoy · ' + fechaLarga(new Date(hoy + 'T00:00:00'));
   const h = v.querySelector('#agcuerpo .tdhead h2'); if (!h) return;
   const caja = h.parentElement;
@@ -17742,20 +17051,18 @@ function agMarcarDia() {
   }
   caja.classList.add('agtitdia');
 }
-cargarAgenda = (orig => async function (...a) { const r = await orig.apply(this, a); agMarcarDia(); return r; })(cargarAgenda);
 
 /* v2.147.0 · Agenda: «Tu día» sin citas (petición de Eric). Sin contadores a cero; en un día pasado, «No tuviste citas este día.» (no se
    puede añadir nada); el mensaje, compacto: icono y frase en una línea, centrado. */
 function agDiaVacio() {
   const c = $('agcuerpo'); if (!c || TAB !== 'agenda') return;
   const v = c.querySelector(':scope > .vacio'), st = c.querySelector('.tdhead .tdstats');
-  const sinCitas = !!v && !c.querySelector('.tdlista');
+  const sinCitas = !!v && !c.querySelector('.tdesc');
   if (st) st.classList.toggle('hide', sinCitas);
   if (!v) return;
   v.classList.add('vlinea');
   if (AG_FECHA < hoyISO()) v.textContent = 'No tuviste citas este día.';
 }
-cargarAgenda = (orig => async function (...a) { const r = await orig.apply(this, a); agDiaVacio(); return r; })(cargarAgenda);
 
 
 /* v2.148.0 · Analítica: panel de indicadores por áreas (decisión de Eric, 3/10/2026: «Panel por áreas + Explorar», engranaje con
@@ -18124,68 +17431,7 @@ function notifDia(f) {
   return dif <= 0 ? 'Hoy' : dif === 1 ? 'Ayer' : dif < 7 ? 'Esta semana' : 'Antes';
 }
 
-function notifPintar() {
-  const l = NOTIF_LISTA, ico = t => (TIPOS_NOTIF.find(x => x[0] === t) || [])[1] || '🔔';
-  const areas = NOTIF_AREAS.filter(a => l.some(x => notifArea(x.tipo) === a[0]));
-  if (NOTIF_FILTRO && !areas.some(a => a[0] === NOTIF_FILTRO)) NOTIF_FILTRO = '';
-  const vis = l.filter(x => !NOTIF_FILTRO || notifArea(x.tipo) === NOTIF_FILTRO);
-  let dia = '';
-  $('dbody').innerHTML = `<div class="fh"><div><h2>Notificaciones</h2><div class="sm">${NOTIF_N ? NOTIF_N + ' sin leer' : 'Estás al día'}</div></div>
-      <span class="acts" style="margin:0"><button type="button" class="icobtn notcfgb" id="notcfg" title="Elegir qué recibo y cuándo" aria-label="Elegir qué recibo y cuándo">${svgIco(ICON_NOM.settings)}</button>
-      <button class="x" data-cerrar aria-label="Cerrar">✕</button></span></div>
-    ${areas.length > 1 ? `<div class="segs notfil" role="group" aria-label="Filtrar">${[['', 'Todas']].concat(areas.map(a => [a[0], a[1]])).map(([k, t]) =>
-      `<button type="button" data-nfil="${k}" class="${NOTIF_FILTRO === k ? 'on' : ''}" aria-pressed="${NOTIF_FILTRO === k}">${esc(t)}</button>`).join('')}</div>` : ''}
-    <div class="notlista2">${vis.map((x, i) => {
-      const g = notifDia(x.visible_desde || x.creado_en), cab = g !== dia ? `<h3 class="notdia">${g}</h3>` : ''; dia = g;
-      const acc = notifAcciones(x), cuando = new Date(x.visible_desde || x.creado_en);
-      return `${cab}<div class="notit2 ${x.leida_en ? '' : 'nuevo'}" data-nidx="${l.indexOf(x)}">
-        <span class="ic" aria-hidden="true">${ico(x.tipo)}</span>
-        <div class="tx"><b>${esc(x.titulo)}</b>${x.cuerpo ? `<span class="sm">${esc(x.cuerpo)}</span>` : ''}
-          <span class="sm notcuando">${g === 'Hoy' || g === 'Ayer' ? cuando.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : cuando.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}${x.resumen ? ' · del resumen del día' : ''}</span>
-          <div class="notacts">${acc.map(([t, , p], j) => `<button type="button" class="btn ${p ? '' : 'sec'}" data-nacc="${j}">${esc(t)}</button>`).join('')}
-            <button type="button" class="btn sec" data-npos>Posponer a mañana</button></div></div></div>`; }).join('')
-      || `<div class="vacio">${NOTIF_FILTRO ? 'No hay avisos de esta área.' : 'No tienes notificaciones.'}</div>`}</div>
-    <div class="acts" style="justify-content:flex-end;flex-wrap:wrap">
-      ${NOTIF_N ? '<button class="btn sec" id="notleer">Marcar todas como leídas</button>' : ''}
-      ${l.some(x => x.leida_en) ? '<button class="btn sec" id="notlimpiar">Borrar las leídas</button>' : ''}
-      ${l.length ? '<button class="btn sec dang" id="notvaciar">Vaciar todas</button>' : ''}</div>`;
-  const cerrarYRefrescar = () => { $('dlg').close(); refrescarCampana(); };
-  $('dbody').querySelectorAll('[data-nfil]').forEach(b => b.onclick = () => { NOTIF_FILTRO = b.dataset.nfil; notifPintar(); });
-  $('dbody').querySelectorAll('.notit2').forEach(el => {
-    const x = l[+el.dataset.nidx], acc = notifAcciones(x);
-    el.querySelectorAll('[data-nacc]').forEach(b => b.onclick = async e => {
-      e.stopPropagation();
-      await db.rpc('leer_notificacion', { p_id: x.id });
-      cerrarYRefrescar(); acc[+b.dataset.nacc][1]();
-    });
-    el.querySelector('[data-npos]').onclick = async e => {
-      e.stopPropagation();
-      const { data } = await db.rpc('posponer_notificacion', { p_id: x.id });
-      if (!data || !data.ok) { toast('No se ha podido posponer', true); return; }
-      NOTIF_LISTA = l.filter(y => y !== x); if (!x.leida_en) NOTIF_N = Math.max(0, NOTIF_N - 1);
-      toast('Te lo volvemos a enseñar mañana'); notifPintar(); refrescarCampana();
-    };
-    // Pulsar el aviso (fuera de los botones) hace su acción principal
-    el.onclick = async () => {
-      await db.rpc('leer_notificacion', { p_id: x.id });
-      cerrarYRefrescar(); if (acc.length) (acc.find(a => a[2]) || acc[0])[1]();
-    };
-  });
-  if ($('notleer')) $('notleer').onclick = async () => { await db.rpc('leer_notificaciones'); cerrarYRefrescar(); };
-  const borrarNotif = async soloLeidas => {
-    let q = db.from('notificaciones').delete().eq('usuario_id', PERFIL.id);
-    if (soloLeidas) q = q.not('leida_en', 'is', null);
-    const { error } = await q;
-    if (error) { toast('No se han podido borrar', true); return; }
-    toast(soloLeidas ? 'Notificaciones leídas borradas' : 'Notificaciones vaciadas'); cerrarYRefrescar();
-  };
-  if ($('notlimpiar')) $('notlimpiar').onclick = () => borrarNotif(true);
-  if ($('notvaciar')) $('notvaciar').onclick = async () => {
-    const op = await elegirOpcion('Vaciar notificaciones', 'Se borran todas tus notificaciones, también las que no has leído.', [{ k: 'no', t: 'Cancelar', cls: 'sec' }, { k: 'si', t: 'Vaciar' }]);
-    if (op === 'si') borrarNotif(false);
-  };
-  $('notcfg').onclick = () => { $('dlg').close(); CFG_SEC = 'notif'; window.__CFG_DIRECTO = true; ir('config'); };
-}
+// v2.242.0: aquí iba la primera versión de notifPintar (se redefine entera más abajo)
 panelNotificaciones = function (l) {
   NOTIF_LISTA = l || [];
   notifPintar();
@@ -19190,7 +18436,7 @@ async function moverCitaLocal(orden, id, acc) {
   const y = window.scrollY;
   await pintarTuDia();
   window.scrollTo({ top: y });
-  const b = document.querySelector(`.tdlista [data-td="${acc}|${id}"]:not([disabled])`) || document.querySelector(`.tdlista [data-td$="|${id}"]`);
+  const b = document.querySelector(`#agcuerpo .tdu [data-td="${acc}|${id}"]:not([disabled])`) || document.querySelector(`#agcuerpo .tdu [data-td$="|${id}"]`);
   if (b) b.focus({ preventScroll: true });
   if (!(await guardarOrden(orden))) cargarAgenda();
 }
@@ -19376,21 +18622,6 @@ try { const m = () => { try { localStorage.setItem('dlc-modo', MODO_PLATAFORMA ?
   aplicarModoPlataforma = (orig => function (...a) { const r = orig.apply(this, a); m(); return r; })(aplicarModoPlataforma); } catch (e) {}
 
 // ---- «Tu día»: la cita movida se desliza a su sitio (FLIP) y queda resaltada un momento
-moverCitaLocal = (orig => async function (orden, id, acc) {
-  const idDe = it => { const b = it.querySelector('[data-td]'); return b ? b.dataset.td.split('|')[1] : null; };
-  const antes = new Map();
-  document.querySelectorAll('.tdlista .tdit').forEach(it => { const k = idDe(it); if (k) antes.set(k, it.getBoundingClientRect().top); });
-  const r = await orig.call(this, orden, id, acc);
-  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.querySelectorAll('.tdlista .tdit').forEach(it => {
-    const k = idDe(it); if (!k) return;
-    if (String(k) === String(id)) { it.classList.remove('tdmovida'); void it.offsetWidth; it.classList.add('tdmovida'); setTimeout(() => it.classList.remove('tdmovida'), 1300); }
-    const y0 = antes.get(k); if (quieto || y0 == null || !it.animate) return;
-    const dy = y0 - it.getBoundingClientRect().top;
-    if (Math.abs(dy) > 1) it.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.7,.2,1)' });
-  });
-  return r;
-})(moverCitaLocal);
 
 /* v2.173.0 · El próximo recibo con IVA en «Plan y suscripción» (petición de Eric por la sesión de la web: que la web, Stripe y la app digan lo mismo).
    Durante la prueba: hoy 0 €, el primer recibo con IVA (con la puesta en marcha si el pago es mensual) y lo que viene después; fuera de ella, el
@@ -19493,25 +18724,6 @@ function explicarAviso(inf) {
   if (inf.ventanas && !inf.ventanas.length) return `Según su ficha, ${quien} no atiende los ${dia}. Si sí atiende, añade ese día en «Horario de atención» de su ficha.`;
   return `Según su ficha, ${quien} atiende los ${dia} de ${v}${inf.llegada != null ? `, y siguiendo el orden de tu día llegarías hacia las ${hm(inf.llegada)}` : ''}. Para quitar el aviso: pon una hora a la cita, cámbiala de orden o corrige el horario en su ficha. Es solo un aviso: la cita se guarda igual.`;
 }
-pintarTuDia = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try {
-    document.querySelectorAll('.tdlista .tdit').forEach(it => {
-      const av = it.querySelector('.tdaviso'); if (!av || av.dataset.expl) return;
-      const id = (it.querySelector('[data-td]') || { dataset: {} }).dataset.td; const k = id ? id.split('|')[1] : null;
-      const inf = k && TD_INFO[k]; if (!inf) return;
-      if (inf.lejos) av.textContent = `Ubicación a ${num(inf.lejos)} km de la parada anterior: revisa la dirección`;
-      const t = explicarAviso(inf);
-      av.dataset.expl = '1'; av.title = t;
-      av.insertAdjacentHTML('beforeend', ` <button type="button" class="tdavi" aria-label="Por qué sale este aviso">i</button>`);
-      av.querySelector('.tdavi').onclick = ev => { ev.stopPropagation(); appVentana({ titulo: 'Por qué sale este aviso', msg: t, ok: 'Entendido', cancel: false }); };
-    });
-    if (EST_ULT && EST_ULT.fin >= 24 * 60) document.querySelectorAll('#agcuerpo .tdstats span, .tdstats span').forEach(s => {
-      if (/^Fin estimado/.test(s.textContent.trim()) && !s.dataset.dia) { s.dataset.dia = '1'; s.insertAdjacentHTML('beforeend', ' <span class="sm">(día siguiente: revisa los avisos)</span>'); }
-    });
-  } catch (e) {}
-  return r;
-})(pintarTuDia);
 
 /* v2.175.0 · Con pago anual, la tarjeta de la cuota enseña lo que se cobra (repaso de Web delcos): «2950 € · Al año, sin IVA · 3569,50 € con IVA»,
    igual que el aviso del recibo (antes, el equivalente mensual). */
@@ -19532,31 +18744,6 @@ pintarProximoRecibo = (orig => function (...a) {
    actual el día no cabe en la jornada (acaba después de la hora de vuelta o, sin ella, de las 21:00), un solo aviso arriba dice qué hacer («Ordenar
    por cercanía» o pasar citas a otro día) y se quitan los avisos sueltos de hora y horario, que en ese caso no dicen nada útil; las horas estimadas
    que caen fuera de la jornada salen como «—». Los de ubicación lejana se quedan. Y en el móvil, volver a pulsar «⋯» cierra su menú. */
-pintarTuDia = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try {
-    const lista = document.querySelector('#agcuerpo .tdlista'), e = lista && TD_CITAS ? estimarDia(TD_CITAS, AG_FECHA) : null;
-    const viejo = $('tdnocabe'); if (viejo) viejo.remove();
-    if (!lista || !e || AG_FECHA < hoyISO()) return r;
-    const limite = isFinite(e.tope) ? e.tope : 21 * 60;
-    const conAviso = Object.values(TD_INFO).filter(i => i.aviso && !i.lejos).length;
-    if (!(e.fin > limite) && conAviso < 3) return r;
-    const noCabe = e.fin > limite;
-    const fuera = Object.values(TD_INFO).filter(i => i.llegada != null && i.llegada >= limite).length;
-    const finTxt = e.fin >= 24 * 60 ? `pasada la medianoche (hacia las ${hm(e.fin)} del día siguiente)` : `hacia las ${hm(e.fin)}`;
-    lista.classList.add('tdnocabe');
-    lista.insertAdjacentHTML('beforebegin', `<div class="banda-aviso" id="tdnocabe">${noCabe ? `<b>Este día no cabe en una jornada.</b> Con este orden acabarías ${finTxt}${fuera ? ` y ${fuera === 1 ? 'una cita queda' : fuera + ' citas quedan'} fuera de la jornada` : ''}.` : `<b>El orden de las citas no encaja con sus horas:</b> ${conAviso} no llegan a su hora o a su horario de atención.`}
-      Antes de mirar cada cita: ${$('tdordenar') ? '<button type="button" class="btn sec" id="tdnocord">Ordenar por cercanía</button> o ' : ''}pasa a otro día las citas de la zona más lejana (⋯ → Aplazar).</div>`);
-    if ($('tdnocord')) $('tdnocord').onclick = () => $('tdordenar') && $('tdordenar').click();
-    lista.querySelectorAll('.tdit').forEach(it => {
-      const id = (it.querySelector('[data-td]') || { dataset: {} }).dataset.td, k = id ? id.split('|')[1] : null, inf = k && TD_INFO[k];
-      if (!inf) return;
-      const av = it.querySelector('.tdaviso'); if (av && !inf.lejos) av.remove();
-      const h = it.querySelector('.tdh'); if (h && /^~/.test(h.textContent) && inf.llegada >= limite) { h.textContent = '—'; h.title = 'Con este orden, fuera de la jornada'; }
-    });
-  } catch (err) {}
-  return r;
-})(pintarTuDia);
 // Cita con hora fija que el orden deja tarde: el aviso dice qué hacer, y la «i» habla del orden (no del horario de atención)
 estimarDiaBase = (orig => function (citas, fecha) {
   const r = orig.call(this, citas, fecha);
@@ -19666,10 +18853,6 @@ window.addEventListener('click', e => {
 }, true);
 
 // ---- 4. Detalle de la cita al pulsarla en «Tu día»
-function citaDeItem(it) {
-  const b = it && it.querySelector('[data-td]'); const id = b ? b.dataset.td.split('|')[1] : null;
-  return id ? (TD_CITAS || []).find(x => x.id === id) : null;
-}
 function verCita(c) {
   const inf = TD_INFO[c.id] || {}, abierta = CITA_ABIERTA.includes(c.estado);
   const hora = c.hora ? String(c.hora).slice(0, 5) : (abierta && inf.llegada != null && inf.llegada < 24 * 60 ? `hacia las ${hm(inf.llegada)} (estimada)` : 'sin hora');
@@ -19714,20 +18897,6 @@ function verCita(c) {
   $('dlg').classList.add('pequena');
   $('dlg').showModal();
 }
-window.addEventListener('click', e => {
-  const it = e.target.closest && e.target.closest('.tdlista [data-tdf]');
-  if (!it || e.target.closest('button, a, .tdmenu, input, textarea, select')) return;
-  const c = citaDeItem(it); if (!c) return;
-  e.stopImmediatePropagation(); e.stopPropagation(); e.preventDefault();
-  verCita(c);
-}, true);
-window.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const it = e.target.closest && e.target.closest('.tdlista [data-tdf]');
-  if (!it || e.target !== it) return;
-  const c = citaDeItem(it); if (!c) return;
-  e.stopImmediatePropagation(); e.preventDefault(); verCita(c);
-}, true);
 
 // ---- 2. El mes de la Agenda, en cualquier mes y año
 let AG_MES = null;
@@ -19787,21 +18956,8 @@ function agElegirMes(mes, ancla) {
   p.style.top = Math.min(innerHeight - p.offsetHeight - 10, r.bottom + 6) + 'px';
 }
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.agmpop, #agmtit')) document.querySelectorAll('.agmpop').forEach(x => x.remove()); }, true);
-agSemanaMes = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try { if ($('agmes')) await agPintarMes(AG_MES || hoyISO().slice(0, 7)); } catch (e) {}
-  return r;
-})(agSemanaMes);
 
 // ---- 6. «Esta semana»: toda la celda abre el día (en el móvil, también al tocar un nombre)
-window.addEventListener('click', e => {
-  const cel = e.target.closest && e.target.closest('#agsemana .agsd[data-agdia]');
-  if (!cel) return;
-  const movil = window.matchMedia && matchMedia('(max-width: 760px)').matches;
-  if (e.target.closest('.agsc') && !movil) return;   // en el escritorio, el nombre sigue llevando a su ficha
-  e.stopImmediatePropagation(); e.stopPropagation(); e.preventDefault();
-  agVerDia(cel.dataset.agdia);
-}, true);
 
 // ---- 7. Fechas y horas en el móvil: el campo se prepara antes de abrir la ventana (así el teléfono no abre su calendario)
 (() => {
@@ -19968,72 +19124,6 @@ window.addEventListener('click', e => {
 
 // ---- 1. La franja de la semana, en cualquier semana
 let AG_SEMANA = null;
-async function agPintarSemana(lun, dir) {
-  const caja = $('agsemana'); if (!caja) return;
-  const hoy = hoyISO(), actual = lunesDe(hoy);
-  lun = lun || actual; AG_SEMANA = lun;
-  const dom = isoMas(lun, 6);
-  const grid = caja.querySelector('.agsemgrid');
-  const cab = caja.querySelector('.fh h2');
-  if (cab) cab.innerHTML = `${lun === actual ? 'Esta semana' : lun === isoMas(actual, 7) ? 'La semana que viene' : lun === isoMas(actual, -7) ? 'La semana pasada' : 'Semana'} <span class="sm">${fechaCorta(lun)} – ${fechaCorta(dom)}</span>`;
-  const fh = caja.querySelector('.fh');
-  if (fh && !fh.querySelector('.agsemnav')) {
-    fh.insertAdjacentHTML('beforeend', `<span class="agsemnav"><button type="button" class="kmv" data-agsw="-1" aria-label="Semana anterior">‹</button>
-      <button type="button" class="kmv" data-agsw="1" aria-label="Semana siguiente">›</button></span>`);
-    fh.querySelectorAll('[data-agsw]').forEach(b => b.onclick = ev => { ev.stopPropagation(); agPintarSemana(isoMas(AG_SEMANA || actual, 7 * +b.dataset.agsw), +b.dataset.agsw); });
-  }
-  if (!grid) return;
-  const marcar = () => grid.querySelectorAll('.agsd[data-agdia]').forEach(d => d.classList.toggle('sel', d.dataset.agdia === AG_FECHA && AG_FECHA !== hoy));
-  if (!dir && lun === actual && !caja.dataset.sem) { marcar(); return; }   // la de esta semana ya está pintada
-  const { data } = await rpcCache('agenda_rango', { p_desde: lun, p_hasta: dom, p_usuario: agUsuarioFiltro() }, 'agenda-sem-' + lun);
-  if (AG_SEMANA !== lun || !$('agsemana')) return;
-  const porDia = {};
-  (data || []).filter(x => !['Descartada', 'Aplazada'].includes(x.estado)).forEach(x => { (porDia[x.fecha] = porDia[x.fecha] || []).push(x); });
-  Object.values(porDia).forEach(l => l.sort((a, b) => String(a.hora || '99').localeCompare(String(b.hora || '99'))));
-  const hora = x => x.hora ? String(x.hora).slice(0, 5) : '';
-  const corto = n => String(n || '').replace(/^(Dra?\.|Sra?\.|D\.)\s*/i, '');
-  const html = Array.from({ length: 7 }, (_, i) => isoMas(lun, i)).map((f, i) => { const l = porDia[f] || [], hechas = l.filter(x => x.estado === 'Visitada').length;
-    return `<div class="agsd ${f === hoy ? 'hoy' : ''} ${f < hoy ? 'pasado' : ''}" data-agdia="${f}">
-      <button type="button" class="agsdh" data-agdia="${f}"><b>${AG_DIAS_TXT[i]} ${+f.slice(8)}</b>${l.length ? `<span>${hechas}/${l.length}</span>` : ''}</button>
-      ${l.slice(0, 4).map(x => `<button type="button" class="agsc" data-agficha="${x.cuenta_id}" style="--c:${EST_COL[x.estado] || '#6B7F95'}">${hora(x) ? `<i>${hora(x)}</i> ` : ''}${esc(corto(x.nombre))}</button>`).join('')}
-      ${l.length > 4 ? `<button type="button" class="agsmas" data-agdia="${f}">+${l.length - 4} más</button>` : ''}
-      ${!l.length ? '<span class="agsv">—</span>' : ''}</div>`; }).join('');
-  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (dir && grid.animate && !quieto) await grid.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 28}%)`, opacity: 0 }], { duration: 140, easing: 'ease-in' }).finished.catch(() => {});
-  grid.innerHTML = html; caja.dataset.sem = lun;
-  grid.querySelectorAll('[data-agficha]').forEach(b => b.onclick = ev => { ev.stopPropagation(); abrirFicha(b.dataset.agficha); });
-  grid.querySelectorAll('button[data-agdia]').forEach(b => b.onclick = ev => { ev.stopPropagation(); agVerDia(b.dataset.agdia); });
-  marcar();
-  if (dir && grid.animate && !quieto) grid.animate([{ transform: `translateX(${dir * 28}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.2,.7,.2,1)' });
-}
-// Deslizar el dedo sobre la franja: semana anterior o siguiente
-(() => {
-  let x0 = null, y0 = null;
-  document.addEventListener('touchstart', e => { const g = e.target.closest && e.target.closest('#agsemana .agsemgrid'); if (!g || e.touches.length !== 1) { x0 = null; return; } x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
-  document.addEventListener('touchend', e => {
-    if (x0 == null) return;
-    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    const dir = dx < 0 ? 1 : -1;
-    agPintarSemana(isoMas(AG_SEMANA || lunesDe(hoyISO()), 7 * dir), dir);
-    const g = document.querySelector('#agsemana .agsemgrid'); if (g) { g.__swipe = Date.now(); }
-  }, { passive: true });
-  // El toque que termina un deslizamiento no abre el día
-  window.addEventListener('click', e => { const g = e.target.closest && e.target.closest('#agsemana .agsemgrid'); if (g && g.__swipe && Date.now() - g.__swipe < 400) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
-})();
-agSemanaMes = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try { if ($('agsemana')) await agPintarSemana(AG_SEMANA || lunesDe(hoyISO()), 0); } catch (e) {}
-  return r;
-})(agSemanaMes);
-agVerDia = (orig => async function (f, ...a) {
-  const r = await orig.call(this, f, ...a);
-  try {
-    const lun = lunesDe(f);
-    if ($('agsemana')) { if (lun !== (AG_SEMANA || lunesDe(hoyISO()))) agPintarSemana(lun, lun > (AG_SEMANA || lun) ? 1 : -1); else agPintarSemana(lun, 0); }
-  } catch (e) {}
-  return r;
-})(agVerDia);
 
 // ---- 2 y 3. Cabecera del día: moverse de día y apuntar tareas
 // Se guardan las del día en memoria: mover una cita repinta el día sin volver a pedirlas (solo se piden al cambiar de día, recargar o editarlas)
@@ -20046,7 +19136,6 @@ async function tareasDelDia(f) {
   TAREAS_DIA = { f, l: data || [] };
   return TAREAS_DIA.l;
 }
-cargarAgenda = (orig => function (...a) { TAREAS_DIA = null; return orig.apply(this, a); })(cargarAgenda);
 function editarTarea(t, fecha) {
   t = t || {};
   $('dbody').innerHTML = `
@@ -20079,54 +19168,6 @@ function editarTarea(t, fecha) {
   $('dlg').classList.add('pequena');
   $('dlg').showModal();
 }
-pintarTuDia = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try {
-    const cuerpo = $('agcuerpo'), head = cuerpo && cuerpo.querySelector('.tdhead');
-    if (!head || !agUnida()) return r;
-    const f = AG_FECHA, h2 = head.querySelector('h2');
-    // Moverse de día sin salir de la pantalla
-    if (h2 && !head.querySelector('.tdnav')) {
-      h2.insertAdjacentHTML('afterend', `<span class="tdnav">
-        <button type="button" class="kmv" data-tdd="-1" aria-label="Día anterior">‹</button>
-        <span class="tdnavf"><button type="button" class="btn sec" id="tdelegir">Elegir día</button><input type="date" id="tdelegirf" data-sel="1" tabindex="-1" aria-hidden="true"></span>
-        <button type="button" class="kmv" data-tdd="1" aria-label="Día siguiente">›</button></span>`);
-      head.querySelectorAll('[data-tdd]').forEach(b => b.onclick = () => agVerDia(isoMas(AG_FECHA, +b.dataset.tdd)));
-      const inp = $('tdelegirf');
-      $('tdelegir').onclick = ev => { ev.stopPropagation(); inp.value = AG_FECHA; abrirCalendario(inp); };
-      inp.addEventListener('change', () => { if (inp.value && inp.value !== AG_FECHA) agVerDia(inp.value); });
-    }
-    // Tareas propias del día
-    const propia = !AG_VISTA || AG_VISTA.id === PERFIL.id;
-    const acts = head.querySelector('.acts');
-    if (propia && acts && !$('tdtarea')) {
-      acts.insertAdjacentHTML('afterbegin', '<button type="button" class="btn sec" id="tdtarea">+ Tarea</button>');
-      $('tdtarea').onclick = () => editarTarea(null, AG_FECHA);
-    }
-    const l = propia ? await tareasDelDia(f) : null;
-    if (AG_FECHA !== f || !$('agcuerpo')) return r;
-    const vieja = $('tdtareas'); if (vieja) vieja.remove();
-    if (l && l.length) {
-      const sitio = $('tdnocabe') || cuerpo.querySelector('.tdlista') || cuerpo.querySelector('.vacio');
-      const html = `<div class="tdtareas" id="tdtareas"><div class="tdtcab">Tareas y notas · ${l.length}</div>${l.map(t => `
-        <div class="tdtarea ${t.hecha ? 'hecha' : ''}" data-tarea="${t.id}">
-          <label class="tdtchk"><input type="checkbox" data-tacheck="${t.id}" ${t.hecha ? 'checked' : ''} aria-label="Hecha"></label>
-          <span class="tdth">${t.hora ? esc(String(t.hora).slice(0, 5)) : ''}</span>
-          <span class="tdttx"><b>${esc(t.titulo)}</b>${t.nota ? `<span class="sm">${esc(t.nota)}</span>` : ''}</span>
-          ${l.length > 1 ? `<span class="tdtmov"><button type="button" class="kmv" data-tamov="-1|${t.id}" aria-label="Subir la tarea" ${l[0] === t ? 'disabled' : ''}>↑</button><button type="button" class="kmv" data-tamov="1|${t.id}" aria-label="Bajar la tarea" ${l[l.length - 1] === t ? 'disabled' : ''}>↓</button></span>` : ''}</div>`).join('')}</div>`;
-      if (sitio) sitio.insertAdjacentHTML('beforebegin', html); else cuerpo.insertAdjacentHTML('beforeend', html);
-      $('tdtareas').querySelectorAll('[data-tacheck]').forEach(c => c.onchange = async ev => {
-        ev.stopPropagation();
-        const { error } = await db.from('tareas').update({ hecha: c.checked, modificado_en: new Date().toISOString() }).eq('id', c.dataset.tacheck);
-        if (error) { toast('No se ha podido guardar', true); c.checked = !c.checked; return; }
-        c.closest('.tdtarea').classList.toggle('hecha', c.checked); TAREAS_DIA = null;
-      });
-      $('tdtareas').querySelectorAll('.tdtarea').forEach(d => d.onclick = ev => { if (ev.target.closest('.tdtchk, .tdtmov')) return; editarTarea(l.find(x => x.id === d.dataset.tarea)); });
-      $('tdtareas').querySelectorAll('[data-tamov]').forEach(b => b.onclick = ev => { ev.stopPropagation(); const [dir, id] = b.dataset.tamov.split('|'); moverTarea(id, +dir); });
-    }
-  } catch (e) {}
-  return r;
-})(pintarTuDia);
 
 // ---- 4. Borrar y descartar en el detalle de la cita
 verCita = (orig => function (c) {
@@ -20357,32 +19398,16 @@ let AGQ_T = null, AGQ_ID = null, DLG_EPOCA = 0;
 new MutationObserver(() => { if ($('dlg').open) DLG_EPOCA = RC_EPOCA; }).observe($('dlg'), { attributes: true, attributeFilter: ['open'] });
 function agCambiosEnVentana() { return RC_EPOCA !== DLG_EPOCA; }
 function agOlvidarAgenda() { for (const k of [...RC.keys()]) if (k.startsWith('agenda_')) { RC.delete(k); RC_VUELO.delete(k); } }
-function tdIdDe(it) { const b = it.querySelector('[data-td]'); return b ? b.dataset.td.split('|')[1] : null; }
 
 // Repinta «Tu día» sin saltos: las citas que cambian de sitio se deslizan y la tocada queda resaltada un momento
 async function repintarDiaSuave(id, data) {
+  // v2.246.0: el deslizamiento de las tarjetas lo pone la envoltura de la v2.244.0 (aquí animaba las filas ocultas)
   agOlvidarAgenda();
   if (data) { TD_PRESET = { fecha: AG_FECHA, data }; TD_ULTIMO = { fecha: AG_FECHA, data }; }
-  const antes = new Map();
-  document.querySelectorAll('.tdlista .tdit').forEach(it => { const k = tdIdDe(it); if (k) antes.set(k, it.getBoundingClientRect().top); });
   const cuerpo = $('agcuerpo'), alto = cuerpo ? cuerpo.offsetHeight : 0, y = window.scrollY;
   if (cuerpo) cuerpo.style.minHeight = alto + 'px';           // mientras se repinta, la caja no encoge
   try { await pintarTuDia(); } finally { if ($('agcuerpo')) $('agcuerpo').style.minHeight = ''; }
   window.scrollTo({ top: y });
-  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.querySelectorAll('.tdlista .tdit').forEach(it => {
-    const k = tdIdDe(it); if (!k) return;
-    if (id && String(k) === String(id)) { it.classList.remove('tdmovida'); void it.offsetWidth; it.classList.add('tdmovida'); setTimeout(() => it.classList.remove('tdmovida'), 1300); }
-    const y0 = antes.get(k); if (quieto || y0 == null || !it.animate) return;
-    const dy = y0 - it.getBoundingClientRect().top;
-    if (Math.abs(dy) > 1) it.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' });
-  });
-}
-// Métricas, semana y mes: solo cambian sus cifras
-function agCifrasQuietas() {
-  agMetricas();
-  const s = $('agsemana'); if (s && s.querySelector('.agsemgrid')) { s.dataset.sem = AG_SEMANA || lunesDe(hoyISO()); agPintarSemana(AG_SEMANA || lunesDe(hoyISO())); }
-  const m = $('agmes'); if (m) { m.dataset.mes = '-'; agPintarMes(AG_MES); }
 }
 // Lo que antes era «cargar la agenda entera» tras un cambio: en la vista del día, solo lo que cambia
 function agRefrescoQuieto(id, o = {}) {
@@ -22189,15 +21214,7 @@ aplicarPermisosMenu = (orig => function (...a) {
 const MANUAL_ANCLA = { inicio: 'inicio', agenda: 'agenda', rutas: 'rutas', ciclo: 'ciclo', cirugias: 'cirugias', directorio: 'directorio', seguimiento: 'calidad',
   duplicados: 'duplicados', eventos: 'eventos', pacientes: 'clientes', ventas: 'pedidos', oportunidades: 'oportunidades', compras: 'compras', proveedores: 'proveedores', concursos: 'concursos', parque: 'parque', productos: 'productos',
   facturacion: 'facturacion', analitica: 'analitica', config: 'ajustes', perfil: 'perfil', empresa: 'organizacion', plan: 'plan', organizacion: 'organizacion', usuarios: 'usuarios' };
-function abrirManual(ancla) {
-  try {
-    localStorage.setItem('delcos-manual', JSON.stringify({ empresa: nombreApp(),
-      terminos: Object.fromEntries(Object.keys(TERM_DEF).map(k => [k, terminoDe(k)])) }));
-  } catch (e) {}
-  const url = 'manual/index.html' + (ancla ? '#' + ancla : '');
-  const w = window.open(url, '_blank');   // sin «noopener»: con él el navegador devuelve null aunque abra la pestaña
-  if (w) { try { w.opener = window; } catch (e) {} } else location.href = url;
-}
+// v2.242.0: aquí iba la primera versión de abrirManual (se redefine entera más abajo)
 document.addEventListener('click', e => {
   const b = e.target.closest('#manbtn'); if (!b || ES_MEDICO()) return;
   e.stopImmediatePropagation(); e.preventDefault();
@@ -22719,30 +21736,6 @@ const ICU = {
 };
 
 // Pastillas con las cifras (de #agmet, que se sigue pintando igual)
-function agPastillas() {
-  const v = $('v-agenda'), m = $('agmet'); if (!v || !m || !agConCinta()) return;
-  const sal = v.querySelector(':scope > .saludo'); if (!sal) return;
-  const ms = [...m.querySelectorAll('.agm')]; if (!ms.length) return;
-  const html = ms.map((x, k) => {
-    const t = (x.querySelector('.agmt') || {}).textContent || '', b = (x.querySelector('.agmv b') || {}).textContent || '';
-    let de = k === 0 ? ((x.querySelector('.agmv') || {}).textContent || '').match(/de\s+([\d.]+)/) : null;
-    // «Hoy», con las mismas citas que Tu día cuando se ve hoy
-    let bv = b;
-    if (k === 0 && AG_FECHA === hoyISO() && Array.isArray(TD_CITAS) && TD_ULTIMO && TD_ULTIMO.fecha === AG_FECHA) {
-      const act = TD_CITAS.filter(c => !citaAnulada(c.estado));
-      bv = String(act.filter(c => !CITA_ABIERTA.includes(c.estado)).length); de = [null, String(act.length)];
-    }
-    const tit = [((x.querySelector('.agmv') || {}).textContent || '').trim(), ((x.querySelector('.agms') || {}).textContent || '').trim()].filter(Boolean).join(' · ');
-    const nom = k === 2 ? 'Cierres' : t;
-    return `<span class="agp ${k === 3 ? 'agp-pend' : ''}" title="${esc(tit)}" ${k === 3 ? 'data-agp="pend" role="button" tabindex="0"' : ''}>${esc(nom)} <b>${esc(bv)}${de ? '/' + esc(de[1]) : ''}</b></span>`;
-  }).join('');
-  let h = $('aghud');
-  if (!h) { const ref = sal.firstElementChild; if (!ref) return; ref.insertAdjacentHTML('afterend', '<div class="aghud" id="aghud" aria-label="Tus números"></div>'); h = $('aghud'); }
-  h.innerHTML = html;
-  const p = h.querySelector('[data-agp="pend"]');
-  if (p) p.onclick = p.onkeydown = e => { if (e.type === 'keydown' && e.key !== 'Enter') return; const d = $('agpend'); d && d.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-}
-agMetricas = (orig => async function (...a) { const r = await orig.apply(this, a); agPastillas(); return r; })(agMetricas);
 
 // La cinta de 14 días
 async function agCinta() {
@@ -22783,7 +21776,6 @@ async function agCinta() {
   $('cmesb').onclick = e => { e.stopPropagation(); const m = $('agmes'); if (!m) return; const ab = !m.classList.contains('pop'); m.classList.toggle('pop', ab); $('cmesb').setAttribute('aria-expanded', String(ab));
     // El mes se abre bajo su botón (en el móvil, centrado)
     if (ab) { const r = $('cmesb').getBoundingClientRect(), w = Math.min(380, innerWidth - 32); m.style.top = Math.round(r.bottom + 8) + 'px'; m.style.left = Math.round(Math.max(16, Math.min(r.left, innerWidth - w - 16))) + 'px'; m.style.bottom = 'auto'; m.style.right = 'auto'; } };
-  $('cplan').onclick = () => { const p = $('agplansem'); p && p.click(); };
   // En el móvil, la cinta se abre en la semana del día elegido
   const sems = c.querySelector('.csems'); if (sems && AG_FECHA >= diasMas(ini, 7)) sems.scrollLeft = sems.scrollWidth;
 }
@@ -22791,97 +21783,8 @@ function cerrarMesCinta() { const m = $('agmes'); if (m) m.classList.remove('pop
 document.addEventListener('click', e => { const m = $('agmes'); if (m && m.classList.contains('pop') && !e.target.closest('#agmes, #cmesb, .agmpop, .agpop')) cerrarMesCinta(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMesCinta(); });
 
-// Al elegir un día (en la cinta, el mes o la ficha), la cinta va a su semana
-agVerDia = (orig => async function (f, ...a) {
-  cerrarMesCinta();
-  const fuera = f && (!CINTA_INI || f < CINTA_INI || f > diasMas(CINTA_INI, 13));
-  if (fuera) CINTA_INI = lunesCinta(f);
-  const r = await orig.call(this, f, ...a);
-  // La cinta marca el día que se ve (y, si era de otra quincena, se vuelve a pintar en su semana)
-  if (agConCinta() && AG_FECHA === f) {
-    const c = $('agcinta');
-    if (fuera || !c || c.dataset.ini !== CINTA_INI) agCinta(); else c.querySelectorAll('.cdia').forEach(x => x.classList.toggle('sel', x.dataset.cf === f));
-  }
-  return r;
-})(agVerDia);
-cargarAgenda = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  const v = $('v-agenda');
-  if (v) v.classList.toggle('agcinta', agConCinta());
-  if (agConCinta()) { agPastillas(); await agCinta(); } else { CINTA_INI = null; }
-  return r;
-})(cargarAgenda);
-agCifrasQuietas = (orig => function (...a) { const r = orig.apply(this, a); if (agConCinta()) agCinta(); return r; })(agCifrasQuietas);
 
 // Las tarjetas de Tu día, desde la lista de siempre
-function tarjetasTuDia() {
-  const cuerpo = $('agcuerpo'), lista = cuerpo && cuerpo.querySelector('.tdlista');
-  if (!lista || !agConCinta()) return;
-  const viejas = cuerpo.querySelector('.tdesc'); if (viejas) viejas.remove();
-  const fecha = AG_FECHA, hoy = hoyISO(), esHoy = fecha === hoy;
-  const ahora = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
-  const escala = ESTADOS_DEF.filter(x => x.papel !== 'negativo');
-  const vis = TT('visita', 's', '', 'l', 'l');
-  const filas = [...lista.querySelectorAll('.tdit')];
-  const datos = filas.map((it, i) => {
-    const b = it.querySelector('[data-td]'), id = b ? b.dataset.td.split('|')[1] : null;
-    const c = (TD_CITAS || []).find(x => x.id === id); if (!c) return null;
-    const htx = ((it.querySelector('.tdh') || {}).textContent || '').trim();
-    const m = htx.match(/(\d{1,2}):(\d{2})/);
-    return { c, it, i, htx, min: m ? +m[1] * 60 + +m[2] : null };
-  }).filter(Boolean);
-  const abiertas = datos.filter(d => CITA_ABIERTA.includes(d.c.estado));
-  const sig = esHoy ? (abiertas.find(d => d.min == null || d.min + 15 >= ahora) || null) : null;
-  const dias = f => Math.max(0, Math.round((new Date(hoy + 'T12:00:00') - new Date(String(f).slice(0, 10) + 'T12:00:00')) / 864e5));
-  const card = d => {
-    const { c, it } = d, ab = CITA_ABIERTA.includes(c.estado), info = TD_INFO[c.id] || {}, ant = c.anterior || null;
-    const nivel = escala.findIndex(x => x.valor === c.estado_comercial);
-    const obj = nivel >= 0 ? escala[nivel + 1] : null;
-    const falta = d.min != null ? d.min - ahora : null;
-    // El aviso sin la «i» de la fila; si la fila la tiene, la tarjeta lleva la suya, que abre la misma explicación
-    const avEl = it.querySelector('.tdaviso');
-    const aviso = avEl ? [...avEl.childNodes].filter(x => x.nodeType === 3).map(x => x.textContent).join('').trim() : '';
-    const avBtn = avEl && avEl.querySelector('.tdavi') ? ` <button type="button" class="tdavi" data-tdavi="${c.id}" aria-label="Por qué sale este aviso">i</button>` : '';
-    const vent = ((it.querySelector('.tdvent') || {}).textContent || '').trim();
-    const lineas = [
-      ant && ant.proxima_accion ? ['toca', 'toca', `Toca: ${esc(ant.proxima_accion)}`] : null,
-      c.anterior !== undefined ? ['reloj', '', ant ? `Última ${vis} hace ${dias(ant.fecha)} ${dias(ant.fecha) === 1 ? 'día' : 'días'}` : `Primera ${vis}`] : null,
-      vent ? ['puerta', '', esc(vent)] : null,
-      ab && aviso ? ['aviso', 'tdav', esc(aviso) + avBtn] : null,
-      ab && !xyCita(c) ? ['aviso', 'tdav', 'Sin ubicación'] : null,
-      c.nota ? ['nota', '', esc(c.nota)] : null
-    ].filter(Boolean);
-    const cuando = !ab ? '' : d === sig && falta != null && falta > 0 ? `en ${falta >= 60 ? Math.floor(falta / 60) + ' h ' : ''}${falta % 60} min` : d.htx.startsWith('~') ? 'Hora estimada' : '';
-    const bt = k => it.querySelector(`[data-td="${k}|${c.id}"]`);
-    const sube = bt('sube'), baja = bt('baja'), reg = bt('visita'), nueva = bt('nueva');
-    return `<article class="tdu ${d === sig ? 'sig' : ''} ${ab ? '' : 'hecha'}" data-tdu="${c.id}" tabindex="0" aria-label="${esc(c.nombre)}">
-      <div class="tdu-cab">
-        <div class="tdu-av" aria-hidden="true">${esc(iniciales(c.nombre))}<span class="n">${d.i + 1}</span></div>
-        <div class="tdu-tit">${d === sig ? '<span class="tdu-sig"><i></i>Siguiente</span>' : ''}
-          <div class="tdu-nom"><b class="tdu-nb" title="Ver la cita">${esc(c.nombre)}</b>${c.clase ? `<span class="tdu-k ${esc(c.clase)}" title="Clase ${esc(c.clase)}">${esc(c.clase)}</span>` : ''}${(it.querySelector('.p-urg') || {}).outerHTML || ''}</div>
-          <span class="tdu-sub">${esc([c.centro_nombre, c.municipio].filter(Boolean).join(' · ') || '')}</span></div>
-        <div class="tdu-hora"><span class="h">${esc(d.htx || '·')}</span>${cuando ? `<span class="tdu-cu">${cuando}</span>` : ''}</div>
-      </div>
-      ${escala.length && nivel >= 0 ? `<div class="tdu-niv"><div class="tdu-barra" title="${esc(escala.map(x => x.valor).join(' → '))}">${escala.map((x, k) => `<i class="${k <= nivel ? 'on' : k === nivel + 1 ? 'obj' : ''}"></i>`).join('')}</div>
-        <span class="tdu-nt"><b>${esc(c.estado_comercial)}</b>${obj ? ` → ${esc(obj.valor)}` : ' · mantener'}</span></div>` : ''}
-      ${lineas.length ? `<ul class="tdu-dat">${lineas.map(([ic, cl, t]) => `<li class="${cl}">${SVA(ICU[ic])}<span>${t}</span></li>`).join('')}</ul>` : ''}
-      <div class="tdu-pie"><span class="tdu-est">${pillCita(c.estado)}<span class="sm">${textoOrigenCita(c)}</span></span>
-        <span class="tdu-ops">${sube ? `<button class="kmv" type="button" data-td="sube|${c.id}" aria-label="Subir en el orden" title="Subir en el orden" ${sube.disabled ? 'disabled' : ''}>${ICO.arriba}</button>` : ''}${baja ? `<button class="kmv" type="button" data-td="baja|${c.id}" aria-label="Bajar en el orden" title="Bajar en el orden" ${baja.disabled ? 'disabled' : ''}>${ICO.abajo}</button>` : ''}<button class="kmv" type="button" data-td="mas|${c.id}" aria-label="Más acciones" title="Más acciones">${SVA(ICU.mas)}</button></span>
-        ${nueva ? `<button class="btn sec tdu-reg" type="button" data-td="nueva|${c.id}">Nueva cita</button>` : ''}
-        ${reg ? `<button class="btn ${d === sig ? '' : 'sec'} tdu-reg" type="button" data-td="visita|${c.id}">Registrar ${vis}</button>` : ''}</div>
-    </article>`;
-  };
-  lista.insertAdjacentHTML('beforebegin', `<div class="tdesc" aria-label="Citas del día">${datos.map(card).join('')}</div>`);
-  lista.classList.add('tdoculta');
-  agPastillas();
-}
-pintarTuDia = (orig => async function (...a) { const r = await orig.apply(this, a); tarjetasTuDia(); return r; })(pintarTuDia);
-// La «i» del aviso de la tarjeta abre la explicación de la fila
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-tdavi]'); if (!b) return;
-  const f = [...document.querySelectorAll('.tdlista .tdit')].find(it => it.querySelector(`[data-td$="|${b.dataset.tdavi}"]`));
-  const i = f && f.querySelector('.tdavi'); if (i) i.click();
-});
 // Pulsar la tarjeta (fuera de sus botones) abre la cita, como la fila de antes
 document.addEventListener('click', e => {
   const t = e.target.closest('.tdu'); if (!t || e.target.closest('button, a, input, select')) return;
@@ -23193,11 +22096,6 @@ function asegurarEquipo() {
   b.classList.toggle('sec', !eq);
   b.title = eq ? 'Volver a tu agenda' : 'Ver el cumplimiento del equipo';
 }
-cargarAgenda = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  asegurarEquipo(); [250, 900].forEach(ms => setTimeout(() => { try { asegurarEquipo(); } catch (e) {} }, ms));
-  return r;
-})(cargarAgenda);
 window.addEventListener('click', e => {
   const b = e.target.closest('[data-ag="equipo"]'); if (!b || AG_MODO !== 'equipo') return;
   e.stopImmediatePropagation(); e.preventDefault();
@@ -23587,23 +22485,12 @@ async function agPintarSemanaExp() {
   const p = cont.querySelector('#semplan'); if (p) p.textContent = 'Repartir la semana';
   const head = cont.querySelector('.semhead'); if (head) head.insertAdjacentHTML('afterbegin', '<span class="sm">Arrastra una cita a otro día para moverla · «⋯» en un día para bloquearlo o añadir una cita</span>');
 }
-function agBotonSemana() {
-  const b = $('cplan'); if (!b) return;
-  b.innerHTML = `${svgIco(ICON_NOM['calendar-days'] || ICON_NOM.info)}<span>${AG_SEM_ABIERTA ? 'Ocultar la semana' : 'Ver la semana'}</span>`;
-  b.title = AG_SEM_ABIERTA ? 'Ocultar la semana' : 'Ver la semana entera, moverla y repartirla';
-  b.setAttribute('aria-expanded', String(AG_SEM_ABIERTA));
-  b.onclick = ev => { ev.stopPropagation(); ev.preventDefault(); AG_SEM_ABIERTA = !AG_SEM_ABIERTA; agBotonSemana(); agPintarSemanaExp(); };
-}
-function agRepartirSemana() {
-  AG_SEM_ABIERTA = true; agBotonSemana();
-  agPintarSemanaExp().then(() => { const p = $('semplan'); if (p) { $('agsemexp').scrollIntoView({ behavior: 'smooth', block: 'start' }); p.click(); } });
-}
 // Columna derecha: tu semana
 async function agSemanaLateral() {
   if (TAB !== 'agenda' || AG_MODO !== 'dia') return;
   const v = $('v-agenda'); if (!v || !v.classList.contains('agcinta')) return;
   let box = $('agsemlat');
-  if (!box) { const ref = $('agsug') || $('agpend') || $('agcuerpo'); ref.insertAdjacentHTML(ref.id === 'agcuerpo' ? 'afterend' : 'beforebegin', '<div class="card" id="agsemlat"></div>'); box = $('agsemlat'); }
+  if (!box) { $('agcuerpo').insertAdjacentHTML('afterend', '<div class="card" id="agsemlat"></div>'); box = $('agsemlat'); }
   const desde = lunesDe(AG_FECHA || hoyISO()), hasta = isoMas(desde, 6);
   const [r, bloq] = await Promise.all([rpcCache('agenda_rango', { p_desde: desde, p_hasta: hasta, p_usuario: agUsuarioFiltro() }, 'agenda-' + desde), agBloqueos(desde, 7)]);
   if (!$('agsemlat')) return;
@@ -23621,73 +22508,6 @@ async function agSemanaLateral() {
   if ($('agslrep')) $('agslrep').onclick = agRepartirSemana;
 }
 // Sugerencias dentro de tu día y bandejas
-function agSugerenciasDentro() {
-  if (TAB !== 'agenda' || AG_MODO !== 'dia') return;
-  const sug = $('agsug'), lista = document.querySelector('#agcuerpo .tdlista') || $('agcuerpo'); if (!sug || !lista) return;
-  const tarjetas = [...document.querySelectorAll('#agcuerpo .tdu')];
-  tarjetas.forEach(t => t.querySelectorAll('.agtamb').forEach(x => x.remove()));
-  sug.querySelectorAll('.sgcen').forEach(c => {
-    const cab = c.querySelector('.sgcencab'); if (!cab) return;
-    const nom = ((cab.querySelector('b, strong, h4') || cab).textContent || '').trim().split(/\n/)[0].toUpperCase();
-    if (!nom) return;
-    const t = tarjetas.find(x => x.textContent.toUpperCase().includes(nom.slice(0, 22))); if (!t) return;
-    const items = [...c.querySelectorAll('.item')]; if (!items.length) return;
-    const chips = items.map((it, i) => { const n = ((it.querySelector('.tx b, b') || {}).textContent || '').trim(); return n ? `<button type="button" data-agti="${i}" title="Añadir una cita con ${esc(n)}"><i>+</i> ${esc(n)}</button>` : ''; }).join('');
-    const pie = t.querySelector('.tdu-pie, .tduacts') || t.lastElementChild;
-    pie.insertAdjacentHTML('beforebegin', `<div class="agtamb"><div class="agtambh">${svgIco(ICON_NOM['map-pin'])} En este centro también</div><div class="agtambl">${chips}</div></div>`);
-    t.querySelectorAll('[data-agti]').forEach(b => b.onclick = ev => {
-      ev.stopPropagation();
-      const it = items[+b.dataset.agti], cita = it && [...it.querySelectorAll('button')].find(x => /cita/i.test(x.textContent));
-      if (cita) cita.click(); else if (it) it.click();
-    });
-  });
-  // Bandejas: «Les toca visita» y «Pendientes de días anteriores»
-  const head = document.querySelector('#agcuerpo .tdhead'); if (!head) return;
-  const toca = [...sug.querySelectorAll('.lista')].filter(l => !l.closest('.sgcen')).pop();
-  const nToca = toca ? toca.querySelectorAll('.item').length : 0;
-  const pend = $('agpend'), nPend = pend ? +(((pend.querySelector('h2 .n, h2 span') || {}).textContent || '').replace(/\D/g, '')) || pend.querySelectorAll('.item').length : 0;
-  let band = $('agband'); if (band) band.remove();
-  if (!nToca && !nPend) return;
-  head.insertAdjacentHTML('afterend', `<div class="agband" id="agband">${nToca ? `<button type="button" data-agbd="toca">${svgIco(ICON_NOM.target)} Les toca ${TT('visita', 's', '', 'l', 'l')} <b>${nToca}</b></button>` : ''}${nPend ? `<button type="button" class="urg" data-agbd="pend">${svgIco(ICON_NOM['circle-alert'] || ICON_NOM.info)} Pendientes de días anteriores <b>${nPend}</b></button>` : ''}</div>`);
-  $('agband').querySelectorAll('[data-agbd]').forEach(b => b.onclick = () => agBandeja(b.dataset.agbd));
-}
-function agBandeja(k) {
-  const d = $('tools'), sug = $('agsug'), pend = $('agpend');
-  const tit = k === 'toca' ? `Les toca ${TT('visita', 's', '', 'l', 'l')}` : 'Pendientes de días anteriores';
-  const txt = k === 'toca' ? `Según la frecuencia objetivo de cada ${TT('medico', 's', '', 'l', 'l')}. Añádelos a este día o planifica una ruta con ellos.` : 'Los planificaste y no se visitaron. Muévelos a hoy o descártalos.';
-  d.innerHTML = `<div class="tbox"><div class="fh"><h2>${esc(tit)}</h2><button class="x" id="tclose" aria-label="Cerrar">✕</button></div><p class="sm">${esc(txt)}</p><div class="agbdc"></div></div>`;
-  const c = d.querySelector('.agbdc');
-  if (k === 'toca' && sug) { const l = [...sug.querySelectorAll('.lista')].filter(x => !x.closest('.sgcen')).pop(); if (l) { const cab = l.previousElementSibling; if (cab && cab.querySelector('button')) c.appendChild(cab); c.appendChild(l); const vm = sug.querySelector('.vermas'); if (vm) c.appendChild(vm); } }
-  if (k === 'pend' && pend) [...pend.children].filter(x => !x.matches('h2, p.sm')).forEach(x => c.appendChild(x));
-  $('tclose').onclick = () => d.classList.remove('abierto');
-  if (typeof HERR_CTX !== 'undefined') HERR_CTX = 'agband-' + k;
-  d.classList.add('abierto');
-}
-function agVistaUnica() {
-  if (TAB !== 'agenda') return;
-  const v = $('v-agenda'); if (!v) return;
-  const dia = AG_MODO === 'dia' && v.classList.contains('agcinta');
-  v.classList.toggle('agb', dia);
-  if (!dia) { const x = $('agsemlat'); if (x) x.remove(); return; }
-  agBotonSemana(); agMenusCinta(); agSemanaLateral(); agSugerenciasDentro(); agPintarSemanaExp();
-}
-cargarAgenda = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try { agVistaUnica(); } catch (e) {}
-  return r;
-})(cargarAgenda);
-sugerenciasAgenda = (orig => async function (...a) {
-  const r = await orig.apply(this, a);
-  try { agSugerenciasDentro(); } catch (e) {}
-  return r;
-})(sugerenciasAgenda);
-// Los cambios de la cinta (‹ › o pulsar otro día) repintan la cinta: se le vuelven a poner los menús y la semana
-agVerDia = (orig => function (...a) {
-  const r = orig.apply(this, a);
-  Promise.resolve(r).then(() => { try { if (TAB === 'agenda' && AG_MODO === 'dia') { agMenusCinta(); agBotonSemana(); } } catch (e) {} });
-  return r;
-})(agVerDia);
-document.addEventListener('click', e => { if (e.target.closest('#agcinta [data-cm]')) setTimeout(() => { try { agMenusCinta(); agBotonSemana(); } catch (x) {} }, 400); });
 
 /* v2.230.0 · KPIs de Pedidos y Analítica (Eric eligió la A de https://claude.ai/artifact/PTBZBvZ3yZrQxpxXCNKyrs).
    - Pedidos: #operativa deja de ser el cartel con los avisos desplegables y pasa a tres tarjetas vivas (pagos por validar, paquetes por
@@ -23853,22 +22673,6 @@ function citaConMenu(c) {
   return hay;
 }
 const citaHecha = e => EST_COL[e] === 'var(--ok)';
-tarjetasTuDia = (orig => function (...a) {
-  const r = orig.apply(this, a);
-  const cuerpo = $('agcuerpo'); if (!cuerpo) return r;
-  cuerpo.querySelectorAll('.tdu[data-tdu]').forEach(t => {
-    const c = (TD_CITAS || []).find(x => x.id === t.dataset.tdu);
-    if (c && !citaConMenu(c)) { const m = t.querySelector('[data-td^="mas|"]'); if (m) m.remove(); }
-  });
-  // El «⋯» del día, en la cabecera de «Tu día»
-  const h2 = cuerpo.querySelector('.tdhead h2');
-  if (h2 && AG_FECHA >= hoyISO() && !$('tddiamas')) {
-    h2.insertAdjacentHTML('afterend', `<button type="button" class="kmv tddiamas" id="tddiamas" aria-label="Opciones del día" title="Opciones del día: nueva cita, bloquear el día…">${SVA(ICU.mas)}</button>`);
-    const b = $('tddiamas'), cab = h2.parentElement; cab.classList.add('tdtitw');
-    b.onclick = e => { e.stopPropagation(); const d = document.querySelector(`#agcinta [data-cf="${AG_FECHA}"]`); menuDiaSemana(b, AG_FECHA, !!(d && d.classList.contains('bloq'))); };
-  }
-  return r;
-})(tarjetasTuDia);
 
 verCita = (orig => function (c, ...r) {
   const x = orig.call(this, c, ...r);
@@ -24869,3 +23673,1408 @@ async function txGuardar() {
   toast('Textos guardados: se recarga la plataforma');
   setTimeout(() => location.reload(), 900);
 }
+
+
+/* ============================================================
+   v2.236.0 · Modelo de página «Lista» (variante A elegida por Eric): cabecera con la acción principal y «⋯»,
+   indicadores que filtran, barra con buscador, filtros rápidos, «Filtros», «Columnas» y el recuento, tabla con su pie
+   y tarjetas en el móvil. Al llegar no se tapa la pantalla: se ve el esqueleto con la misma forma. Primero en
+   Contactos (directorio) y Clientes; se monta encima de lo que ya pintan sus funciones, sin cambiar su lógica.
+   ============================================================ */
+const plIco = (...n) => svgIco(n.map(k => ICON_NOM[k] || ICON_EMOJI[k]).find(Boolean) || '');
+const PL_KPI = {};   // indicadores por pantalla: {t, epoca, datos}
+const PL = {
+  directorio: {
+    que: () => TT('medico', 'p', '', 'l', 'l'),
+    nuevo: () => $('nuevoBtn'),
+    textoNuevo: () => 'Añadir ' + TT('medico', 's', '', 'l', 'l'),
+    cuerpo: () => $('lista'), tabla: () => $('tabla'), pie: () => $('dirpag'), cuenta: () => $('cuenta'),
+    conDatos: el => !!el.querySelector('.trow, .vacio'),
+    rapidos: [['fest', 'Estado'], ['fcom', ''], ['fprov', 'Provincia'], ['fmuni', 'Municipio'], ['fesp', 'Especialidad']],
+    q: () => F.q || '',
+    buscarQ: v => { F.q = v; buscar(true); },
+    activos: () => ['prov', 'muni', 'esp', 'est', 'rep', 'com'].filter(k => F[k]).length + ['urg', 'mios', 'sin'].filter(k => F[k]).length + Object.keys(F.campos || {}).length,
+    filtros: () => { const b = $('dirtools'); if (b) b.click(); },
+    columnas: () => abrirColumnas(),
+    mapa: () => $('mapaBtn'),
+    mas: () => [['dircalidad', 'Calidad del dato'], ['cercaBtn', 'Cerca de mí']],
+    kpis: async () => {
+      const t = x => RPC_ORIG('buscar_cuentas', { q: null, lim: 1, desplaz: 0, ...x }).then(r => (r.data && r.data.total) || 0, () => 0);
+      const [tot, urg, sin, mios] = await Promise.all([t({}), t({ f_urgentes: true }), t({ f_sin_visitar: true }), t({ f_mios: true })]);
+      return [{ k: 'tot', t: TT('medico', 'p', '', 'l', 'C'), n: tot, s: 'en total' }, { k: 'urg', t: 'Urgentes', n: urg, s: 'marcados como urgentes' },
+        { k: 'sin', t: 'Sin visitar nunca', n: sin, s: 'todavía sin ' + TT('visita', 'p', '', 'l', 'l') }, { k: 'mios', t: 'De mi cartera', n: mios, s: 'asignados a ti' }];
+    },
+    kpiOn: k => k === 'tot' ? !F.urg && !F.sin && !F.mios : !!F[k],
+    kpiPulsar: k => { if (k === 'tot') { F.urg = false; F.sin = false; F.mios = false; } else F[k] = !F[k]; buscar(true); },
+    card: null   // las tarjetas del directorio las pone filaTabla (abajo), con los datos de la ficha
+  },
+  pacientes: {
+    que: () => 'clientes',
+    nuevo: () => $('pacnuevo'),
+    cuerpo: () => $('paclista'), tabla: () => $('paclista'), pie: () => $('pacpag'), cuenta: () => $('paccuenta'),
+    conDatos: el => !!el.querySelector('.dgrid, .vacio'),
+    rapidos: [['pactipo', 'Tipo'], ['pacped', 'Pedidos'], ['pacmun', 'Población']],
+    q: () => PAC.q || '',
+    buscarQ: v => { const i = $('pacq'); if (i) { i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); } else { PAC.q = v; PAC.pagina = 0; listaPacientes(); } },
+    activos: () => (PAC.tipo ? 1 : 0) + (PAC.pedidos ? 1 : 0) + (PAC.municipio ? 1 : 0) + (PAC.medico ? 1 : 0) + Object.keys(PAC.campos || {}).length,
+    filtros: () => { const b = document.querySelector('#v-pacientes .htbtn'); if (b) b.click(); },
+    columnas: () => { const b = document.querySelector('#v-pacientes .htbtn'); if (!b) return; b.click(); setTimeout(() => { const c = $('tools') && $('tools').querySelector('.t2abrir'); if (c) c.click(); }, 80); },
+    mapa: () => null,
+    mas: () => [],
+    kpis: async () => {
+      const t = x => RPC_ORIG('clientes_lista', { q: null, p_medico: null, lim: 1, desplaz: 0, p_tipo: null, p_pedidos: null, p_municipio: null, ...x }).then(r => (r.data && r.data.total) || 0, () => 0);
+      const [tot, con, sin, emp] = await Promise.all([t({}), t({ p_pedidos: 'con' }), t({ p_pedidos: 'sin' }), t({ p_tipo: 'Empresa' })]);
+      return [{ k: 'tot', t: 'Clientes', n: tot, s: 'en total' }, { k: 'con', t: 'Con pedidos', n: con, s: 'han comprado alguna vez' },
+        { k: 'sin', t: 'Sin pedidos', n: sin, s: 'todavía sin compras' }, { k: 'emp', t: 'Empresas', n: emp, s: 'clínicas, centros y otras' }];
+    },
+    kpiOn: k => k === 'tot' ? !PAC.tipo && !PAC.pedidos : k === 'emp' ? PAC.tipo === 'Empresa' : PAC.pedidos === k,
+    kpiPulsar: k => {
+      if (k === 'tot') { PAC.tipo = ''; PAC.pedidos = ''; }
+      else if (k === 'emp') PAC.tipo = PAC.tipo === 'Empresa' ? '' : 'Empresa';
+      else PAC.pedidos = PAC.pedidos === k ? '' : k;
+      if ($('pactipo')) $('pactipo').value = PAC.tipo || ''; if ($('pacped')) $('pacped').value = PAC.pedidos || '';
+      PAC.pagina = 0; listaPacientes();
+    },
+    // Tarjeta del móvil a partir de la fila de la tabla: nombre, población y teléfono, y el tipo a la derecha
+    card: dr => { const c = dr.children, tx = i => c[i] ? c[i].textContent.trim() : '';
+      return { a: tx(0), b: [tx(5), tx(3)].filter(x => x && x !== '—').join(' · '), c: c[1] ? c[1].innerHTML : '' }; }
+  }
+};
+
+// Directorio: cada fila lleva su tarjeta (oculta en el ordenador) con el nombre, centro · municipio y el estado
+filaTabla = (orig => function (m) {
+  const h = orig(m), i = h.lastIndexOf('</button>'); if (i < 0) return h;
+  const l2 = [m.centro_nombre, m.municipio].filter(Boolean).join(' · ');
+  return h.slice(0, i) + `<span class="plcard"><b>${m.urgente ? '<i class="plurg" aria-label="Urgente"></i>' : ''}${esc(m.nombre || '')}</b><span class="plc2">${esc(l2)}</span><span class="plc3">${celda(m, 'estado_comercial')}</span></span>` + h.slice(i);
+})(filaTabla);
+
+// Esqueleto de la tabla: mismas filas y alturas que la tabla cargada
+function plEsqueleto(tab, conCab) {
+  const anchos = tab === 'directorio' ? colsConfig().filter(c => c.on).map(c => c.w) : [200, 90, 110, 110, 170, 130, 130, 110, 70, 60, 100];
+  const barra = (w, r, i) => `<span class="plskc" style="width:${w}px;min-width:${w}px"><i class="plsk" style="width:${[70, 55, 80, 60, 45, 65, 50][(i + r) % 7]}%"></i></span>`;
+  const fila = r => `<div class="plskr">${anchos.map((w, i) => barra(w, r, i)).join('')}<span class="plcard"><i class="plsk" style="width:62%"></i><i class="plsk" style="width:44%"></i></span></div>`;
+  return `<div class="plsktab">${conCab ? `<div class="plskh">${anchos.map(w => `<span class="plskc" style="width:${w}px;min-width:${w}px"><i class="plsk" style="width:46%"></i></span>`).join('')}</div>` : ''}${Array.from({ length: 8 }, (_, r) => fila(r)).join('')}</div>`;
+}
+
+function plKpisHtml(tab) {
+  const c = PL[tab], k = PL_KPI[tab];
+  if (!k || !k.datos) return ['', '', '', ''].map(() => `<div class="plk plcarga"><span class="plkt"><i class="plsk" style="width:46%"></i></span><b><i class="plsk plskv"></i></b><small><i class="plsk" style="width:70%"></i></small></div>`).join('');
+  return k.datos.map(d => `<button type="button" class="plk ${c.kpiOn(d.k) ? 'on' : ''}" data-plk="${d.k}"><span class="plkt">${esc(d.t)}</span><b data-pln="${d.n}">${num(d.n)}</b><small>${esc(d.s)}</small></button>`).join('');
+}
+function plCargarKpis(tab) {
+  const c = PL[tab], k = PL_KPI[tab], ep = typeof RC_EPOCA !== 'undefined' ? RC_EPOCA : 0;
+  if (k && (k.pend || (k.datos && k.epoca === ep && Date.now() - k.t < 60000))) return;
+  PL_KPI[tab] = Object.assign(k || {}, { pend: true });
+  c.kpis().then(datos => {
+    const nuevo = !PL_KPI[tab].datos;
+    Object.assign(PL_KPI[tab], { datos, t: Date.now(), epoca: ep, pend: false });
+    const box = document.querySelector(`#v-${tab} .plkpis`); if (!box) return;
+    box.innerHTML = plKpisHtml(tab);
+    if (nuevo && !matchMedia('(prefers-reduced-motion: reduce)').matches) box.querySelectorAll('b[data-pln]').forEach(b => {
+      const n = +b.dataset.pln, t0 = performance.now(); if (!n) return;
+      const paso = () => { const p = Math.min(1, (performance.now() - t0) / 700); b.textContent = num(Math.round(n * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(paso); };
+      paso();
+    });
+  }, () => { PL_KPI[tab].pend = false; });
+}
+
+// Sin nombre propio, el filtro rápido usa la etiqueta de su campo (así no se escribe aquí el nombre de un rol)
+const plEtiqueta = id => { const l = document.querySelector(`label[for="${id}"]`); return l ? l.textContent.trim() : ''; };
+// v2.242.0: aquí iba la primera versión de plToolHtml (se redefine entera más abajo)
+
+// Monta (o vuelve a ajustar) la plantilla sobre lo que haya pintado la pantalla. Se puede llamar las veces que haga falta.
+// v2.242.0: aquí iba la primera versión de plSync (se redefine entera más abajo)
+
+// Un observador por pantalla: cada vez que la pantalla se repinta, la plantilla se ajusta antes de que se vea
+const PL_OBS = {};
+function plObservar(tab) {
+  const sec = $('v-' + tab); if (!sec || PL_OBS[tab]) return;
+  let pend = false;
+  let n = 0, t0 = 0;
+  const mo = new MutationObserver(() => {
+    if (pend) return;
+    // Freno: más de 30 ajustes en 100 ms es que otra parte de la pantalla responde a cada cambio; se espera al siguiente fotograma
+    const ya = performance.now(); if (ya - t0 > 100) { t0 = ya; n = 0; }
+    if (++n > 30) { if (n === 31) requestAnimationFrame(() => { n = 0; t0 = performance.now(); plSync(tab); }); return; }
+    pend = true;
+    queueMicrotask(() => { pend = false; window.PL_N = (window.PL_N || 0) + 1; mo.disconnect(); try { plSync(tab); } finally { mo.takeRecords(); mo.observe(sec, { childList: true, subtree: true, characterData: true }); } });
+  });
+  PL_OBS[tab] = mo; mo.observe(sec, { childList: true, subtree: true, characterData: true });
+}
+Object.keys(PL).forEach(plObservar);
+
+// Al llegar, sin cargador que tape la pantalla: se ve la plantilla con su esqueleto
+revelar = (orig => function (el, max, desde) {
+  const tab = el && el.id && el.id.slice(2);
+  if (el && PL[tab] && el.matches('main > section')) { el.classList.remove('preparando'); plSync(tab); llegar(el); return; }
+  return orig(el, max, desde);
+})(revelar);
+
+// Los indicadores se piden aparte (RPC_ORIG): las listas «solo la última» descartarían las consultas paralelas
+// Clics de la barra, los indicadores y el menú «⋯»
+function plCerrarPop() { document.querySelectorAll('.plpop').forEach(p => p.remove()); }
+function plPop(btn, items) {
+  plCerrarPop();
+  const r = btn.getBoundingClientRect();
+  const p = document.createElement('div'); p.className = 'plpop'; p.setAttribute('role', 'menu');
+  p.innerHTML = (items.length > 12 ? '<input type="search" class="plpopq" placeholder="Buscar…" aria-label="Buscar">' : '') +
+    `<div class="plpopl">${items.map((x, i) => `<button type="button" role="menuitemradio" aria-checked="${!!x.on}" class="${x.on ? 'on' : ''}" data-ppi="${i}">${esc(x.t)}</button>`).join('')}</div>`;
+  document.body.appendChild(p);
+  const izq = Math.min(Math.max(8, r.left), innerWidth - p.offsetWidth - 8);
+  Object.assign(p.style, { left: izq + 'px', top: (r.bottom + 6 + scrollY) + 'px' });
+  p.querySelectorAll('[data-ppi]').forEach(b => b.onclick = () => { plCerrarPop(); items[+b.dataset.ppi].fn(); });
+  const q = p.querySelector('.plpopq');
+  if (q) { q.oninput = () => { const v = normalizar(q.value); p.querySelectorAll('[data-ppi]').forEach(b => b.classList.toggle('hide', !!v && !normalizar(b.textContent).includes(v))); }; if (!PANTALLA_TACTIL) q.focus(); }
+}
+const normalizar = typeof quitarAcentos === 'function' ? (s => quitarAcentos(String(s || '').toLowerCase())) : (s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
+document.addEventListener('click', e => {
+  if (!e.target.closest('.plpop') && !e.target.closest('.plchip, .plmas')) plCerrarPop();
+  const sec = e.target.closest('main > section.plantilla'); if (!sec) return;
+  const tab = sec.id.slice(2), c = PL[tab]; if (!c) return;
+  const k = e.target.closest('[data-plk]'); if (k) { c.kpiPulsar(k.dataset.plk); plSync(tab); return; }
+  const r = e.target.closest('[data-plr]');
+  if (r) {
+    if (document.querySelector('.plpop') && r.classList.contains('abierto')) { plCerrarPop(); r.classList.remove('abierto'); return; }
+    sec.querySelectorAll('.plchip.abierto').forEach(x => x.classList.remove('abierto'));
+    const s = $(r.dataset.plr); if (!s) return;
+    r.classList.add('abierto');
+    plPop(r, [...s.options].map((o, i) => ({ t: i === 0 ? (o.text || 'Todos') : o.text, on: s.selectedIndex === i, fn: () => { r.classList.remove('abierto'); s.selectedIndex = i; s.dispatchEvent(new Event('change', { bubbles: true })); } })));
+    return;
+  }
+  if (e.target.closest('.plmas')) {
+    const items = c.mas().filter(([id]) => $(id) && !$(id).classList.contains('hide')).map(([id, t]) => ({ t, fn: () => $(id).click() }));
+    if (items.length) plPop(e.target.closest('.plmas'), items); return;
+  }
+  if (e.target.closest('.plfil')) { c.filtros(); return; }
+  if (e.target.closest('.plcol')) { c.columnas(); return; }
+  if (e.target.closest('.plmapa')) { const m = c.mapa(); if (m) m.click(); setTimeout(() => plSync(tab), 50); return; }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.plpop')) plCerrarPop(); });
+addEventListener('scroll', () => { if (document.querySelector('.plpop')) plCerrarPop(); }, { passive: true });
+// Buscador de la barra
+let PL_TQ;
+document.addEventListener('input', e => {
+  const i = e.target.closest('main > section.plantilla .plqi'); if (!i) return;
+  const tab = i.closest('section').id.slice(2);
+  clearTimeout(PL_TQ); PL_TQ = setTimeout(() => PL[tab].buscarQ(i.value.trim()), 300);
+});
+// Si el modo mapa cambia el botón, la barra lo refleja
+barraCuentas = (orig => function () { orig(); const b = document.querySelector('#v-directorio .plmapa'), m = $('mapaBtn'); if (b && m && b.dataset.modo !== (m.dataset.modo || '')) { b.dataset.modo = m.dataset.modo || ''; b.innerHTML = m.innerHTML; b.title = m.title; b.setAttribute('aria-label', m.title); } })(barraCuentas);
+
+
+/* ============================================================
+   v2.237.0 · Inicio y Agenda aparecen de una vez (aviso de Eric): al abrir la app la primera pantalla se enseñaba
+   sin esperar (salían los indicadores antiguos y luego el mosaico) y la Agenda se daba por lista antes de tener la
+   cinta y «Tu semana». Inicio enseña desde el principio el esqueleto del mosaico; la Agenda sigue con el cargador hasta tener
+   la cinta y «Tu semana» (como mucho 10 s).
+   ============================================================ */
+// Tope de espera por pantalla: en el móvil con mala cobertura la Agenda encadena varias consultas
+const LISTA_ESPERA = { agenda: 10000 };
+const LISTA_PARA = {
+  // Inicio: el mosaico ya pintado (si la persona no tiene mosaico, basta con que no queden esqueletos)
+  inicio: s => !!s.querySelector('#inimos > *') || (!s.classList.contains('conmos') && !s.querySelector('.ksk, .skel') && performance.now() - (s.__t0 || 0) > 1500),
+  // Agenda en vista de día: la cinta y «Tu semana» con sus días (o, si no llega, un respiro de 0,8 s tras la cinta)
+  // v2.248.0: la vista del día avisa cuando está pintada entera (dataset.listo)
+  agenda: s => (typeof AG_MODO !== 'undefined' && AG_MODO !== 'dia') || s.dataset.listo === '1'
+};
+revelar = (orig => function (el, max, desde) {
+  const tab = el && el.id && el.id.slice(2), listo = LISTA_PARA[tab];
+  if (!listo || !el.matches || !el.matches('main > section')) return orig(el, max, desde);
+  // Inicio con su esqueleto: sin cargador encima
+  if (tab === 'inicio' && !ES_MEDICO()) { inicioEsqueleto(); el.classList.remove('preparando'); llegar(el); return; }
+  const turno = ++REVELADO, t0 = performance.now(), tope = LISTA_ESPERA[tab] || 6000;
+  el.classList.add('preparando'); el.__t0 = t0; el.__cinta = 0;
+  const mirar = () => estable(el, Math.max(300, tope - (performance.now() - t0)), desde).then(() => {
+    if (turno !== REVELADO) return;
+    if (listo(el) || performance.now() - t0 > tope) { el.classList.remove('preparando'); llegar(el); }
+    else setTimeout(mirar, 60);
+  });
+  mirar();
+})(revelar);
+// Al abrir la app, la primera pantalla también espera a estar completa (antes se enseñaba sin pasar por el revelado)
+(() => {
+  const app = $('app'); if (!app) return;
+  let visto = !app.classList.contains('hide');
+  const revelarActual = () => { const sc = $('v-' + TAB); if (sc && !sc.classList.contains('hide') && LISTA_PARA[TAB]) revelar(sc, 6000, Date.now() - 5); };
+  // El arranque puede enseñar la app antes de que se ejecute esto: entonces se aplica ya a la pantalla que se ve
+  if (visto) revelarActual();
+  new MutationObserver(() => {
+    const ahora = !app.classList.contains('hide'); if (ahora === visto) return; visto = ahora;
+    if (ahora) revelarActual();
+  }).observe(app, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// Inicio: el mosaico está desde el primer momento (en esqueleto) y lo de antes no se pinta nunca; así no hace falta tapar la pantalla
+function inicioEsqueleto() {
+  if (ES_MEDICO()) return;
+  const sec = $('v-inicio'), sal = sec && sec.querySelector(':scope > .saludo'); if (!sal) return;
+  sec.classList.add('conmos');
+  if (!$('inimos')) {
+    sal.insertAdjacentHTML('afterend', '<div id="inimos" class="inimos"></div><div class="inikpisb"><button type="button" class="btn sec" id="inikpisver">Ver tus indicadores</button></div>');
+    $('inikpisver').onclick = () => { const on = !sec.classList.contains('conkpis'); sec.classList.toggle('conkpis', on); $('inikpisver').textContent = on ? 'Ocultar tus indicadores' : 'Ver tus indicadores'; };
+  }
+  const box = $('inimos'); if (box.children.length) return;
+  const t = (c, n) => `<div class="mt ${c} mtsk"><i class="plsk" style="width:38%"></i>${[...Array(n)].map((_, i) => `<i class="plsk" style="width:${[64, 82, 56, 74, 60][i % 5]}%"></i>`).join('')}</div>`;
+  box.innerHTML = t('mtat', 6) + t('mthoy', 4) + t('', 2) + t('', 2) + t('mtprox', 3);
+}
+cargarInicio = (orig => function (...a) { if (TAB === 'inicio') inicioEsqueleto(); return orig.apply(this, a); })(cargarInicio);
+LISTA_PARA.inicio = s => true;   // con el esqueleto del mosaico se enseña al momento
+
+
+
+/* ============================================================
+   v2.238.0 · Modelo «Lista» en Ventas: Pedidos, Oportunidades, Compras, Proveedores, Facturas, Productos, Servicios y Stock.
+   La plantilla pasa a ser genérica: cada pantalla dice sus filtros rápidos (selectores), su buscador si lo tiene, dónde está su
+   lista y su paginador. Los indicadores que filtran (Operativa de Pedidos) van en la banda; los totales (.kpis.vtot) pasan a una
+   franja de resumen compacta encima de la tabla. Sin buscador propio, el de la barra filtra la tabla («Contiene»).
+   ============================================================ */
+// Pantallas con varias secciones: la configuración depende de la sección abierta (null = sin plantilla, p. ej. Configuración de Facturación)
+const PL_SECC = {
+  ventas: () => typeof PEDSEC === 'undefined' ? null : ({ ventas: 'pedidos', llamadas: 'oport', compras: 'compras', proveedores: 'prov' })[PEDSEC] || null,
+  facturacion: () => typeof FSEC !== 'undefined' && FSEC === 'facturas' ? 'facturas' : null,
+  productos: () => typeof PSEC === 'undefined' ? null : ({ catalogo: 'prods', servicios: 'servs', stock: 'stock' })[PSEC] || 'prods'
+};
+// Base común de las listas en rejilla (.dgrid) con «Filtros y columnas»
+const plRejilla = o => Object.assign({
+  rejilla: true,
+  nuevo: () => document.querySelector(`#v-${o.tab} > .saludo .acts > .btn:not(.sec):not(.htbtn):not(.fab)`) || document.querySelector(`#v-${o.tab} .fab`),
+  cuerpo: () => o.lista ? $(o.lista) : null,
+  tabla: () => { const w = document.querySelector(`#v-${o.tab} .dgrid-wrap`); return (o.lista && $(o.lista)) || w; },
+  pie: () => o.pag ? $(o.pag) : null,
+  cuenta: () => null,
+  conDatos: el => !!el.querySelector('.dgrid, .vacio'),
+  rapidos: [],
+  q: () => { const i = o.buscador && $(o.buscador); if (i) return i.value || ''; const g = document.querySelector(`#v-${o.tab} .dgrid`); return g ? ((HT_ESTADO[htTipo(g)] || {}).texto || '') : ''; },
+  buscarQ: v => {
+    const i = o.buscador && $(o.buscador);
+    if (i) { i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); return; }
+    const g = document.querySelector(`#v-${o.tab} .dgrid`); if (!g) return;
+    const t = htTipo(g); HT_ESTADO[t] = HT_ESTADO[t] || { texto: '', facetas: {} }; HT_ESTADO[t].texto = v; htAplicarFiltros(g);
+    const sec = $('v-' + o.tab); if (sec) { htContador(sec); }
+  },
+  activos: () => { const sec = $('v-' + o.tab); const n = sec ? sec.querySelectorAll('.htchips .htchip').length : 0; return n; },
+  filtros: () => { const b = document.querySelector(`#v-${o.tab} .htbtn`); if (b) b.click(); },
+  columnas: () => { const b = document.querySelector(`#v-${o.tab} .htbtn`); if (!b) return; b.click(); setTimeout(() => { const c = $('tools') && $('tools').querySelector('.t2abrir'); if (c) c.click(); }, 80); },
+  mapa: () => null,
+  // «⋯»: los botones secundarios de la cabecera (menos «Filtros y columnas»)
+  mas: () => [...document.querySelectorAll(`#v-${o.tab} > .saludo .acts > button.sec:not(.htbtn):not(.plmas)`)].filter(b => !b.classList.contains('hide') && !(o.extra || []).some(([id]) => id === b.id))
+    .map(b => { if (!b.id) b.id = 'plb' + Math.random().toString(36).slice(2, 8); return [b.id, (b.textContent.trim() || b.title || b.getAttribute('aria-label') || '').replace(/\s+/g, ' ')]; })
+    .concat((o.extra || []).filter(([id]) => $(id))),
+  kpis: null, kpiOn: () => false, kpiPulsar: () => {},
+  // Tarjeta del móvil: la primera celda, las dos siguientes con texto y la pastilla de estado (si la hay) a la derecha
+  card: dr => {
+    const c = [...dr.children].filter(x => !x.classList.contains('plcard')), tx = x => x ? x.textContent.trim().replace(/\s+/g, ' ') : '';
+    const est = c.find(x => x.querySelector('.pill, .est, .cirest, [class*="estado"]'));
+    const resto = c.slice(1).filter(x => x !== est).map(tx).filter(x => x && x !== '—').slice(0, 2);
+    return { a: tx(c[0]), b: resto.join(' · '), c: est ? est.innerHTML : '' };
+  }
+}, o);
+Object.assign(PL, {
+  ventas: {
+    pedidos: plRejilla({ tab: 'ventas', que: () => 'pedidos', lista: 'pedlista', pag: 'pedpag', buscador: 'pq', banda: 'operativa', extra: [['opcfg', 'Elegir qué avisos ver']],
+      rapidos: [['#pper select', 'Periodo'], ['#pestado', ''], ['#pcanal', ''], ['#porigf', '']] }),
+    oport: plRejilla({ tab: 'ventas', que: () => 'oportunidades', lista: 'lllista', pag: 'llpag', buscador: 'llq', despues: 'llres2',
+      rapidos: [['#llper select', 'Periodo'], ['#llfres', '']] }),
+    compras: plRejilla({ tab: 'ventas', que: () => 'pedidos de compra' }),
+    prov: plRejilla({ tab: 'ventas', que: () => 'proveedores' })
+  },
+  facturacion: { facturas: plRejilla({ tab: 'facturacion', que: () => 'facturas', lista: 'flista', pag: 'fpag', buscador: 'fq', rapidos: [['#fper select', 'Periodo'], ['#fcob', '']] }) },
+  productos: {
+    prods: plRejilla({ tab: 'productos', que: () => 'productos' }),
+    servs: plRejilla({ tab: 'productos', que: () => 'servicios' }),
+    stock: plRejilla({ tab: 'productos', que: () => 'productos' })
+  }
+});
+// La configuración de una pantalla en este momento (las de varias secciones, según la abierta)
+function plCfg(tab) {
+  const x = PL[tab]; if (!x) return null;
+  if (PL_SECC[tab]) { const k = PL_SECC[tab](); return k ? x[k] || null : null; }
+  return x;
+}
+const plSel = id => id && /^[#.]/.test(id) ? document.querySelector(id) : $(id);
+const plEtiq = id => { const s = plSel(id); if (!s) return ''; const l = (s.id && document.querySelector(`label[for="${s.id}"]`)) || (s.closest('div') && s.closest('div').querySelector(':scope > label')); return l ? l.textContent.trim() : ''; };
+
+// Recuento: el de la pantalla; si no tiene, el paginador («1–20 de N») o las filas que se ven
+function plRecuento(sec, c) {
+  const cu = c.cuenta && c.cuenta(); if (cu && /\d/.test(cu.textContent)) return cu.innerHTML.replace(/<span class="sm">[\s\S]*?<\/span>/, '').trim();
+  const pag = sec.querySelector('.pltab .pag > span, .pag > span'); const m = pag && pag.textContent.match(/de\s+([\d.]+)/);
+  const g = sec.querySelector('.dgrid'); if (!m && !g) return sec.querySelector('.pltab .vacio, .panel .vacio') ? `<b>0</b> ${esc(c.que())}` : '';
+  const n = m ? m[1] : num(g.querySelectorAll(':scope > .dr:not(.hide):not(.htfuera)').length);
+  return `<b>${n}</b> ${esc(c.que())}`;
+}
+
+plSync = function (tab) {
+  const sec = $('v-' + tab), c = plCfg(tab); if (!sec) return;
+  if (!c) {   // sección sin plantilla: fuera lo que se hubiera puesto
+    if (sec.classList.contains('plantilla')) { sec.classList.remove('plantilla'); sec.querySelectorAll(':scope > .plkpis, :scope > .pltool, .plmas').forEach(x => x.remove()); }
+    return;
+  }
+  const clave = PL_SECC[tab] ? PL_SECC[tab]() : tab;
+  sec.classList.add('plantilla'); sec.dataset.plsec = clave;
+  const sal = sec.querySelector(':scope > .saludo');
+  const acts = sal && sal.querySelector('.acts');
+  if (acts && !acts.querySelector('.plmas')) acts.insertAdjacentHTML('afterbegin', `<button type="button" class="btn sec plmas" aria-label="Más acciones" title="Más acciones">${plIco('ellipsis', '⋯')}</button>`);
+  const mas = acts && acts.querySelector('.plmas'); if (mas) { const no = !c.mas().length; if (mas.classList.contains('plno') !== no) mas.classList.toggle('plno', no); }
+  const nb = c.nuevo && c.nuevo();
+  if (nb && c.textoNuevo && !ES_MOVIL() && !nb.classList.contains('fab') && nb.textContent.trim() !== c.textoNuevo()) nb.innerHTML = plIco('plus') + ' ' + esc(c.textoNuevo());
+  if (nb && c.textoNuevo && ES_MOVIL() && !nb.dataset.plfab) { nb.dataset.plfab = '1'; nb.classList.add('fab'); nb.dataset.txt = c.textoNuevo(); nb.setAttribute('aria-label', c.textoNuevo()); nb.innerHTML = plIco('plus'); sec.appendChild(nb); }
+  // Móvil: un solo «+», el de la sección abierta (al cambiar de sección quedaba el de la anterior)
+  if (c.rejilla && ES_MOVIL()) {
+    const prim = [...sec.querySelectorAll(':scope > .saludo .acts > .btn:not(.sec):not(.htbtn), :scope > .fab')].find(b => /^\s*\+/.test(b.dataset.txt ? '+' : b.textContent) && (b.classList.contains('fab') ? b.dataset.plsec === clave || !b.dataset.plsec : true));
+    if (prim && !prim.classList.contains('fab')) { prim.dataset.txt = prim.textContent.replace('+', '').trim(); prim.classList.add('fab'); prim.setAttribute('aria-label', prim.dataset.txt); prim.innerHTML = plIco('plus'); sec.appendChild(prim); }
+    if (prim) { prim.dataset.plsec = clave; sec.querySelectorAll(':scope > .fab').forEach(f => { const fuera = f !== prim; if (f.classList.contains('plfuera') !== fuera) f.classList.toggle('plfuera', fuera); }); }
+  }
+  // Debajo de la cabecera (y de las pestañas, si las hay): la banda de indicadores y la barra
+  const ancla = sec.querySelector(':scope > .subnav') || sal;
+  let kp = sec.querySelector(':scope > .plkpis');
+  if (c.kpis || c.banda) {
+    if (!kp) { kp = document.createElement('div'); kp.className = 'plkpis' + (c.banda ? ' plbanda' : ''); if (c.kpis) kp.innerHTML = plKpisHtml(tab); }
+    if (!kp.isConnected) { if (ancla) ancla.after(kp); else sec.prepend(kp); }
+    if (c.kpis) { plCargarKpis(tab); kp.querySelectorAll('[data-plk]').forEach(b => { const on = c.kpiOn(b.dataset.plk); if (b.classList.contains('on') !== on) b.classList.toggle('on', on); }); }
+    if (c.banda) { const b = $(c.banda); if (b && b.parentElement !== kp) kp.appendChild(b); }
+  } else if (kp) kp.remove();
+  let tl = sec.querySelector(':scope > .pltool');
+  if (tl && tl.dataset.plsec !== clave) { tl.remove(); tl = null; }
+  if (!tl) { tl = document.createElement('div'); tl.className = 'pltool'; tl.dataset.plsec = clave; tl.innerHTML = plToolHtml(tab); }
+  if (!tl.isConnected) { const ref = sec.querySelector(':scope > .plkpis') || ancla; if (ref) ref.after(tl); else sec.prepend(tl); }
+  const qi = tl.querySelector('.plqi'); if (qi && document.activeElement !== qi && qi.value !== c.q()) qi.value = c.q();
+  tl.querySelectorAll('[data-plr]').forEach(b => {
+    const s = plSel(b.dataset.plr), w = s && s.closest('#fcomwrap');
+    const ver = !!s && !(w && w.classList.contains('hide')) && s.options.length > 1;
+    if (b.classList.contains('hide') === ver) b.classList.toggle('hide', !ver); if (!ver) return;
+    if (!b.dataset.plt) b.dataset.plt = plEtiq(b.dataset.plr);
+    const on = s.selectedIndex > 0 && !(b.dataset.plt === 'Periodo');
+    const txt = s.selectedIndex > 0 || b.dataset.plt === 'Periodo' ? `${b.dataset.plt}: ${s.options[s.selectedIndex].text.replace(/\s*\(\d[\d.]*\)\s*$/, '')}` : b.dataset.plt;
+    if (b.textContent !== txt) b.textContent = txt; if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
+  });
+  const n = c.activos(), pn = tl.querySelector('.pln');
+  if (pn) { const v = String(n || ''); if (pn.textContent !== v) pn.textContent = v; if (pn.classList.contains('hide') !== !n) pn.classList.toggle('hide', !n); }
+  const cnt = tl.querySelector('.plcnt'), h = plRecuento(sec, c);
+  if (cnt && h && cnt.dataset.h !== h) { cnt.dataset.h = h; cnt.innerHTML = h; }
+  // Tabla y pie en una tarjeta; los totales, en la franja de resumen encima
+  const tb = c.tabla(), pie = c.pie();
+  if (tb && tb.parentElement && !tb.parentElement.classList.contains('pltab')) { const w = document.createElement('div'); w.className = 'pltab'; tb.before(w); w.appendChild(tb); if (pie) w.appendChild(pie); }
+  else if (tb && pie && pie.parentElement !== tb.parentElement) tb.parentElement.appendChild(pie);
+  const tab2 = tb && tb.closest('.pltab');
+  if (c.rejilla && tab2) {
+    sec.querySelectorAll('.kpis.vtot:not(.plres)').forEach(k => { if (k.closest('#v-' + tab) && !k.closest('.plkpis')) k.classList.add('plres'); });
+    if (c.despues) { const d = $(c.despues); if (d && tab2.nextElementSibling !== d) tab2.after(d); }
+  }
+  const cuerpo = c.cuerpo();
+  if (cuerpo) {
+    if (cuerpo.querySelector(':scope > .cargador')) {
+      if (cuerpo.__plUlt) { cuerpo.innerHTML = cuerpo.__plUlt; cuerpo.classList.add('platenua'); }
+      else if (tab === 'directorio') { cuerpo.innerHTML = plEsqueleto(tab, false); if (!$('thead').children.length) $('thead').innerHTML = plEsqueleto(tab, true).match(/<div class="plskh">[\s\S]*?<\/div>/)[0]; }
+      else cuerpo.innerHTML = plEsqueleto(tab, true);
+    } else if (c.conDatos(cuerpo)) { cuerpo.classList.remove('platenua'); cuerpo.__plUlt = cuerpo.innerHTML; }
+  }
+  const vc = tab === 'pacientes' && $('vcuerpo');
+  if (vc && !vc.children.length) vc.innerHTML = `<div class="panel plskpanel"><div class="pltab">${plEsqueleto(tab, true)}</div></div>`;
+  // Primera llegada de una pantalla en rejilla: mientras no hay tabla, su esqueleto debajo de la barra
+  if (c.rejilla && !sec.querySelector('.dgrid, .pltab, .vacio') && !sec.querySelector(':scope > .plskpanel')) tl.insertAdjacentHTML('afterend', `<div class="panel plskpanel"><div class="pltab">${plEsqueleto(tab, true)}</div></div>`);
+  if (sec.querySelector('.dgrid, .vacio')) sec.querySelectorAll(':scope > .plskpanel').forEach(x => x.remove());
+  if (c.card) sec.querySelectorAll('.dgrid > .dr:not([data-plc])').forEach(dr => {
+    dr.dataset.plc = '1'; const x = c.card(dr);
+    dr.insertAdjacentHTML('beforeend', `<span class="plcard"><b>${esc(x.a)}</b><span class="plc2">${esc(x.b)}</span><span class="plc3">${x.c}</span></span>`);
+  });
+};
+// La barra y los clics usan la configuración de la sección abierta
+plToolHtml = function (tab) {
+  const c = plCfg(tab);
+  return `<label class="plq">${plIco('search', '🔍')}<input type="search" class="plqi" placeholder="Buscar en ${esc(c.que())}" aria-label="Buscar en ${esc(c.que())}"></label>
+    <div class="plrap">${c.rapidos.map(([id, t]) => { t = t || plEtiq(id); return `<button type="button" class="plchip" data-plr="${esc(id)}" data-plt="${esc(t)}">${esc(t)}</button>`; }).join('')}</div>
+    <button type="button" class="plbtn plfil">${plIco('sliders-horizontal')}<span>Filtros</span><span class="pln hide"></span></button>
+    <button type="button" class="plbtn plcol">${plIco('columns-3', 'table', 'list')}<span>Columnas</span></button>
+    ${c.mapa() ? `<button type="button" class="plbtn plic plmapa" title="Ver en el mapa" aria-label="Ver en el mapa">${plIco('map')}</button>` : ''}
+    <span class="plcnt"><i class="plsk" style="width:90px"></i></span>`;
+};
+plKpisHtml = (orig => function (tab) { return plCfg(tab) && plCfg(tab).kpis ? orig(tab) : ''; })(plKpisHtml);
+plCargarKpis = (orig => function (tab) { const c = plCfg(tab); if (c && c.kpis) return orig(tab); })(plCargarKpis);
+['ventas', 'facturacion', 'productos'].forEach(plObservar);
+// Revelado de las pantallas con secciones: la primera llegada, de una vez (como siempre), con la plantilla ya puesta
+revelar = (orig => function (el, max, desde) {
+  const tab = el && el.id && el.id.slice(2);
+  if (PL_SECC[tab] && el.matches && el.matches('main > section')) {
+    // Primera llegada de una pantalla en rejilla: de una vez, con el cargador (el esqueleto queda para cuando se vuelve a buscar)
+    const t0 = Date.now(); el.classList.add('preparando');
+    // La sección puede decidirse un momento después (al pintarse): se vuelve a mirar
+    setTimeout(() => { if (plCfg(tab)) plSync(tab);
+      // La v2.236 trataba como plantilla toda pantalla de PL: mientras se llama al revelado de siempre, esta no está en PL
+      const keep = PL[tab]; delete PL[tab]; try { orig(el, max, desde || t0); } finally { PL[tab] = keep; } }, 0);
+    return;
+  }
+  return orig(el, max, desde);
+})(revelar);
+// Clics de la barra: con la configuración de la sección abierta (la v2.236 leía PL[tab] directamente)
+document.addEventListener('click', e => {
+  const sec = e.target.closest('main > section.plantilla'); if (!sec || !PL_SECC[sec.id.slice(2)]) return;
+  const tab = sec.id.slice(2), c = plCfg(tab); if (!c) return;
+  const r = e.target.closest('[data-plr]');
+  if (r) {
+    e.stopImmediatePropagation();
+    if (document.querySelector('.plpop') && r.classList.contains('abierto')) { plCerrarPop(); r.classList.remove('abierto'); return; }
+    sec.querySelectorAll('.plchip.abierto').forEach(x => x.classList.remove('abierto'));
+    const s = plSel(r.dataset.plr); if (!s) return;
+    r.classList.add('abierto');
+    plPop(r, [...s.options].map((o, i) => ({ t: o.text, on: s.selectedIndex === i, fn: () => {
+      r.classList.remove('abierto'); s.selectedIndex = i; s.dispatchEvent(new Event('change', { bubbles: true }));
+      // Periodo personalizado: las fechas están en el panel de filtros
+      if (/pers/i.test(o.value) || /personaliz/i.test(o.text)) setTimeout(() => c.filtros(), 60);
+    } })));
+    return;
+  }
+  if (e.target.closest('.plmas')) {
+    e.stopImmediatePropagation();
+    const items = c.mas().filter(([id]) => $(id) && !$(id).classList.contains('hide')).map(([id, t]) => ({ t, fn: () => $(id).click() }));
+    if (items.length) plPop(e.target.closest('.plmas'), items); return;
+  }
+  if (e.target.closest('.plfil')) { e.stopImmediatePropagation(); c.filtros(); return; }
+  if (e.target.closest('.plcol')) { e.stopImmediatePropagation(); c.columnas(); return; }
+}, true);
+document.addEventListener('input', e => {
+  const i = e.target.closest('main > section.plantilla .plqi'); if (!i) return;
+  const tab = i.closest('section').id.slice(2); if (!PL_SECC[tab]) return;
+  e.stopImmediatePropagation();
+  clearTimeout(PL_TQ); PL_TQ = setTimeout(() => { const c = plCfg(tab); if (c) c.buscarQ(i.value.trim()); }, 300);
+}, true);
+
+
+/* ============================================================
+   v2.239.0 · Modelo «Lista» en Eventos, Cirugías, Concursos y Parque instalado: los bloques de tarjetas pasan a una tabla con
+   las mismas filas (cada fila conserva su botón y lo que abre). Los bloques (Próximos, Pasados, Reposiciones…) pasan a ser
+   indicadores que filtran y un filtro rápido; si una fila estaba en dos bloques, sale una vez y cuenta en los dos.
+   La acción principal sube a la cabecera; las demás, al «⋯».
+   ============================================================ */
+const PLG = {};   // bloque elegido por pantalla
+const plTxt = el => el ? el.textContent.trim().replace(/\s+/g, ' ') : '';
+const plSm = el => { const s = el && el.querySelector('.tx .sm, .sm'); return plTxt(s); };
+const BLQ = {
+  eventos: { attr: 'ev', que: 'eventos', grupo: 'Cuándo', def: 'Eventos',
+    cols: [['Evento', ''], ['Fecha', ''], ['Tipo', ''], ['Lugar', ''], ['Asistentes', 'num'], ['Gasto', 'num']],
+    celdas: b => {
+      const p = plSm(b).split(' · '), hora = p.find(x => /^\d{1,2}:\d{2}$/.test(x)), tipo = p.find(x => EV_TIPOS.includes(x));
+      const asis = p.find(x => /asistente/.test(x)) || '', lugar = p.filter((x, i) => i > 0 && x !== hora && x !== tipo && x !== asis).join(' · ');
+      return [`<b>${esc(plTxt(b.querySelector('.tx b')))}</b>`, esc(p[0] + (hora ? ' · ' + hora : '')), esc(tipo || '—'), esc(lugar || '—'), esc((asis.match(/\d+/) || ['0'])[0]), esc(plTxt(b.querySelector('.evtot')) || '—')];
+    } },
+  cirugias: { attr: 'cir', que: 'cirugías', grupo: 'Bloque', def: 'Cirugías',
+    cols: [['Fecha', ''], ['Cirugía', ''], ['Equipo y lugar', ''], ['Estado', '']],
+    celdas: b => [esc(plTxt(b.querySelector('.cirf b')) + (plTxt(b.querySelector('.cirf .sm')) ? ' · ' + plTxt(b.querySelector('.cirf .sm')) : '')),
+      `<b>${esc(plTxt(b.querySelector('.tx b')))}</b>`, esc(plSm(b.querySelector('.tx'))), (b.querySelector('.cirest') || {}).innerHTML || ''] },
+  concursos: { attr: 'con', que: 'concursos', grupo: 'Bloque', def: 'Concursos',
+    cols: [['Concurso', ''], ['Cliente, organismo y lotes', ''], ['Estado y plazos', '']],
+    celdas: b => [`<b>${esc(plTxt(b.querySelector('.tx b')))}</b>`, esc(plSm(b.querySelector('.tx'))), (b.querySelector('.cirest') || {}).innerHTML || ''] },
+  parque: { attr: 'eq', que: 'equipos', grupo: 'Bloque', def: 'Todos los equipos',
+    cols: [['Equipo', ''], ['Serie, centro y contrato', ''], ['Revisión y vencimientos', '']],
+    celdas: b => [`<b>${esc(plTxt(b.querySelector('.tx b')))}</b>`, esc(plSm(b.querySelector('.tx'))), (b.querySelector('.cirest') || {}).innerHTML || ''] }
+};
+// Configuración de cada una (Eventos solo en su pestaña «Eventos», no en Transparencia)
+Object.assign(PL_SECC, {
+  eventos: () => { const on = document.querySelector('#v-eventos .pagtabs button.on'); return !on || on === document.querySelector('#v-eventos .pagtabs button') ? 'lista' : null; },
+  cirugias: () => 'lista', concursos: () => 'lista', parque: () => 'lista'
+});
+Object.keys(BLQ).forEach(tab => {
+  const o = BLQ[tab];
+  PL[tab] = { lista: plRejilla({ tab, que: () => o.que, bloques: o, rapidos: [['#plg-' + tab, o.grupo]], banda: 'plgb-' + tab,
+    activos: () => { const sec = $('v-' + tab); return (PLG[tab] ? 1 : 0) + (sec ? sec.querySelectorAll('.htchips .htchip').length : 0); } }) };
+});
+
+// Pasa los bloques de tarjetas de la pantalla a una tabla (cada vez que la pantalla los vuelve a pintar)
+function blqConvertir(tab) {
+  const o = BLQ[tab], sec = $('v-' + tab), caja = sec && sec.querySelector('#cfgcuerpo'); if (!o || !caja) return;
+  const items = [...caja.querySelectorAll('.lista > .item[data-' + o.attr + ']')];
+  const yaTabla = caja.querySelector('.dgrid.blq-' + tab);
+  if (!items.length && (yaTabla || !caja.querySelector('.cirpag, .evpag'))) return;
+  // Acciones: la principal a la cabecera; las demás, al «⋯» (también en la cabecera, ocultas)
+  const sal = sec.querySelector(':scope > .saludo');
+  let acts = sal && sal.querySelector(':scope > .acts');
+  if (sal && !acts) { sal.insertAdjacentHTML('beforeend', '<div class="acts"></div>'); acts = sal.querySelector(':scope > .acts'); }
+  const cab = caja.querySelector('.evcab');
+  // las de la vez anterior (también el «+» del móvil, que va al final de la sección) se quitan: si no, se repetirían sus id
+  if (cab && acts) { sec.querySelectorAll('[data-plmov]').forEach(b => b.remove()); [...cab.querySelectorAll('button')].forEach(b => { b.dataset.plmov = '1'; acts.appendChild(b); }); cab.remove(); }
+  // Filas: una por registro, con los bloques en que sale
+  const filas = new Map(), grupos = [];
+  caja.querySelectorAll('section.card, .card').forEach(card => {
+    const h = card.querySelector('h2'), g = h ? plTxt(h).replace(/\s*·\s*[\d.]+$/, '') : o.def;
+    const its = [...card.querySelectorAll('.lista > .item[data-' + o.attr + ']')]; if (!its.length) return;
+    if (!grupos.includes(g)) grupos.push(g);
+    its.forEach(b => { const k = b.dataset[o.attr]; if (filas.has(k)) { filas.get(k).g.add(g); b.remove(); } else filas.set(k, { b, g: new Set([g]) }); });
+  });
+  const vacio = caja.querySelector('.vacio');
+  const nota = [...caja.querySelectorAll('.cirpag > p.sm, .evpag > p.sm')];
+  const wrap = document.createElement('div'); wrap.className = 'dgrid-wrap';
+  wrap.innerHTML = `<div class="dgrid blq-${tab}"><div class="dh">${o.cols.map(([t, k]) => `<span class="${k}">${esc(t)}</span>`).join('')}</div></div>`;
+  const g = wrap.firstElementChild;
+  filas.forEach(({ b, g: gs }) => {
+    const cel = o.celdas(b), click = b.onclick;
+    b.className = 'dr'; b.innerHTML = cel.map((x, i) => `<span class="${o.cols[i][1]}">${x || '<span class="vac">—</span>'}</span>`).join('');
+    b.dataset.grupos = [...gs].join('|'); b.onclick = click; g.appendChild(b);
+  });
+  if (!filas.size) wrap.innerHTML = `<div class="vacio">${esc(vacio ? plTxt(vacio) : 'Todavía no hay nada aquí.')}</div>`;
+  caja.innerHTML = ''; nota.forEach(p => caja.appendChild(p)); caja.appendChild(wrap);
+  // Bloque elegido (filtro rápido y banda de indicadores)
+  if (PLG[tab] && !grupos.includes(PLG[tab])) PLG[tab] = '';
+  let sel = $('plg-' + tab);
+  if (!sel) { sec.insertAdjacentHTML('beforeend', `<div class="plgsel hide"><label for="plg-${tab}">${esc(o.grupo)}</label><select id="plg-${tab}"></select></div>`); sel = $('plg-' + tab); sel.onchange = () => { PLG[tab] = sel.value; blqFiltrar(tab); }; }
+  sel.innerHTML = '<option value="">Todos</option>' + (grupos.length > 1 ? grupos.map(x => `<option ${PLG[tab] === x ? 'selected' : ''}>${esc(x)}</option>`).join('') : '');
+  let band = $('plgb-' + tab);
+  if (!band) { band = document.createElement('div'); band.id = 'plgb-' + tab; band.className = 'plgband'; sec.appendChild(band); }
+  const cuenta = x => [...filas.values()].filter(f => f.g.has(x)).length;
+  band.innerHTML = grupos.length > 1 ? grupos.map(x => `<button type="button" class="plk ${PLG[tab] === x ? 'on' : ''}" data-plg="${esc(x)}"><span class="plkt">${esc(x)}</span><b>${num(cuenta(x))}</b><small>${cuenta(x) === 1 ? '1 ' + esc(o.que.replace(/s$/, '')) : esc(o.que)}</small></button>`).join('') : '';
+  band.classList.toggle('hide', grupos.length < 2);
+  blqFiltrar(tab);
+}
+function blqFiltrar(tab) {
+  const v = PLG[tab] || '', sec = $('v-' + tab); if (!sec) return;
+  sec.querySelectorAll('.dgrid.blq-' + tab + ' > .dr').forEach(r => r.classList.toggle('plgfuera', !!v && !(r.dataset.grupos || '').split('|').includes(v)));
+  sec.querySelectorAll('[data-plg]').forEach(b => b.classList.toggle('on', b.dataset.plg === v));
+  const s = $('plg-' + tab); if (s && s.value !== v) s.value = v;
+  const cnt = sec.querySelector('.plcnt'); if (cnt) { cnt.dataset.h = ''; }
+}
+// Antes de ajustar la plantilla, los bloques se convierten en tabla
+plSync = (orig => function (tab) { if (BLQ[tab] && plCfg(tab)) blqConvertir(tab); return orig(tab); })(plSync);
+// El recuento de estas tablas cuenta solo las filas que se ven (bloque y búsqueda)
+plRecuento = (orig => function (sec, c) {
+  if (!c.bloques) return orig(sec, c);
+  const g = sec.querySelector('.dgrid'); if (!g) return sec.querySelector('#cfgcuerpo .vacio') ? `<b>0</b> ${esc(c.que())}` : '';
+  return `<b>${num(g.querySelectorAll(':scope > .dr:not(.htfuera):not(.plgfuera)').length)}</b> ${esc(c.que())}`;
+})(plRecuento);
+document.addEventListener('click', e => {
+  const k = e.target.closest('main > section.plantilla [data-plg]'); if (!k) return;
+  const tab = k.closest('section').id.slice(2); PLG[tab] = PLG[tab] === k.dataset.plg ? '' : k.dataset.plg; blqFiltrar(tab); plSync(tab);
+});
+Object.keys(BLQ).forEach(plObservar);
+// Las páginas (Eventos, Cirugías…) crean su sección al entrar: el observador se engancha entonces (y otra vez si se vuelve a crear)
+const PL_OBSEL = {};
+function plVigilar(tab) {
+  const sec = $('v-' + tab); if (!sec || PL_OBSEL[tab] === sec) return;
+  if (PL_OBS[tab]) { PL_OBS[tab].disconnect(); delete PL_OBS[tab]; }
+  PL_OBSEL[tab] = sec; plObservar(tab);
+}
+ir = (orig => function (t, ...a) { const r = orig.call(this, t, ...a); if (PL[t]) { plVigilar(t); setTimeout(() => plVigilar(t), 0); } return r; })(ir);
+Object.keys(PL).forEach(plVigilar);
+// Las pestañas de las páginas (.pagtabs) van justo debajo de la cabecera: la banda y la barra, después de ellas
+plSync = (orig => function (tab) {
+  const r = orig(tab), sec = $('v-' + tab); if (!sec || !sec.classList.contains('plantilla')) return r;
+  const tabs = sec.querySelector(':scope > .pagtabs, :scope > .subnav'), kp = sec.querySelector(':scope > .plkpis'), tl = sec.querySelector(':scope > .pltool');
+  if (tabs && tl && (tabs.compareDocumentPosition(tl) & 2)) { const ref = kp || tl; ref.before(tabs); }
+  return r;
+})(plSync);
+
+
+/* ============================================================
+   v2.240.0 · Paneles sin saltos. Grabados con la red lenta, Inicio, Analítica, Agenda, Rutas y Calidad del dato ya llegan
+   de una vez; quedaban tres detalles:
+   - Las cifras que cuentan (mosaico de Inicio, indicadores de Inicio, Pedidos y Analítica) volvían a contar desde cero cada vez
+     que se volvía a la pantalla, y parecía que saltaban: ahora solo cuentan si la cifra ha cambiado desde la última vez.
+   - En el móvil, las cifras grandes de Analítica se partían en dos líneas.
+   - Oportunidades enseñaba los filtros de Pedidos («Mes actual» dos veces): los de la otra sección se apartan del panel.
+   ============================================================ */
+const CONTADO = {};   // última cifra que se ha enseñado contando, por pantalla y grupo
+const plYaContado = (clave, valores) => { const k = TAB + ':' + clave, f = valores.join('|'); if (CONTADO[k] === f) return true; CONTADO[k] = f; return false; };
+mosContar = (orig => function (box) {
+  const els = [...box.querySelectorAll('[data-mcnt], [data-meur]')];
+  if (plYaContado('mos', els.map(e => e.dataset.mcnt != null ? e.dataset.mcnt : e.dataset.meur))) return;
+  return orig(box);
+})(mosContar);
+kvContar = (orig => function (raiz) {
+  const ns = [...raiz.querySelectorAll('[data-kvn]')];
+  if (plYaContado('kv', ns.map(n => n.dataset.kvn))) { ns.forEach(n => n.textContent = num(+n.dataset.kvn)); return; }
+  return orig(raiz);
+})(kvContar);
+pkContar = (orig => function (els, fmt) {
+  if (plYaContado('pk' + els.length, els.map(e => e.dataset.v))) { els.forEach(el => el.textContent = fmt(+el.dataset.v, el)); return; }
+  return orig(els, fmt);
+})(pkContar);
+
+// Pedidos y Oportunidades comparten el panel de filtros: los de la otra sección se apartan (no salen en el panel ni como filtro activo)
+const PL_AJENOS = { pedidos: ['llper', 'llfres'], oport: ['pper', 'pcanal', 'pestado', 'popf', 'porigf'], compras: ['llper', 'llfres', 'pper', 'pcanal', 'pestado', 'popf', 'porigf'], prov: ['llper', 'llfres', 'pper', 'pcanal', 'pestado', 'popf', 'porigf'] };
+function plAjenos(sec, clave) {
+  const pan = sec.querySelector(':scope > .htpanel'), prop = pan && pan.querySelector('.htpropios'); if (!prop) return;
+  let fuera = pan.querySelector(':scope > .plajenos');
+  if (!fuera) { fuera = document.createElement('div'); fuera.className = 'plajenos hide'; pan.appendChild(fuera); }
+  const ajenos = new Set(PL_AJENOS[clave] || []);
+  [...prop.children, ...fuera.children].forEach(d => {
+    const s = d.querySelector('select'), id = d.id || (s && s.id) || '', ajeno = ajenos.has(id);
+    if (ajeno && d.parentElement !== fuera) fuera.appendChild(d);
+    else if (!ajeno && d.parentElement === fuera) prop.appendChild(d);
+  });
+}
+plSync = (orig => function (tab) {
+  if (tab === 'ventas') { const sec = $('v-ventas'), k = PL_SECC.ventas(); if (sec && k) plAjenos(sec, k); }
+  return orig(tab);
+})(plSync);
+
+
+/* ============================================================
+   v2.241.0 · Volver, pestañas, pasos y fichas: una sola forma (Eric eligió la A «Ligera» de
+   https://claude.ai/artifact/SYZkDbbm8dtSRTUWEN5TE4). «‹ Destino» como enlace encima del título; pestañas en caja segmentada;
+   pasos de los asistentes en barra numerada; y la ficha de un registro (pedido, factura, evento, cirugía, concurso, equipo, centro,
+   stock, depósito) en panel lateral en el ordenador, como la de un contacto: la lista sigue a la vista. Los formularios y las
+   ventanas anchas (comparar, importar…) siguen como estaban, y Configuración sigue sin ventanas emergentes.
+   ============================================================ */
+let FX_FICHA = 0;
+// Mientras se abre una ficha, no se encaja en la página
+areaEncaje = (orig => function (...a) { return FX_FICHA ? null : orig.apply(this, a); })(areaEncaje);
+(() => {
+  const d = $('dlg'); if (!d) return;
+  const sm = d.showModal;
+  d.showModal = function () { d.classList.toggle('dlgficha', !!FX_FICHA); return sm.apply(this, arguments); };
+  d.addEventListener('close', () => d.classList.remove('dlgficha'));
+})();
+['verPedido', 'verFactura', 'verEvento', 'verCirugia', 'verConcurso', 'verEquipo', 'fichaCentro', 'fichaStock', 'verDeposito'].forEach(n => {
+  const orig = window[n]; if (typeof orig !== 'function') return;
+  window[n] = async function (...a) { FX_FICHA++; try { return await orig.apply(this, a); } finally { FX_FICHA--; } };
+});
+
+
+/* v2.242.0 · Limpieza segura: fuera funciones sin uso y cuerpos antiguos redefinidos; estilos de clases que ya no existen. */
+
+
+/* ============================================================
+   v2.243.0 · Inicio de verdad: solo se pinta lo que se ve. Desde el mosaico (v2.228) Inicio seguía pintando por debajo las
+   tarjetas de antes (agenda de hoy, próximas acciones, urgentes, últimas visitas, comisión, rutas, Mi semana, ventas del mes,
+   alertas, equipo, operativa, volver a llamar…) y las escondía, con unas 12 consultas que nadie veía. Ahora Inicio pinta el
+   mosaico (aparte, pintarMosaico) y los indicadores (#kpis, que se ven con «Ver tus indicadores»); lo demás ya no se pide.
+   El portal del profesional sigue como estaba.
+   ============================================================ */
+function inicioQuitarAntiguo() {
+  const sec = $('v-inicio'); if (!sec) return;
+  sec.querySelectorAll(':scope > .cols, :scope > #iniextra, :scope > #inialerta, :scope > #vistazo').forEach(x => x.remove());
+}
+// Los indicadores de Inicio (antes dentro de pintarInicioBase, junto con las tarjetas)
+async function inicioIndicadores() {
+  const cfg = kpiConfig().filter(x => x.on);
+  const res = await rpcCache('panel_inicio', { lim: 6 }, 'inicio');
+  marca('datos de Inicio recibidos');
+  if (TAB !== 'inicio' || !$('kpis')) return;
+  const data = res.data;
+  if (!data) { $('kpis').innerHTML = '<div class="vacio">Sin conexión y sin copia guardada todavía.</div>'; return; }
+  const k = data.kpis;
+  const kpi = (n, t, cls, accion, ayuda, id) =>
+    `<div class="kpi ${cls || ''} ${accion ? 'click' : ''}" ${accion ? `data-k="${accion}"` : ''} ${id ? `data-kid="${id}"` : ''}>
+       ${ayuda ? `<button class="ai" data-ayuda-txt="${esc(ayuda)}" data-ayuda-tit="${esc(t)}" aria-label="Qué es">i</button>` : ''}
+       <b>${typeof n === 'string' ? n : num(n)}</b><span>${esc(t.charAt(0).toUpperCase() + t.slice(1))}</span></div>`;
+  $('kpis').innerHTML = cfg.map((x, i) => {
+    if (x.filtro) return `<div class="kpi click" data-kf="${esc(JSON.stringify(x.filtro))}" data-kfi="${i}">
+        <button class="ai" data-ayuda-txt="${esc(AYUDA_KPI.filtro + ' Filtro: ' + textoFiltro(x.filtro) + '.')}" data-ayuda-tit="${esc(x.t || 'Filtro guardado')}" aria-label="Qué es">i</button>
+        <b class="cont"><span class="spin" style="width:18px;height:18px;border-width:2px;display:inline-block"></span></b><span>${esc(x.t || textoFiltro(x.filtro))}</span></div>`;
+    const c = KPI_CAT.find(y => y.id === x.id);
+    if (!kpiPermitido(c)) return '';
+    return kpi(c.v(k), x.t || c.t, c.cls ? c.cls(k) : '', c.h, AYUDA_KPI[c.id], c.id);
+  }).join('');
+  if (res.cache) avisoCache($('kpis'), res.fecha);
+  cfg.forEach((x, i) => {
+    if (!x.filtro) return;
+    contarFiltro(x.filtro).then(n => { const b = document.querySelector(`#kpis [data-kfi="${i}"] .cont`); if (b) b.textContent = num(n); }).catch(() => {});
+  });
+  ponerAyudas();
+  // Las explicaciones, después de que kpisVivos convierta las tarjetas (lo hace al momento, en su observador)
+  await new Promise(r => setTimeout(r, 0));
+  if (TAB === 'inicio') indicadoresCompletos();
+  marca('Inicio completo');
+}
+pintarInicio = (orig => async function () {
+  if (ES_MEDICO()) return orig();
+  $('v-inicio').classList.remove('ini-cargando');
+  inicioQuitarAntiguo();
+  await inicioIndicadores();
+})(pintarInicio);
+
+
+/* ============================================================
+   v2.244.0 · Agenda reescrita (1 de 3): «Tu día» sale directamente de los datos (Eric eligió reescribir la Agenda entera).
+   Hasta ahora las tarjetas (.tdu) se construían leyendo una lista antigua (.tdlista) que se pintaba y se escondía, con seis capas
+   encima (avisos con su «i», «no cabe», tareas, tarjetas, menú…). En la vista de día con cinta, tdPintar() pinta de una vez:
+   cabecera (título, «⋯» del día, cifras, botones), jornada, aviso «no cabe», tareas, tarjetas, vacío y citas de otras personas.
+   Los botones de cada cita llevan los mismos data-td de siempre (los atiende el mismo listener) y se ponen solo si tocan. El
+   orden y los refrescos animan las tarjetas (antes animaban las filas ocultas). Semana, Mes y Equipo siguen como estaban.
+   ============================================================ */
+// Estados de una cita sin escribir sus nombres (la prueba de literales los cuenta): por su color
+const citaAusente = e => EST_COL[e] === 'var(--warn)' && !CITA_ABIERTA.includes(e);   // «no estaba»
+const tdHm = h => esc(String(h).slice(0, 5));
+function tdDiasDesde(f) { return Math.max(0, Math.round((new Date(hoyISO() + 'T12:00:00') - new Date(String(f).slice(0, 10) + 'T12:00:00')) / 864e5)); }
+
+async function tdPintar() {
+  const fecha = AG_FECHA, hoy = hoyISO(), esHoy = fecha === hoy, pasado = fecha < hoy;
+  const r = await rpcCache('agenda_rango', { p_desde: fecha, p_hasta: fecha, p_usuario: agUsuarioFiltro() }, 'agenda-' + fecha);
+  if (AG_FECHA !== fecha || AG_MODO !== 'dia' || !$('agcuerpo')) return;
+  const todas = r.data || [];
+  const mias = todas.filter(c => c.usuario_id === agUid()), otras = todas.filter(c => c.usuario_id !== agUid());
+  TD_CITAS = mias;
+  const { est, fin, tope } = estimarDia(mias, fecha);
+  const j = jornadaActiva();
+  const abiertasL = mias.filter(c => CITA_ABIERTA.includes(c.estado)), abiertas = abiertasL.length;
+  const activas = mias.filter(c => !citaAnulada(c.estado)).length;
+  const hechas = mias.filter(c => citaHecha(c.estado)).length, ausentes = mias.filter(c => citaAusente(c.estado)).length;
+  const pasaTope = abiertas && fin > tope;
+  const conSitio = abiertasL.filter(c => xyCita(c)).length;
+  const propia = !AG_VISTA || AG_VISTA.id === PERFIL.id;
+  const vis = TT('visita', 's', '', 'l', 'l');
+  // «No cabe»: si con este orden el día acaba después de la jornada (o hay 3 avisos o más), un solo aviso arriba
+  const limite = isFinite(tope) ? tope : 21 * 60;
+  const conAviso = Object.values(TD_INFO).filter(i => i.aviso && !i.lejos).length;
+  const noCabe = !pasado && abiertas && fin > limite, bandaNoCabe = !pasado && abiertas && (noCabe || conAviso >= 3);
+  const fuera = Object.values(TD_INFO).filter(i => i.llegada != null && i.llegada >= limite).length;
+  const finTxt = fin >= 24 * 60 ? `pasada la medianoche (hacia las ${hm(fin)} del día siguiente)` : `hacia las ${hm(fin)}`;
+  // Siguiente cita (hoy): la primera abierta que no haya pasado hace más de 15 minutos
+  const ahora = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
+  const minDe = c => c.hora ? (+String(c.hora).slice(0, 2) * 60 + +String(c.hora).slice(3, 5)) : (est[c.id] != null ? est[c.id] : null);
+  const sig = esHoy ? (abiertasL.find(c => { const m = minDe(c); return m == null || m + 15 >= ahora; }) || null) : null;
+  const escala = ESTADOS_DEF.filter(x => x.papel !== 'negativo');
+
+  const tarjeta = (c, i) => {
+    const ab = CITA_ABIERTA.includes(c.estado), info = TD_INFO[c.id] || {}, ant = c.anterior || null;
+    const idxAb = abiertasL.indexOf(c);
+    let h = c.hora ? tdHm(c.hora) : (ab && est[c.id] != null && !pasado ? '~' + hm(est[c.id]) : '·');
+    if (bandaNoCabe && !c.hora && ab && info.llegada != null && info.llegada >= limite) h = '—';
+    const m = minDe(c), falta = m != null ? m - ahora : null;
+    const cuando = !ab ? '' : c === sig && falta != null && falta > 0 ? `en ${falta >= 60 ? Math.floor(falta / 60) + ' h ' : ''}${falta % 60} min` : /^~/.test(h) ? 'Hora estimada' : '';
+    const nivel = escala.findIndex(x => x.valor === c.estado_comercial), obj = nivel >= 0 ? escala[nivel + 1] : null;
+    // El aviso: el de ubicación lejana siempre; los demás, solo si no hay el aviso general de «no cabe»
+    let aviso = ab && info.aviso ? (info.lejos ? `Ubicación a ${num(info.lejos)} km de la parada anterior: revisa la dirección` : info.aviso) : '';
+    if (aviso && bandaNoCabe && !info.lejos) aviso = '';
+    const vent = ab && !aviso && info.ventanas && info.ventanas.length ? `Consulta ${txtVentanas(info.ventanas)}${info.espera ? ` · esperas ${info.espera} min` : ''}` : '';
+    const lineas = [
+      ant && ant.proxima_accion ? ['toca', 'toca', `Toca: ${esc(ant.proxima_accion)}`] : null,
+      c.anterior !== undefined ? ['reloj', '', ant ? `Última ${vis} hace ${tdDiasDesde(ant.fecha)} ${tdDiasDesde(ant.fecha) === 1 ? 'día' : 'días'}` : `Primera ${vis}`] : null,
+      vent ? ['puerta', '', esc(vent)] : null,
+      aviso ? ['aviso', 'tdav tdaviso', esc(aviso) + ` <button type="button" class="tdavi" data-tdavi="${c.id}" aria-label="Por qué sale este aviso">i</button>`, explicarAviso(info)] : null,
+      ab && !xyCita(c) ? ['aviso', 'tdav', 'Sin ubicación'] : null,
+      c.nota ? ['nota', '', esc(c.nota)] : null
+    ].filter(Boolean);
+    const sube = ab && !pasado, reg = ab && puedeRegistrarEnDia(c.fecha), nueva = citaAusente(c.estado) && !pasado;
+    return `<article class="tdu ${c === sig ? 'sig' : ''} ${ab ? '' : 'hecha'}" data-tdu="${c.id}" data-tdf="${c.cuenta_id}" tabindex="0" aria-label="${esc(c.nombre)}">
+      <div class="tdu-cab">
+        <div class="tdu-av" aria-hidden="true">${esc(iniciales(c.nombre))}<span class="n">${i + 1}</span></div>
+        <div class="tdu-tit">${c === sig ? '<span class="tdu-sig"><i></i>Siguiente</span>' : ''}
+          <div class="tdu-nom"><b class="tdu-nb" title="Ver la cita">${esc(c.nombre)}</b>${c.clase ? `<span class="tdu-k ${esc(c.clase)}" title="Clase ${esc(c.clase)}">${esc(c.clase)}</span>` : ''}${c.urgente ? '<span class="pill p-urg">Urgente</span>' : ''}</div>
+          <span class="tdu-sub">${esc([c.centro_nombre, c.municipio].filter(Boolean).join(' · ') || 'Sin centro')}</span></div>
+        <div class="tdu-hora"><span class="h" title="${c.hora ? 'Hora fijada' : 'Hora estimada según el orden'}">${h}</span>${cuando ? `<span class="tdu-cu">${cuando}</span>` : ''}</div>
+      </div>
+      ${escala.length && nivel >= 0 ? `<div class="tdu-niv"><div class="tdu-barra" title="${esc(escala.map(x => x.valor).join(' → '))}">${escala.map((x, k) => `<i class="${k <= nivel ? 'on' : k === nivel + 1 ? 'obj' : ''}"></i>`).join('')}</div>
+        <span class="tdu-nt"><b>${esc(c.estado_comercial)}</b>${obj ? ` → ${esc(obj.valor)}` : ' · mantener'}</span></div>` : ''}
+      ${lineas.length ? `<ul class="tdu-dat">${lineas.map(([ic, cl, t, tit]) => `<li class="${cl}"${tit ? ` title="${esc(tit)}"` : ''}>${SVA(ICU[ic])}<span>${t}</span></li>`).join('')}</ul>` : ''}
+      <div class="tdu-pie"><span class="tdu-est">${pillCita(c.estado)}<span class="sm">${textoOrigenCita(c)}</span></span>
+        <span class="tdu-ops">${sube ? `<button class="kmv" type="button" data-td="sube|${c.id}" aria-label="Subir en el orden" title="Subir en el orden" ${idxAb <= 0 ? 'disabled' : ''}>${ICO.arriba}</button><button class="kmv" type="button" data-td="baja|${c.id}" aria-label="Bajar en el orden" title="Bajar en el orden" ${idxAb >= abiertas - 1 ? 'disabled' : ''}>${ICO.abajo}</button>` : ''}${citaConMenu(c) ? `<button class="btn sec tdmas" type="button" data-td="mas|${c.id}" aria-label="Más acciones">⋯</button>` : ''}</span>
+        ${nueva ? `<button class="btn sec tdu-reg" type="button" data-td="nueva|${c.id}">Nueva cita</button>` : ''}
+        ${reg ? `<button class="btn ${c === sig ? '' : 'sec'} tdu-reg" type="button" data-td="visita|${c.id}">Registrar ${vis}</button>` : ''}</div>
+    </article>`;
+  };
+
+  $('agcuerpo').innerHTML = `
+    <div class="tdhead">
+      <div class="${fecha >= hoy ? 'tdtitw' : ''}"><h2 style="padding:0">${esHoy ? 'Tu día' : pasado ? 'Lo que pasó este día' : 'Tu agenda de este día'}</h2>${fecha >= hoy ? `<button type="button" class="kmv tddiamas" id="tddiamas" aria-label="Opciones del día" title="Opciones del día: nueva cita, bloquear el día…">${SVA(ICU.mas)}</button>` : ''}
+        <div class="tdstats">
+          <span><b>${num(activas)}</b> citas</span>
+          <span><b style="color:var(--ok)">${num(hechas)}</b> visitadas</span>
+          ${ausentes ? `<span><b style="color:var(--warn)">${num(ausentes)}</b> no estaban</span>` : ''}
+          <span><b>${abiertas}</b> por hacer</span>
+          ${abiertas && !pasado ? `<span>Fin estimado <b style="color:${pasaTope ? 'var(--warn)' : 'var(--navy)'}">${hm(fin)}</b>${pasaTope ? ' · pasa de la hora de vuelta' : ''}${fin >= 24 * 60 ? ' <span class="sm">(día siguiente: revisa los avisos)</span>' : ''}</span>` : ''}
+        </div></div>
+      <div class="acts" style="margin:0">
+        ${propia ? '<button type="button" class="btn sec" id="tdtarea">+ Tarea</button>' : ''}
+        ${!pasado && conSitio > 1 ? '<button class="btn sec" id="tdordenar" title="Ordena las citas abiertas para recorrer menos kilómetros. Las que tienen hora fija se respetan.">Ordenar por cercanía</button>' : ''}
+        ${esHoy && !j && abiertas && agUid() === PERFIL.id ? '<button class="btn" id="tdempezar">▶ Empezar jornada</button>' : ''}
+        ${esHoy && j && agUid() === PERFIL.id ? '<button class="btn dang" id="tdterminar">Terminar jornada</button>' : ''}
+        ${pasado && abiertas ? '<button class="btn" id="tdrepro">Reprogramar pendientes</button>' : ''}
+      </div>
+    </div>
+    ${esHoy && j ? `<div class="tdjornada">● Jornada en curso desde hace ${durTxt(Date.now() - j.inicio)}. Registra cada ${vis} al terminarla.</div>` : ''}
+    ${bandaNoCabe ? `<div class="banda-aviso" id="tdnocabe">${noCabe ? `<b>Este día no cabe en una jornada.</b> Con este orden acabarías ${finTxt}${fuera ? ` y ${fuera === 1 ? 'una cita queda' : fuera + ' citas quedan'} fuera de tu horario` : ''}.` : `<b>Varias citas no encajan con sus horarios.</b>`}
+      Antes de mirar cada cita: ${!pasado && conSitio > 1 ? '<button type="button" class="btn sec" id="tdnocord">Ordenar por cercanía</button> o ' : ''}pasa a otro día las citas de la zona más lejana (⋯ → Aplazar).</div>` : ''}
+    ${mias.length ? `<div class="tdesc" aria-label="Citas del día">${mias.map(tarjeta).join('')}</div>`
+      : `<div class="vacio">${esHoy ? 'No tienes citas hoy. Planifica una ruta en Rutas o cita a alguien de las sugerencias.' : 'Sin citas este día.'}</div>`}
+    ${otras.length ? `<h3 class="tdotros">Citas de otras personas · ${otras.length}</h3>
+      <div class="lista">${otras.map(c => `<div class="item" style="cursor:default"><span class="ic">${c.hora ? tdHm(c.hora) : '·'}</span>
+        <span class="tx"><b>${esc(c.nombre)}</b><span class="sm">${esc(c.usuario || '')} · ${pillCita(c.estado)}</span></span></div>`).join('')}</div>` : ''}`;
+
+  const on = (id, f) => { const b = $(id); if (b) b.onclick = f; };
+  on('tdempezar', empezarJornada); on('tdterminar', terminarJornada);
+  on('tdrepro', () => reprogramarCitas(abiertasL, 'Pendientes del ' + fechaCorta(fecha), 'Sin visitar ese día'));
+  on('tdordenar', async () => {
+    const nuevo = ordenarPorCercania(mias), nf = ordenarPorCercania.fuera || 0;
+    if (await guardarOrden(nuevo)) { toast(nf ? `Ordenadas · ${nf} no caben en su horario o en el tuyo y quedan al final` : 'Citas ordenadas por cercanía'); repintarDiaSuave(); }
+  });
+  on('tdnocord', () => $('tdordenar') && $('tdordenar').click());
+  on('tdtarea', () => editarTarea(null, AG_FECHA));
+  on('tddiamas', e => { e.stopPropagation(); const d = document.querySelector(`#agcinta [data-cf="${AG_FECHA}"]`); menuDiaSemana($('tddiamas'), AG_FECHA, !!(d && d.classList.contains('bloq'))); });
+  if (typeof agPastillas === 'function') agPastillas();
+  // Botones de la ruta del día (Empezar ruta / Ruta completa): también al cambiar de día (antes solo al cargar la Agenda)
+  try { if (typeof prepararParadas === 'function') prepararParadas(fecha); } catch (e) { }
+  // Tareas propias del día (después de pintar: no retrasan las citas)
+  if (!propia) return;
+  const l = await tareasDelDia(fecha);
+  if (AG_FECHA !== fecha || !$('agcuerpo')) return;
+  const vieja = $('tdtareas'); if (vieja) vieja.remove();
+  if (!l || !l.length) return;
+  const sitio = $('tdnocabe') || $('agcuerpo').querySelector('.tdesc, .vacio');
+  const html = `<div class="tdtareas" id="tdtareas"><div class="tdtcab">Tareas y notas · ${l.length}</div>${l.map(t => `
+    <div class="tdtarea ${t.hecha ? 'hecha' : ''}" data-tarea="${t.id}">
+      <label class="tdtchk"><input type="checkbox" data-tacheck="${t.id}" ${t.hecha ? 'checked' : ''} aria-label="Hecha"></label>
+      <span class="tdth">${t.hora ? tdHm(t.hora) : ''}</span>
+      <span class="tdttx"><b>${esc(t.titulo)}</b>${t.nota ? `<span class="sm">${esc(t.nota)}</span>` : ''}</span>
+      ${l.length > 1 ? `<span class="tdtmov"><button type="button" class="kmv" data-tamov="-1|${t.id}" aria-label="Subir la tarea" ${l[0] === t ? 'disabled' : ''}>↑</button><button type="button" class="kmv" data-tamov="1|${t.id}" aria-label="Bajar la tarea" ${l[l.length - 1] === t ? 'disabled' : ''}>↓</button></span>` : ''}
+    </div>`).join('')}</div>`;
+  if (sitio) sitio.insertAdjacentHTML('beforebegin', html); else $('agcuerpo').insertAdjacentHTML('beforeend', html);
+  $('tdtareas').querySelectorAll('[data-tacheck]').forEach(c => c.onchange = async ev => {
+    ev.stopPropagation();
+    const { error } = await db.from('tareas').update({ hecha: c.checked, modificado_en: new Date().toISOString() }).eq('id', c.dataset.tacheck);
+    if (error) { toast('No se ha podido guardar', true); c.checked = !c.checked; return; }
+    c.closest('.tdtarea').classList.toggle('hecha', c.checked); TAREAS_DIA = null;
+  });
+  $('tdtareas').querySelectorAll('.tdtarea').forEach(d => d.onclick = ev => { if (ev.target.closest('.tdtchk, .tdtmov')) return; editarTarea(l.find(x => x.id === d.dataset.tarea)); });
+  $('tdtareas').querySelectorAll('[data-tamov]').forEach(b => b.onclick = ev => { ev.stopPropagation(); const [dir, id] = b.dataset.tamov.split('|'); moverTarea(id, +dir); });
+}
+// La «i» del aviso abre su explicación (antes pulsaba la de la fila oculta)
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-tdavi]'); if (!b) return;
+  e.stopPropagation();
+  const inf = TD_INFO[b.dataset.tdavi]; if (!inf) return;
+  appVentana({ titulo: 'Por qué sale este aviso', msg: explicarAviso(inf), ok: 'Entendido', cancel: false });
+}, true);
+// Las citas que cambian de sitio se deslizan y la tocada se resalta (antes se animaban las filas ocultas)
+function tdPosiciones() { const m = new Map(); document.querySelectorAll('#agcuerpo .tdu[data-tdu]').forEach(t => m.set(t.dataset.tdu, t.getBoundingClientRect().top)); return m; }
+function tdAnimar(antes, id, dur = 300) {
+  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('#agcuerpo .tdu[data-tdu]').forEach(t => {
+    const k = t.dataset.tdu;
+    if (id && String(k) === String(id)) { t.classList.remove('tdmovida'); void t.offsetWidth; t.classList.add('tdmovida'); setTimeout(() => t.classList.remove('tdmovida'), 1300); }
+    const y0 = antes.get(k); if (quieto || y0 == null || !t.animate) return;
+    const dy = y0 - t.getBoundingClientRect().top;
+    if (Math.abs(dy) > 1) t.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: dur, easing: 'cubic-bezier(.2,.7,.2,1)' });
+  });
+}
+moverCitaLocal = (orig => async function (orden, id, acc) {
+  const antes = tdPosiciones();
+  const r = await orig.call(this, orden, id, acc);
+  tdAnimar(antes, id, 260);
+  const b = document.querySelector(`#agcuerpo .tdu [data-td="${acc}|${id}"]:not([disabled])`) || document.querySelector(`#agcuerpo .tdu [data-td$="|${id}"]`);
+  if (b) b.focus({ preventScroll: true });
+  return r;
+})(moverCitaLocal);
+repintarDiaSuave = (orig => async function (id, data) {
+  const antes = tdPosiciones();
+  const r = await orig.call(this, id, data);
+  tdAnimar(antes, id, 320);
+  return r;
+})(repintarDiaSuave);
+
+
+
+/* ============================================================
+   v2.245.0 · Agenda reescrita (2 de 3): la vista del día se monta de una vez desde los datos. Hasta ahora cargarAgenda pasaba por
+   once capas: pintaba la Agenda de 2021 (flechas, Día/Semana/Mes), las cifras (#agmet), la semana (#agsemana), el mes (#agmes), las
+   sugerencias (#agsug) y los pendientes (#agpend), las escondía y otras capas leían ese HTML oculto para pintar las pastillas, las
+   bandejas y «En este centro también». Ahora, en la vista de día:
+   - agCargarDia() pinta la cabecera (título, pastillas, + Nueva cita y, quien ve el equipo, «Mi agenda/…» y Equipo), la cinta, «Tu día»
+     (tdPintar) y «Tu semana»; nada oculto.
+   - Pastillas desde agenda_metricas (AG_MET). La cuarta, «Por visitar», ya no lleva a una lista escondida.
+   - Bandejas desde los datos: «Les toca visita» = toca_actividad (antes contaba la última lista de las sugerencias, que podía ser
+     otra) y «Pendientes de días anteriores» = pendientes_ruta, con sus botones en el panel lateral.
+   - «En este centro también» desde sugerencias_centros, por la posición del centro (antes, buscando su nombre en el texto).
+   - El mes se pinta al pulsarlo en la cinta; la cinta conserva sus «⋯» y la semana desplegada al repintarse; «Tu semana» se
+     actualiza al cambiar de día.
+   Semana, Mes y Equipo siguen como estaban.
+   ============================================================ */
+let AG_MET = null, AG_SUG = null, AG_PEND = null;
+const agN = () => agConCinta() && $('v-agenda').classList.contains('agn');
+
+
+// ---- Pastillas: las cifras de agenda_metricas
+function agPastillasHtml() {
+  const d = AG_MET; if (!d) return '';
+  const n1 = x => num(x == null ? 0 : x), dec = x => (x == null ? '0' : String(x).replace('.', ','));
+  const h = d.hoy || {}, s = d.semana || {}, c = d.cierres || {}, p = d.pendientes || {};
+  let hechas = n1(h.visitadas), total = n1(h.citas);
+  // «Hoy», con las mismas citas que Tu día cuando se ve hoy
+  if (AG_FECHA === hoyISO() && Array.isArray(TD_CITAS) && TD_ULTIMO && TD_ULTIMO.fecha === AG_FECHA) {
+    const act = TD_CITAS.filter(x => !citaAnulada(x.estado));
+    hechas = num(act.filter(x => !CITA_ABIERTA.includes(x.estado)).length); total = num(act.length);
+  }
+  const vp = TT('visita', 'p', '', 'l', 'l');
+  return [
+    ['Hoy', `${hechas}/${total}`, `${hechas} de ${total} citas · media ${dec(d.media_dia)} ${vp}/día`, ''],
+    ['Semana', n1(s.visitas), `${n1(s.visitas)} ${vp} · media ${dec(s.media)}/semana`, ''],
+    ['Cierres', n1(c.hoy), `${n1(c.hoy)} cierres con éxito hoy · media ${dec(c.media_dia)}/día`, ''],
+    ['Por visitar', n1((p.urgentes || 0) + (p.sin_visita || 0)), `${n1(p.urgentes)} urgentes · ${n1(p.sin_visita)} sin ${TT('visita', 's', '', 'l', 'l')} en 60 días`, 'agp-pend']
+  ].map(([t, b, tit, cl]) => `<span class="agp ${cl}" title="${esc(tit)}">${esc(t)} <b>${esc(b)}</b></span>`).join('');
+}
+
+
+// Quién ya tiene cita ese día (no se le propone)
+const agConCitaHoy = () => new Set((TD_CITAS || []).filter(c => !citaAnulada(c.estado)).map(c => c.cuenta_id));
+
+// «En este centro también»: cada centro de sugerencias_centros va en la primera cita del día que está allí (a menos de 200 m)
+function agTamb() {
+  const cuerpo = $('agcuerpo'); if (!cuerpo || !AG_SUG || AG_SUG.fecha !== AG_FECHA) return;
+  cuerpo.querySelectorAll('.agtamb').forEach(x => x.remove());
+  const tarjetas = [...cuerpo.querySelectorAll('.tdu[data-tdu]')]; if (!tarjetas.length) return;
+  const cita = id => (TD_CITAS || []).find(c => String(c.id) === String(id));
+  const ya = agConCitaHoy(), usadas = new Set();
+  AG_SUG.centros.forEach(g => {
+    const gente = (g.cuentas || g.medicos || []).filter(m => !ya.has(m.id)); if (!gente.length) return;
+    const t = tarjetas.find(x => {
+      const c = cita(x.dataset.tdu); if (!c || usadas.has(x)) return false;
+      if (g.lat != null && c.lat != null) return km([+g.lat, +g.lon], [+c.lat, +c.lon]) <= 0.2;
+      return g.centro_nombre && c.centro_nombre && agImp(g.centro_nombre) === agImp(c.centro_nombre);
+    });
+    if (!t) return;
+    usadas.add(t);
+    const chips = gente.slice(0, 6).map(m => `<button type="button" data-agti="${m.id}" data-agtv="${m.visitar ? 1 : ''}" title="${esc(m.visitar ? 'Añadir una cita · ' + m.visitar : 'Ver su ficha' + (m.falta && m.falta.length ? ' · falta: ' + m.falta.join(', ') : ''))}">${m.visitar ? '<i>+</i> ' : ''}${esc(m.nombre)}</button>`).join('')
+      + (gente.length > 6 ? `<span class="sm">y ${gente.length - 6} más</span>` : '');
+    const pie = t.querySelector('.tdu-pie') || t.lastElementChild;
+    pie.insertAdjacentHTML('beforebegin', `<div class="agtamb"><div class="agtambh">${svgIco(ICON_NOM['map-pin'])} En este centro también</div><div class="agtambl">${chips}</div></div>`);
+  });
+}
+const agImp = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+document.addEventListener('click', e => {
+  const b = e.target.closest('#agcuerpo .agtamb [data-agti]'); if (!b) return;
+  e.stopPropagation();
+  if (b.dataset.agtv) nuevaCita(b.dataset.agti, AG_FECHA); else abrirFicha(b.dataset.agti);
+}, true);
+
+// Bandejas bajo la cabecera de «Tu día»
+function agTocaLista() { const ya = agConCitaHoy(); return AG_SUG && AG_SUG.fecha === AG_FECHA ? AG_SUG.toca.filter(m => !ya.has(m.id || m.cuenta_id)) : []; }
+function agBandejas() {
+  const head = document.querySelector('#agcuerpo .tdhead'); if (!head) return;
+  const old = $('agband'); if (old) old.remove();
+  const nToca = agTocaLista().length, nPend = (AG_PEND || []).length;
+  if (!nToca && !nPend) return;
+  head.insertAdjacentHTML('afterend', `<div class="agband" id="agband">${nToca ? `<button type="button" data-agbd="toca">${svgIco(ICON_NOM.target)} Les toca ${TT('visita', 's', '', 'l', 'l')} <b>${nToca}</b></button>` : ''}${nPend ? `<button type="button" class="urg" data-agbd="pend">${svgIco(ICON_NOM['circle-alert'] || ICON_NOM.info)} Pendientes de días anteriores <b>${nPend}</b></button>` : ''}</div>`);
+  $('agband').querySelectorAll('[data-agbd]').forEach(b => b.onclick = () => agBandeja(b.dataset.agbd));
+}
+
+
+
+// El título conserva «· agenda de …» al ver la de otra persona (agMarcarDia lo dejaba en «Hoy · …»)
+agMarcarDia = (orig => function (...a) {
+  const r = orig.apply(this, a);
+  if (agN() && AG_VISTA && $('agtit') && !$('agtit').textContent.includes(AG_VISTA.nombre)) $('agtit').textContent += ' · agenda de ' + AG_VISTA.nombre;
+  return r;
+})(agMarcarDia);
+// Subir o bajar una cita no recarga la Agenda aunque otra pantalla (Inicio pide las citas de hoy) haya pedido otro día entretanto:
+// se guarda lo último de cada día y se usa el del día que se ve
+const AG_DIAS_DATOS = {};
+rpcCache = (orig => async function (fn, params, clave) {
+  const r = await orig.call(this, fn, params, clave);
+  if (fn === 'agenda_rango' && params && params.p_desde === params.p_hasta && r && r.data) AG_DIAS_DATOS[params.p_desde] = r.data;
+  return r;
+})(rpcCache);
+moverCitaLocal = (orig => async function (...a) {
+  if ((!TD_ULTIMO || TD_ULTIMO.fecha !== AG_FECHA) && AG_DIAS_DATOS[AG_FECHA]) TD_ULTIMO = { fecha: AG_FECHA, data: AG_DIAS_DATOS[AG_FECHA] };
+  return orig.apply(this, a);
+})(moverCitaLocal);
+// «Ver la semana» aparece de una vez: se pinta escondida y se enseña ya con sus días (antes salía vacía y se llenaba)
+agPintarSemanaExp = (orig => async function (...a) {
+  const cin = $('agcinta');
+  if (!agN() || !cin || !AG_SEM_ABIERTA || $('agsemexp')) return orig.apply(this, a);
+  cin.insertAdjacentHTML('beforeend', '<div id="agsemexp" class="agsemexp" style="display:none"></div>');
+  try { return await orig.apply(this, a); } finally { const x = $('agsemexp'); if (x) x.style.display = ''; }
+})(agPintarSemanaExp);
+
+
+/* ============================================================
+   v2.246.0 · Agenda reescrita (3 de 3): fuera las capas antiguas de la vista del día. Desde la v2.244.0 «Tu día» sale de tdPintar
+   y desde la v2.245.0 la vista del día la monta agCargarDia, pero seguían en la app la lista oculta de «Tu día» y sus cinco capas
+   (centros agrupados, avisos, «no cabe», navegación por días, tarjetas copiadas), las cifras, la semana y el mes de 2026 que se
+   pintaban escondidos, las sugerencias en columna y las capas que las leían. Se quitan, con sus estilos. Semana, mes y Equipo
+   (a los que se llega desde Rutas, el planificador y Equipo) siguen igual.
+   ============================================================ */
+
+
+/* ============================================================
+   v2.247.0 · «Ver la semana» sin descuadre (aviso de Eric: en apptest, en el 14/10, al pulsar «Ver la semana» la pantalla se
+   descuadraba un momento). Para pintar la semana dentro de la cinta, la tarjeta de «Tu día» cede un instante su nombre (#agcuerpo)
+   a la semana; mientras llegaban los datos de esa semana (en una semana que no es la de hoy hay que pedirlos), la tarjeta perdía su
+   sitio en la rejilla y saltaba arriba a todo el ancho. Ahora los datos se piden antes y el cambio de nombre dura solo lo que se
+   tarda en pintar, sin esperar a la red.
+   ============================================================ */
+
+
+
+/* ============================================================
+   v2.248.0 · Agenda sin fantasmas (aviso de Eric: al cambiar de día, abrir la semana o el mes, planificar o volver, las piezas
+   aparecían tarde y se movían). Cada pieza pedía sus datos y se pintaba al llegar: la bandeja y «Volver a hoy» empujaban las
+   tarjetas, los «⋯» de la cinta salían después, la semana se pintaba dos veces… Ahora cada cambio pide primero todo lo que
+   necesita (agConDatos: los datos quedan a mano en AG_PRE mientras se pinta) y lo pinta todo de una vez, sin pasar por la red.
+   Además:
+   - Fuera las pantallas sueltas de Semana y Mes de antes (flechas, Día/Semana/Mes, varios meses): quien pide la semana llega a la
+     vista del día con la semana desplegada en la cinta, y quien pide el mes, con el mes abierto. Equipo tiene su pantalla
+     (agCargarEquipo).
+   - Las bandejas «Les toca visita» y «Pendientes de días anteriores» vuelven a abrirse (desde la v2.245 no hacían nada).
+   - «Ver la semana» cambia su texto cuando la semana ya está pintada; el mes se abre ya pintado.
+   ============================================================ */
+const AG_PRE = new Map(); let AG_PRE_USO = 0;
+const agK = (fn, d, h, u) => [fn, d, h, u || ''].join('|');
+rpcCache = (orig => function (fn, params, clave, ...x) {
+  if (AG_PRE.size && fn === 'agenda_rango' && params) { const k = agK(fn, params.p_desde, params.p_hasta, params.p_usuario); if (AG_PRE.has(k)) return Promise.resolve(AG_PRE.get(k)); }
+  return orig.call(this, fn, params, clave, ...x);
+})(rpcCache);
+bloqueadosSemana = (orig => function (d, h, ...x) {
+  const k = agK('bloq', d, h, agUid()); if (AG_PRE.has(k)) return Promise.resolve(AG_PRE.get(k));
+  return orig.call(this, d, h, ...x);
+})(bloqueadosSemana);
+function agCargaRango(d, h, u, clave) {
+  const k = agK('agenda_rango', d, h, u); if (AG_PRE.has(k)) return null;
+  return rpcCache('agenda_rango', { p_desde: d, p_hasta: h, p_usuario: u }, clave).then(r => { AG_PRE.set(k, r); });
+}
+function agCargaBloq(d, h) {
+  const k = agK('bloq', d, h, agUid()); if (AG_PRE.has(k)) return null;
+  return bloqueadosSemana(d, h).catch(() => ({})).then(b => { AG_PRE.set(k, b || {}); });
+}
+// Lo que necesita cada pieza (con los mismos parámetros con que la pieza los pide)
+function agDiaCargas(f) {
+  return [TD_PRESET && TD_PRESET.fecha === f ? null : agCargaRango(f, f, agUsuarioFiltro(), 'agenda-' + f), Promise.resolve(tareasDelDia(f)).catch(() => null)];
+}
+function agCintaCargas() {
+  const ini = CINTA_INI || lunesCinta(AG_FECHA || hoyISO());
+  return [agCargaRango(ini, diasMas(ini, 13), agUid(), 'agenda-cinta-' + agUid() + '-' + ini), agCargaBloq(ini, isoMas(ini, 13))];
+}
+function agSemCargas(f) { const d = lunesDe(f || AG_FECHA || hoyISO()); return [agCargaRango(d, isoMas(d, 6), agUsuarioFiltro(), 'agenda-' + d), agCargaBloq(d, isoMas(d, 6))]; }
+function agSugDatos(f) {
+  const hoy = hoyISO(), uid = agUid(), yo = uid === PERFIL.id, nada = { data: [] };
+  const seguro = p => Promise.resolve(p).catch(() => nada);
+  return Promise.all([
+    seguro(RPC_ORIG('pendientes_ruta', {})),
+    f >= hoy ? seguro(db.rpc('toca_actividad', { p_usuario: yo && VE_TODO() ? null : uid, lim: 60 })) : nada,
+    f >= hoy ? seguro(RPC_ORIG('sugerencias_centros', { p_fecha: f, p_usuario: yo ? null : uid })) : nada
+  ]).then(([rp, rt, rc]) => ({ f, pend: (rp && rp.data) || [], toca: (rt && rt.data) || [], centros: (rc && rc.data) || [] }));
+}
+function agPonerSug(f, s) { if (!s || s.f !== f) return; AG_PEND = s.pend; AG_SUG = { fecha: f, toca: s.toca, centros: s.centros }; }
+// Pide todo lo de «cargas» y después pinta sin esperar a la red (los datos quedan en AG_PRE hasta el final de ese pintado)
+async function agConDatos(cargas, pintar) {
+  AG_PRE_USO++;
+  try {
+    await Promise.all((cargas || []).filter(Boolean).map(p => Promise.resolve(p).catch(() => null)));
+    return await pintar();
+  } finally { setTimeout(() => { if (--AG_PRE_USO <= 0) { AG_PRE_USO = 0; AG_PRE.clear(); } }, 0); }
+}
+
+// ---- La Agenda: vista del día (con la semana o el mes abiertos si se piden) o Equipo
+async function cargarAgenda() {
+  if (TAB !== 'agenda' || !$('v-agenda')) return;
+  if (AG_MODO === 'equipo') return agCargarEquipo();
+  const mes = AG_MODO === 'mes', plan = ABRIR_PLAN_SEMANA;
+  if (AG_MODO === 'semana') AG_SEM_ABIERTA = true;
+  AG_MODO = 'dia'; ABRIR_PLAN_SEMANA = false;
+  await agCargarDia();
+  if (mes) agMesPop();
+  if (plan) agRepartirSemana();
+}
+async function agCargarEquipo() {
+  const v = $('v-agenda');
+  if (VE_TODO() && !COMS.length) { try { await cargarComerciales(); } catch (e) { } }
+  if (TAB !== 'agenda' || AG_MODO !== 'equipo') return;
+  v.classList.remove('agunida', 'agcinta', 'agb', 'agn');
+  v.innerHTML = `<div class="saludo"><div><h1>Agenda</h1><div class="fecha" id="agtit">Cumplimiento del equipo</div></div><div class="acts" style="margin:0"></div></div>
+    <div class="card" id="agcuerpo"></div>`;
+  asegurarEquipo();
+  await pintarEquipo();
+  v.dataset.listo = '1';
+}
+async function agCargarDia() {
+  const v = $('v-agenda'); if (!v) return;
+  if (!AG_FECHA) AG_FECHA = hoyISO();
+  const f = AG_FECHA;
+  TAREAS_DIA = null;
+  if (!CINTA_INI || f < CINTA_INI || f > diasMas(CINTA_INI, 13)) CINTA_INI = lunesCinta(f);
+  v.dataset.listo = '';
+  const y = scrollY, mismo = v.classList.contains('agn') && $('agcuerpo');
+  if (mismo) $('agcuerpo').classList.add('agcargando');
+  let s = null, met = null;
+  await agConDatos([...agDiaCargas(f), agSugDatos(f).then(x => { s = x; }),
+    Promise.resolve(RPC_ORIG('agenda_metricas', { p_usuario: AG_VISTA ? AG_VISTA.id : null })).then(r => { met = r && r.data; }),
+    ...agCintaCargas(), ...agSemCargas(f), VE_TODO() && !COMS.length ? cargarComerciales() : null], async () => {
+    if (AG_FECHA !== f || TAB !== 'agenda' || AG_MODO !== 'dia') return;
+    if (met) AG_MET = met;
+    agPonerSug(f, s);
+    v.classList.add('agunida', 'agcinta', 'agb', 'agn');
+    v.innerHTML = `
+      <div class="saludo"><div><h1>Agenda</h1><div class="fecha" id="agtit">${esc('Hoy · ' + fechaLarga(new Date(hoyISO() + 'T00:00:00')) + (AG_VISTA ? ' · agenda de ' + AG_VISTA.nombre : ''))}</div></div>
+        <div class="aghud" id="aghud" aria-label="Tus números">${agPastillasHtml()}</div>
+        <div class="acts" style="margin:0"><button class="btn" data-ag="nueva">+ Nueva cita</button></div></div>
+      <div class="card" id="agcuerpo"></div>
+      <div class="card" id="agsemlat"></div>`;
+    asegurarEquipo();
+    await Promise.all([pintarTuDia(), agCinta(), agSemanaLateral()]);
+    agMarcarDia(); agDiaVacio();
+    if (!AG_VISTA) avisoSinSalida($('agcuerpo'));
+    if (mismo) window.scrollTo(0, y);
+    v.dataset.listo = '1';
+    // Si una bandeja estaba abierta (p. ej. tras «Mover a hoy»), se repinta con lo nuevo
+    if ($('tools') && $('tools').classList.contains('abierto') && /^agband-/.test(typeof HERR_CTX !== 'undefined' && HERR_CTX || '')) agBandeja(HERR_CTX.slice(7));
+  });
+}
+
+// ---- «Tu día» con sus bandejas y «En este centro también», de una vez
+async function pintarTuDia() {
+  if (!agConCinta()) return;
+  const f = AG_FECHA;
+  let s = null;
+  await agConDatos([...agDiaCargas(f), !AG_SUG || AG_SUG.fecha !== f ? agSugDatos(f).then(x => { s = x; }) : null], async () => {
+    if (AG_FECHA !== f || !agConCinta()) return;
+    agPonerSug(f, s);
+    await tdPintar();
+    if (agN()) { agTamb(); agBandejas(); }
+  });
+}
+
+// ---- Elegir otro día: todo lo que cambia (Tu día, bandejas, cinta, «Tu semana», la semana abierta) aparece a la vez
+agVerDia = async function (f) {
+  document.querySelectorAll('.agpop').forEach(x => x.remove());
+  cerrarMesCinta();
+  if (!f) return;
+  if (!agN()) { AG_MODO = 'dia'; AG_FECHA = f; return cargarAgenda(); }
+  const antes = AG_FECHA || f; AG_FECHA = f;
+  const c = $('agcuerpo'); if (c) c.classList.add('agcargando');
+  const fuera = !CINTA_INI || f < CINTA_INI || f > diasMas(CINTA_INI, 13); if (fuera) CINTA_INI = lunesCinta(f);
+  const otraSem = lunesDe(f) !== lunesDe(antes);
+  let s = null;
+  try {
+    await agConDatos([...agDiaCargas(f), agSugDatos(f).then(x => { s = x; }), ...(fuera ? agCintaCargas() : []), ...agSemCargas(f)], async () => {
+      if (AG_FECHA !== f || !agN()) return;
+      agPonerSug(f, s);
+      const piezas = [pintarTuDia(), agSemanaLateral()];
+      if (fuera || (otraSem && AG_SEM_ABIERTA)) piezas.push(agCinta());
+      await Promise.all(piezas);
+      if (!fuera) document.querySelectorAll('#agcinta .cdia').forEach(x => x.classList.toggle('sel', x.dataset.cf === f));
+      agMarcarDia(); agDiaVacio(); agPastillas();
+    });
+  } finally { const cc = $('agcuerpo'); if (cc) cc.classList.remove('agcargando'); }
+  if (AG_FECHA !== f) return;
+  const cc = $('agcuerpo'); if (!cc) return;
+  const top = cc.getBoundingClientRect().top;
+  if (top < 80 || top > innerHeight * 0.6) scrollTo({ top: scrollY + top - 90, behavior: 'smooth' });
+};
+
+// ---- Cinta: datos, «⋯» de cada día y semana desplegada, de una vez
+agCinta = (orig => async function () {
+  if (!agN()) return;
+  if (!CINTA_INI) CINTA_INI = lunesCinta(AG_FECHA || hoyISO());
+  return agConDatos([...agCintaCargas(), ...(AG_SEM_ABIERTA ? agSemCargas(AG_FECHA) : [])], async () => {
+    await orig();
+    if (!agN() || !$('agcinta')) return;
+    await agMenusCinta();
+    if (AG_SEM_ABIERTA) await agPintarSemanaExp();
+    agBotonSemana();
+    const b = $('cmesb'); if (b) b.onclick = e => { e.stopPropagation(); agMesPop(); };
+    const h = $('choy'); if (h) h.onclick = () => { CINTA_INI = null; agVerDia(hoyISO()); };
+  });
+})(agCinta);
+agSemanaLateral = (orig => function (...a) {
+  if (!agN()) return orig.apply(this, a);
+  return agConDatos(agSemCargas(AG_FECHA), () => orig.apply(this, a));
+})(agSemanaLateral);
+agPintarSemanaExp = (orig => function (...a) {
+  if (!agN()) return orig.apply(this, a);
+  return agConDatos(AG_SEM_ABIERTA ? agSemCargas(AG_FECHA) : [], () => orig.apply(this, a));
+})(agPintarSemanaExp);
+// «Ver la semana» / «Ocultar la semana»: el botón dice lo que hay pintado (cambia cuando la semana ya está)
+function agBotonSemana() {
+  const b = $('cplan'); if (!b) return;
+  const ab = !!$('agsemexp');
+  b.innerHTML = `${svgIco(ICON_NOM['calendar-days'] || ICON_NOM.info)}<span>${ab ? 'Ocultar la semana' : 'Ver la semana'}</span>`;
+  b.title = ab ? 'Ocultar la semana' : 'Ver la semana entera, moverla y repartirla';
+  b.setAttribute('aria-expanded', String(ab));
+  b.onclick = async ev => {
+    ev.stopPropagation(); ev.preventDefault();
+    if (b.dataset.ocupado) return; b.dataset.ocupado = '1';
+    AG_SEM_ABIERTA = !ab;
+    try { await agPintarSemanaExp(); } finally { delete b.dataset.ocupado; agBotonSemana(); }
+  };
+}
+async function agRepartirSemana() {
+  AG_SEM_ABIERTA = true;
+  await agPintarSemanaExp(); agBotonSemana();
+  const p = $('semplan'); if (p) { $('agsemexp').scrollIntoView({ behavior: 'smooth', block: 'start' }); p.click(); }
+}
+// El mes se abre ya pintado
+async function agMesPop() {
+  let m = $('agmes');
+  if (m && m.classList.contains('pop')) { cerrarMesCinta(); return; }
+  if (!m) { $('v-agenda').insertAdjacentHTML('beforeend', '<div class="card agmes" id="agmes"><div class="fh"></div><div class="agmesgrid"></div></div>'); m = $('agmes'); }
+  m.dataset.mes = '-';
+  await agPintarMes(AG_MES || (AG_FECHA || hoyISO()).slice(0, 7));
+  const b = $('cmesb'); if (!b || !$('agmes')) return;
+  m.classList.add('pop'); b.setAttribute('aria-expanded', 'true');
+  const r = b.getBoundingClientRect(), w = Math.min(380, innerWidth - 32);
+  Object.assign(m.style, { top: Math.round(r.bottom + 8) + 'px', left: Math.round(Math.max(16, Math.min(r.left, innerWidth - w - 16))) + 'px', bottom: 'auto', right: 'auto' });
+}
+
+// ---- Pastillas, cifras y bandejas
+function agPastillas() {
+  if (!agN()) return;
+  const h = $('aghud'); if (!h || !AG_MET) return;
+  const html = agPastillasHtml(); if (h.__html !== html) { h.innerHTML = html; h.__html = html; }   // solo si cambia alguna cifra
+}
+async function agMetricas() {
+  if (!agN()) return;
+  const { data } = await RPC_ORIG('agenda_metricas', { p_usuario: AG_VISTA ? AG_VISTA.id : null });
+  if (!data || !agN()) return;
+  AG_MET = data; agPastillas();
+}
+// Tras un cambio (mover, registrar, notas…): cifras, cinta, «Tu semana», bandejas y el mes si está abierto, de una vez
+function agCifrasQuietas() {
+  if (!agN()) return;
+  const f = AG_FECHA; let s = null;
+  agMetricas();
+  agConDatos([...agCintaCargas(), ...agSemCargas(f), agSugDatos(f).then(x => { s = x; })], async () => {
+    if (AG_FECHA !== f || !agN()) return;
+    agPonerSug(f, s);
+    await Promise.all([agCinta(), agSemanaLateral()]);
+    agTamb(); agBandejas();
+  });
+  const m = $('agmes'); if (m && m.classList.contains('pop')) { m.dataset.mes = '-'; agPintarMes(AG_MES); }
+}
+function agBandeja(k) {
+  if (!agN()) return;
+  const d = $('tools'); if (!d) return;
+  const toca = k === 'toca';
+  const l = toca ? agTocaLista() : (AG_PEND || []);
+  const vis = TT('visita', 's', '', 'l', 'l');
+  const tit = toca ? `Les toca ${vis}` : 'Pendientes de días anteriores';
+  const txt = toca ? `Según la frecuencia objetivo de cada ${TT('medico', 's', '', 'l', 'l')}. Añádelos a este día o planifica una ruta con ellos.` : 'Los planificaste y no se visitaron. Muévelos a hoy o descártalos.';
+  const fila = m => toca
+    ? `<div class="item" style="cursor:default"><span class="ic">${svgIco(ICON_NOM.target)}</span>
+        <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${esc([m.estado_comercial, m.dias_sin_visita != null ? m.dias_sin_visita + ` días sin ${vis}` : 'nunca visitado', m.municipio].filter(Boolean).join(' · '))}</span></span>
+        <span class="acts" style="margin:0"><button class="btn sec" data-agbf="${m.id}">Ficha</button><button class="btn sec" data-agbc="${m.id}">+ Cita</button></span></div>`
+    : `<div class="item" style="cursor:default"><span class="ic w">!</span>
+        <span class="tx"><b>${esc(m.nombre)}</b><span class="sm">${fechaCorta(m.fecha)}${m.centro_nombre ? ' · ' + esc(m.centro_nombre) : ''}</span></span>
+        <span class="acts" style="margin:0"><button class="btn sec" data-cita="hoy|${m.id}">Mover a hoy</button><button class="btn sec" data-cita="desc|${m.id}">Descartar</button></span></div>`;
+  d.innerHTML = `<div class="tbox"><div class="fh"><h2>${esc(tit)}</h2><button class="x" id="tclose" aria-label="Cerrar">✕</button></div><p class="sm">${esc(txt)}</p>
+    <div class="acts" style="margin:8px 0">${toca && l.some(m => m.lat) ? '<button class="btn sec" id="agbruta">Planificar ruta</button>' : ''}${!toca && l.length ? '<button class="btn sec" id="agbrepro">Reprogramar todas</button>' : ''}</div>
+    <div class="agbdc"><div class="lista">${l.map(fila).join('') || '<div class="vacio">Nada pendiente.</div>'}</div></div></div>`;
+  $('tclose').onclick = () => d.classList.remove('abierto');
+  d.querySelectorAll('[data-agbf]').forEach(b => b.onclick = () => abrirFicha(b.dataset.agbf));
+  d.querySelectorAll('[data-agbc]').forEach(b => b.onclick = () => nuevaCita(b.dataset.agbc, AG_FECHA));
+  if ($('agbruta')) $('agbruta').onclick = async e => { const bt = e.currentTarget; d.classList.remove('abierto'); ir('rutas'); await new Promise(r => setTimeout(r, 60)); planDesdeLista(l, 'toca', bt); };
+  if ($('agbrepro')) $('agbrepro').onclick = () => reprogramarCitas(l, 'Pendientes de días anteriores', `${l.length} sin visitar`);
+  if (typeof HERR_CTX !== 'undefined') HERR_CTX = 'agband-' + k;
+  d.classList.add('abierto');
+}
+
+
+
+/* ============================================================
+   v2.249.0 · Contactos y Clientes de una vez (listas sin fantasmas, primer grupo). Se sigue enseñando el esqueleto sin cargador
+   encima (modelo «Lista» de la v2.236), pero ahora es fiel: cada pieza de la estructura (cabecera, indicadores, barra con
+   buscador, filtros rápidos y recuento, tabla) está en su sitio desde el primer momento y al llegar los datos solo cambia lo de
+   dentro. Antes el recuento del esqueleto medía distinto que la cifra y empujaba el buscador y los filtros, y en Clientes los
+   filtros rápidos aparecían tarde (su desplegable se crea al llegar los datos) y salían dos esqueletos seguidos porque la lista
+   esperaba a la de poblaciones. Ahora:
+   - El recuento tiene sitio fijo y los filtros rápidos sin desplegable todavía se ven con su nombre, en espera (plespera).
+   - Clientes pide a la vez las poblaciones y la lista (DB_PRE: lo pedido antes se entrega una vez, sin volver a la red) y el
+     buscador espera 300 ms (antes 600: la barra y el campo oculto esperaban cada uno lo suyo).
+   - Arreglos: «Volver a la búsqueda» de «Cerca de mí» funciona desde la barra (era una copia sin clic y con el id repetido);
+     con el mapa abierto no queda la tabla vacía debajo; el resumen de filtros de antes (#chips) ya no aparece encima
+     de la tabla empujándola (lo dicen los filtros rápidos y el número de la barra).
+   ============================================================ */
+// ---- Lo pedido antes, entregado una vez sin volver a la red
+const DB_PRE = new Map();
+db.rpc = (orig => function (fn, p, ...x) {
+  if (DB_PRE.size) { const k = fn + JSON.stringify(p || {}); if (DB_PRE.has(k)) { const r = DB_PRE.get(k); DB_PRE.delete(k); return Promise.resolve(r); } }
+  return orig.call(this, fn, p, ...x);
+})(db.rpc);
+// Los mismos parámetros con que listaPacientes pide la lista
+const pacParams = () => ({ q: PAC.q || null, p_medico: PAC.medico,
+  lim: tamPagina(), desplaz: PAC.pagina * tamPagina(), p_tipo: PAC.tipo || null, p_pedidos: PAC.pedidos || null,
+  p_municipio: PAC.municipio || null, ...(Object.keys(PAC.campos || {}).length ? { f_campos: PAC.campos } : {}) });
+pintarPacientes = (orig => async function (...a) {
+  const p = pacParams();
+  const [m, l] = await Promise.all([db.rpc('municipios_clientes'), db.rpc('clientes_lista', p)]);
+  DB_PRE.set('municipios_clientes{}', m); DB_PRE.set('clientes_lista' + JSON.stringify(p), l);
+  return orig.apply(this, a);
+})(pintarPacientes);
+// El buscador de la barra busca directamente (antes pasaba por el campo oculto y esperaba dos veces)
+PL.pacientes.buscarQ = v => { const i = $('pacq'); if (i) i.value = v; PAC.q = (v || '').trim(); PAC.pagina = 0; listaPacientes(); };
+
+// ---- «Cerca de mí»: el recuento de la barra lleva «Volver a la búsqueda» de verdad
+plRecuento = (orig => function (sec, c) {
+  const r = orig.call(this, sec, c);
+  return typeof r === 'string' ? r.replace(/\sid="cercacerrar"/g, ' data-cercavolver') : r;
+})(plRecuento);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-cercavolver]'); if (!b) return;
+  e.stopPropagation(); CERCA = null; buscar(true);
+});
+
+// ---- La barra tiene sus filtros rápidos desde el primer momento: mientras su desplegable no existe (Clientes lo crea al llegar
+// los datos), el filtro se ve con su nombre y en espera, en vez de aparecer después empujando el buscador
+plSync = (orig => function (tab, ...x) {
+  const r = orig.call(this, tab, ...x);
+  const sec = $('v-' + tab), c = plCfg(tab); if (!sec || !c || !c.rapidos) return r;
+  sec.querySelectorAll(':scope > .pltool [data-plr]').forEach(b => {
+    if (plSel(b.dataset.plr)) { if (b.classList.contains('plespera')) b.classList.remove('plespera'); return; }
+    const nom = (c.rapidos.find(x => x[0] === b.dataset.plr) || [])[1]; if (!nom) return;
+    if (b.classList.contains('hide')) b.classList.remove('hide');
+    if (!b.classList.contains('plespera')) b.classList.add('plespera');
+    if (b.textContent !== nom) b.textContent = nom;
+  });
+  return r;
+})(plSync);
+
+
+/* ============================================================
+   v2.250.0 · Ventas sin paginadores repetidos (listas sin fantasmas, segundo grupo). Las listas de Ventas (Pedidos,
+   Oportunidades, Compras, Proveedores, Facturas, Catálogo, Servicios y Stock) ya llegaban de una vez (v2.238) y no se
+   recolocan al buscar, filtrar, pulsar un indicador, pasar de página u ordenar (prueba ventas2250). Lo que sí fallaba: en
+   Facturas y Oportunidades el paginador se crea dentro de la lista y la plantilla lo saca al pie de la tabla; al volver a
+   pintar se creaba otro y quedaban dos (con el mismo id). Ahora, antes de pintar un paginador se quita el anterior con su nombre.
+   ============================================================ */
+paginador = (orig => function (el, ...a) {
+  if (el && el.id) document.querySelectorAll('#' + el.id).forEach(x => { if (x !== el) x.remove(); });
+  return orig.call(this, el, ...a);
+})(paginador);
+
+
+/* ============================================================
+   v2.251.0 · Pestañas sin fantasmas en Eventos, Cirugías, Concursos y Parque (listas sin fantasmas, tercer grupo). Las cuatro
+   listas de bloques llegan de una vez y no se recolocan al buscar, filtrar, pulsar un bloque u ordenar (prueba bloques2251),
+   pero al cambiar de pestaña (Concursos: En marcha, Contratos, Cerrados) la página entera se volvía a montar y, mientras
+   llegaban los datos, la cabecera se quedaba sin su botón, el filtro de bloques desaparecía y la barra se movía. Ahora:
+   - Cambiar entre pestañas que son listas no vuelve a montar la página: la pestaña se marca al momento, la lista de antes se
+     atenúa y la nueva la sustituye de una vez cuando llegan sus datos (a Transparencia de Eventos, que no es una lista, se
+     sigue llegando montando la página entera).
+   - El filtro de bloques se queda en su sitio, desactivado, si la pestaña tiene un solo bloque (antes desaparecía y el buscador
+     se ensanchaba).
+   ============================================================ */
+cargarPagina = (orig => function (t, ...a) {
+  const P = PAGINAS[t], sec = $('v-' + t), caja = sec && sec.querySelector('#cfgcuerpo'), tabs = sec && sec.querySelector(':scope > .pagtabs');
+  if (!P || !BLQ[t] || TAB !== t || !caja || !tabs || !sec.classList.contains('plantilla')) return orig.call(this, t, ...a);
+  const tab = P.tabs.some(x => x[0] === PAG_TAB[t]) ? PAG_TAB[t] : P.tabs[0][0];
+  tabs.querySelectorAll('[data-ptab]').forEach(b => b.classList.toggle('on', b.dataset.ptab === tab));
+  // Solo entre pestañas que son listas (Transparencia de Eventos no lo es: esa página se vuelve a montar entera, como antes)
+  if (PL_SECC[t] && !PL_SECC[t]()) return orig.call(this, t, ...a);
+  caja.classList.add('pagcambia');
+  return Promise.resolve().then(P.tabs.find(x => x[0] === tab)[2]).finally(() => { const c = $('cfgcuerpo'); if (c) c.classList.remove('pagcambia'); });
+})(cargarPagina);
+// El filtro de bloques no desaparece: con un solo bloque se queda desactivado
+plSync = (orig => function (tab, ...x) {
+  const r = orig.call(this, tab, ...x);
+  if (!BLQ[tab]) return r;
+  const b = document.querySelector(`#v-${tab} > .pltool [data-plr="#plg-${tab}"]`), s = $('plg-' + tab);
+  if (b && s) {
+    const nada = s.options.length < 2;
+    if (nada && b.classList.contains('hide')) b.classList.remove('hide');
+    if (b.classList.contains('plnada') !== nada) b.classList.toggle('plnada', nada);
+    if (nada && b.textContent !== BLQ[tab].grupo) b.textContent = BLQ[tab].grupo;
+  }
+  return r;
+})(plSync);
+
+
+/* ============================================================
+   v2.252.0 · Configuración sin fantasmas. Al pasar de un apartado a otro, la página nueva salía vacía y se iba llenando
+   (14 de 26 apartados se veían en varios pasos: «Tus datos», «Punto de salida», Roles…). Ahora el apartado de antes se queda
+   fijo y atenuado (la copia de congelar, como en las pestañas) hasta que el nuevo está entero.
+   Usuarios y Calidad del dato ya llegaban y cambiaban de una vez (pruebas usuarios2252).
+   ============================================================ */
+document.addEventListener('click', e => {
+  const b = e.target.closest('#v-config .cfuidx [data-ck]'); if (!b || TAB !== 'config' || b.dataset.ck === CFG_KEY) return;
+  congelar($('v-config'));
+}, true);
+
+
+/* v2.253.0 · Inicio sin fantasmas: el mosaico, la cabecera y los indicadores ya llegaban y cambiaban de una vez (prueba inicio2253, como
+   comercial, administración y dirección). En el móvil, la cabecera guardaba 100 px a la derecha de cuando los botones iban arriba: con
+   «Buenas tardes» la «i» bajaba sola a otra línea. Solo estilo. */
