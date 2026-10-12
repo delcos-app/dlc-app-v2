@@ -1659,7 +1659,8 @@ function pintarUsuarioBase(id) {
         const desde = modo === 'todo' ? '2000-01-01' : modo === 'fecha' ? ($('ucdf').value || hoyISO()) : hoyISO();
         await db.rpc('asignar_esquema', { p_usuario: id, p_esquema: $('ucom').value || null, p_quitar: !$('ucom').value, p_desde: desde });
       }
-      await db.from('perfiles').update({ comision_ver: $('uverc').value }).eq('id', id);
+      const { error: ever } = await db.from('perfiles').update({ comision_ver: $('uverc').value }).eq('id', id);   // v2.276.0: si falla, se dice
+      if (ever) { toast('Usuario guardado, pero no se ha podido guardar qué ve de su comisión: ' + ever.message, true); return; }
     }
     // v2.109.0: la zona marcada se guarda también con «Guardar» (antes solo con su propio botón y se perdía)
     let extra = '';
@@ -2734,6 +2735,9 @@ function editorEsquema(id) {
 async function panelComisionUsuario(u) {
   if (!ESQUEMAS.length) { const { data } = await db.rpc('esquemas_lista'); ESQUEMAS = data || []; }
   const actual = ESQUEMAS.find(e => (e.personas || []).includes(u.nombre));
+  // v2.276.0: el valor guardado, de su perfil (la lista de usuarios no lo trae: siempre salía «Nada»)
+  const { data: pv } = await db.from('perfiles').select('comision_ver').eq('id', u.id).maybeSingle();
+  const ver = (pv && pv.comision_ver) || u.comision_ver || 'nada'; u.comision_ver = ver;
   return `<label>Comisión</label>
     <div class="g2">
       <div><label class="sm" for="ucom">Esquema</label><select id="ucom">
@@ -2741,9 +2745,9 @@ async function panelComisionUsuario(u) {
         ${ESQUEMAS.map(e => `<option value="${e.id}" ${actual && actual.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}
       </select></div>
       <div><label class="sm" for="uverc">Qué ve esa persona</label><select id="uverc">
-        <option value="nada" ${u.comision_ver === 'nada' || !u.comision_ver ? 'selected' : ''}>Nada</option>
-        <option value="unidades" ${u.comision_ver === 'unidades' ? 'selected' : ''}>Solo sus unidades</option>
-        <option value="importe" ${u.comision_ver === 'importe' ? 'selected' : ''}>Unidades e importe</option>
+        <option value="nada" ${ver === 'nada' ? 'selected' : ''}>Nada</option>
+        <option value="unidades" ${ver === 'unidades' ? 'selected' : ''}>Solo sus unidades</option>
+        <option value="importe" ${ver === 'importe' ? 'selected' : ''}>Unidades e importe</option>
       </select></div>
     </div>`;
 }
@@ -15904,7 +15908,7 @@ async function portalMedico() {
       <p class="leer">Últimos 12 meses, ${pac} que empezaron contigo. Solo cifras: nunca se muestra ningún ${TT('paciente', 's', '', 'l', 'l')}.</p></div>
     <div class="card ancard" id="mdmat"><h2>Pedir material</h2>
       ${lp.length ? `<div class="g2"><div><label for="mdmatm">Material</label><select id="mdmatm">${lp.map(x => `<option value="${esc(x.valor)}" data-max="${x.max}">${esc(x.valor)}</option>`).join('')}</select></div>
-        <div><label for="mdmatn">Cantidad</label><input id="mdmatn" type="number" min="1" max="${lp[0].max}" value="1"></div></div>
+        <div><label for="mdmatn">Cantidad</label><input id="mdmatn" type="number" min="1" value="1"><span class="sm" id="mdmatmax">Máximo ${num(lp[0].max)} por petición</span></div></div>
         <label for="mdmatt">Nota para tu comercial</label><input id="mdmatt" placeholder="Opcional">
         <div class="acts" style="margin:8px 0 0;justify-content:flex-start"><button type="button" class="btn" id="mdmatok">Pedir</button></div>`
       : '<p class="sm" style="padding:0 16px">Tu empresa todavía no ofrece material para pedir.</p>'}
@@ -15916,10 +15920,19 @@ async function portalMedico() {
       <textarea id="mdmsgt" rows="2" placeholder="Escribe tu duda" aria-label="Tu mensaje"></textarea>
       <div class="acts" style="margin:8px 0 0;justify-content:flex-start"><button type="button" class="btn" id="mdmsgok">Enviar</button></div></div>`;
   if (puede('portal_centro') && $('mdcons')) $('mdcons').remove();
-  if ($('mdmatm')) $('mdmatm').onchange = () => { const m = +$('mdmatm').selectedOptions[0].dataset.max; $('mdmatn').max = m; if (+$('mdmatn').value > m) $('mdmatn').value = m; };
+  // v2.277.0: sin máximo en el campo (rebajaba en silencio lo escrito); en cuanto lo escrito pasa del máximo, el aviso se pone en rojo
+  const mdMatAviso = () => {
+    const w = $('mdmatmax'), o = $('mdmatm') && $('mdmatm').selectedOptions[0]; if (!w || !o) return;
+    const m = +o.dataset.max, n = +$('mdmatn').value || 0;
+    w.classList.toggle('mdmatpasa', n > m); w.textContent = (n > m ? 'Como máximo ' : 'Máximo ') + num(m) + ' por petición';
+  };
+  if ($('mdmatm')) $('mdmatm').onchange = mdMatAviso;
+  if ($('mdmatn')) $('mdmatn').addEventListener('input', mdMatAviso);
   if ($('mdmatok')) $('mdmatok').onclick = async ev => {
     ev.target.disabled = true;
-    const { data: r } = await db.rpc('pedir_material', { p_material: $('mdmatm').value, p_cantidad: +$('mdmatn').value || 0, p_nota: $('mdmatt').value.trim() || null });
+    const mx = +$('mdmatm').selectedOptions[0].dataset.max, n = +$('mdmatn').value || 0;
+    if (n < 1 || n > mx) { ev.target.disabled = false; mdMatAviso(); toast(n < 1 ? 'Indica cuántos necesitas' : `Como máximo ${num(mx)} por petición: pide ${num(mx)} o escribe en la nota cuántos necesitas`, true); return; }
+    const { data: r } = await db.rpc('pedir_material', { p_material: $('mdmatm').value, p_cantidad: n, p_nota: $('mdmatt').value.trim() || null });
     ev.target.disabled = false;
     if (!r || !r.ok) { toast(r && r.motivo === 'cantidad' ? `Como máximo ${num(r.max)}` : motivoPortal(r), true); return; }
     toast('Pedido enviado a tu comercial'); portalMedico();
