@@ -4429,6 +4429,64 @@ dialog.encajada #dbody > .acts:last-child,dialog.encajada #dlg2body > .acts:last
 #v-informe .pmcheck li.ok::before{border-color:#2E9E6A;background:#2E9E6A url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/12px no-repeat}
 #v-informe .pmcheck li.ok{color:var(--muted)}
 #dbody .usrok .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* v2.282.0 · Portal del centro */
+#v-informe .pcped .pclin{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:6px 16px;align-items:center;padding:10px 0;border-top:1px solid #EEF3F8}
+#v-informe .pcped .pclin:first-child{border-top:0}
+#v-informe .pcped .pclin b{display:block}
+#v-informe .pcped .pclin [data-ctp]{width:100%}
+#v-informe .pcped .pcerr{grid-column:1 / -1;color:#B42318;font-weight:600;font-size:13px}
+#v-informe .pcped .pctot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+#v-informe .pcped .pctot b{font-size:18px}
+#v-informe .pcpeds .item{cursor:default}
+@media (max-width:760px){#v-informe .pcped .pclin{grid-template-columns:1fr}}
+
+/* v2.283.0 · Packs para los centros */
+#v-informe .pcped .pcprod{padding:12px 0;border-top:1px solid var(--line)}
+#v-informe .pcped .pcprod:first-child{border-top:0}
+#v-informe .pcped .pcpcab{display:flex;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;align-items:baseline;margin-bottom:4px}
+#v-informe .pcped .pcpack{grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,.8fr)) 110px;border-top:1px solid #EEF3F8}
+#v-informe .pcped .pcpacks .pcpack:first-child{border-top:0}
+#v-informe .pcped .pcpk b,#v-informe .pcped .pcdato b{display:block}
+#v-informe .pcped .pcdato{font-variant-numeric:tabular-nums}
+#v-informe .pcped [data-pcpk]{width:100%}
+#v-informe .pcped .pcent{display:flex;flex-direction:column;gap:6px;margin:14px 0 6px;padding-top:12px;border-top:1px solid var(--line)}
+#v-informe .pcped .pcentl{display:flex;flex-direction:column;gap:8px;padding-left:4px}
+#v-informe .pcped .pcef{display:grid;grid-template-columns:minmax(0,1fr) 120px 36px;gap:8px;align-items:center}
+#v-informe .pcped #pcentres.pcmal{color:#B42318;font-weight:600}
+#prpacks .prpkf{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+#prpacks .prpkf label{display:flex;flex-direction:column;gap:4px;font-size:13px}
+#prpacks .prpkf input{width:110px}
+#prpacks .pmhx{border:0;background:none;color:var(--muted);cursor:pointer;padding:6px}
+#prpacks .pcerr{display:block;color:#B42318;font-weight:600;font-size:13px;margin-top:6px}
+@media (max-width:760px){#v-informe .pcped .pcpack{grid-template-columns:repeat(3,minmax(0,1fr))}#v-informe .pcped .pcpk,#v-informe .pcped [data-pcpk]{grid-column:1 / -1}#v-informe .pcped .pcef{grid-template-columns:minmax(0,1fr) 90px 36px}}
+
+/* v2.284.0 · Pago por adelantado */
+#v-informe .pcpeds .pcpst{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+#v-informe .pcped .pcant{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--hielo,#F2F7FC)}
+
+/* v2.285.0 · Lotes, facturas y material del portal del centro */
+#v-informe .pcpeds .pclotes{display:block;margin-top:2px}
+#v-informe .pcpeds .pcfacs{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px}
+#v-informe #pcdesc .item{cursor:default}
+#prmat .prmatpp{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-left:auto}
+
+/* v2.285.0 · Ajustes del pedido por packs */
+#v-informe .pcped .pcprod{padding:12px 16px}
+#v-informe .pcped .pcpcab .sm{text-align:right}
+#v-informe .pcped .pcpack{grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,.8fr)) 150px}
+#v-informe .pcped .pcent{margin:14px 16px 6px}
+#v-informe .pcped .pcentl[hidden]{display:none}
+#v-informe .pcped .pcef{grid-template-columns:minmax(0,1fr) 150px 36px}
+#v-informe .pcped .pcant{margin:10px 16px 0}
+#prpacks .prpkacts{display:flex;margin-top:8px}
+@media (max-width:760px){
+  #v-informe .pcped .pcpcab .sm{text-align:left}
+  #v-informe .pcped .pcpack{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #v-informe .pcped .pcpack .numw{grid-column:1 / -1;width:150px}
+  #v-informe .pcped .pcef{grid-template-columns:150px 36px;justify-content:space-between}
+  #v-informe .pcped .pcef [data-pced]{grid-column:1 / -1}
+}
 </style>
 </head>
 <body>
@@ -4565,6 +4623,6 @@ try{var co=sessionStorage.getItem('dlc-cambio-org');if(co!==null||localStorage.g
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.281.0"></script>
+<script src="./app.js?v=2.286.0"></script>
 </body>
 </html>

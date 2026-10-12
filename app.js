@@ -16016,7 +16016,7 @@ async function pintarCfgPortal() {
   if ($('cfpok')) $('cfpok').onclick = async () => {
     const material = [...c.querySelectorAll('[data-cfpm]')].filter(x => x.checked)
       .map(x => ({ valor: x.dataset.cfpm, max: Math.max(1, Math.min(1000, +c.querySelector(`[data-cfpx="${CSS.escape(x.dataset.cfpm)}"]`).value || 20)) }));
-    const { data: r, error } = await db.rpc('guardar_ajuste', { p_clave: 'portal', p_valor: { material } });
+    const { data: r, error } = await db.rpc('guardar_ajuste', { p_clave: 'portal', p_valor: Object.assign({}, (aj && aj.valor) || {}, { material }) });   // v2.284.0: sin borrar el resto del ajuste
     if (error || (r && r.ok === false)) { toast('No se ha podido guardar', true); return; }
     toast('Guardado'); pintarCfgPortal();
   };
@@ -16037,6 +16037,9 @@ arbolConfig = (orig => function () {
    Ve sus pedidos y lo comprado, pide material y escribe a su comercial (lo mismo que el médico). En la ficha del centro, «Productos
    del centro». */
 async function cargarCentro() {
+  // v2.282.0: página nueva (al final del archivo); al arrancar se espera a que esté leída
+  if (!window.PM_LISTO || typeof cargarCentro2282 !== 'function') { const v0 = $('v-informe'); if (v0 && !v0.innerHTML.trim()) v0.innerHTML = '<div class="card">' + skelCard('Cargando…') + '</div>'; setTimeout(cargarCentro, 30); return; }
+  if (window.PC_LISTO) return cargarCentro2282();
   const v = $('v-informe');
   v.innerHTML = `<div class="medhero"><div><div class="sm" style="color:rgba(255,255,255,.8)">Tu centro</div><h1 id="ctnom">…</h1>
       <div class="sm" style="color:rgba(255,255,255,.85)">Pide la reposición de tus productos y sigue tus pedidos</div></div></div>
@@ -26038,7 +26041,7 @@ async function presMateriales(forzar) {
   if (PRES_MAT && !forzar && Date.now() - PRES_T < 300000) return PRES_MAT;
   if (!navigator.onLine) return PRES_MAT || [];
   try {
-    const { data, error } = await db.from('producto_materiales').select('id,producto_id,nombre,tipo,orden').order('orden').order('creado_en');
+    const { data, error } = await db.from('producto_materiales').select('id,producto_id,nombre,tipo,orden,para_portal').order('orden').order('creado_en');
     if (!error) { PRES_MAT = data || []; PRES_T = Date.now(); }
   } catch (e) {}
   return PRES_MAT || [];
@@ -26123,11 +26126,11 @@ editorProducto = (orig => function (p, ...r) {
     const l = (await presMateriales(true)).filter(m => m.producto_id === p.id);
     if (!$('dbody') || $('prmat') || !$('prok')) return;
     ref.insertAdjacentHTML('beforebegin', `<div class="blk" id="prmat"><h3>Material para presentar</h3>
-      <p class="sm">Imágenes o PDF (fichas técnicas, estudios, catálogo) que se enseñan a pantalla completa al registrar ${esc(TT('visita', 's', 'una', 'l', 'l'))}. Hasta 8 MB cada uno.</p>
+      <p class="sm">Imágenes o PDF (fichas técnicas, estudios, catálogo) que se enseñan a pantalla completa al registrar ${esc(TT('visita', 's', 'una', 'l', 'l'))}. Hasta 8 MB cada uno. Con «Para los centros», los centros que tienen el producto lo descargan desde su portal.</p>
       <div class="prmatl" id="prmatl"></div>
-      <label class="btn sec prmatadd">+ Añadir imagen o PDF<input type="file" id="prmatf" accept="image/*,application/pdf" multiple hidden></label></div>`);
+      <label class="btn sec prmatadd">+ Añadir imagen o PDF<input type="file" id="prmatf" accept="image/*,application/pdf" data-fp="1" multiple hidden></label></div>`);
     const pinta = lista => {
-      $('prmatl').innerHTML = lista.length ? lista.map(m => `<div class="prmati"><span>${m.tipo === 'application/pdf' ? 'PDF' : 'Imagen'} · ${esc(m.nombre)}</span>
+      $('prmatl').innerHTML = lista.length ? lista.map(m => `<div class="prmati"><span>${m.tipo === 'application/pdf' ? 'PDF' : 'Imagen'} · ${esc(m.nombre)}</span><label class="prmatpp"><input type="checkbox" data-prmatpp="${m.id}" ${m.para_portal ? 'checked' : ''}> Para los centros</label>
           <button type="button" class="lnk" data-prmatver="${m.id}">Ver</button><button type="button" class="lnk" data-prmatdel="${m.id}" aria-label="Quitar ${esc(m.nombre)}">Quitar</button></div>`).join('')
         : '<p class="sm">Todavía no tiene material.</p>';
       $('prmatl').querySelectorAll('[data-prmatver]').forEach(b => b.onclick = async () => {
@@ -26469,7 +26472,7 @@ function pmResumen(d, k, pac) {
 }
 
 const pmFaltaTxt = () => {
-  const t = { horario: 'dónde y cuándo pasas consulta', telefono: 'un teléfono de contacto', visitas: `cómo prefieres ${TT('visita', 'p', 'el', 'l', 'l')}` };
+  const t = { horario: typeof PM_CENTRO === 'function' && PM_CENTRO() ? 'dónde y cuándo atendéis' : 'dónde y cuándo pasas consulta', telefono: 'un teléfono de contacto', visitas: `cómo prefieres ${TT('visita', 'p', 'el', 'l', 'l')}` };
   const l = PM.faltan.map(x => t[x]).filter(Boolean);
   return l.length > 1 ? l.slice(0, -1).join(', ') + ' y ' + l[l.length - 1] : l[0] || 'algún dato';
 };
@@ -26518,7 +26521,7 @@ function pmPintarFicha() {
         <div><label for="pmcomo">Cómo prefieres ${TT('visita', 'p', 'el', 'l', 'l')} <span class="pmreq">Necesario</span></label><select id="pmcomo"><option value="">Elige…</option>${PM_COMO.map(x => `<option ${F.visitas.como === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
         <div><label for="pmmom">Mejor momento</label><input id="pmmom" value="${esc(F.visitas.momento)}" placeholder="p. ej. martes a última hora"></div>
         <div class="pmancho"><label for="pmnot">Notas para tu comercial</label><textarea id="pmnot" rows="2" placeholder="Acceso, planta, a quién preguntar…">${esc(F.notas)}</textarea></div></div></div>
-    <div class="card ancard pmcons"><h2>Dónde pasas consulta <span class="pmreq">Necesario: al menos un día con horario</span> ${pmAyu('Dónde pasas consulta', 'Añade cada centro o consulta donde atiendes y su horario. Busca el centro por su nombre o población; si no aparece, añádelo tú. En el horario, pulsa los días y escribe las horas; con «Rellenar» pones de golpe el mismo horario en todos los días marcados.')}</h2>
+    <div class="card ancard pmcons"><h2>${PM_CENTRO() ? 'Dónde y cuándo atendéis' : 'Dónde pasas consulta'} <span class="pmreq">Necesario: al menos un día con horario</span> ${pmAyu(PM_CENTRO() ? 'Dónde y cuándo atendéis' : 'Dónde pasas consulta', 'Añade cada centro o consulta donde atiendes y su horario. Busca el centro por su nombre o población; si no aparece, añádelo tú. En el horario, pulsa los días y escribe las horas; con «Rellenar» pones de golpe el mismo horario en todos los días marcados.')}</h2>
       <div id="pmclist" class="pmclist">${F.consultas.map((c, i) => pmConsulta(c, i)).join('') || '<p class="sm">Todavía no hay ninguna consulta.</p>'}</div>
       <div class="pmcadd"><input id="pmcq" type="search" placeholder="Añadir un centro: escribe su nombre o la población" aria-label="Buscar un centro"><div id="pmcres" class="pmcres"></div></div></div>
     <div class="pmpie"><span class="sm" id="pmest">${esc(estado)}</span><button type="button" class="btn" id="pmenviar">Enviar a mi comercial</button></div>`;
@@ -26621,7 +26624,7 @@ async function pmEnviar() {
 // ——— Material y dudas: las tarjetas de siempre, en su pestaña, con su ayuda ———
 portalMedico = (orig => async function (...a) {
   const r = await orig.apply(this, a);
-  if (!ES_MEDICO() || puede('portal_centro')) return r;
+  if (!ES_MEDICO()) return r;   // v2.282.0: también el centro
   const c = $('mdcons'); if (c) c.remove();   // la constancia va en el Resumen
   const ay = { mdmat: ['Pedir material', 'Pide el material que te ofrece la empresa (folletos, talonarios…). Le llega a tu comercial, que te lo entrega; mientras está pendiente lo puedes anular.'],
     mdmsg: ['Dudas a tu comercial', 'Escribe a tu comercial cualquier duda. Te contestará aquí y te llegará un aviso.'] };
@@ -26640,7 +26643,7 @@ resumirAyuda = (orig => function (pop) {
   if (ES_MEDICO()) pop.querySelectorAll('.aiman').forEach(x => x.remove());
 })(resumirAyuda);
 ir = (orig => function (t, ...a) {
-  if (ES_MEDICO() && !puede('portal_centro') && !['informe', 'config', 'perfil'].includes(t)) t = 'informe';
+  if (ES_MEDICO() && !['informe', 'config', 'perfil'].includes(t)) t = 'informe';   // v2.282.0: también el centro
   return orig.call(this, t, ...a);
 })(ir);
 
@@ -26864,7 +26867,7 @@ function pmPintarCheck() {
   const todo = tel && como && horario;
   box.classList.toggle('ok', todo);
   box.innerHTML = `<b>${todo ? 'Tu ficha tiene todo lo necesario' : 'Para completar tu ficha'}</b>
-    <ul><li class="${tel ? 'ok' : ''}">Un teléfono de contacto</li><li class="${horario ? 'ok' : ''}">Dónde y cuándo pasas consulta (al menos un día con su horario)</li><li class="${como ? 'ok' : ''}">Cómo prefieres las ${TT('visita', 'p', '', 'l', 'l')}</li></ul>
+    <ul><li class="${tel ? 'ok' : ''}">Un teléfono de contacto</li><li class="${horario ? 'ok' : ''}">${PM_CENTRO() ? 'Dónde y cuándo atendéis' : 'Dónde y cuándo pasas consulta'} (al menos un día con su horario)</li><li class="${como ? 'ok' : ''}">Cómo prefieres las ${TT('visita', 'p', '', 'l', 'l')}</li></ul>
     <span class="sm">${todo ? 'Envíalo a tu comercial y el aviso de «faltan datos» desaparece.' : 'El resto es opcional. Cuando lo tengas, pulsa «Enviar a mi comercial».'}</span>`;
 }
 
@@ -26950,7 +26953,7 @@ function avisosEnVivo() {
       clearTimeout(espera);
       espera = setTimeout(() => {
         refrescarCampana();
-        if (ES_MEDICO() && !puede('portal_centro') && $('v-informe') && TAB === 'informe') { try { portalMedico(); } catch (e) {} }
+        if (ES_MEDICO() && $('v-informe') && TAB === 'informe') { try { if (puede('portal_centro') && typeof centroPintar === 'function') centroPintar(); else portalMedico(); } catch (e) {} }
         if (que !== 'notif' && typeof FICHA_ID !== 'undefined' && FICHA_ID && $('fportal')) { const b = $('fportal'); b.remove(); try { fichaPortal(FICHA_ID); } catch (e) {} }
       }, 400);
     };
@@ -26963,3 +26966,331 @@ function avisosEnVivo() {
 }
 // Se engancha en cuanto hay perfil (al arrancar llega un momento después)
 (function engancharVivo() { if (PERFIL && PERFIL.id) { avisosEnVivo(); comprobarAcceso(true); } else setTimeout(engancharVivo, 1000); })();
+
+
+
+
+/* ============================================================
+   v2.282.0 · Portal del centro con el mismo modelo que el del profesional (petición de Eric, 12/10/2026).
+   Una sola página con pestañas: «Resumen» (4 indicadores; «Tus pedidos» y «Lo que has comprado» del mismo tamaño, con su «i»),
+   «Pedir reposición» (sus productos con su precio; sin máximo en el campo: por encima de 1.000 unidades —lo que acepta
+   pedido_portal, que descartaba en silencio— avisa en la fila y no envía), «Mi centro» (la misma ficha que el profesional, con
+   sus textos) y «Material y dudas». Configuración, ayudas y navegación, como el portal del profesional.
+   ============================================================ */
+const PM_CENTRO = () => typeof puede === 'function' && puede('portal_centro');
+const PC_MAX = 1000;
+window.PC_LISTO = true;
+
+async function cargarCentro2282() {
+  const v = $('v-informe');
+  v.innerHTML = `<div class="medhero"><div><div class="sm" style="color:rgba(255,255,255,.8)">Tu centro</div><h1 id="ctnom">…</h1>
+      <div class="sm" style="color:rgba(255,255,255,.85)">Pide la reposición de tus productos y sigue tus pedidos</div></div></div>
+    <div class="pmtabs" role="tablist">${[['res', 'Resumen'], ['ped', 'Pedir reposición'], ['ficha', 'Mi centro'], ['mat', 'Material y dudas']].map(([k, t]) =>
+      `<button type="button" role="tab" data-pmt="${k}" class="${PM.tab === k ? 'on' : ''}" aria-selected="${PM.tab === k}">${t}<span class="pmtpunto" hidden></span></button>`).join('')}</div>
+    <div data-pmp="res" id="mdcuerpo" ${PM.tab === 'res' ? '' : 'hidden'}>${pmEsqueleto()}</div>
+    <div data-pmp="ped" id="pcped" ${PM.tab === 'ped' ? '' : 'hidden'}>${pmEsqueleto(true)}</div>
+    <div data-pmp="ficha" id="pmficha" ${PM.tab === 'ficha' ? '' : 'hidden'}>${pmEsqueleto(true)}</div>
+    <div data-pmp="mat" id="pmmat" ${PM.tab === 'mat' ? '' : 'hidden'}><div id="mdportal" class="pmfila"></div></div>`;
+  if (!['res', 'ped', 'ficha', 'mat'].includes(PM.tab)) PM.tab = 'res';
+  v.querySelectorAll('[data-pmt]').forEach(b => b.onclick = () => pmTab(b.dataset.pmt));
+  await centroPintar();
+  portalMedico();
+}
+
+async function centroPintar() {
+  if (!$('mdcuerpo')) return;
+  const [{ data: prods }, { data: mp }, { data: f }] = await Promise.all([RPC_ORIG('productos_portal', {}), RPC_ORIG('mis_pedidos_portal', {}),
+    PM.ficha ? Promise.resolve({ data: null }) : RPC_ORIG('portal_mi_ficha', {})]);
+  if (f && f.ok) pmFichaDatos(f);
+  if (!$('mdcuerpo')) return;
+  if (mp && mp.nombre) $('ctnom').textContent = mp.nombre;
+  const lp = Array.isArray(prods) ? prods : [], peds = (mp && mp.pedidos) || [], pp = (mp && mp.por_producto) || [];
+  window.PC_ANT = !!(mp && mp.pago_anticipado);   // v2.284.0
+  const conIva = x => r2((+x.precio || 0) * (1 + (+x.iva || 0) / 100));
+  const enMarcha = peds.filter(p => p.estado !== 'Anulado' && p.estado !== 'Preparado').length;
+  const uds = pp.reduce((s, x) => s + (+x.unidades || 0), 0);
+  const ult = peds.length ? String(peds[0].fecha).slice(0, 10) : null;
+  const falta = PM.faltan.length ? `<div class="pmaviso"><div><b>Completa la ficha de tu centro</b><span class="sm">Falta ${esc(pmFaltaTxt())}. Así tu comercial sabe cuándo os va mejor que pase.</span></div>
+      <button type="button" class="btn" data-pmir="ficha">Completar la ficha</button></div>` : '';
+  $('mdcuerpo').innerHTML = `${pcDebeHtml(peds)}${falta}
+    <div class="pmk">
+      <div class="kpi"><b>${num(enMarcha)}</b><span>pedidos en marcha</span></div>
+      <div class="kpi"><b>${ult ? fechaCorta(ult) : '—'}</b><span>último pedido</span></div>
+      <div class="kpi"><b>${num(uds)}</b><span>unidades en 12 meses</span></div>
+      <div class="kpi"><b>${num(lp.length)}</b><span>productos para pedir</span></div></div>
+    <div class="pmfila">
+      <div class="card ancard pcpeds"><h2>Tus pedidos ${pmAyu('Tus pedidos', 'Los pedidos de reposición que habéis hecho y en qué punto están: pendiente de validar por tu comercial, pendiente de pago (si se paga por adelantado), validado, preparado o anulado. Cada pedido lleva los lotes que se os han enviado y sus facturas para descargar.')}</h2>
+        ${peds.length ? `<div class="lista">${peds.slice(0, 8).map(p => `<div class="item"><span class="tx">
+            <b>${p.numero ? esc(p.numero) + ' · ' : ''}${fechaCorta(String(p.fecha).slice(0, 10))}</b>
+            <span class="sm">${esc((p.lineas || []).map(l => `${l.producto} × ${num(l.unidades)}${l.regalo ? ' de regalo' : ''}`).join(', '))}${p.total != null ? ' · ' + eurI(p.total) : ''}</span>${pcExtraPed(p)}</span>
+            <span class="pcpst"><span class="pill ${NOMBRE_ESTADO_CENTRO[p.estado] || ''}">${esc(p.estado)}</span>${p.proforma ? `<button type="button" class="btn sec chico" data-pcpro="${p.id}">Factura proforma</button>` : ''}</span></div>`).join('')}</div>` : '<p class="sm">Todavía no hay pedidos.</p>'}</div>
+      <div class="card ancard"><h2>Lo que habéis comprado ${pmAyu('Lo que habéis comprado', 'Unidades de los últimos 12 meses por producto, de los pedidos validados.')}</h2>
+        ${pp.length ? barrasH(pp.map(x => ({ n: x.producto, v: x.unidades })), v => num(v) + ' uds.') : vacioGrafico('Aparecerá cuando tengáis pedidos validados.')}</div></div>`;
+  $('mdcuerpo').querySelectorAll('[data-pmir]').forEach(b => b.onclick = () => pmTab(b.dataset.pmir));
+  pcPintarPedido(lp);   // v2.283.0: por packs
+  pmPintarFicha();
+}
+
+
+
+
+/* ============================================================
+   v2.283.0 · Packs para los centros (petición de Eric, 12/10/2026, con las directrices comerciales de los centros; SQL 151).
+   - Producto: «Packs para los centros» (compras N, te regalan M) y PVP recomendado con IVA. Con packs, el centro pide ese
+     producto solo por packs desde su portal; el regalo va en el pedido como línea aparte al 100 % de descuento.
+   - Portal del centro, «Pedir reposición»: cada pack con sus unidades, su importe, el coste real por unidad y el margen sobre el
+     PVP recomendado; cuántos packs de cada (0 a 50, avisando en la fila si no vale); entrega en la dirección del centro o
+     repartida entre varias direcciones (las unidades repartidas tienen que cuadrar). La bonificación es de cada pedido.
+   ============================================================ */
+const PC_PACK_MAX = 50;
+const pcPct = v => (Math.round(v * 1000) / 10).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+
+function pcPintarPedido(lp) {
+  const box = $('pcped'); if (!box) return;
+  const conIva = x => r2((+x.precio || 0) * (1 + (+x.iva || 0) / 100));
+  const dirs = [...new Set((PM.ubic || []).map(u => [u.direccion, u.municipio].filter(Boolean).join(', ')).filter(Boolean))];
+  const prod = x => {
+    const pu = conIva(x), packs = Array.isArray(x.packs) ? x.packs : [], pvp = +x.pvp_recomendado || 0;
+    if (!packs.length) return `<div class="pcprod"><div class="pcpcab"><b>${esc(x.nombre)}</b><span class="sm">${eurI(pu)} la unidad con IVA${x.propio ? ' · vuestro precio' : ''}</span></div>
+      <div class="pclin"><span class="sm">Unidades</span><input type="number" step="1" value="0" data-ctp="${x.producto_id}" data-ctpr="${pu}" aria-label="Unidades de ${esc(x.nombre)}"><span class="pcerr" hidden></span></div></div>`;
+    return `<div class="pcprod"><div class="pcpcab"><b>${esc(x.nombre)}</b><span class="sm">${eurI(pu)} la unidad con IVA${pvp ? ` · PVP recomendado ${eurI(pvp)}` : ''}</span></div>
+      <div class="pcpacks">${packs.map((k, i) => {
+        const c = +k.compra || 0, g = +k.regalo || 0, imp = r2(c * pu), coste = (c + g) ? imp / (c + g) : 0;
+        return `<div class="pclin pcpack"><span class="pcpk"><b>Pack ${num(c)}${g ? ' + ' + num(g) : ''}</b><span class="sm">${num(c + g)} unidades${g ? ` (${num(g)} de regalo)` : ''}</span></span>
+          <span class="pcdato"><b>${eurI(imp)}</b><span class="sm">con IVA</span></span>
+          <span class="pcdato"><b>${eurI(coste)}</b><span class="sm">por unidad</span></span>
+          ${pvp ? `<span class="pcdato"><b>${pcPct((pvp - coste) / pvp)}</b><span class="sm">de margen</span></span>` : '<span></span>'}
+          <input type="number" step="1" value="0" data-pcpk="${x.producto_id}" data-pci="${i}" data-pcc="${c}" data-pcg="${g}" data-pcimp="${imp}" aria-label="Cuántos packs ${num(c)}${g ? '+' + num(g) : ''}">
+          <span class="pcerr" hidden></span></div>`;
+      }).join('')}</div></div>`;
+  };
+  box.innerHTML = `<div class="card ancard pmcons pcped"><h2>Pedir reposición ${pmAyu('Pedir reposición', `Elige cuántos packs quieres de cada producto (de 0 a ${num(PC_PACK_MAX)} de cada pack). El coste por unidad incluye las de regalo, y el margen se calcula sobre el PVP recomendado. La bonificación es de cada pedido. Tu comercial lo revisa y lo valida; en «Resumen» verás cómo va.`)}</h2>
+    ${lp.length ? `<div id="ctprods">${lp.map(prod).join('')}</div>
+      <div class="pcent"><b>Entrega</b>
+        <label class="opt"><input type="radio" name="pcent" value="una" checked> En la dirección del centro</label>
+        <label class="opt"><input type="radio" name="pcent" value="varias"> Repartir entre varias direcciones</label>
+        <div id="pcentl" class="pcentl" hidden><datalist id="pcdirs">${dirs.map(d => `<option value="${esc(d)}">`).join('')}</datalist>
+          <div id="pcentf"></div><button type="button" class="btn sec chico" id="pcentmas">+ Otra dirección</button><span class="sm" id="pcentres"></span></div></div>
+      ${window.PC_ANT ? '<p class="sm pcant">Pago por adelantado: cuando tu comercial lo valide, descarga la factura proforma en «Resumen» y haz la transferencia. Lo preparamos en cuanto llegue.</p>' : ''}<label for="ctnota">Nota</label><input id="ctnota" placeholder="Opcional: horario de entrega, persona de contacto…">
+      <div class="pctot"><span id="pctxt">Total <b id="cttot">${eurI(0)}</b> con IVA</span><button type="button" class="btn" id="ctok">Enviar pedido</button></div>`
+      : '<p class="sm">Todavía no tenéis productos para pedir. Tu comercial os los dará de alta.</p>'}</div>`;
+  if (!lp.length) return;
+  const entFila = (d = '', u = '') => `<div class="pcef"><input list="pcdirs" placeholder="Dirección de entrega" value="${esc(d)}" data-pced><input type="number" step="1" placeholder="Unidades" value="${esc(u)}" data-pceu><button type="button" class="pmhx" data-pcex aria-label="Quitar esta dirección">✕</button></div>`;
+  const entPintar = () => { if (!$('pcentf').children.length) $('pcentf').innerHTML = entFila() + entFila(); };   // sin repintar: se perdería lo escrito
+  const revisar = () => {
+    let total = 0, uds = 0, regalo = 0, mal = 0;
+    box.querySelectorAll('[data-ctp], [data-pcpk]').forEach(i => {
+      const n = Number(i.value || 0), e = i.closest('.pclin').querySelector('.pcerr'), pk = !!i.dataset.pcpk, max = pk ? PC_PACK_MAX : PC_MAX;
+      const bad = !Number.isInteger(n) || n < 0 || n > max;
+      e.hidden = !bad; e.textContent = bad ? (n > max ? (pk ? `Como máximo ${num(max)} packs de este tipo en cada pedido` : `Como máximo ${num(max)} unidades en cada pedido`) : 'Escribe un número entero') : '';
+      if (bad) { mal++; return; }
+      if (pk) { total += n * (+i.dataset.pcimp || 0); uds += n * ((+i.dataset.pcc || 0) + (+i.dataset.pcg || 0)); regalo += n * (+i.dataset.pcg || 0); }
+      else { total += n * (+i.dataset.ctpr || 0); uds += n; }
+    });
+    const varias = (box.querySelector('[name=pcent]:checked') || {}).value === 'varias';
+    $('pcentl').hidden = !varias;
+    let repartidas = 0;
+    if (varias) { entPintar(); box.querySelectorAll('[data-pceu]').forEach(i => { repartidas += Math.max(0, Math.floor(+i.value || 0)); }); }
+    const res = $('pcentres');
+    if (res) { res.textContent = varias ? `Repartidas ${num(repartidas)} de ${num(uds)} unidades` : ''; res.classList.toggle('pcmal', varias && repartidas !== uds); }
+    $('pctxt').innerHTML = `Total <b id="cttot">${eurI(total)}</b> con IVA${uds ? ` · ${num(uds)} unidades${regalo ? ` (${num(regalo)} de regalo)` : ''}` : ''}`;
+    return { mal, uds, varias, repartidas };
+  };
+  box.addEventListener('input', revisar); box.addEventListener('change', revisar);
+  box.addEventListener('click', e => {
+    if (e.target.closest('#pcentmas')) { $('pcentf').insertAdjacentHTML('beforeend', entFila()); revisar(); }
+    const x = e.target.closest('[data-pcex]'); if (x) { x.closest('.pcef').remove(); revisar(); }
+  });
+  $('ctok').onclick = async ev => {
+    const r = revisar();
+    if (r.mal) { toast('Revisa las cantidades marcadas en rojo', true); return; }
+    const lineas = [];
+    box.querySelectorAll('[data-pcpk]').forEach(i => { const n = Math.floor(+i.value || 0); if (n > 0) lineas.push({ producto_id: i.dataset.pcpk, pack: { compra: +i.dataset.pcc, regalo: +i.dataset.pcg }, packs: n }); });
+    box.querySelectorAll('[data-ctp]').forEach(i => { const n = Math.floor(+i.value || 0); if (n > 0) lineas.push({ producto_id: i.dataset.ctp, unidades: n }); });
+    if (!lineas.length) { toast('Elige algún pack o pon unidades', true); return; }
+    let entregas = null;
+    if (r.varias) {
+      entregas = [...box.querySelectorAll('.pcef')].map(f => ({ direccion: f.querySelector('[data-pced]').value.trim(), unidades: Math.floor(+f.querySelector('[data-pceu]').value || 0) }))
+        .filter(x => x.direccion && x.unidades > 0);
+      if (entregas.length < 2 || r.repartidas !== r.uds) { toast(`Reparte las ${num(r.uds)} unidades entre al menos dos direcciones`, true); return; }
+    }
+    ev.target.disabled = true;
+    const { data: res } = await db.rpc('pedido_portal', { p_lineas: lineas, p_nota: $('ctnota').value.trim() || null, p_entregas: entregas });
+    ev.target.disabled = false;
+    if (!res || !res.ok) {
+      const m = res && res.motivo;
+      toast(m === 'vacio' ? 'Elige algún pack o pon unidades' : m === 'pack' ? `Ese pack de ${res.producto || 'producto'} ya no está disponible: vuelve a cargar la página`
+        : m === 'unidades' ? `Revisa las cantidades de ${res.producto || 'un producto'}` : m === 'entregas' ? `Las direcciones tienen que sumar ${num(res.total)} unidades` : motivoPortal(res), true);
+      return;
+    }
+    toast('Pedido enviado: tu comercial lo validará'); PM.tab = 'res'; await centroPintar(); pmTab('res');
+  };
+  revisar();
+}
+
+// Producto: packs para los centros y PVP recomendado
+editorProducto = (orig => function (p, ...r) {
+  const x = orig.call(this, p, ...r);
+  setTimeout(async () => {
+    if (!puede('administrar') || !$('dbody') || !$('prok') || $('prpacks') || !p || !p.id) return;
+    const { data: d } = await db.from('productos').select('packs, pvp_recomendado').eq('id', p.id).maybeSingle();
+    const ref = $('prmat') || $('dbody').querySelector('.acts:last-of-type'); if (!ref || $('prpacks')) return;
+    let packs = (d && Array.isArray(d.packs) ? d.packs : []).map(k => ({ compra: +k.compra || 0, regalo: +k.regalo || 0 }));
+    ref.insertAdjacentHTML('beforebegin', `<div class="blk" id="prpacks"><h3>Packs para los centros</h3>
+      <p class="sm">Si pones packs, los centros piden este producto solo por packs desde su portal. El regalo va en el pedido como línea aparte al 100 % de descuento. El PVP recomendado (con IVA) sirve para enseñarles su margen.</p>
+      <div id="prpkl"></div><button type="button" class="btn sec chico" id="prpkmas">+ Añadir pack</button>
+      <div class="g2" style="margin-top:10px"><div><label for="prpkpvp">PVP recomendado (con IVA)</label><input id="prpkpvp" type="number" step="0.01" value="${d && d.pvp_recomendado != null ? +d.pvp_recomendado : ''}" placeholder="Sin indicar"></div></div>
+      <span class="pcerr" id="prpkerr" hidden></span>
+      <div class="prpkacts"><button type="button" class="btn sec" id="prpkok">Guardar packs</button></div></div>`);
+    const leer = () => [...$('prpkl').querySelectorAll('.prpkf')].map(f => ({ compra: f.querySelector('[data-pkc]').value, regalo: f.querySelector('[data-pkg]').value }));
+    const pinta = () => {
+      $('prpkl').innerHTML = packs.length ? packs.map((k, i) => `<div class="prpkf"><label>Compra <input type="number" step="1" data-pkc value="${k.compra || ''}"></label>
+          <label>Regalo <input type="number" step="1" data-pkg value="${k.regalo || 0}"></label><button type="button" class="pmhx" data-pkx="${i}" aria-label="Quitar este pack">✕</button></div>`).join('')
+        : '<p class="sm">Sin packs: los centros lo piden por unidades.</p>';
+      $('prpkl').querySelectorAll('[data-pkx]').forEach(b => b.onclick = () => { packs = leer(); packs.splice(+b.dataset.pkx, 1); pinta(); });
+    };
+    pinta();
+    $('prpkmas').onclick = () => { packs = leer(); packs.push({ compra: '', regalo: 0 }); pinta(); };
+    $('prpkok').onclick = async ev => {
+      const l = leer().map(k => ({ compra: Number(k.compra), regalo: Number(k.regalo || 0) })), err = $('prpkerr');
+      const malo = l.find(k => !Number.isInteger(k.compra) || k.compra < 1 || !Number.isInteger(k.regalo) || k.regalo < 0);
+      const rep = l.some((k, i) => l.findIndex(y => y.compra === k.compra && y.regalo === k.regalo) !== i);
+      const pv = $('prpkpvp').value === '' ? null : Number($('prpkpvp').value);
+      const txt = malo ? 'Cada pack necesita una compra de 1 o más unidades y un regalo de 0 o más (números enteros).' : rep ? 'Hay dos packs iguales.' : pv != null && (!(pv >= 0) || isNaN(pv)) ? 'El PVP recomendado tiene que ser un importe de 0 o más.' : '';
+      err.hidden = !txt; err.textContent = txt; if (txt) return;
+      ev.target.disabled = true;
+      const { error } = await db.from('productos').update({ packs: l.length ? l.sort((a, b) => a.compra - b.compra) : null, pvp_recomendado: pv }).eq('id', p.id);
+      ev.target.disabled = false;
+      if (error) { toast('No se han podido guardar los packs: ' + error.message, true); return; }
+      packs = l; pinta(); toast(l.length ? `Packs guardados (${num(l.length)})` : 'Sin packs: se pide por unidades');
+    };
+  }, 0);
+  return x;
+})(editorProducto);
+
+
+
+
+/* ============================================================
+   v2.284.0 · Pago por adelantado en el portal del centro (SQL 152).
+   - Configuración → Portal: «Pago por adelantado» (ajuste portal.pago_anticipado). Con él, un pedido del portal validado y sin
+     cobrar sale al centro «Pendiente de pago», con su factura proforma (datos de la empresa e IBAN, líneas, IVA; diseño del PDF de
+     la empresa). Al marcarlo cobrado se prepara como siempre. El centro recibe un aviso al validar, cobrar, preparar o anular.
+   ============================================================ */
+NOMBRE_ESTADO_CENTRO['Pendiente de pago'] = 'p-warn';
+window.PC_ANT = false;
+
+async function pcProforma(id, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const { data: f } = await RPC_ORIG('portal_proforma', { p_id: id });
+    if (!f || !f.ok) { toast(f && f.motivo === 'no_encontrado' ? 'Ese pedido ya no está pendiente de pago' : motivoPortal(f), true); return; }
+    const d = f.diseno || {};
+    const C = Object.assign({}, PDF_DEF, d, { cols: Object.assign({}, PDF_DEF.cols, d.cols || {}) },
+      { titulo: 'FACTURA PROFORMA', formaPago: true, iban: true, vencimiento: false });
+    const doc = await facturaPDF(f, '', C);
+    doc.save(f.numero + '.pdf');
+    toast(`Proforma descargada. Pon «${f.concepto}» como concepto de la transferencia`);
+  } catch (e) { toast('No se ha podido preparar la proforma', true); registrarError('app', 'Proforma del portal', { e: String(e) }); }
+  finally { if (btn) btn.disabled = false; }
+}
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-pcpro]'); if (b) pcProforma(b.dataset.pcpro, b); });
+
+// Configuración → Portal: pago por adelantado de los pedidos del centro
+pintarCfgPortal = (orig => async function (...a) {
+  const r = await orig.apply(this, a);
+  const c = $('cfgcuerpo'); if (!c || $('cfpant')) return r;
+  const { data: aj } = await db.from('ajustes').select('valor').eq('clave', 'portal').maybeSingle();
+  if (!$('cfgcuerpo') || $('cfpant')) return r;
+  const on = !!(aj && aj.valor && aj.valor.pago_anticipado);
+  c.insertAdjacentHTML('beforeend', `<div class="card" id="cfpantc"><div class="fh"><div><h2>Pedidos del portal del centro ${typeof pmAyu === 'function' ? pmAyu('Pago por adelantado', 'Con el pago por adelantado, al validar un pedido del portal el centro lo ve «Pendiente de pago» y descarga la factura proforma con vuestros datos y el IBAN para hacer la transferencia. Cuando la recibáis, marcad el pago como cobrado en el pedido: el centro recibe el aviso y el pedido se prepara como siempre. El IBAN y los datos salen de Facturación → Datos fiscales.') : ''}</h2></div></div>
+    <label class="opt"><input type="checkbox" id="cfpant" ${on ? 'checked' : ''}> Pago por adelantado (transferencia antes de preparar el pedido)</label>
+    <div class="acts" style="justify-content:flex-end"><button class="btn" id="cfpantok" type="button">Guardar</button></div></div>`);
+  $('cfpantok').onclick = async ev => {
+    ev.target.disabled = true;
+    const { data: a2 } = await db.from('ajustes').select('valor').eq('clave', 'portal').maybeSingle();
+    const { data: x, error } = await db.rpc('guardar_ajuste', { p_clave: 'portal', p_valor: Object.assign({}, (a2 && a2.valor) || {}, { pago_anticipado: $('cfpant').checked }) });
+    ev.target.disabled = false;
+    if (error || (x && x.ok === false)) { toast('No se ha podido guardar', true); return; }
+    toast($('cfpant').checked ? 'Guardado: los centros pagarán por adelantado' : 'Guardado: sin pago por adelantado');
+  };
+  return r;
+})(pintarCfgPortal);
+
+function pcDebeHtml(peds) {
+  const n = (peds || []).filter(p => p.proforma).length;
+  return n ? `<div class="pmaviso pcdebe"><div><b>${n === 1 ? 'Tienes un pedido pendiente de pago' : `Tienes ${num(n)} pedidos pendientes de pago`}</b><span class="sm">Descarga la factura proforma en «Tus pedidos» y haz la transferencia: lo preparamos en cuanto llegue.</span></div></div>` : '';
+}
+
+
+
+
+/* ============================================================
+   v2.285.0 · Portal del centro: lotes, facturas y material para descargar (SQL 153).
+   - «Tus pedidos»: cada pedido con sus lotes (y caducidad) y sus facturas o rectificativas, que se descargan en PDF con el
+     diseño de la empresa.
+   - «Material y dudas»: «Material para descargar» con el material de sus productos que la empresa marca «Para los centros»
+     (en el producto, Material para presentar → «Para los centros»).
+   ============================================================ */
+function pcExtraPed(p) {
+  const lotes = p.lotes || [], facs = p.facturas || [];
+  return (lotes.length ? `<span class="sm pclotes">Lote${lotes.length > 1 ? 's' : ''}: ${lotes.map(l => `${esc(l.producto)} ${esc(l.lote)}${l.caducidad ? ' (cad. ' + fechaCorta(String(l.caducidad).slice(0, 10)) + ')' : ''}`).join(' · ')}</span>` : '')
+    + (facs.length ? `<span class="pcfacs">${facs.map(f => `<button type="button" class="lnk" data-pcfac="${f.id}">${f.rectificativa ? 'Rectificativa' : 'Factura'} ${esc(f.numero || '')}</button>`).join('')}</span>` : '');
+}
+
+async function pcFactura(id, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const { data: f } = await RPC_ORIG('portal_factura', { p_id: id });
+    if (!f || !f.ok) { toast(motivoPortal(f), true); return; }
+    const d = f.diseno || {};
+    const C = Object.assign({}, PDF_DEF, d, { cols: Object.assign({}, PDF_DEF.cols, d.cols || {}) });
+    const doc = await facturaPDF(f, f.rectifica_num || '', C);
+    doc.save(nombrePDF(f));
+  } catch (e) { toast('No se ha podido preparar la factura', true); registrarError('app', 'Factura del portal', { e: String(e) }); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+async function pcMaterialBajar(id, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const { data: m } = await RPC_ORIG('portal_material_archivo', { p_id: id });
+    if (!m || !m.ok) { toast(motivoPortal(m), true); return; }
+    const bin = atob(m.datos || ''), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u8], { type: m.tipo || 'application/octet-stream' }));
+    const a = document.createElement('a'); a.href = url; a.download = m.nombre || 'material'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  } catch (e) { toast('No se ha podido descargar', true); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('[data-pcfac], [data-pcmat]'); if (!t) return;
+  if (t.dataset.pcfac) pcFactura(t.dataset.pcfac, t); else pcMaterialBajar(t.dataset.pcmat, t);
+});
+
+async function pcDescargas() {
+  const caja = $('pmmat'); if (!caja || $('pcdesc')) return;
+  caja.insertAdjacentHTML('afterbegin', `<div class="card ancard" id="pcdesc"><h2>Material para descargar ${pmAyu('Material para descargar', 'Dípticos, fichas de producto, guías de mostrador y otro material que la empresa prepara para los centros, de los productos que tenéis dados de alta. Pulsa para descargarlo.')}</h2><div id="pcdescl">${skelCard('Cargando…')}</div></div>`);
+  const { data: l } = await RPC_ORIG('portal_materiales', {});
+  const box = $('pcdescl'); if (!box) return;
+  const lista = Array.isArray(l) ? l : [];
+  const kb = n => n ? (n > 1048576 ? (n / 1048576).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB') : '';
+  box.innerHTML = lista.length ? `<div class="lista">${lista.map(m => `<div class="item"><span class="tx"><b>${esc(m.nombre)}</b>
+      <span class="sm">${esc(m.producto)} · ${m.tipo === 'application/pdf' ? 'PDF' : 'Imagen'}${m.tamano ? ' · ' + kb(m.tamano) : ''}</span></span>
+      <button type="button" class="btn sec chico" data-pcmat="${m.id}">Descargar</button></div>`).join('')}</div>`
+    : '<p class="sm">Todavía no hay material para descargar.</p>';
+}
+centroPintar = (orig => async function (...a) { const r = await orig.apply(this, a); try { await pcDescargas(); } catch (e) {} return r; })(centroPintar);
+
+// Producto: el material, también para los centros
+document.addEventListener('change', async e => {
+  const c = e.target.closest && e.target.closest('[data-prmatpp]'); if (!c) return;
+  c.disabled = true;
+  const { error } = await db.from('producto_materiales').update({ para_portal: c.checked }).eq('id', c.dataset.prmatpp);
+  c.disabled = false;
+  if (error) { c.checked = !c.checked; toast('No se ha podido guardar: ' + error.message, true); return; }
+  const m = (PRES_MAT || []).find(x => x.id === c.dataset.prmatpp); if (m) m.para_portal = c.checked;
+  toast(c.checked ? 'Los centros que tienen este producto ya lo pueden descargar' : 'Ya no se ofrece a los centros');
+});
