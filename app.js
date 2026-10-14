@@ -1,3 +1,7 @@
+/* v2.305.0: si el enlace del correo de activación ha caducado, Supabase vuelve a la app con el error en la dirección
+   (#error_code=otp_expired o ?error_code=…): se lee antes de nada para avisar en el acceso y ofrecer un enlace nuevo */
+const ENLACE_ERROR = (() => { try { const p = new URLSearchParams((location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, ''));
+  return p.get('error_code') || p.get('error') || null; } catch (e) { return null; } })();
 /* Añadir una clase que ya está o quitar una que no está no hace nada (el navegador lo contaba como un cambio
    y despertaba a los componentes que vigilan la pantalla, que podían entrar en bucle entre ellos) */
 (function () {
@@ -166,6 +170,7 @@ $('lform').addEventListener('submit', async e => {
   const { error } = await db.auth.signInWithPassword({ email: $('lu').value.trim(), password: $('lp').value });
   btn.disabled = false; btn.textContent = 'Entrar';
   if (error) {
+    if (/not confirmed/i.test(error.message)) { accesoSinActivar('Tu cuenta aún no está activada: abre el enlace del correo que te enviamos o pide uno nuevo.'); return; }
     msg.textContent = error.message === 'Invalid login credentials'
       ? 'Correo o contraseña incorrectos.' : 'No se ha podido entrar: ' + error.message;
     return;
@@ -352,6 +357,7 @@ async function buscar(reiniciar) {
     q: F.q || null, f_provincia: F.prov || null, f_municipio: F.muni || null,
     f_estado: F.est || null, f_especialidad: F.esp || null, f_area: null,
     f_urgentes: F.urg, f_mios: !!F.mios, f_sin_visitar: !!F.sin, f_comercial: F.com || null, f_reporting: F.rep || null,
+    ...(F.tipo ? { f_tipo: F.tipo } : {}),
     orden: F.orden, lim: tamPagina(), desplaz: F.pagina * tamPagina(),
     ...(Object.keys(F.campos || {}).length ? { f_campos: F.campos } : {})
   };
@@ -3335,6 +3341,7 @@ function abrirHerramientas(contexto) {
   HERR_CTX = contexto;
   const filtrosDir = `
     <h3>Filtros</h3>
+    <label>Tipo</label><select data-tf="tipo"><option value="">Todas</option><option value="Persona" ${F.tipo === 'Persona' ? 'selected' : ''}>Profesionales</option><option value="Centro" ${F.tipo === 'Centro' ? 'selected' : ''}>Centros</option></select>
     <label>Provincia</label><select data-tf="prov">${optFiltro(OPF.provincias, F.prov, 'Todas las provincias')}</select>
     <label>Municipio</label><select data-tf="muni">${optFiltro(OPF.municipios, F.muni, 'Todos los municipios')}</select>
     <label>Especialidad</label><select data-tf="esp">${optFiltro(OPF.especialidades, F.esp, 'Todas las especialidades')}</select>
@@ -3343,6 +3350,7 @@ function abrirHerramientas(contexto) {
     ${VE_TODO() && $('fcom') ? `<label>Comercial</label><select data-tf="com">${$('fcom').innerHTML}</select>` : ''}
     <label class="opt" style="margin-top:10px"><input type="checkbox" data-tfc="mios" ${F.mios ? 'checked' : ''}> Solo ${TT('medico', 'p', 'el', 'l', 'l')} de mi cartera</label>
     <label class="opt"><input type="checkbox" data-tfc="sin" ${F.sin ? 'checked' : ''}> Sin visitar nunca</label>
+    <label class="opt"><input type="checkbox" data-tfc="urg" ${F.urg ? 'checked' : ''}> Solo urgentes</label>
     <div class="tfcampos">${camposFiltros('medico', F.campos, 'tfcp')}</div>
     <label>Ordenar por</label><select data-tf="orden">
       <option value="nombre" ${F.orden === 'nombre' ? 'selected' : ''}>Nombre</option>
@@ -4886,7 +4894,7 @@ async function pedidoOperativa(id) {
     ${OPS.map(([k, t]) => `<label class="opchk ${opHecho(p, k) ? 'on' : ''}"><input type="checkbox" data-op="${k}" ${opHecho(p, k) ? 'checked' : ''} ${permitido ? '' : 'disabled'}>
       <span>${esc(t)}${k === 'pago' && p.forma_pago ? ` <span class="sm">· ${esc(p.forma_pago)}${/reembolso/i.test(p.forma_pago) ? ' (se cobra al entregar)' : ''}</span>` : ''}</span></label>`).join('')}
     <div class="acts" style="margin:6px 0 0">
-      ${cli.email ? `<a class="btn sec" id="pdmailpago" data-ped="${id}" href="mailto:${esc(cli.email)}?subject=${encodeURIComponent('Datos para el pago de tu pedido ' + (p.numero || ''))}&body=${encodeURIComponent(textoEmailPago(p, total, cli.nombre))}">✉️ Preparar email con los datos de pago</a>` : '<span class="sm">El cliente no tiene email en su ficha.</span>'}
+      ${cli.email ? `<a class="btn sec" id="pdmailpago" data-ped="${id}" href="mailto:${esc(cli.email)}?subject=${encodeURIComponent(asuntoEmailPago(p, total, cli.nombre))}&body=${encodeURIComponent(textoEmailPago(p, total, cli.nombre))}">✉️ Preparar email con los datos de pago</a>` : '<span class="sm">El cliente no tiene email en su ficha.</span>'}
     </div></div>`);
   $('dbody').querySelectorAll('[data-op]').forEach(c => c.onchange = async () => {
     const { data: r, error } = await db.rpc('marcar_operativa', { p_pedido: id, p_campo: c.dataset.op, p_hecho: c.checked });
@@ -6237,6 +6245,18 @@ const salidaUsuario = () => prefsActivas().salida || { nombre: `la ${TT('visita'
 
 /** Orden por cercanía: las citas con hora fija marcan el esqueleto; las demás se insertan donde menos desvío suman. */
 
+// v2.298: coloca la cita de esa ficha con esa hora entre las abiertas del día (mismo criterio que «Cambiar la hora»)
+async function colocarPorHora(fecha, uid, cuentaId, h) {
+  const { data } = await RPC_ORIG('agenda_rango', { p_desde: fecha, p_hasta: fecha, p_usuario: uid });
+  const hh = c => c.hora ? String(c.hora).slice(0, 5) : null;
+  const ab = (data || []).filter(c => c.usuario_id === uid && CITA_ABIERTA.includes(c.estado));
+  const yo = ab.filter(c => c.cuenta_id === cuentaId && hh(c) === h).pop(); if (!yo) return;
+  const resto = ab.filter(c => c !== yo);
+  let i = resto.findIndex(c => hh(c) && hh(c) > h);
+  if (i < 0) { i = 0; resto.forEach((c, k) => { if (hh(c) && hh(c) <= h) i = k + 1; }); }
+  resto.splice(i, 0, yo);
+  if (resto.some((c, k) => c !== ab[k])) { await guardarOrden(resto); if (typeof RC !== 'undefined' && RC.delete) RC.delete('agenda-' + fecha); }
+}
 async function guardarOrden(citas) {
   const { data: r, error } = await db.rpc('ordenar_citas', { p_ids: citas.map(c => c.id) });
   if (error || (r && r.ok === false)) { toast('No se ha podido guardar el orden', true); return false; }
@@ -9222,8 +9242,8 @@ async function enviarFacturaEmail(f, rn) {
     <div class="fh"><div><h2>Enviar ${esc(f.numero)} por email</h2><div class="sm">La factura va adjunta en PDF</div></div>
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
     <label for="efp">Para</label><input id="efp" type="email" value="${esc(c.email || '')}" placeholder="email del cliente">
-    <label for="efa">Asunto</label><input id="efa" value="${esc(`Tu factura ${f.numero} · ${e.razon_social || nombreApp()}`)}">
-    <label for="eft">Mensaje</label><textarea id="eft" rows="7">${esc(`Hola${saludo ? ' ' + saludo : ''}:\n\nTe adjuntamos la factura ${f.numero} de tu pedido, por un importe de ${eurI(f.total)}.\n\nGracias por tu confianza. Para cualquier consulta, estamos a tu disposición${e.telefono ? ' en el ' + e.telefono : ''}.\n\nUn saludo,\n${e.razon_social || nombreApp()}`)}</textarea>
+    <label for="efa">Asunto</label><input id="efa" value="${esc(plantillaCorreo('factura', 'asunto', varsCorreo({ documento: 'factura', numero: f.numero, importe: f.total, nombre: c.nombre })))}">
+    <label for="eft">Mensaje</label><textarea id="eft" rows="12">${esc(plantillaCorreo('factura', 'texto', varsCorreo({ documento: 'factura', numero: f.numero, importe: f.total, nombre: c.nombre })))}</textarea>
     <div class="adjunto">📎 ${esc(nombrePDF(f))}</div>
     <div class="acts" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn sec" data-cerrar2>Cancelar</button>
       <button class="btn" id="efok">Enviar</button></div>`;
@@ -9265,6 +9285,7 @@ document.addEventListener('click', async e => {
   const a = e.target.closest('#pdmailpago');
   if (!a) return;
   e.preventDefault(); e.stopImmediatePropagation();
+  if (!((AJUSTES.empresa || {}).iban || '').trim()) { toast('Falta el IBAN: ponlo en Configuración → Facturación → Datos fiscales antes de enviar los datos de pago', true); return; }   // v2.306.0
   const href = new URL(a.href.replace(/^mailto:/, 'http://x/?to=').replace('?subject', '&subject'));
   const para = decodeURIComponent(href.searchParams.get('to') || ''), asunto = href.searchParams.get('subject') || '', texto = href.searchParams.get('body') || '';
   const { data, error } = await db.functions.invoke('enviar_email', { body: { para, asunto, texto, pedido_id: a.dataset.ped || null, marca: 'email_pago' } });
@@ -10616,7 +10637,7 @@ async function pintarUsuarios2() {
       <div class="kpi"><b>${num(activos.length)} / ${num(maxU)}</b><span>usuarios del plan ${esc(act.nombre)}</span></div>
       ${Object.entries(porRol).map(([r, n]) => `<div class="kpi"><b>${num(n)}</b><span>${esc(r)}</span></div>`).join('')}
       <div class="kpi ${inactivos ? 'warn' : 'ok'}"><b>${num(inactivos)}</b><span>sin actividad en 30 días</span></div>
-      <div class="kpi"><b>${num(todos.filter(u => rolPuede(u.rol, 'portal_prescriptor') && u.activo).length)}</b><span>${TT('medico', 'p', '', 'l', 'l')} con acceso</span></div></div>
+      <div class="kpi" data-usrinvk><b>${num(todos.filter(u => (rolPuede(u.rol, 'portal_prescriptor') || rolPuede(u.rol, 'portal_centro')) && u.activo).length)}</b><span>Cuentas con acceso</span></div></div>
     <div class="card" style="padding:14px 16px">
       <div class="usrbar"><input id="usrq" type="search" placeholder="Buscar por nombre o email" value="${esc(USR_F.q)}">
         <select id="usrrol"><option value="">Todos los roles</option>${rolesNombres().map(r => `<option ${USR_F.rol === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
@@ -11912,6 +11933,7 @@ function detalleUsuario(u) {
       ${!rolPuede(u.rol, 'portal_prescriptor') ? '<button class="btn sec" data-uacc="cartera">🗂️ Asignar cartera</button>' : ''}
       ${puede('administrar') && u.id !== PERFIL.id ? '<button class="btn sec" data-uacc="acceso">Datos de acceso</button>' : ''}
       <button class="btn sec" data-uacc="pass">🔑 Enviar cambio de contraseña</button>
+      <button class="btn sec" data-uacc="activar">📧 Reenviar el correo de activación</button>
       ${typeof puedeVerComo === 'function' && puedeVerComo(u) ? (esInvitado(u) ? '<button class="btn" data-uacc="como">👤 Impersonalizar</button>' : '<button class="btn sec" data-uacc="como">👤 Impersonalizar</button>') : ''}
       ${puede('administrar') && u.id !== PERFIL.id ? '<button class="btn sec dang" data-uacc="borrar">🗑 Borrar usuario</button>' : ''}</div>`;
   $('dlg').showModal();
@@ -11920,6 +11942,7 @@ function detalleUsuario(u) {
     if (a === 'editar') editarUsuario(u.id);
     if (a === 'cartera') { $('dlg').close(); asignarCartera(u.id); }
     if (a === 'pass') { $('dlg').close(); restablecerPassword(u); }
+    if (a === 'activar') reenviarActivacion(u.email);
     if (a === 'acceso') verAccesoTemporal(u);   // v2.279.0
     if (a === 'como') { $('dlg').close(); entrarComo(u.id); }
     if (a === 'borrar') { $('dlg').close(); borrarUsuario(u); }
@@ -18898,6 +18921,8 @@ nuevaCita = async function (medicoId, fecha, op = {}) {
     }});
     ev.target.disabled = false;
     if (r.error) { toast('No se ha podido: ' + r.error.message, true); return; }
+    // v2.298: con hora, la cita nueva se coloca entre las del día según su hora (antes quedaba la última)
+    if ($('nch').value) await colocarPorHora(f, TAB === 'agenda' && AG_VISTA ? AG_VISTA.id : PERFIL.id, elegido.id, $('nch').value);
     $('dlg').close(); toast('Cita añadida el ' + fechaDiaMes(f)); if (TAB === 'agenda') agRefrescoQuieto(); else cargarInicio();
   };
   $('dlg').classList.add('pequena');
@@ -21758,6 +21783,13 @@ pulirCfg = (orig => function () {
           k.querySelectorAll('.usrresrol').forEach(y => y.classList.toggle('on', y === x && !!s.value)); };
         x.onclick = filtra; x.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); filtra(); } };
       });
+      // v2.297: «Cuentas con acceso» (profesionales y centros con portal) lleva a la tarjeta de invitados
+      const inv = k.querySelector('[data-usrinvk]');
+      if (inv) {
+        inv.classList.add('usrresrol'); inv.setAttribute('role', 'button'); inv.tabIndex = 0; inv.title = 'Ver las cuentas con acceso a su portal';
+        const ir2 = () => { const w = c.querySelector('.usrinvw'); if (!w) return; w.scrollIntoView({ behavior: 'smooth', block: 'start' }); w.classList.remove('usrinvluz'); void w.offsetWidth; w.classList.add('usrinvluz'); };
+        inv.onclick = ir2; inv.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir2(); } };
+      }
     }
   }
 })(pulirCfg);
@@ -21849,7 +21881,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMesCin
 // Las tarjetas de Tu día, desde la lista de siempre
 // Pulsar la tarjeta (fuera de sus botones) abre la cita, como la fila de antes
 document.addEventListener('click', e => {
-  const t = e.target.closest('.tdu'); if (!t || e.target.closest('button, a, input, select')) return;
+  const t = e.target.closest('.tdu'); if (!t || e.target.closest('button, a, input, select, .agtamb[data-agtc]')) return;
   const c = (TD_CITAS || []).find(x => x.id === t.dataset.tdu); if (c) verCita(c);
 });
 document.addEventListener('keydown', e => {
@@ -23752,22 +23784,32 @@ const PL = {
     textoNuevo: () => 'Añadir ' + TT('medico', 's', '', 'l', 'l'),
     cuerpo: () => $('lista'), tabla: () => $('tabla'), pie: () => $('dirpag'), cuenta: () => $('cuenta'),
     conDatos: el => !!el.querySelector('.trow, .vacio'),
-    rapidos: [['fest', 'Estado'], ['fcom', ''], ['fprov', 'Provincia'], ['fmuni', 'Municipio'], ['fesp', 'Especialidad']],
+    rapidos: [['ftipo', 'Tipo'], ['fest', 'Estado'], ['fcom', ''], ['fprov', 'Provincia'], ['fmuni', 'Municipio'], ['fesp', 'Especialidad']],
     q: () => F.q || '',
     buscarQ: v => { F.q = v; buscar(true); },
-    activos: () => ['prov', 'muni', 'esp', 'est', 'rep', 'com'].filter(k => F[k]).length + ['urg', 'mios', 'sin'].filter(k => F[k]).length + Object.keys(F.campos || {}).length,
+    buscaTxt: () => 'Buscar cuentas',
+    nKpis: 5,   // v2.304.0: el esqueleto con los mismos cinco huecos
+    // v2.296: un campo personalizado vaciado se quedaba como clave y contaba como filtro sin verse en el panel
+    activos: () => ['tipo', 'prov', 'muni', 'esp', 'est', 'rep', 'com'].filter(k => F[k]).length + ['urg', 'mios', 'sin'].filter(k => F[k]).length + Object.values(F.campos || {}).filter(filtroConValor).length,
+    quitar: () => {
+      Object.assign(F, { q: '', tipo: '', prov: '', muni: '', esp: '', est: '', urg: false, mios: false, sin: false, com: '', rep: '', campos: {} });
+      ['ftipo', 'fest', 'fprov', 'fmuni', 'fesp', 'fcom', 'frep', 'q'].forEach(id => { if ($(id)) $(id).value = ''; });
+      const t = $('tools'); if (t && t.classList.contains('abierto') && HERR_CTX === 'directorio') t.classList.remove('abierto');
+      cargarFiltros(); buscar(true);
+    },
     filtros: () => { const b = $('dirtools'); if (b) b.click(); },
     columnas: () => abrirColumnas(),
     mapa: () => $('mapaBtn'),
     mas: () => [['dircalidad', 'Calidad del dato'], ['cercaBtn', 'Cerca de mí']],
     kpis: async () => {
       const t = x => RPC_ORIG('buscar_cuentas', { q: null, lim: 1, desplaz: 0, ...x }).then(r => (r.data && r.data.total) || 0, () => 0);
-      const [tot, urg, sin, mios] = await Promise.all([t({}), t({ f_urgentes: true }), t({ f_sin_visitar: true }), t({ f_mios: true })]);
-      return [{ k: 'tot', t: TT('medico', 'p', '', 'l', 'C'), n: tot, s: 'en total' }, { k: 'urg', t: 'Urgentes', n: urg, s: 'marcados como urgentes' },
+      // v2.304.0: profesionales y centros por separado (antes una sola cifra con el nombre de los profesionales que contaba también los centros)
+      const [pro, cen, urg, sin, mios] = await Promise.all([t({ f_tipo: 'Persona' }), t({ f_tipo: 'Centro' }), t({ f_urgentes: true }), t({ f_sin_visitar: true }), t({ f_mios: true })]);
+      return [{ k: 'Persona', t: TT('medico', 'p', '', 'l', 'C'), n: pro, s: 'en total' }, { k: 'Centro', t: 'Centros', n: cen, s: 'en total' }, { k: 'urg', t: 'Urgentes', n: urg, s: 'marcados como urgentes' },
         { k: 'sin', t: 'Sin visitar nunca', n: sin, s: 'todavía sin ' + TT('visita', 'p', '', 'l', 'l') }, { k: 'mios', t: 'De mi cartera', n: mios, s: 'asignados a ti' }];
     },
-    kpiOn: k => k === 'tot' ? !F.urg && !F.sin && !F.mios : !!F[k],
-    kpiPulsar: k => { if (k === 'tot') { F.urg = false; F.sin = false; F.mios = false; } else F[k] = !F[k]; buscar(true); },
+    kpiOn: k => k === 'Persona' || k === 'Centro' ? F.tipo === k : !!F[k],
+    kpiPulsar: k => { if (k === 'Persona' || k === 'Centro') { F.tipo = F.tipo === k ? '' : k; if ($('ftipo')) $('ftipo').value = F.tipo; } else F[k] = !F[k]; buscar(true); },
     card: null   // las tarjetas del directorio las pone filaTabla (abajo), con los datos de la ficha
   },
   pacientes: {
@@ -23820,7 +23862,7 @@ function plEsqueleto(tab, conCab) {
 
 function plKpisHtml(tab) {
   const c = PL[tab], k = PL_KPI[tab];
-  if (!k || !k.datos) return ['', '', '', ''].map(() => `<div class="plk plcarga"><span class="plkt"><i class="plsk" style="width:46%"></i></span><b><i class="plsk plskv"></i></b><small><i class="plsk" style="width:70%"></i></small></div>`).join('');
+  if (!k || !k.datos) return Array(c.nKpis || 4).fill('').map(() => `<div class="plk plcarga"><span class="plkt"><i class="plsk" style="width:46%"></i></span><b><i class="plsk plskv"></i></b><small><i class="plsk" style="width:70%"></i></small></div>`).join('');
   return k.datos.map(d => `<button type="button" class="plk ${c.kpiOn(d.k) ? 'on' : ''}" data-plk="${d.k}"><span class="plkt">${esc(d.t)}</span><b data-pln="${d.n}">${num(d.n)}</b><small>${esc(d.s)}</small></button>`).join('');
 }
 function plCargarKpis(tab) {
@@ -23874,6 +23916,8 @@ revelar = (orig => function (el, max, desde) {
 
 // Los indicadores se piden aparte (RPC_ORIG): las listas «solo la última» descartarían las consultas paralelas
 // Clics de la barra, los indicadores y el menú «⋯»
+// Un filtro de campo personalizado cuenta si tiene algo (texto, lista o rango)
+const filtroConValor = v => v != null && v !== '' && !(Array.isArray(v) && !v.length) && !(typeof v === 'object' && !Array.isArray(v) && !Object.values(v).some(x => x != null && x !== ''));
 function plCerrarPop() { document.querySelectorAll('.plpop').forEach(p => p.remove()); }
 function plPop(btn, items) {
   plCerrarPop();
@@ -23882,8 +23926,8 @@ function plPop(btn, items) {
   p.innerHTML = (items.length > 12 ? '<input type="search" class="plpopq" placeholder="Buscar…" aria-label="Buscar">' : '') +
     `<div class="plpopl">${items.map((x, i) => `<button type="button" role="menuitemradio" aria-checked="${!!x.on}" class="${x.on ? 'on' : ''}" data-ppi="${i}">${esc(x.t)}</button>`).join('')}</div>`;
   document.body.appendChild(p);
-  const izq = Math.min(Math.max(8, r.left), innerWidth - p.offsetWidth - 8);
-  Object.assign(p.style, { left: izq + 'px', top: (r.bottom + 6 + scrollY) + 'px' });
+  if (ES_MOVIL()) p.classList.add('plhoja');
+  else { const izq = Math.min(Math.max(8, r.left), innerWidth - p.offsetWidth - 8); Object.assign(p.style, { left: izq + 'px', top: (r.bottom + 6 + scrollY) + 'px' }); }
   p.querySelectorAll('[data-ppi]').forEach(b => b.onclick = () => { plCerrarPop(); items[+b.dataset.ppi].fn(); });
   const q = p.querySelector('.plpopq');
   if (q) { q.oninput = () => { const v = normalizar(q.value); p.querySelectorAll('[data-ppi]').forEach(b => b.classList.toggle('hide', !!v && !normalizar(b.textContent).includes(v))); }; if (!PANTALLA_TACTIL) q.focus(); }
@@ -23908,6 +23952,7 @@ document.addEventListener('click', e => {
     if (items.length) plPop(e.target.closest('.plmas'), items); return;
   }
   if (e.target.closest('.plfil')) { c.filtros(); return; }
+  if (e.target.closest('.plquitar') && c.quitar) { c.quitar(); plSync(tab); return; }
   if (e.target.closest('.plcol')) { c.columnas(); return; }
   if (e.target.closest('.plmapa')) { const m = c.mapa(); if (m) m.click(); setTimeout(() => plSync(tab), 50); return; }
 });
@@ -24111,6 +24156,7 @@ plSync = function (tab) {
   });
   const n = c.activos(), pn = tl.querySelector('.pln');
   if (pn) { const v = String(n || ''); if (pn.textContent !== v) pn.textContent = v; if (pn.classList.contains('hide') !== !n) pn.classList.toggle('hide', !n); }
+  const pq = tl.querySelector('.plquitar'); if (pq && pq.classList.contains('hide') !== !n) pq.classList.toggle('hide', !n);
   const cnt = tl.querySelector('.plcnt'), h = plRecuento(sec, c);
   if (cnt && h && cnt.dataset.h !== h) { cnt.dataset.h = h; cnt.innerHTML = h; }
   // Tabla y pie en una tarjeta; los totales, en la franja de resumen encima
@@ -24143,9 +24189,10 @@ plSync = function (tab) {
 // La barra y los clics usan la configuración de la sección abierta
 plToolHtml = function (tab) {
   const c = plCfg(tab);
-  return `<label class="plq">${plIco('search', '🔍')}<input type="search" class="plqi" placeholder="Buscar en ${esc(c.que())}" aria-label="Buscar en ${esc(c.que())}"></label>
+  return `<label class="plq">${plIco('search', '🔍')}<input type="search" class="plqi" placeholder="${esc(c.buscaTxt ? c.buscaTxt() : 'Buscar en ' + c.que())}" aria-label="${esc(c.buscaTxt ? c.buscaTxt() : 'Buscar en ' + c.que())}"></label>
     <div class="plrap">${c.rapidos.map(([id, t]) => { t = t || plEtiq(id); return `<button type="button" class="plchip" data-plr="${esc(id)}" data-plt="${esc(t)}">${esc(t)}</button>`; }).join('')}</div>
     <button type="button" class="plbtn chico plfil">${plIco('sliders-horizontal')}<span>Filtros</span><span class="pln hide"></span></button>
+    ${c.quitar ? '<button type="button" class="plquitar hide">Quitar filtros</button>' : ''}
     <button type="button" class="plbtn chico plcol">${plIco('columns-3', 'table', 'list')}<span>Columnas</span></button>
     ${c.mapa() ? `<button type="button" class="plbtn chico plic plmapa" title="Ver en el mapa" aria-label="Ver en el mapa">${plIco('map')}</button>` : ''}
     <span class="plcnt"><i class="plsk" style="width:90px"></i></span>`;
@@ -24527,7 +24574,7 @@ async function tdPintar() {
 
   $('agcuerpo').innerHTML = `
     <div class="tdhead">
-      <div class="${fecha >= hoy ? 'tdtitw' : ''}"><h2 style="padding:0">${esHoy ? 'Tu día' : pasado ? 'Lo que pasó este día' : 'Tu agenda de este día'}</h2>${fecha >= hoy ? `<button type="button" class="kmv tddiamas" id="tddiamas" aria-label="Opciones del día" title="Opciones del día: nueva cita, bloquear el día…">${SVA(ICU.mas)}</button>` : ''}
+      <div class="${fecha >= hoy ? 'tdtitw' : ''}"><h2 style="padding:0">${esHoy ? 'Tu día' : pasado ? 'Lo que pasó este día' : 'Tu agenda de este día'}</h2>${mias.length > 1 ? `<button type="button" class="btn sec chico plic" id="tdcompactar" aria-pressed="${tdCompacto()}" title="${tdCompacto() ? 'Ver el detalle de las citas' : 'Compactar las citas: una línea cada una'}" aria-label="${tdCompacto() ? 'Ver el detalle de las citas' : 'Compactar las citas'}">${plIco(tdCompacto() ? 'file-text' : 'list')}</button>` : ''}${fecha >= hoy ? `<button type="button" class="kmv tddiamas" id="tddiamas" aria-label="Opciones del día" title="Opciones del día: nueva cita, bloquear el día…">${SVA(ICU.mas)}</button>` : ''}
         <div class="tdstats">
           <span><b>${num(activas)}</b> citas</span>
           <span><b style="color:var(--ok)">${num(hechas)}</b> visitadas</span>
@@ -24684,12 +24731,34 @@ function agTamb() {
     });
     if (!t) return;
     usadas.add(t);
-    const chips = gente.slice(0, 6).map(m => `<button type="button" data-agti="${m.id}" data-agtv="${m.visitar ? 1 : ''}" title="${esc(m.visitar ? 'Añadir una cita · ' + m.visitar : 'Ver su ficha' + (m.falta && m.falta.length ? ' · falta: ' + m.falta.join(', ') : ''))}">${m.visitar ? '<i>+</i> ' : ''}${esc(m.nombre)}</button>`).join('')
+    // v2.303: agrupados por cuándo atienden en ese centro el día de la cita (mañana, tarde, otro día); con más de 6, los primeros
+    const chip = m => `<button type="button" data-agti="${m.id}" data-agtv="${m.visitar ? 1 : ''}" title="${esc(m.visitar ? 'Añadir una cita · ' + m.visitar : 'Ver su ficha' + (m.falta && m.falta.length ? ' · falta: ' + m.falta.join(', ') : ''))}">${m.visitar ? '<i>+</i> ' : ''}${esc(m.nombre)}</button>`;
+    const grupos = agTambGrupos(gente.slice(0, 6), AG_FECHA);
+    const chips = grupos.map(([t2, l]) => `<div class="agtambg"><span class="agtambgt">${esc(t2)}</span><div class="agtambl">${l.map(chip).join('')}</div></div>`).join('')
       + (gente.length > 6 ? `<span class="sm">y ${gente.length - 6} más</span>` : '');
     const pie = t.querySelector('.tdu-pie') || t.lastElementChild;
-    pie.insertAdjacentHTML('beforebegin', `<div class="agtamb"><div class="agtambh">${svgIco(ICON_NOM['map-pin'])} En este centro también</div><div class="agtambl">${chips}</div></div>`);
+    pie.insertAdjacentHTML('beforebegin', `<div class="agtamb${g.centro_id ? ' agtambc' : ''}"${g.centro_id ? ` data-agtc="${esc(g.centro_id)}" role="button" tabindex="0" title="Abrir la ficha del centro"` : ''}><div class="agtambh">${svgIco(ICON_NOM['map-pin'])} En este centro también${g.centro_id ? '<span class="agtambver">Ver el centro ›</span>' : ''}</div>${chips}</div>`);
   });
 }
+// Mañana / tarde / otro día según el horario de su consulta (ubicaciones.dias: {"L": "Mañana 10:00-13:00", "X": "16-19"…})
+function agTambGrupos(gente, fecha) {
+  const letra = 'DLMXJVS'[new Date(fecha + 'T12:00:00').getDay()], NOM = { L: 'lunes', M: 'martes', X: 'miércoles', J: 'jueves', V: 'viernes', S: 'sábado', D: 'domingo' };
+  const g = { m: [], t: [], o: [], s: [] }, otros = new Set();
+  gente.forEach(m => {
+    const d = m.dias || {}, hoy = d[letra], ks = Object.keys(d).filter(k => d[k]);
+    if (!ks.length) { g.s.push(m); return; }
+    if (!hoy) { g.o.push(m); ks.forEach(k => otros.add(k)); return; }
+    const h = parseInt((String(hoy).match(/(\d{1,2})(?::\d{2})?/) || [])[1], 10);
+    (/tarde/i.test(hoy) || (!/ma[ñn]ana/i.test(hoy) && h >= 14) ? g.t : g.m).push(m);
+  });
+  const dOtros = 'LMXJVSD'.split('').filter(k => otros.has(k)).map(k => NOM[k]);
+  return [['Por la mañana', g.m], ['Por la tarde', g.t], ['Otro día' + (dOtros.length && dOtros.length <= 3 ? ' (' + dOtros.join(', ') + ')' : ''), g.o], ['Sin horario', g.s]].filter(([, l]) => l.length);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#agcuerpo .agtamb[data-agtc]'); if (!b || e.target.closest('[data-agti]')) return;
+  e.stopPropagation(); fichaCentro(b.dataset.agtc);
+}, true);
+document.addEventListener('keydown', e => { const b = e.target.closest && e.target.closest('#agcuerpo .agtamb[data-agtc]'); if (b && e.target === b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); fichaCentro(b.dataset.agtc); } });
 const agImp = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 document.addEventListener('click', e => {
   const b = e.target.closest('#agcuerpo .agtamb [data-agti]'); if (!b) return;
@@ -27335,3 +27404,253 @@ document.addEventListener('change', async e => {
   const m = (PRES_MAT || []).find(x => x.id === c.dataset.prmatpp); if (m) m.para_portal = c.checked;
   toast(c.checked ? 'Los centros que tienen este producto ya lo pueden descargar' : 'Ya no se ofrece a los centros');
 });
+
+
+/* ============================================================
+   v2.299.0 · Tu día compacto (petición de Eric): un botón deja cada cita en una línea con el nombre, la hora y el estado.
+   Se recuerda en este dispositivo. Pulsar la cita sigue abriendo su detalle (desde ahí se registra la visita).
+   ============================================================ */
+function tdCompacto() { try { return localStorage.getItem('delcos-tdcompacto') === '1'; } catch (e) { return false; } }
+function tdAplicarCompacto() { document.body.classList.toggle('tdcompacto', tdCompacto()); }
+tdAplicarCompacto();
+document.addEventListener('click', e => {
+  const b = e.target.closest('#tdcompactar'); if (!b) return;
+  const on = !tdCompacto();
+  try { localStorage.setItem('delcos-tdcompacto', on ? '1' : '0'); } catch (x) {}
+  tdAplicarCompacto(); b.title = on ? 'Ver el detalle de las citas' : 'Compactar las citas: una línea cada una'; b.setAttribute('aria-label', on ? 'Ver el detalle de las citas' : 'Compactar las citas'); b.innerHTML = plIco(on ? 'file-text' : 'list'); b.setAttribute('aria-pressed', on);
+});
+
+/* ============================================================
+   v2.300.0 · Volver siempre al punto de partida (petición de Eric). Cuando desde una ventana se abre otra (una cita → la
+   ficha del centro → la ficha de un profesional…), la de antes se apunta en una pila. Al cerrar la de dentro (con su ✕,
+   con «‹ Volver» o al guardar y cerrarse), se vuelve a abrir la anterior con sus datos al día, en vez de dejar a la persona
+   en la pantalla de debajo. Cerrar la primera cierra del todo. Cambiar de pantalla vacía la pila.
+   ============================================================ */
+const VUELTA = [];
+let VISTA = null, VUELTA_REABRIENDO = false, VUELTA_CLIC = null, VUELTA_PONER = false;
+// El último clic dentro de una ventana (menos su ✕): así se sabe que la ventana nueva se abrió desde ella aunque el botón la cierre antes
+document.addEventListener('click', e => {
+  const d = e.target.closest && e.target.closest('dialog'); if (!d || e.target.closest('[data-cerrar], .x, .vueltabtn')) return;
+  VUELTA_CLIC = { d, t: performance.now() };
+}, true);
+const VISTA_TITULO = { verCita: 'la cita', fichaCentro: 'el centro', abrirFicha: 'la ficha', verPedido: 'el pedido', verFactura: 'la factura', verEvento: 'el evento',
+  verCirugia: 'la cirugía', verConcurso: 'el concurso', verEquipo: 'el equipo', verDeposito: 'el depósito', fichaStock: 'el producto' };
+const vistaDlg = () => ['ficha', 'dlg'].map($).find(d => d && d.open) || null;
+const vistaIgual = (a, b) => a && b && a.fn === b.fn && JSON.stringify(a.args.map(x => x && x.id || x)) === JSON.stringify(b.args.map(x => x && x.id || x));
+function vistaBoton(v, d0) {
+  const d = d0 || (v && v.dlg); if (!d || !d.open || !VUELTA.length || d.querySelector('.vueltabtn')) return;
+  const fh = d.querySelector('.fh'); if (!fh) return;
+  const ant = VUELTA[VUELTA.length - 1];
+  const t = fh.firstElementChild, dentro = t && t.tagName !== 'BUTTON' && !t.matches('h2') ? t : fh;
+  dentro.insertAdjacentHTML('afterbegin', `<button type="button" class="btn sec chico vueltabtn" title="Volver a ${esc(VISTA_TITULO[ant.fn] || 'la ventana anterior')}">‹ Volver</button>`);
+}
+Object.keys(VISTA_TITULO).forEach(fn => {
+  const orig = window[fn]; if (typeof orig !== 'function') return;
+  window[fn] = async function (...args) {
+    const nueva = { fn, args, t: performance.now() };
+    // La de antes cuenta si sigue abierta o se acaba de cerrar para abrir esta (los botones cierran y abren seguido)
+    const desde = VISTA && VISTA.dlg && (VISTA.dlg.open || (VUELTA_CLIC && VUELTA_CLIC.d === VISTA.dlg && performance.now() - VUELTA_CLIC.t < 1500));
+    if (!VUELTA_REABRIENDO && desde && !vistaIgual(VISTA, nueva)) { VISTA.cerrada = null; VUELTA.push(VISTA); if (VUELTA.length > 8) VUELTA.shift(); }
+    VISTA = nueva; VUELTA_PONER = VUELTA.length > 0;
+    try { const r = await orig.apply(this, args); if (VISTA === nueva) { nueva.dlg = vistaDlg(); vistaBoton(nueva); } return r; }
+    finally { if (VISTA === nueva) VUELTA_PONER = false; }
+  };
+});
+['dlg', 'ficha'].forEach(id => {
+  const d = $(id); if (!d) return;
+  // «‹ Volver» se pone antes de que la ventana se vea (si aparece después, el título salta)
+  const sm = d.showModal;
+  d.showModal = function (...a) { const r = sm.apply(this, a); if (VUELTA_PONER && VISTA) { VISTA.dlg = d; vistaBoton(VISTA, d); } return r; };
+  d.addEventListener('close', () => {
+    const v = VISTA; if (!v || v.dlg !== d) return;
+    v.cerrada = performance.now();
+    setTimeout(() => {
+      if (VISTA !== v || !v.cerrada || d.open || !VUELTA.length) return;
+      if (document.querySelector('dialog[open]')) return;   // se abrió otra cosa encima: no se toca
+      const ant = VUELTA.pop(); VISTA = null; VUELTA_REABRIENDO = true;
+      Promise.resolve(window[ant.fn](...ant.args)).finally(() => { VUELTA_REABRIENDO = false; if (VISTA) vistaBoton(VISTA); });
+    }, 380);
+  });
+});
+document.addEventListener('click', e => { const b = e.target.closest('.vueltabtn'); if (!b) return; const d = b.closest('dialog'); if (d && d.open) d.close(); });
+ir = (orig => function (...a) { VUELTA.length = 0; VISTA = null; return orig.apply(this, a); })(ir);
+
+/* ============================================================
+   v2.301.0 · Lo de debajo se pone al día solo (petición de Eric): al guardar una ficha, un centro o sus profesionales,
+   las citas y listas que dependen de ellos se refrescan sin recargar. Se borra al momento lo guardado en memoria (así la
+   ventana que vuelve a abrirse ya trae lo nuevo) y la pantalla de debajo se repinta en silencio al cerrarse las ventanas.
+   ============================================================ */
+const ESCRITURAS_FICHAS = new Set(['guardar_cuenta', 'guardar_centro', 'centro_anadir_profesional', 'centro_quitar_profesional', 'guardar_campos',
+  'unificar_cuentas', 'archivar_cuenta', 'clasificar_cuentas']);
+let DATOS_CAMBIADOS = false;
+function refrescarDebajo() {
+  if (document.querySelector('dialog[open]')) { DATOS_CAMBIADOS = true; return; }
+  DATOS_CAMBIADOS = false;
+  if (TAB === 'agenda' && $('agcuerpo')) agRefrescoQuieto(null, { cifras: false });
+  else if (TAB === 'directorio' && typeof buscar === 'function') buscar(true);
+}
+db.rpc = (orig => function (fn, args, ...r) {
+  const res = orig.call(this, fn, args, ...r);
+  if (!ESCRITURAS_FICHAS.has(fn) || !res || typeof res.then !== 'function') return res;
+  return res.then(x => {
+    if (x && !x.error) { invalidarCache(); try { DB_PRE.clear(); } catch (e) {} setTimeout(refrescarDebajo, 0); }
+    return x;
+  });
+})(db.rpc);
+['dlg', 'dlg2', 'ficha'].forEach(id => { const d = $(id); if (d) d.addEventListener('close', () => setTimeout(() => { if (DATOS_CAMBIADOS) refrescarDebajo(); }, 450)); });
+
+/* ============================================================
+   v2.302.0 · Alta y edición de un centro con su propio formulario (aviso de Eric: al crear un centro salía el de un
+   profesional, con «consultas» y un selector de centro dentro). Para una ficha de tipo Centro: nombre, teléfono, email,
+   contacto y nota, y debajo su dirección (calle, código postal, población, provincia), cómo llegar y su horario de atención.
+   Sin consultas ni planta/sala. Se guarda como la ubicación principal de la ficha, situada en el mapa al guardar.
+   ============================================================ */
+abrirEditor = (orig => async function (id, tipo, ...r) {
+  const res = await orig.call(this, id, tipo, ...r);
+  const body = $('dbody');
+  if (!body || !$('eguardar') || $('ee') || $('esr') || !$('econs')) return res;   // solo el formulario de un centro
+  body.classList.add('edcentro');
+  body.querySelectorAll('.cpersform[data-cpamb=medico]').forEach(x => x.remove());   // los campos personalizados son de los profesionales (cargo, equipo…)
+  const boxes = [...$('econs').children];
+  if (!id) boxes.slice(1).forEach(b => b.remove());
+  const box = $('econs').firstElementChild; if (!box) return res;
+  const i = box.dataset.cons, cf = f => box.querySelector(`[data-cf="${i}|${f}"]`);
+  const val = f => (cf(f) || {}).value || '';
+  // Los campos de dirección, a la vista (los mismos data-cf: el guardado los recoge igual)
+  const u = {}; ['direccion', 'cp', 'municipio', 'provincia'].forEach(f => { u[f] = val(f); const h = cf(f); if (h) h.remove(); });
+  box.insertAdjacentHTML('afterbegin', `<h3 class="edch">Dirección del centro</h3>
+    <label for="edcd">Calle y número</label><input id="edcd" data-cf="${i}|direccion" value="${esc(val('direccion') || '')}" placeholder="p. ej. Calle Mayor 12">
+    <div class="g2"><div><label for="edcc">Código postal</label><input id="edcc" data-cf="${i}|cp" inputmode="numeric" maxlength="5" value="${esc(val('cp') || '')}"></div>
+      <div><label for="edcm">Población</label><input id="edcm" data-cf="${i}|municipio" autocapitalize="characters"></div></div>
+    <label for="edcp">Provincia</label><input id="edcp" data-cf="${i}|provincia" autocapitalize="characters">`);
+  const c0 = (box.dataset.lat || ''), ant = { d: '', m: '' };
+  $('edcd').value = u.direccion || ''; $('edcc').value = u.cp || ''; $('edcm').value = u.municipio || ''; $('edcp').value = u.provincia || '';
+  ant.d = $('edcd').value; ant.m = $('edcm').value;
+  const lbl = [...box.querySelectorAll('label')].find(l => /^Días y horario/.test(l.textContent)); if (lbl) lbl.textContent = 'Horario de atención';
+  const add = $('eadd'); if (add) add.closest('.acts').classList.add('hide');
+  // Al guardar: el nombre de la ubicación es el del centro y, si la dirección cambió, se sitúa en el mapa
+  let listo = false;
+  $('eguardar').addEventListener('click', async e => {
+    if (listo) { listo = false; return; }
+    const nom = $('en').value.trim().toUpperCase(), cn = cf('centro_nombre'); if (cn) cn.value = nom;
+    const d = $('edcd').value.trim(), m = $('edcm').value.trim();
+    if (!d || (d === ant.d && m === ant.m && c0)) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    const g = await geocodificar([d, $('edcc').value.trim(), m, $('edcp').value.trim(), 'España'].filter(Boolean).join(', '), { direccion: d, municipio: m, cp: $('edcc').value.trim() }).catch(() => null);
+    if (g && !g.fuera) { if (cf('lat')) cf('lat').value = g.lat; if (cf('lon')) cf('lon').value = g.lon; }
+    else if (g && g.fuera) toast(`La dirección sale en ${g.fuera}, no en ${m}: se guarda sin situarla en el mapa`, true);
+    ant.d = d; ant.m = m; listo = true; $('eguardar').click();
+  }, true);
+  return res;
+})(abrirEditor);
+
+// v2.304.0: el filtro rápido «Tipo» de Cuentas
+if ($('ftipo')) $('ftipo').addEventListener('change', e => { F.tipo = e.target.value; buscar(true); });
+// El desplegable sigue a F.tipo (también si se cambia desde el panel o los indicadores) y nombra a los profesionales con el vocabulario de la empresa
+buscar = (orig => function (...a) {
+  const s = $('ftipo');
+  if (s) { if (s.options[1]) s.options[1].text = TT('medico', 'p', '', 'l', 'C'); if (s.value !== (F.tipo || '')) s.value = F.tipo || ''; }
+  return orig.apply(this, a);
+})(buscar);
+
+
+/* ============================================================
+   v2.305.0 · Reenviar el correo de activación (aviso de Eric: un profesional abrió el enlace del correo de alta cuando ya
+   había caducado y no tenía forma de pedir otro). Supabase reenvía el correo de confirmación con auth.resend (no hace falta
+   SQL): desde la ficha del usuario (administración) y desde la pantalla de acceso, que avisa si el enlace ha caducado o si
+   la cuenta aún no está activada.
+   ============================================================ */
+async function reenviarActivacion(email, o = {}) {
+  email = String(email || '').trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { (o.err || (t => toast(t, true)))('Escribe tu correo para enviarte un enlace nuevo.'); return false; }
+  const { error } = await db.auth.resend({ type: 'signup', email, options: { emailRedirectTo: location.origin + location.pathname } });
+  if (error) {
+    const t = /rate|seconds|429|security purposes/i.test(error.message + (error.status || '')) ? 'Se acaba de enviar uno: espera un minuto antes de pedir otro.'
+      : /already|confirmed/i.test(error.message) ? 'Esa cuenta ya está activada: puede entrar con su correo y contraseña (o usar «Enviar cambio de contraseña»).'
+      : 'No se ha podido enviar: ' + error.message;
+    (o.err || (x => toast(x, true)))(t); return false;
+  }
+  (o.ok || toast)('Correo de activación enviado a ' + email + '. El enlace nuevo sustituye al anterior.');
+  return true;
+}
+// En el acceso: aviso y botón «Enviarme un enlace nuevo» con el correo escrito
+function accesoSinActivar(texto) {
+  const msg = $('lmsg'); if (!msg) return;
+  msg.innerHTML = `<span>${esc(texto)}</span> <button type="button" class="btn sec chico" id="lreenv">Enviarme un enlace nuevo</button>`;
+  $('lreenv').onclick = async () => {
+    const b = $('lreenv'); b.disabled = true;
+    await reenviarActivacion($('lu').value, { ok: t => { msg.textContent = t; }, err: t => { msg.querySelector('span').textContent = t; b.disabled = false; } });
+  };
+}
+if (ENLACE_ERROR && /otp_expired|access_denied|expired/i.test(ENLACE_ERROR)) {
+  accesoSinActivar('El enlace de activación ha caducado o ya se usó. Escribe tu correo y te enviamos uno nuevo.');
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+}
+
+
+/* ============================================================
+   v2.306.0 · Textos de los correos a los clientes (revisión de Eric con un correo real: al cliente le llegó «IBAN: (añade el
+   IBAN…)», la despedida repetía lo que ya dice la firma y el concepto no era su nombre). Cada empresa escribe sus textos en
+   Configuración → Correo y firma → «Textos de los correos», con huecos como [nombre] o [iban] que se rellenan al enviar.
+   Se guardan en el ajuste plantillas_correo. Sin IBAN no se envían los datos de pago. La despedida y los teléfonos van solo en la firma.
+   ============================================================ */
+const PLANT_CORREO = {
+  pago: { titulo: 'Datos de pago por transferencia', asunto: '[Documento] [numero] de [empresa] para [nombre]',
+    texto: 'Hola [nombre_pila]:\n\nGracias por tu pedido [numero], por un importe de [importe].\n\nPara completarlo, haz una transferencia bancaria con estos datos:\n\nBeneficiario: [beneficiario]\nIBAN: [iban]\nImporte: [importe]\nConcepto: [nombre]\n\nIndica el concepto tal como aparece arriba: así identificamos el pago enseguida y no se retrasa la preparación del pedido.\n\nEn cuanto recibamos el pago preparamos el envío.' },
+  factura: { titulo: 'Envío de la factura', asunto: '[Documento] [numero] de [empresa] para [nombre]',
+    texto: 'Hola [nombre_pila]:\n\nTe adjuntamos la [documento] [numero] de tu pedido, por un importe de [importe].\n\nGracias por tu confianza. Si tienes cualquier duda, estaremos encantados de ayudarte.' }
+};
+const VARS_CORREO = [['nombre', 'Nombre completo del cliente'], ['nombre_pila', 'Solo el nombre de pila'], ['empresa', 'Vuestra razón social'], ['documento', 'pedido o factura'],
+  ['Documento', 'Pedido o Factura'], ['numero', 'Número del pedido o la factura'], ['importe', 'Importe total'], ['beneficiario', 'Titular de la cuenta (razón social)'], ['iban', 'IBAN de los datos fiscales']];
+function varsCorreo(o) {
+  const e = AJUSTES.empresa || {}, emp = e.razon_social || nombreApp(), doc = o.documento || 'pedido';
+  return { nombre: o.nombre || '', nombre_pila: o.nombre ? nombrePila(o.nombre) : '', empresa: emp, documento: doc, Documento: doc.charAt(0).toUpperCase() + doc.slice(1),
+    numero: o.numero || '', importe: eurI(o.importe || 0), beneficiario: emp, iban: e.iban || '' };
+}
+function plantillaCorreo(k, campo, v) {
+  const g = (AJUSTES.plantillas_correo || {})[k] || {}, t = (g[campo] || '').trim() || PLANT_CORREO[k][campo];
+  return t.replace(/\[(\w+)\]/g, (m, n) => n in v ? v[n] : m).replace(/ {2,}/g, ' ').trim();
+}
+textoEmailPago = function (p, total, cliente) { return plantillaCorreo('pago', 'texto', varsCorreo({ documento: 'pedido', numero: p.numero, importe: total, nombre: cliente })); };
+function asuntoEmailPago(p, total, cliente) { return plantillaCorreo('pago', 'asunto', varsCorreo({ documento: 'pedido', numero: p.numero, importe: total, nombre: cliente })); }
+
+// Configuración → Correo y firma: «Textos de los correos»
+function pintarPlantillasCorreo() {
+  const c = $('cfgcuerpo'); if (!c || $('plcorreo') || !$('cook')) return;
+  const fin = $('cook').closest('.card'); if (!fin) return;
+  let k = 'pago';
+  fin.insertAdjacentHTML('beforebegin', `<div class="card cfgpanel" id="plcorreo"><h2 class="plch">Textos de los correos</h2>
+    <p class="sm">Lo que reciben tus clientes. Los huecos entre corchetes se rellenan al enviar. La despedida, los teléfonos y el aviso legal ya van en la firma: no hace falta repetirlos aquí.</p>
+    <div class="segs" id="plck" role="group" aria-label="Correo">${Object.entries(PLANT_CORREO).map(([x, p]) => `<button type="button" data-plk2="${x}" class="${x === k ? 'on' : ''}">${esc(p.titulo)}</button>`).join('')}</div>
+    <label for="plcasu">Asunto</label><input id="plcasu">
+    <label for="plctxt">Texto</label><textarea id="plctxt" rows="14"></textarea>
+    <div class="sm plchue">Huecos (pulsa para añadirlo donde está el cursor):</div>
+    <div class="plcvars">${VARS_CORREO.map(([n, t]) => `<button type="button" class="btn sec chico" data-plv="${n}" title="${esc(t)}">[${n}]</button>`).join('')}</div>
+    <div class="acts plcacts"><button type="button" class="btn sec" id="plcrest">Volver al texto de partida</button><button type="button" class="btn" id="plcok">Guardar los textos</button></div>
+    <p class="sm plcmsg" id="plcmsg"></p></div>`);
+  const val = () => { const g = (AJUSTES.plantillas_correo || {})[k] || {}; $('plcasu').value = g.asunto || PLANT_CORREO[k].asunto; $('plctxt').value = g.texto || PLANT_CORREO[k].texto; };
+  const pend = {};
+  const leer = () => { pend[k] = { asunto: $('plcasu').value.trim(), texto: $('plctxt').value.replace(/\s+$/, '') }; };
+  val();
+  $('plck').onclick = e => {
+    const b = e.target.closest('[data-plk2]'); if (!b) return; leer(); k = b.dataset.plk2;
+    $('plck').querySelectorAll('[data-plk2]').forEach(x => x.classList.toggle('on', x === b));
+    if (pend[k]) { $('plcasu').value = pend[k].asunto; $('plctxt').value = pend[k].texto; } else val();
+  };
+  let ult = $('plctxt'); ['plcasu', 'plctxt'].forEach(id => $(id).addEventListener('focus', () => { ult = $(id); }));
+  c.querySelectorAll('[data-plv]').forEach(b => b.onclick = () => {
+    const t = ult, v = '[' + b.dataset.plv + ']', i = t.selectionStart == null ? t.value.length : t.selectionStart, j = t.selectionEnd == null ? i : t.selectionEnd;
+    t.value = t.value.slice(0, i) + v + t.value.slice(j); t.focus(); t.selectionStart = t.selectionEnd = i + v.length;
+  });
+  $('plcrest').onclick = () => { $('plcasu').value = PLANT_CORREO[k].asunto; $('plctxt').value = PLANT_CORREO[k].texto; };
+  $('plcok').onclick = async ev => {
+    leer(); const v = Object.assign({}, AJUSTES.plantillas_correo || {}, pend);
+    ev.target.disabled = true;
+    const { data: r, error } = await db.rpc('guardar_ajuste', { p_clave: 'plantillas_correo', p_valor: v });
+    ev.target.disabled = false;
+    if (error || (r && r.ok === false)) { $('plcmsg').textContent = 'No se han podido guardar: ' + ((error && error.message) || r.error); return; }
+    AJUSTES.plantillas_correo = v; $('plcmsg').textContent = 'Textos guardados.'; toast('Textos de los correos guardados');
+  };
+}
+// Aparece en cuanto la página «Correo y firma» está pintada (su botón Guardar, #cook, existe)
+new MutationObserver(() => { if (TAB === 'config' && $('cook') && !$('plcorreo')) pintarPlantillasCorreo(); }).observe(document.querySelector('main') || document.body, { childList: true, subtree: true });

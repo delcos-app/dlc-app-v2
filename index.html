@@ -3778,11 +3778,11 @@ header .top .logo,nav.main .mlmarca{cursor:pointer}
 #agcuerpo .tddiamas svg{width:18px;height:18px}
 @media (pointer:coarse){#agcinta .cdmas,#agcinta .cdia.sel .cdmas{display:none!important}}
 /* Tu día con los mismos márgenes */
-#v-agenda.agcinta #agcuerpo > .agband,#v-agenda.agcinta #agcuerpo > #tdnocabe,#v-agenda.agcinta #agcuerpo > .tdesc{margin-left:16px;margin-right:16px}
+#v-agenda.agcinta #agcuerpo > .agband,#v-agenda.agcinta #agcuerpo > #tdnocabe,#v-agenda.agcinta #agcuerpo > .tdesc,#v-agenda.agcinta #agcuerpo > #tdtareas{margin-left:16px;margin-right:16px}
 #v-agenda.agcinta #agcuerpo > .tdesc{margin-bottom:16px}
 #v-agenda.agcinta #agcuerpo > #tdnocabe{border-radius:12px}
 @media (max-width:760px){
-  #v-agenda.agcinta #agcuerpo > .agband,#v-agenda.agcinta #agcuerpo > #tdnocabe,#v-agenda.agcinta #agcuerpo > .tdesc{margin-left:12px;margin-right:12px}
+  #v-agenda.agcinta #agcuerpo > .agband,#v-agenda.agcinta #agcuerpo > #tdnocabe,#v-agenda.agcinta #agcuerpo > .tdesc,#v-agenda.agcinta #agcuerpo > #tdtareas{margin-left:12px;margin-right:12px}
   #v-agenda.agcinta #agcuerpo .tdhead{padding:14px 12px 10px}
   #v-agenda.agcinta #agcuerpo > .agband{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
   #v-agenda.agcinta #agcuerpo > .agband button{justify-content:space-between;width:100%;font-size:13px;padding:10px 12px;text-align:left}
@@ -4494,6 +4494,52 @@ dialog.encajada #dbody > .acts:last-child,dialog.encajada #dlg2body > .acts:last
 #v-informe .pmperl > div:first-child{border-top:0}
 #v-informe .pmperl span{color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 #v-informe .pmperl b{font:800 20px var(--f-titulo);color:var(--ink);font-variant-numeric:tabular-nums}
+/* v2.296: desplegables de filtro con muchas opciones (las filas se montaban) y, en el móvil, hoja abajo; «Quitar filtros» */
+.plpopl button{flex-shrink:0}
+.plquitar{all:unset;cursor:pointer;padding:0 12px;color:var(--navy);font-weight:700;white-space:nowrap;display:inline-flex;align-items:center}
+@media (max-width:760px){
+  .plpop.plhoja{position:fixed;left:8px;right:8px;top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));max-width:none;max-height:70vh;display:flex;flex-direction:column;z-index:400}
+  .plpop.plhoja .plpopl{max-height:none;flex:1;min-height:0}
+  .plpop.plhoja .plpopq{flex-shrink:0}
+  .plpop.plhoja .plpopl button{padding:12px}
+}
+/* v2.297: la tarjeta de invitados se marca un momento al llegar desde «Cuentas con acceso» */
+@keyframes usrinvluz{0%{box-shadow:0 0 0 3px var(--navy)}100%{box-shadow:0 0 0 0 var(--navy)}}
+.usrinvw.usrinvluz{animation:usrinvluz 1.6s ease-out}
+/* v2.298: la caja de tareas con el mismo aspecto que una cita (Eric: todo debe verse igual) */
+#v-agenda.agcinta #agcuerpo > #tdtareas{background:#fff;border-radius:14px;padding:12px 14px}
+/* v2.299: Tu día compacto: una línea por cita (nombre, hora y estado) */
+body.tdcompacto #agcuerpo .tdesc{gap:6px}
+body.tdcompacto #agcuerpo .tdu{padding:8px 12px}
+body.tdcompacto #agcuerpo .tdu :is(.tdu-niv,.tdu-dat,.agtamb,.tdu-sub,.tdu-sig,.tdu-cu){display:none}
+body.tdcompacto #agcuerpo .tdu .tdu-pie{display:none}
+body.tdcompacto #agcuerpo .tdu .tdu-cab{display:flex;align-items:center;gap:12px}
+body.tdcompacto #agcuerpo .tdu .tdu-tit{flex:1;min-width:0}
+body.tdcompacto #agcuerpo .tdu .tdu-av{display:none}
+/* v2.300: «‹ Volver» a la ventana desde la que se abrió esta */
+.vueltabtn{display:inline-flex;margin:0 0 6px}
+/* v2.302: formulario de un centro (sin consultas, selector de centro, planta ni sala) */
+#dbody.edcentro .cons .consbar,#dbody.edcentro .cons .cenpick,#dbody.edcentro .cons .g2:has([data-cf$="|planta"]),#dbody.edcentro .cons .g2:has([data-cf$="|telefono"]){display:none}
+#dbody.edcentro .cons > label:has(+ .cenpick){display:none}
+#dbody.edcentro .cons{border:0;padding:0;background:none}
+.edch{margin:14px 0 4px}
+/* v2.303: «En este centro también» agrupado por cuándo atienden; todo el recuadro abre la ficha del centro */
+.agtambc{cursor:pointer}
+.agtambc:hover{border-color:var(--navy)}
+.agtambver{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:700;color:var(--navy)}
+.agtambg{margin-top:8px}
+.agtambg .agtambl{margin-top:4px}
+.agtambgt{font-size:12px;font-weight:700;color:var(--muted)}
+/* v2.304: Cuentas con cinco indicadores (profesionales, centros, urgentes, sin visitar y mi cartera) */
+#v-directorio > .plkpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:760px){ #v-directorio > .plkpis{grid-template-columns:repeat(2,minmax(0,1fr))} #v-directorio > .plkpis > :last-child{grid-column:1 / -1} }
+/* v2.306: textos de los correos */
+.plcvars{display:flex;flex-wrap:wrap;gap:6px}
+#plcorreo .segs{margin:6px 0 4px}
+.plch{padding:0 0 4px}
+.plchue{margin:6px 0 4px}
+.plcacts{justify-content:flex-end;flex-wrap:wrap}
+.plcmsg{margin:6px 0 0}
 /* ==== SISTEMA delcos · capa del contrato de componentes (generada desde sistema/contrato.json con gen_capa.js; no se edita a mano) ==== */
 html:not(#_s) body :is(#v-inicio .saludo h1#hola){font-family:var(--f-titulo) !important;font-weight:800 !important;font-size:30px !important}
 html:not(#_s) body :is(#v-informe .medhero h1):not(:is(#v-inicio .saludo h1#hola)){font-family:var(--f-titulo) !important;font-weight:800 !important;font-size:30px !important}
@@ -4631,6 +4677,7 @@ try{var co=sessionStorage.getItem('dlc-cambio-org');if(co!==null||localStorage.g
           <div><label for="fmuni">Municipio</label><select id="fmuni"></select></div>
           <div><label for="fesp">Especialidad</label><select id="fesp"></select></div>
           <div><label for="frep">Reporting</label><select id="frep"><option value="">Todos</option><option value="con">Con reporting</option><option value="sin">Sin reporting</option></select></div>
+          <div><label for="ftipo">Tipo</label><select id="ftipo"><option value="">Todas</option><option value="Persona">Profesionales</option><option value="Centro">Centros</option></select></div>
           <div><label for="fest">Estado comercial</label><select id="fest"></select></div>
           <div id="fcomwrap" class="hide"><label for="fcom">Comercial</label><select id="fcom"></select></div>
           <div><label for="forden">Ordenar por</label>
@@ -4685,6 +4732,6 @@ try{var co=sessionStorage.getItem('dlc-cambio-org');if(co!==null||localStorage.g
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.295.0"></script>
+<script src="./app.js?v=2.306.0"></script>
 </body>
 </html>
