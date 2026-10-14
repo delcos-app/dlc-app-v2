@@ -19096,7 +19096,8 @@ async function fichaCentro(id) {
   $('dbody').innerHTML = `<div class="fh"><div><h2>Centro</h2></div><button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
     <div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:80%"></div>`;
   if (!dlg.open) dlg.showModal();
-  const { data, error } = await db.rpc('ficha_centro', { p_id: id });
+  // v2.310.0: con la ficha se pide su cuenta de tipo Centro (un solo centro), para abrirla desde aquí
+  const [{ data, error }, { data: cta }] = await Promise.all([db.rpc('ficha_centro', { p_id: id }), db.from('cuentas').select('id').eq('centro_id', id).maybeSingle().then(r => r, () => ({ data: null }))]);
   if (!dlg.open) return;
   if (error || !data || !data.datos) {
     $('dbody').innerHTML = `<div class="fh"><div><h2>Centro</h2></div><button class="x" data-cerrar aria-label="Cerrar">✕</button></div>
@@ -19114,6 +19115,7 @@ async function fichaCentro(id) {
       ${c.telefono ? `<a class="btn sec" href="tel:${esc(c.telefono)}">Llamar · ${esc(c.telefono)}</a>` : ''}
       ${c.lat != null ? '<button type="button" class="btn sec" id="fcllegar">Cómo llegar</button>' : ''}
       ${data.puede_editar ? '<button type="button" class="btn sec" id="fceditar">Editar centro</button>' : ''}
+      ${cta && cta.id ? `<button type="button" class="btn sec" id="fccuenta" data-fccta="${cta.id}">Ficha comercial</button>` : ''}
     </div>
     ${hor ? `<div class="vcdatos"><div class="vcfila"><span>Horario</span><b>${esc(hor)}</b></div></div>` : ''}
     <div class="fcprocab"><h3>${esc(quien)} · ${num(l.length)}</h3>${data.puede_fichas ? '<button type="button" class="btn" id="fcanadir">+ Añadir</button>' : ''}</div>
@@ -27780,3 +27782,96 @@ navegarA = async function (destino, paradas) {
   location.href = app;
   setTimeout(() => { document.removeEventListener('visibilitychange', marcar); if (!fuera && document.visibilityState === 'visible') { const w = window.open(web, '_blank'); if (!w) location.href = web; } }, 1500);   // sin el clic, el navegador puede bloquear la ventana: entonces se abre aquí mismo
 };
+
+
+/* ============================================================
+   v2.310.0 · Un solo centro (decisión de Eric; SQL 158). Cada centro es a la vez cuenta de tipo Centro (sale en Cuentas →
+   Centros, con su estado, visitas y pedidos) y centro-lugar (su ficha con sus profesionales). Desde la ficha del centro,
+   «Ficha comercial» abre su cuenta; desde la cuenta de un centro, «Ver sus profesionales» abre la ficha del centro.
+   ============================================================ */
+document.addEventListener('click', e => {
+  const b = e.target.closest('#fccuenta'); if (!b) return;
+  $('dlg').close(); abrirFicha(b.dataset.fccta);
+});
+abrirFicha = (orig => async function (id, ...a) {
+  const r = await orig.call(this, id, ...a);
+  try {
+    const { data: c } = await db.from('cuentas').select('tipo, centro_id').eq('id', id).maybeSingle();
+    const fb = $('fbody');
+    if (c && c.tipo === 'Centro' && c.centro_id && fb && FICHA_ID === id && !$('fcentrop')) {
+      const fh = fb.querySelector('.fh');
+      (fh || fb.firstElementChild).insertAdjacentHTML('afterend', `<div class="blk" id="fcentrop"><div class="fcentropf"><span>Los ${esc(TT('medico', 'p', '', 'l', 'l'))} que atienden aquí y su horario</span>
+        <button type="button" class="btn sec chico" data-fcver="${c.centro_id}">Ver sus ${esc(TT('medico', 'p', '', 'l', 'l'))}</button></div></div>`);
+    }
+  } catch (e) {}
+  return r;
+})(abrirFicha);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-fcver]'); if (!b) return;
+  const f = $('ficha'); if (f && f.open) f.close();
+  fichaCentro(b.dataset.fcver);
+});
+
+
+/* ============================================================
+   v2.311.0 · Dar de baja y eliminar fichas (decisión de Eric; SQL 159). Al pie de la ficha de un profesional o de un centro:
+   «Dar de baja» (siempre; se deshace desde Cuentas → «⋯» → «Fichas dadas de baja») y «Eliminar la ficha» (administración o
+   nivel completo en fichas; solo si no tiene visitas, ventas, muestras, eventos… — si tiene, lo dice y ofrece la baja).
+   ============================================================ */
+const BAJA_QUE = { visitas: 'visitas', ventas: 'ventas', muestras: 'muestras entregadas', eventos: 'eventos', cirugias: 'cirugías', concursos: 'concursos', equipos: 'equipos', portal: 'acceso al portal' };
+abrirFicha = (orig => async function (id, ...a) {
+  const r = await orig.call(this, id, ...a);
+  try {
+    const { data: c } = await db.from('cuentas').select('tipo, nombre, archivado_en').eq('id', id).maybeSingle();
+    const fb = $('fbody');
+    if (!c || !fb || FICHA_ID !== id || $('fbajablk') || !puedeEditarTipo(c.tipo)) return r;
+    const elim = nivelDe2('M') >= 3;
+    fb.insertAdjacentHTML('beforeend', `<div class="blk fbajablk" id="fbajablk"><div class="acts">
+      ${c.archivado_en ? `<button type="button" class="btn sec chico" data-falta="${id}">Volver a dar de alta</button>` : `<button type="button" class="btn sec chico" data-fbaja="${id}">Dar de baja</button>`}
+      ${elim ? `<button type="button" class="btn sec dang chico" data-felim="${id}">Eliminar la ficha</button>` : ''}</div></div>`);
+  } catch (e) {}
+  return r;
+})(abrirFicha);
+async function bajaCuenta(id, baja) {
+  const { data: r, error } = await db.rpc('baja_cuenta', { p_id: id, p_baja: baja });
+  if (error || !r || !r.ok) { toast('No se ha podido: ' + ((error && error.message) || (r && r.error) || ''), true); return false; }
+  try { invalidarCache(); } catch (e) {}
+  toast(baja ? 'Ficha dada de baja' + (r.citas_quitadas ? ` · ${r.citas_quitadas} ${r.citas_quitadas === 1 ? 'cita quitada' : 'citas quitadas'} de la agenda` : '') : 'Ficha dada de alta de nuevo');
+  if (TAB === 'directorio' && typeof buscar === 'function') buscar(true);
+  return true;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-fbaja], [data-falta], [data-felim]'); if (!b) return;
+  const f = $('ficha');
+  if (b.dataset.falta) { if (await bajaCuenta(b.dataset.falta, false)) { if (f && f.open) f.close(); } return; }
+  if (b.dataset.fbaja) {
+    if (!await preguntar('Deja de salir en listas, agenda y buscador, pero conserva su historial. Sus citas pendientes se quitan de la agenda. Se puede volver a dar de alta desde Cuentas → «⋯» → «Fichas dadas de baja».', { titulo: '¿Dar de baja esta ficha?', ok: 'Dar de baja' })) return;
+    if (await bajaCuenta(b.dataset.fbaja, true) && f && f.open) f.close();
+    return;
+  }
+  const id = b.dataset.felim;
+  if (!await preguntar('Se borra para siempre, con su cartera, sus citas y sus ubicaciones. No se puede deshacer.', { titulo: '¿Eliminar la ficha?', ok: 'Eliminar', peligro: true })) return;
+  const { data: r, error } = await db.rpc('eliminar_cuenta', { p_id: id });
+  if (!error && r && r.ok) { try { invalidarCache(); } catch (x) {} toast('Ficha eliminada'); if (f && f.open) f.close(); if (TAB === 'directorio') buscar(true); return; }
+  if (r && r.error === 'historial') {
+    const tiene = Object.entries(r.detalle || {}).map(([k, n]) => `${num(n)} ${BAJA_QUE[k] || k}`).join(', ');
+    if (await preguntar(`No se puede eliminar porque tiene historial que hay que conservar: ${tiene}. Puedes darla de baja: deja de salir, pero no se pierde nada.`, { titulo: 'Esta ficha tiene historial', ok: 'Dar de baja' })) {
+      if (await bajaCuenta(id, true) && f && f.open) f.close();
+    }
+    return;
+  }
+  toast('No se ha podido eliminar: ' + ((error && error.message) || (r && r.error) || ''), true);
+});
+// Cuentas → «⋯» → «Fichas dadas de baja»
+document.body.insertAdjacentHTML('beforeend', '<button type="button" id="dirbajas" class="plmasoc" tabindex="-1" aria-hidden="true"></button>');
+$('dirbajas').onclick = async () => {
+  $('dbody').innerHTML = `<div class="fh"><div><h2>Fichas dadas de baja</h2><div class="sm">No salen en listas, agenda ni buscador. Al darlas de alta vuelven tal como estaban.</div></div>
+    <button class="x" data-cerrar aria-label="Cerrar">✕</button></div><div id="bajasl"><div class="skel"></div><div class="skel"></div></div>`;
+  $('dlg').showModal();
+  const { data } = await db.from('cuentas').select('id, nombre, tipo, archivado_en').not('archivado_en', 'is', null).order('archivado_en', { ascending: false }).limit(300);
+  const l = data || [];
+  $('bajasl').innerHTML = l.length ? `<div class="lista">${l.map(c => `<div class="item bajaf"><span class="tx"><b>${esc(c.nombre)}</b><span class="sm">${c.tipo === 'Centro' ? 'Centro' : esc(TT('medico', 's', '', 'l', 'C'))} · de baja desde el ${fechaCorta(String(c.archivado_en).slice(0, 10))}</span></span>
+      <button type="button" class="btn sec chico" data-falta="${c.id}">Dar de alta</button></div>`).join('')}</div>` : '<div class="vacio">No hay ninguna ficha dada de baja.</div>';
+};
+document.addEventListener('click', e => { const b = e.target.closest('#bajasl [data-falta]'); if (b) setTimeout(() => { const it = b.closest('.bajaf'); if (it) it.remove(); }, 400); });
+PL.directorio.mas = (orig => () => orig().concat([['dirbajas', 'Fichas dadas de baja']]))(PL.directorio.mas);
