@@ -197,7 +197,7 @@ dialog::backdrop{background:rgba(14,47,82,.4)}
 .mapleg{display:flex;gap:12px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
 .mapleg i{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px}
 .mpin span{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-dialog#ficha{max-width:520px;width:100%;height:100dvh;max-height:100dvh;margin:0 0 0 auto;border-radius:18px 0 0 18px;animation:entra .18s ease-out}
+dialog#ficha{max-width:520px;width:100%;height:100dvh;max-height:100dvh;margin:0 0 0 auto;border-radius:0;animation:entra .18s ease-out}
 dialog#ficha .fbox{height:100%;overflow:auto;padding-bottom:40px}
 @keyframes entra{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}
 .upd{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;border-radius:14px;padding:10px 12px 10px 18px;display:flex;gap:12px;align-items:center;z-index:95;box-shadow:0 12px 30px rgba(10,20,30,.3)}
@@ -2112,7 +2112,12 @@ dialog > #dbody > .acts:last-child,dialog > #dlg2body > .acts:last-child{positio
 }
 @media (prefers-reduced-motion: reduce){#fventas .spark i{transition:none}}
 /* Pedido nuevo: referencia y justificante del pago agrupados bajo la forma de pago, en un panel claro */
-#ppagox{background:var(--hielo);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:2px 0 6px;gap:12px}
+/* v2.339.0 (Eric): referencia del pago y su acción en una sola fila, sin caja; la explicación, en la «i» */
+#ppagox.pagofila{display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px 10px;margin:0 0 6px}
+#ppagox.pagofila.hide{display:none}
+#ppagox .pagoref{flex:1 1 260px;min-width:0}
+#ppagox .pagoacc{display:inline-flex;align-items:center;gap:6px}
+#ppagox .pagoacc.hide{display:none}
 #ppagox label.btn,#pdpago label.btn{align-items:center;gap:8px;}
 #ppagox label.btn .ico,#pdpago label.btn .ico{width:18px;height:18px}
 #ppagox label.btn:focus-within,#pdpago label.btn:focus-within{box-shadow:var(--foco)}
@@ -2134,7 +2139,7 @@ dialog > #dbody > .acts:last-child,dialog > #dlg2body > .acts:last-child{positio
 #pdjus > .sm{color:var(--muted)}
 /* Lista de pedidos: la marca «Web» como etiqueta pequeña */
 .pweb{display:inline-flex;align-items:center;padding:0 7px;border-radius:999px;background:var(--sky-soft);color:var(--navy);font-size:11.5px;font-weight:700;line-height:18px;vertical-align:1px}
-@media (max-width:760px){#ppagox{padding:12px}#pdpago .g2 > div[style*="align-self"]{align-self:stretch}#pdpago #pdrefok{width:100%}}
+@media (max-width:760px){#ppagox .pagoacc{flex:1 1 100%}#ppagox .pagoacc .btn{flex:1}#pdpago .g2 > div[style*="align-self"]{align-self:stretch}#pdpago #pdrefok{width:100%}}
 /* ============================================================
    v2.120.0 · Plan y suscripción con el sistema de diseño
    ============================================================ */
@@ -2406,7 +2411,7 @@ dialog.encajada .pdfprev iframe{height:calc(100vh - var(--alto-cab,0px) - 190px)
     margin:0!important;padding:0 10px!important;border:0;border-radius:10px;background:none;color:#3B5168;font:600 14.5px var(--f-texto);
     text-align:left;white-space:nowrap;cursor:pointer;transition:background-color var(--t-rapido) var(--ease-sal),color var(--t-rapido) var(--ease-sal)}
   body.menulat nav.main .in button[data-t].hide,body.menulat nav.main .in button[data-t].mloculto,body.menulat nav.main .in .mlitem.hide,
-  body.menulat nav.main .in button[data-t="seguimiento"]{display:none!important}
+  body.menulat nav.main .in button[data-t="seguimiento"],body.menulat nav.main .in button[data-t="usuarios"]{display:none!important}
   body.menulat nav.main .in button[data-t]::after{display:none!important}
   body.menulat nav.main .in button[data-t] .navico,body.menulat .mlitem .ico{margin:0!important;opacity:.8;flex:none;width:18px;height:18px}
   body.menulat nav.main .in button[data-t] .navico svg{width:18px;height:18px}
@@ -3259,7 +3264,7 @@ input[type=checkbox]:not(.vfswitch input):focus-visible{outline:none;box-shadow:
 .vfswitch input:checked + .sw{background:var(--navy)}
 /* v2.215.0 · Configuración en un solo sitio: índice y página */
 .cfu{display:grid;grid-template-columns:252px minmax(0,1fr);gap:28px;align-items:start}
-.cfuidx{position:sticky;top:88px;max-height:calc(100vh - 100px);overflow:auto;padding:2px 4px 16px 4px;scrollbar-width:thin}
+.cfuidx{position:sticky;top:88px;max-height:var(--cfuidxh,calc(100vh - 100px));overflow:auto;overscroll-behavior:contain;padding:2px 4px 16px 4px;scrollbar-width:thin}
 .cfubusca{position:relative;margin:0 0 6px}.cfubusca svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted);pointer-events:none}
 .cfubusca input{min-height:38px!important;padding:7px 10px 7px 33px!important;font-size:14px;border-radius:10px;max-width:none!important}
 .cfuidx h4{font:700 11px var(--f-titulo);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 10px 4px}
@@ -3727,7 +3732,7 @@ input.campodup{border-color:#E08A00!important;box-shadow:0 0 0 3px rgba(224,138,
 .pk .pkbars i{flex:1;border-radius:3px 3px 0 0;background:#D6E6F5;transform-origin:bottom;animation:pkcrece .9s cubic-bezier(.2,.8,.2,1) both}
 .pk .pkt.alta .pkbars i{background:#F6D3BE}.pk .pkbars i.u{background:var(--navy)}.pk .pkt.alta .pkbars i.u{background:#B4541A}
 .pk .pklg{font-size:11px;color:#8A9BB0;margin-top:6px}
-/* v2.330.0: el día bajo cada barra; sábados, domingos y festivos en otro color */
+/* v2.331.0: el día bajo cada barra; sábados, domingos y festivos en otro color */
 .pk .pkdias{display:flex;gap:4px;margin-top:4px}
 .pk .pkdias span{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;font-size:10.5px;line-height:1.2;color:var(--muted)}
 .pk .pkdias span b{font-size:11px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -4159,7 +4164,7 @@ body.modo-plataforma.menulat #v-delcos .pagtabs{display:none}
 @media (max-width:760px){.imppasos > span{font-size:0;justify-content:center;padding:9px 6px!important}.imppasos > span.actual{font-size:13px}}
 /* Ficha de un registro: panel lateral en el ordenador */
 @media (min-width:761px){
-  dialog#dlg.dlgficha{width:100%;max-width:560px;height:100dvh;max-height:100dvh;margin:0 0 0 auto;border-radius:18px 0 0 18px;animation:entra .18s ease-out}
+  dialog#dlg.dlgficha{width:100%;max-width:560px;height:100dvh;max-height:100dvh;margin:0 0 0 auto;border-radius:0;animation:entra .18s ease-out}
   dialog#dlg.dlgficha > *{max-height:none}
 }
 
@@ -4274,7 +4279,7 @@ body.modo-plataforma.menulat #v-delcos .pagtabs{display:none}
 /* Resumen de las listas en el móvil: una tira de cifras pequeñas que se desliza (v2.319.0; antes, dos columnas) */
 @media (max-width:760px){
   main > section.plantilla .kpis.vtot.plres,main > section.plantilla #vcuerpo > .panel > .kpis.vtot.plres{
-    display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;gap:8px!important;padding:0 0 4px!important}
+    display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;gap:8px!important;padding:0 0 4px!important;border:0!important;background:none!important;box-shadow:none!important}
   main > section.plantilla .kpis.vtot.plres::-webkit-scrollbar{display:none}
   main > section.plantilla .kpis.vtot.plres > .kpi,main > section.plantilla #vcuerpo > .panel > .kpis.vtot.plres > .kpi{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:1px!important;
     padding:9px 12px!important;border:1px solid var(--line)!important;border-radius:12px!important;background:var(--panel,#fff)!important;min-width:0;font-size:12.5px!important;margin:0!important;height:auto!important;flex:0 0 auto!important}
@@ -4282,8 +4287,8 @@ body.modo-plataforma.menulat #v-delcos .pagtabs{display:none}
 }
 
 /* v2.269.0 · Pedidos con la columna «Notas» */
-.dgrid.peds2{--cols:84px minmax(160px,1.4fr) minmax(140px,1.2fr) 110px minmax(110px,1fr) 50px 90px 96px 96px 80px minmax(130px,1.1fr);min-width:1250px}
-.dgrid.peds2.sinimp{--cols:84px minmax(160px,1.4fr) minmax(140px,1.2fr) 110px minmax(110px,1fr) 50px 96px 80px minmax(130px,1.1fr);min-width:1050px}
+.dgrid.peds2{--cols:84px minmax(160px,1.4fr) minmax(140px,1.2fr) 110px minmax(110px,1fr) 50px 90px 96px 124px 80px minmax(130px,1.1fr);min-width:1280px}
+.dgrid.peds2.sinimp{--cols:84px minmax(160px,1.4fr) minmax(140px,1.2fr) 110px minmax(110px,1fr) 50px 124px 80px minmax(130px,1.1fr);min-width:1080px}
 .dgrid.peds2 .pednota{color:var(--muted)}
 
 /* v2.270.0 · Invitados en Usuarios */
@@ -4380,7 +4385,8 @@ body.modo-medico #v-config #cfgcuerpo{grid-template-columns:repeat(2,minmax(0,1f
 .tdu.tdmini .tdu-hora{display:none}
 #agcuerpo .tdhead .acts > .agband.agbandin{display:contents}
 #agcuerpo .tdhead .acts > .agband.agbandin button{margin:0}
-@media (min-width:761px){#agcuerpo .tdhead .acts{display:flex;flex-wrap:wrap;gap:6px}#agcuerpo .tdhead .acts > :is(.btn,button),#agcuerpo .tdhead .acts > .agband.agbandin button{min-height:36px;height:36px;padding:0 10px;font-size:13px;white-space:nowrap;border-radius:10px}#agcuerpo .tdhead .acts > .agband.agbandin button b{font-size:13.5px}}
+#agcuerpo .tdhead .acts{display:flex;flex-wrap:wrap;gap:6px}#agcuerpo .tdhead .acts > :is(.btn,button),#agcuerpo .tdhead .acts > .agband.agbandin button{min-height:36px;height:36px;padding:0 10px;font-size:13px;white-space:nowrap;border-radius:10px}#agcuerpo .tdhead .acts > .agband.agbandin button b{font-size:13.5px}
+@media (max-width:760px){#agcuerpo .tdhead .acts > .agband.agbandin button{width:auto;justify-content:flex-start}#agcuerpo .tdhead .acts > .agband.agbandin button b{margin-left:4px}}
 #agcuerpo .tdhead{position:relative}
 .tdu{border-left:4px solid transparent}
 .tdu.tdst-abierta{border-left-color:#8FBCE6}
@@ -4503,7 +4509,9 @@ dialog.encajada #dbody > .acts:last-child,dialog.encajada #dlg2body > .acts:last
 #v-informe .pmperl b{font:800 20px var(--f-titulo);color:var(--ink);font-variant-numeric:tabular-nums}
 /* v2.296: desplegables de filtro con muchas opciones (las filas se montaban) y, en el móvil, hoja abajo; «Quitar filtros» */
 .plpopl button{flex-shrink:0}
-.plquitar{all:unset;cursor:pointer;padding:0 12px;color:var(--navy);font-weight:700;white-space:nowrap;display:inline-flex;align-items:center}
+/* v2.341.0 (Eric): «Eliminar filtros» es un botón de borrar */
+.plquitar{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}.plquitar.hide{display:none}
+.plquitar svg,[data-htlimpiar] svg{width:14px;height:14px}
 @media (max-width:760px){
   .plpop.plhoja{position:fixed;left:8px;right:8px;top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));max-width:none;max-height:70vh;display:flex;flex-direction:column;z-index:400}
   .plpop.plhoja .plpopl{max-height:none;flex:1;min-height:0}
@@ -4611,7 +4619,7 @@ html body .toast[popover]{margin:0;border:0;overflow:visible}
 /* v2.317.0 · entrega sin cargo */
 .pscbox{display:flex;flex-direction:column;gap:4px;margin:8px 0}
 .prepbox{margin-top:10px}
-#dbody:has(#psincargo:checked) :is(.pscg2,#ptrfbox,#ppagox,.envbox){display:none}
+#dbody:has(#psincargo:checked) :is(.pscg2,#ptrfbox,#ptpvbox,#ppagox,.envbox){display:none}
 /* v2.314.0 · pago por transferencia */
 .pdtrfbox{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
 .pdtrfbox.hide{display:none}
@@ -4650,8 +4658,10 @@ html:not(#_s) body :is(.segs):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe 
 html:not(#_s) body :is(.dgrid > .dh):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs)){font-size:11.5px !important;font-weight:700 !important}
 html:not(#_s) body :is(.dgrid > .dr):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh)){font-size:13.5px !important}
 html:not(#_s) body :is(.lista > .item):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow)){border-radius:10px !important}
-html:not(#_s) body :is(dialog[open]):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt)){border-radius:16px !important}
-html:not(#_s) body :is(.pmaviso, .banda-aviso):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt),:is(dialog[open])){border-radius:12px !important}
+html:not(#_s) body :is(dialog#ficha[open], dialog#dlg.dlgficha[open]):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt)){border-radius:0 !important}
+html:not(#_s) body :is(dialog#dlg[open]:not(.encajada), dialog#dlg2[open]:not(.encajada), dialog#ficha[open]):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt),:is(dialog#ficha[open], dialog#dlg.dlgficha[open])){border-radius:16px !important}
+html:not(#_s) body :is(dialog[open]):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt),:is(dialog#ficha[open], dialog#dlg.dlgficha[open]),:is(dialog#dlg[open]:not(.encajada), dialog#dlg2[open]:not(.encajada), dialog#ficha[open])){border-radius:16px !important}
+html:not(#_s) body :is(.pmaviso, .banda-aviso):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt),:is(dialog#ficha[open], dialog#dlg.dlgficha[open]),:is(dialog#dlg[open]:not(.encajada), dialog#dlg2[open]:not(.encajada), dialog#ficha[open]),:is(dialog[open])){border-radius:12px !important}
 /* forma de caja sin !important y nunca en lo oculto: no puede mostrar nada escondido (D-021) */
 html:not(#_s) body .pill:not([hidden]){display:inline-flex;align-items:center}
 /* piezas sueltas */
@@ -4673,8 +4683,118 @@ html body :is(.pagtabs, .subnav, .pmtabs)::-webkit-scrollbar{display:none}
   html:not(#_s) body :is(textarea):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico)){font-size:16px !important}
   html:not(#_s) body :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea)){font-size:16px !important}
   html:not(#_s) body :is(.card):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad)){padding-left:16px !important;padding-right:16px !important}
+  html:not(#_s) body :is(dialog#dlg[open]:not(.encajada), dialog#dlg2[open]:not(.encajada), dialog#ficha[open]):not(:is(#v-inicio .saludo h1#hola),:is(#v-informe .medhero h1),:is(main > section .saludo h1),:is(.fab),:is(.plqi, .pltool input),:is(#q, .plqi, #cfubus, #pmcq, #txq, input[type=search]),:is(.plchip),:is(.chip:not(.btn)),:is(.chipsel, [data-txf], .htchip, [data-agti], [data-qk], .pmhdia, [data-rnf]),:is(.kmv, .kojo, .agslm, .notbor, .pmhx, .pmhmas, .quitar, .kcfg, .ankcfg, .cdmas, .pwdojo, .rv),:is(.btn.icoonly, .icobtn, dialog .x, .fh .x),:is(.btn.chico, button.chico),:is(.btn:not(.lnk)),:is(.lnk),:is(.numw),:is(.selw > input),:is(input.chico, select.chico),:is(textarea),:is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]):not([type=color]):not(.numw input):not(.selw input), select),:is(.cfuvolver, .cfgvolver, .manvuelta, .rnvol),:is(button[data-pg], .pag button),:is(.mti, .opfila),:is(.usrcard, .cat-card, .imptipo, [data-agbd]),:is(.cdia, .agsld, .cmesb),:is(.ai),:is([data-rnp], .rnpasos button, .imppasos button),:is(label[for]:not(.btn):not(.opt):not(.chk)),:is(input[type=checkbox]:not(.vfswitch input):not(.sw input), input[type=radio]),:is(button.opt),:is(.card.ancard, #agcuerpo, #agsemlat, .card.sinpad),:is(.card),:is(.card > h2, .card > .fh h2, .card > .fh > div > h2),:is(.kpi.usrresrol, .usrres .kpi, .plres .kpi, .vtot .kpi),:is(.kpi, .plk, .kv, .ankpi, .mt, .pkt),:is(.pill),:is(.pagtabs, .subnav, .pmtabs, .cfgsubs),:is(.pagtabs > button, .subnav > button, .pmtabs > button, .cfgsubs > button),:is(.segs),:is(.dgrid > .dh),:is(.dgrid > .dr),:is(.trow),:is(.lista > .item),:is(.fila[data-id], button.item, .rnopt),:is(dialog#ficha[open], dialog#dlg.dlgficha[open])){border-radius:0 !important}
 }
 /* ==== fin SISTEMA delcos ==== */
+/* v2.331.0: cobro con tarjeta o Bizum en el pedido y su configuración */
+#pdtpv{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+#pdtpv .pdpagof .pill{align-self:flex-start}
+#pdtpv .acts{margin:0}
+#pdtpv a.btn{display:inline-flex;align-items:center;justify-content:center;text-align:center}
+.tpvok{color:var(--ok)}.tpverr{color:var(--dang)}
+.tpvw{display:flex;flex-direction:column;gap:12px}
+#tpvurl{word-break:break-all}
+/* v2.335.0: barra del móvil con 2 a 5 botones, «Personalizar menú» del móvil */
+@media (max-width:760px){.bnav[data-n="2"]{grid-template-columns:repeat(2,1fr)}.bnav[data-n="3"]{grid-template-columns:repeat(3,1fr)}.bnav[data-n="4"]{grid-template-columns:repeat(4,1fr)}}
+.bmaspers{justify-content:center;margin-top:10px}
+.movpl{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.movp{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.movp.movp-barra{border-color:var(--navy)}
+.movp.movp-oculta .movpn,.movp.movp-oculta .movpico{opacity:.5}
+.movpn{flex:1;min-width:90px;font-weight:600}
+.movpmv{display:flex;gap:2px}
+.movp .segs{margin-left:auto}
+.movpg{margin-top:12px}
+.movpg h3{margin:0 0 6px}
+.movpg .movpl{margin:0}
+.movpfijo{margin-bottom:6px}
+.movpfijo .sm{margin-left:auto}
+.movpdrag{cursor:grab;touch-action:none;user-select:none;padding:6px 4px;color:var(--muted);font-size:18px;line-height:1}
+.movp.movparr{position:fixed;z-index:10;box-shadow:0 8px 24px rgba(11,37,64,.18);pointer-events:none;opacity:.95;margin:0}
+.movphueco{border:2px dashed var(--line);border-radius:12px}
+.movpvac{padding:12px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.mlpfijo .sm{margin-left:auto}
+.movpico{width:22px;text-align:center;color:var(--navy)}
+/* v2.338.0 · Arreglos del móvil (avisos de Eric, 20/10/2026) */
+/* Referencia del pago: separada del campo de arriba */
+/* Analítica: la leyenda del gráfico de anillo debajo, sin montarse sobre «Cómo leerlo» */
+.donut:has(.donutley){width:auto;height:auto}
+@media (max-width:760px){.donut:has(.donutley){justify-content:center}.donutley{min-width:0;width:100%}}
+/* Inicio: «Sin contactar» en el móvil, 16 por fila */
+@media (max-width:760px){#kpis.kvivo .kvwaf{grid-template-columns:repeat(16,1fr);gap:2px}}
+/* D-024 · Ventanas completas en el móvil: toda la pantalla menos el menú de abajo, desde que se abren */
+@media (max-width:760px){
+  dialog#dlg[open]:not(.encajada),dialog#dlg2[open]:not(.encajada),dialog#ficha[open]{position:fixed;inset:0 0 auto 0;margin:0;
+    width:100%!important;max-width:100%!important;height:calc(100dvh - var(--bnavh,0px))!important;max-height:calc(100dvh - var(--bnavh,0px))!important;box-shadow:none;animation:uiFunde var(--t-medio) linear}
+  dialog#dlg[open]:not(.encajada)::backdrop,dialog#dlg2[open]:not(.encajada)::backdrop,dialog#ficha[open]::backdrop{background:transparent}
+  dialog#dlg[open]:not(.encajada) > #dbody,dialog#dlg2[open]:not(.encajada) > #dlg2body{min-height:100%;box-sizing:border-box}
+}
+/* v2.339.0 · Cabecera del pedido en una fila */
+.pdcabt{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;min-width:0}
+.pdcabt h2{margin:0}
+.pdcabt .pdmeta{white-space:normal}
+/* v2.339.0 · Vista previa de la factura */
+.facprev iframe{width:100%;height:min(70vh,820px);border:1px solid var(--line);border-radius:12px;background:#FFFFFF;display:block}
+.facpaviso{margin:0 0 10px}
+@media (max-width:760px){.facprev iframe{height:calc(100dvh - var(--bnavh,0px) - 230px)}}
+/* v2.339.0 · Reparto por producto en barras */
+.reptot{padding:2px 16px 8px;font-size:13px;color:var(--muted)}
+.reptot b{font:800 18px var(--f-titulo);color:var(--navy);margin-right:2px}
+.barrash.reparto .bh{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 52px 40px}
+.barrash.reparto .bh b{text-align:right;font-variant-numeric:tabular-nums}
+.bhsvg{width:100%;height:12px;display:block}.bhsvg .f{fill:var(--bg)}.bhsvg .v{fill:var(--sky)}
+.barrash.reparto .bhp{text-align:right;font-variant-numeric:tabular-nums}
+/* v2.340.0 · Configuración: pestañas de las partes de un apartado, Textos personalizados y sin «Cómo se llama cada cosa» */
+.cfucab .cfgpartes{margin-top:12px}
+#v-config #mkvoccard,#v-config .mkvoc,#v-config .mketqbox{display:none!important}
+.txmtab{display:flex;flex-direction:column}
+.txmf{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.4fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.txmf.txmcab{border-top:0;font:700 11px var(--f-titulo);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.txmico{text-align:center}
+.txmdef{font-weight:600}
+.txmf input{max-width:360px}
+@media (max-width:760px){.txmf{grid-template-columns:24px minmax(0,1fr)}.txmf > span:last-child{grid-column:2}.txmf.txmcab{display:none}}
+/* v2.341.0 · Alta de cliente: el campo «Empresa» guarda su sitio con «Empresa» elegido (sin saltos) */
+#koempw.koinv{visibility:hidden}
+#koempw label .ai{margin-left:4px}
+/* v2.342.0 · Plantillas de correo y del PDF */
+#plcorreo > .fh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plclista{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.plcusot{font:700 11px var(--f-titulo);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.plcfila{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.plcn{display:flex;flex-direction:column;gap:2px;min-width:0}.plcn .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+.plcb{display:flex;gap:6px;flex-wrap:wrap}
+.pdfplbar{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line)}
+.pdfplbar > div:first-child{min-width:220px;flex:1 1 220px;max-width:360px}
+.pdfplacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.efplants{margin-top:6px}
+/* v2.343.0 · Ninguna pastilla vacía (aviso de Eric: un chip vacío junto a «Cómo llegar») */
+html body :is(.fvdonde,.pill,.chip):empty{display:none}
+.ankpi.anv .avz.avcero .avsp path.l{stroke:#C9D7E6}.ankpi.anv .avz.avcero .avpt{background:#C9D7E6}
+/* v2.344.0 · Configuración más ordenada */
+#cfgcuerpo-hub .cfgsec + .cfgsec{margin-top:22px}
+#cfgcuerpo-hub .cfgsectit{font:800 15px var(--f-titulo);color:var(--navy);margin:0 0 10px}
+#v-config #cfgcuerpo.perfil2{display:block}
+.perfuno .perfunorow{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+.perfuno .perfparte{border:0;background:none;box-shadow:none;padding:0;margin:0}
+.perfuno .perfseg{border-top:1px solid var(--line);margin-top:18px;padding-top:16px}
+.perfuno .perfseg > h2{font:800 15px var(--f-titulo);color:var(--navy);display:flex;align-items:center;gap:8px;margin:0 0 4px}.perfuno .perfseg > h2 svg{width:18px;height:18px}
+.perfuno .perfunorow > .perfparte:not(#miperfil) > h2{display:none}
+@media (max-width:900px){.perfuno .perfunorow{grid-template-columns:1fr}}
+.ntfsilt{display:flex;align-items:center;justify-content:flex-start;gap:10px}
+.ntfsilt > .vfswitch{flex:0 0 auto;width:auto;margin:0}.ntfsilt > b{flex:0 1 auto}
+.ntfsil .ajctl{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.ntfsil:has(#nsil:not(:checked)) .ajctl{opacity:.45}
+#v-config .usrbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:center}
+#v-config .usrbar > *{width:100%;min-width:0}
+@media (max-width:760px){#v-config .usrbar{grid-template-columns:1fr 1fr}#v-config .usrbar > #usrq{grid-column:1 / -1}}
+#v-config label.btn{display:inline-flex;align-items:center;justify-content:center}
+#v-config .marcaed{grid-template-columns:150px minmax(0,1fr);gap:18px;align-items:start}
+#v-config .marcaprev{padding:14px}
+#v-config .marcaprev img{width:84px;height:84px}
+.cfucab{position:relative}
+.cfucab > .cfuacts{position:absolute;right:0;top:22px;margin:0;display:flex;gap:8px}
+@media (max-width:760px){.cfucab > .cfuacts{position:static;margin-top:10px}}
 </style>
 </head>
 <body>
@@ -4755,7 +4875,7 @@ try{var co=sessionStorage.getItem('dlc-cambio-org');if(co!==null||localStorage.g
         <div class="filtros">
           <div><label for="fprov">Provincia</label><select id="fprov"></select></div>
           <div><label for="fmuni">Municipio</label><select id="fmuni"></select></div>
-          <div><label for="fesp">Especialidad</label><select id="fesp"></select></div>
+          <div><label for="fesp">Segmento</label><select id="fesp"></select></div>
           <div><label for="frep">Reporting</label><select id="frep"><option value="">Todos</option><option value="con">Con reporting</option><option value="sin">Sin reporting</option></select></div>
           <div><label for="ftipo">Tipo</label><select id="ftipo"><option value="">Todas</option><option value="Persona">Profesionales</option><option value="Centro">Centros</option></select></div>
           <div><label for="fest">Estado comercial</label><select id="fest"></select></div>
@@ -4812,6 +4932,6 @@ try{var co=sessionStorage.getItem('dlc-cambio-org');if(co!==null||localStorage.g
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=2.330.0"></script>
+<script src="./app.js?v=2.349.0"></script>
 </body>
 </html>
