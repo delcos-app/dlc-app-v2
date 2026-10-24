@@ -456,7 +456,7 @@ async function fichaComercialYPacientes(id) {
     const { data } = await db.rpc('clientes_lista', { q: null, p_medico: id, lim: 5, desplaz: 0 });
     if (FICHA_ID !== id || !data || !data.total) return;
     ($('fventasc') || $('fbody')).insertAdjacentHTML('beforeend', `<div class="blk"><h3>${TT('paciente', 'p', '', 'l', 'C')}<span class="n" style="margin-left:6px">${num(data.total)}</span></h3>
-      ${data.filas.map(x => `<button class="item" data-fmpac="${x.id}" style="padding:7px 4px"><span class="tx"><b>${esc(x.nombre)}</b>
+      ${data.filas.map(x => `<button class="item" data-fmpac="${x.id}"><span class="tx"><b>${esc(x.nombre)}</b>
         <span class="sm">${num(x.unidades)} uds. · ${num(x.pedidos)} pedidos${x.ultimo_pedido ? ' · último ' + fechaCorta(x.ultimo_pedido) : ''}</span></span></button>`).join('')}
       ${data.total > 5 ? `<button class="verlo" id="fmpactodos" style="border-radius:8px;margin-top:6px">Ver los ${num(data.total)} ${TT('paciente', 'p', '', 'l', 'l')}</button>` : ''}</div>`);
     $('fbody').querySelectorAll('[data-fmpac]').forEach(b => b.onclick = () => fichaPaciente(b.dataset.fmpac));
@@ -604,7 +604,7 @@ async function pintarFichaBase(id) {
           ${v.muestras ? ` · ${v.muestras} muestras` : ''}
           ${v.nota ? `<div class="sm">${esc(v.nota)}</div>` : ''}
           ${v.proxima_fecha ? `<div class="sm">Próxima: ${fechaCorta(v.proxima_fecha)} · ${esc(v.proxima_accion || '')}</div>` : ''}</span>
-        ${puedeRegistrar() ? `<button class="btn sec chico" data-editv='${esc(JSON.stringify(v))}' style="min-height:30px;padding:5px 9px;font-size:12.5px">Editar</button>` : ''}
+        ${puedeRegistrar() ? `<button class="btn sec chico" data-editv='${esc(JSON.stringify(v))}'>Editar</button>` : ''}
       </div>`).join('') : `<div class="sm">Todavía no hay ${TT('visita', 'p', '', 'l', 'l', 'registrado')}.</div>`}</div>
     <div id="fzcampos"></div>
     <section class="blk fventas" id="fventas"><h3>Ventas y ${TT('paciente', 'p', '', 'l', 'l')}</h3><div id="fventasc"></div></section>`;
@@ -1386,7 +1386,7 @@ async function pintarPrefsPaso2() {
     ventas: 'Pedidos', analitica: 'Analítica', facturacion: 'Facturación' };
   $('cfgcuerpo').insertAdjacentHTML('afterbegin', `<div class="card miperfil" id="miperfil">
     <div class="mpcab"><span class="mpav">${esc(iniciales(PERFIL.nombre))}</span>
-      <div><h2 style="padding:0;margin:0">${esc(PERFIL.nombre)}</h2><div class="sm">${esc(PERFIL.email || '')}</div>
+      <div><h2 style="padding:0 0 4px;margin:0">${esc(PERFIL.nombre)}</h2><div class="sm">${esc(PERFIL.email || '')}</div>
         <div class="mpchips"><span class="pill p-est">${esc(PERFIL.rol)}</span></div></div></div>
     <div class="mpgrid">
       <div><b>Tus módulos</b><div class="mpmods">${mods.map(m => `<span>${ICO_MOD[m] || '•'} ${esc(nombres[m] || m)}</span>`).join('')}</div></div>
@@ -1408,7 +1408,7 @@ async function pintarPrefsPaso2() {
 function pintarPrefsBase() {
   const s = punto('salida') || { nombre: '', dir: '' };
   const l = punto('llegada');
-  const caja = (k, x, titulo, sub) => `<div class="card" style="padding:16px">
+  const caja = (k, x, titulo, sub) => `<div class="card" style="padding-top:16px;padding-bottom:16px">
     <h2 style="padding:0">${titulo}</h2><p class="sm" style="padding:0">${sub}</p>
     <div class="g2" style="margin-top:10px">
       <div><label>Nombre</label><input data-pn="${k}" value="${esc(x ? x.nombre || '' : '')}" placeholder="Casa, Oficina…"></div>
@@ -1422,7 +1422,7 @@ function pintarPrefsBase() {
 
   $('cfgcuerpo').innerHTML = `
     <p class="sm">El punto de salida y el de llegada se usan para calcular el plan del día y los recorridos.</p>
-    <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="cols">
       ${caja('salida', s, 'Punto de salida', 'Dónde empiezas el día')}
       ${caja('llegada', l, 'Punto de llegada', 'Déjalo vacío para volver al punto de salida')}
     </div>
@@ -1638,7 +1638,7 @@ function pintarUsuarioBase(id) {
         <option value="0" ${u.activo ? '' : 'selected'}>Desactivado</option></select></div>
     </div>
     <label>Permisos por área</label>
-    ${AREAS.map(([k, t]) => `<div class="dprow" style="grid-template-columns:130px 1fr"><b>${t}</b>
+    ${AREAS.map(([k, t]) => `<div class="dprow" style="grid-template-columns:130px minmax(0,1fr)"><b>${t}</b>
       <select data-area="${k}">${NIVELES.map((n, i) => `<option value="${i}" ${(+areas[k] || 0) === i ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`).join('')}
     <div id="ucomzona"></div>
     <div class="acts" style="justify-content:flex-end">
@@ -1931,8 +1931,8 @@ async function listaSeguimiento(reinicia) {
         <span class="sm">${m.n_visitas} ${TT('visita', 'p', '', 'l', 'l')}${m.muestras ? ' · ' + m.muestras + ' muestras' : ''}</span></span>
       <span class="c3"><span class="sm">${m.proxima_fecha
         ? `<b style="color:${m.proxima_fecha < hoyISO() ? 'var(--warn)' : 'var(--navy)'}">${fechaCorta(m.proxima_fecha)}</b><br>${esc(m.proxima_accion || '')}
-           <br><span class="acts" style="margin:4px 0 0"><button class="btn sec chico" data-acc="hecha|${m.id}" style="min-height:26px;padding:3px 8px;font-size:12px">Hecha</button>
-           <button class="btn sec chico" data-acc="aplazar|${m.id}" style="min-height:26px;padding:3px 8px;font-size:12px">Aplazar</button></span>`
+           <br><span class="acts" style="margin:4px 0 0"><button class="btn sec chico" data-acc="hecha|${m.id}">Hecha</button>
+           <button class="btn sec chico" data-acc="aplazar|${m.id}">Aplazar</button></span>`
         : ''}</span></span>
       <span class="pill p-est">${esc(m.estado_comercial)}</span>
     </button>`).join(''));
@@ -2585,7 +2585,7 @@ async function pintarComisionesPaso1() {
       <div class="g2"><div><label for="aep">Persona</label><select id="aep">${COMS.map(u => `<option value="${u.id}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join('')}</select></div>
         <div><label for="aee">Esquema</label><select id="aee"><option value="">Sin comisión</option>${ESQUEMAS.map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('')}</select></div></div>
       <label>Se aplica</label>
-      <div class="opciones" style="grid-template-columns:repeat(3,1fr)">
+      <div class="opciones" style="grid-template-columns:repeat(3,minmax(0,1fr))">
         <label class="opt"><input type="radio" name="aem" value="hoy" checked> A partir de hoy</label>
         <label class="opt"><input type="radio" name="aem" value="todo"> A todo el histórico</label>
         <label class="opt"><input type="radio" name="aem" value="fecha"> Desde una fecha</label></div>
@@ -2705,7 +2705,7 @@ function editorEsquema(id) {
       </div>
       ${fijo ? '' : `<label>Tramos <span class="sm">· deja vacío el "hasta" del último</span></label>
       <div class="trcab" aria-hidden="true"><span>Desde (uds.)</span><span>Hasta (uds.)</span><span>€ por unidad</span></div>
-      <div id="etramos">${tramos.map((t, i) => `<div class="g2" style="margin-bottom:8px;grid-template-columns:1fr 1fr 1fr auto">
+      <div id="etramos">${tramos.map((t, i) => `<div class="g2" style="margin-bottom:8px">
         <input data-td="${i}" type="number" min="0" value="${t.desde_u}" placeholder="Desde">
         <input data-th="${i}" type="number" min="0" value="${t.hasta_u == null ? '' : t.hasta_u}" placeholder="Hasta">
         <input data-tv="${i}" type="number" step="0.01" min="0" value="${t.valor}" placeholder="€/unidad">
@@ -3569,7 +3569,7 @@ function nuevoClasificador() {
         <div><label for="ncd">Descripción</label><input id="ncd" placeholder="Para qué sirve"></div>
       </div>
       <label>Valores</label>
-      <div id="ncv">${valores.map((v, i) => `<div class="g2" style="grid-template-columns:1fr auto;margin-bottom:6px">
+      <div id="ncv">${valores.map((v, i) => `<div class="g2" style="grid-template-columns:minmax(0,1fr) auto;margin-bottom:6px">
         <input data-ncv="${i}" value="${esc(v)}" placeholder="Valor ${i + 1}">
         ${valores.length > 1 ? `<button type="button" class="btn sec" data-ncx="${i}">✕</button>` : ''}</div>`).join('')}</div>
       <div class="acts"><button type="button" class="btn sec" id="ncmas">+ Añadir valor</button></div>
@@ -5079,7 +5079,7 @@ async function fichaPaciente(id) {
       <button class="x" id="fpx" aria-label="Cerrar">✕</button></div>
     ${permitido ? `<div class="acts"><button class="btn" id="fpnped">+ Nuevo pedido</button>
       <button class="btn sec" id="fpedit">Editar datos</button></div>` : ''}
-    <div class="kpis" style="margin:10px 0 0;grid-template-columns:repeat(3,1fr)">
+    <div class="kpis" style="margin:10px 0 0;grid-template-columns:repeat(3,minmax(0,1fr))">
       <div class="kpi"><b>${num(validos.length)}</b><span>pedidos</span></div>
       <div class="kpi"><b>${num(data.total_unidades)}</b><span>unidades</span></div>
       <div class="kpi"><b>${eurI(validos.reduce((n, p) => n + (+p.total || 0), 0))}</b><span>con IVA</span></div></div>
@@ -6100,7 +6100,7 @@ async function cargarAnalitica() {
       </div>
       <div class="kpis vtot" id="atot"></div>
       <div id="aprods"></div>
-      <div class="subnav" style="padding:12px 14px 0"><button data-avista="rank" aria-pressed="true">Ranking</button>
+      <div class="subnav"><button data-avista="rank" aria-pressed="true">Ranking</button>
         <button data-avista="tabla" aria-pressed="false">Tabla por meses</button></div>
       <div id="aserie" style="padding:14px"></div>
       <div id="atabla"></div>
@@ -8729,7 +8729,7 @@ function rectificarFactura(f) {
       <button class="x" data-cerrar2 aria-label="Cerrar">✕</button></div>
     <label for="rfm">Motivo</label><input id="rfm" placeholder="p. ej. Devolución de una caja rota, error en el precio…">
     <label>Qué se rectifica</label>
-    <div class="opciones" style="grid-template-columns:1fr 1fr"><label class="opt"><input type="radio" name="rft" value="total" checked> Toda la factura</label>
+    <div class="opciones" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="opt"><input type="radio" name="rft" value="total" checked> Toda la factura</label>
       <label class="opt"><input type="radio" name="rft" value="parcial"> Solo algunas unidades</label></div>
     <div id="rflin" class="hide">${f.lineas.map((l, i) => `<div class="g2" style="align-items:center"><div>${esc(l.descripcion)} <span class="sm">(${num(l.unidades)} uds)</span></div>
       <div><input type="number" min="0" max="${l.unidades}" data-rfi="${i}" value="0" aria-label="Unidades a rectificar"></div></div>`).join('')}</div>
@@ -8860,7 +8860,7 @@ async function pintarEmpresa() {
   await cargarAjustes();
   const e = AJUSTES.empresa || {}, c = Object.assign({ vencimiento_dias: 15, forma_pago: '', emitir_al_validar: false }, AJUSTES.facturacion || {});
   const f = (k, t, extra) => `<div><label for="em_${k}">${t}</label><input id="em_${k}" value="${esc(e[k] || '')}" ${extra || ''}></div>`;
-  $('fcuerpo').innerHTML = `<div class="card" style="padding:16px 18px">
+  $('fcuerpo').innerHTML = `<div class="card" style="padding-top:16px;padding-bottom:16px">
     <h2 style="padding:0 0 8px">Datos fiscales del emisor</h2><p class="sm">Aparecen en cada factura. Las facturas ya emitidas conservan los datos con los que se emitieron.</p>
     <div class="g2">${f('razon_social', 'Razón social')}${f('nif', 'NIF')}</div>
     <div class="g2">${f('direccion', 'Dirección')}${f('cp', 'Código postal')}</div>
@@ -10607,7 +10607,7 @@ async function pintarMarca() {
   await cargarAjustes();
   const m = Object.assign({ nombre: nombreApp(), logo: null, logo_factura: true }, AJUSTES.marca || {});
   let logo = m.logo;
-  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Marca de la empresa</h2>
+  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2>Marca de la empresa</h2>
     <p class="sm">Así se ve la plataforma para todo tu equipo: en la pantalla de acceso, arriba en cada pantalla, en la app del móvil y en las facturas.</p>
     <div class="marcaed"><div class="marcaprev"><img id="mklogo" src="${esc(logo || 'logo-app.png')}" alt=""><b id="mknomp">${esc(m.nombre)}</b></div>
       <div><label for="mknom">Nombre de la plataforma</label><input id="mknom" value="${esc(m.nombre)}" placeholder="p. ej. Acme Comercial">
@@ -10744,18 +10744,18 @@ async function pintarUsuarios2() {
     $('usrl').querySelectorAll('[data-usr]').forEach(b => b.onclick = () => detalleUsuario(todos.find(u => u.id === b.dataset.usr)));
   };
   $('cfgcuerpo').innerHTML = `<div class="cfgpanel">
-    <div class="kpis vtot" style="margin-bottom:12px">
+    <div class="kpis vtot">
       <div class="kpi"><b>${num(activos.length)} / ${num(maxU)}</b><span>usuarios del plan ${esc(act.nombre)}</span></div>
       ${Object.entries(porRol).map(([r, n]) => `<div class="kpi"><b>${num(n)}</b><span>${esc(r)}</span></div>`).join('')}
       <div class="kpi ${inactivos ? 'warn' : 'ok'}"><b>${num(inactivos)}</b><span>sin actividad en 30 días</span></div>
       <div class="kpi" data-usrinvk><b>${num(todos.filter(u => (rolPuede(u.rol, 'portal_prescriptor') || rolPuede(u.rol, 'portal_centro')) && u.activo).length)}</b><span>Cuentas con acceso</span></div></div>
-    <div class="card" style="padding:14px 16px">
+    <div class="card" style="padding-top:14px;padding-bottom:14px">
       <div class="usrbar"><input id="usrq" type="search" placeholder="Buscar por nombre o email" value="${esc(USR_F.q)}">
         <select id="usrrol"><option value="">Todos los roles</option>${rolesNombres().map(r => `<option ${USR_F.rol === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
         <select id="usrest"><option value="activos" ${USR_F.est === 'activos' ? 'selected' : ''}>Activos</option><option value="inactivos" ${USR_F.est === 'inactivos' ? 'selected' : ''}>Desactivados</option><option value="todos" ${USR_F.est === 'todos' ? 'selected' : ''}>Todos</option></select>
         <button class="btn" id="usrnuevo">+ Nuevo usuario</button></div>
       <div id="usrl" class="usrlista"></div></div>
-    <div class="card usrinvw" style="padding:14px 16px"><h3>Invitados <span id="usrinvn" class="sm"></span></h3>
+    <div class="card usrinvw" style="padding-top:14px;padding-bottom:14px"><h3>Invitados <span id="usrinvn" class="sm"></span></h3>
       <p class="sm">${TT('medico', 'p', '', 'l', 'C')} y centros a los que has dado acceso a su portal. No cuentan como usuarios del plan. Con «Impersonalizar» abres una sesión con su usuario y ves su portal tal como lo verá.</p>
       <div id="usrinv" class="usrinvl"></div></div></div>`;
   $('usrq').oninput = () => { USR_F.q = $('usrq').value; pinta(); };
@@ -10775,7 +10775,7 @@ const plantillaRol = r => Object.assign({}, (rolDef(r) || {}).plantilla || {}, (
 async function pintarRoles() {
   await cargarAjustes();
   const roles = rolesNombres().filter(r => !rolPuede(r, 'portal_prescriptor'));
-  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Roles y permisos</h2>
+  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2>Roles y permisos</h2>
     <p class="sm">Cada rol tiene una plantilla de permisos que se aplica al dar de alta a una persona o al cambiarle el rol. Después se puede ajustar persona a persona en Usuarios. ${TT('medico', 'p', 'el', 'C', 'l')} con acceso solo ven su informe.</p>
     <div class="nivleg">${NIVEL_TXT.map((t, i) => `<span class="nv${i}"><b>${esc(t)}</b>${['No ve el módulo ni aparece en el menú', 'Lo ve, pero no cambia nada', 'Crea y edita lo suyo', 'Todo, incluido borrar y configurar'][i]}</span>`).join('')}</div>
     <div class="dgrid-wrap"><table class="rolmat"><thead><tr><th>Permiso</th>${roles.map(r => `<th>${esc(r)}</th>`).join('')}</tr></thead>
@@ -10868,7 +10868,7 @@ setInterval(refrescarCampana, 30000);   // v2.281.0: cada 30 s (además, en vivo
 
 function pintarNotif() {
   const pref = (PERFIL.preferencias || {}).notif || {}, tipos = tiposDeMiRol();
-  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Notificaciones</h2>
+  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2>Notificaciones</h2>
     <p class="sm">Te llegan a la campana 🔔 de arriba. Elige cuáles quieres recibir.</p>
     ${tipos.length ? `<div class="notcfg">${tipos.map(([k, ic, t, d]) => `<label class="vfswitch"><input type="checkbox" data-nt="${k}" ${pref[k] === false ? '' : 'checked'}><span class="sw"></span>
       <span><b>${ic} ${esc(t)}</b><br><span class="sm">${esc(d)}</span></span></label>`).join('')}</div>` : '<div class="vacio">Tu perfil no tiene notificaciones disponibles todavía.</div>'}</div>`;
@@ -10948,12 +10948,12 @@ function pintarPerfilBase() {
   const pr = PERFIL.preferencias || {};
   const inicios = [['inicio', 'Inicio'], ['agenda', 'Agenda'], ['rutas', 'Rutas'], ['directorio', 'Directorio'], ['ventas', 'Pedidos']].filter(([k]) => puedeModulo(k));
   $('cfgcuerpo').innerHTML = `<div id="perfilcab"></div>
-    <div class="card cfgpanel"><h2 style="padding:0 0 8px">Mis datos</h2>
+    <div class="card cfgpanel"><h2>Mis datos</h2>
       <div class="g2"><div><label for="pfn">Nombre visible</label><input id="pfn" value="${esc(PERFIL.nombre)}"></div>
         <div><label for="pft">Teléfono</label><input id="pft" inputmode="tel" value="${esc(pr.telefono || '')}" placeholder="Para que el equipo pueda llamarte"></div></div>
       <div class="g2"><div><label for="pfi">Al entrar, abrir</label><select id="pfi">${inicios.map(([k, t]) => `<option value="${k}" ${(pr.inicio || 'inicio') === k ? 'selected' : ''}>${t}</option>`).join('')}</select></div><div></div></div>
       <div class="acts" style="justify-content:flex-end"><button class="btn" id="pfok">Guardar</button></div></div>
-    <div class="card cfgpanel"><h2 style="padding:0 0 8px">Contraseña</h2>
+    <div class="card cfgpanel"><h2>Contraseña</h2>
       <div class="g2"><div><label for="pfp1">Nueva contraseña</label><input id="pfp1" type="password" autocomplete="new-password"></div>
         <div><label for="pfp2">Repítela</label><input id="pfp2" type="password" autocomplete="new-password"></div></div>
       <div class="acts" style="justify-content:flex-end"><button class="btn sec" id="pfpok">Cambiar contraseña</button></div></div>`;
@@ -10998,7 +10998,7 @@ async function pintarPrefsParte(parte) {
   if ($('miperfil')) $('miperfil').remove();
   if (parte === 'rutas') {
     c.querySelectorAll(':scope > p.sm').forEach(p => p.remove());
-    c.insertAdjacentHTML('afterbegin', '<div class="card cfgpanel"><h2 style="padding:0 0 4px">Rutas y desplazamientos</h2><p class="sm">Desde dónde sales y dónde terminas. Al pulsar «Cómo llegar» eliges con qué app navegar (Google Maps, Waze o Apple Maps). El horario de las rutas está en su propio apartado.</p></div>');
+    c.insertAdjacentHTML('afterbegin', '<div class="card cfgpanel"><h2>Rutas y desplazamientos</h2><p class="sm">Desde dónde sales y dónde terminas. Al pulsar «Cómo llegar» eliges con qué app navegar (Google Maps, Waze o Apple Maps). El horario de las rutas está en su propio apartado.</p></div>');
   }
 }
 
@@ -11012,16 +11012,16 @@ async function pintarMaterial() {
   const { data: cid } = await db.from('clasificadores').select('id').eq('papel', 'material_visita').maybeSingle();
   const { data: vals } = cid ? await db.from('valores_clasificador').select('id,valor,activo,dato_tipo').eq('clasificador_id', cid.id).order('orden') : { data: [] };
   $('cfgcuerpo').innerHTML = `
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">Material de ${TT('visita', 's', '', 'l', 'l')}</h2>
+    <div class="card cfgpanel"><h2>Material de ${TT('visita', 's', '', 'l', 'l')}</h2>
       <p class="sm">Todo lo que un comercial puede dejar en ${TT('visita', 's', 'un', 'l', 'l')}. Al registrar ${TT('visita', 's', 'el', 'l', 'l')} se marca qué se entregó y cuánto, y queda en la ficha ${TT('medico', 's', 'del', 'l', 'l')} y en Analítica (material por comercial, por ${TT('medico', 's', '', 'l', 'l')} y por mes).</p>
       <div class="mattipos"><div><b>📦 Muestras de producto</b><span>Unidades de un producto del catálogo. Pueden descontarse del stock.</span></div>
         <div><b>📚 Material promocional</b><span>Dípticos, catálogos, flyers, tarjetas… Se cuentan, pero no descuentan stock.</span></div></div></div>
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">📦 Muestras de producto</h2>
+    <div class="card cfgpanel"><h2>📦 Muestras de producto</h2>
       <div class="g2"><div><label for="muprod">Producto que se entrega como muestra</label><select id="muprod"><option value="">— Ninguno —</option>${PRODUCTOS.filter(p => p.tipo !== 'servicio').map(p => `<option value="${p.id}" ${p.id === m.producto_id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div><div></div></div>
       <label class="vfswitch" style="margin-top:10px"><input type="checkbox" id="murest" ${m.restar_stock ? 'checked' : ''}><span class="sw"></span>
         <span><b>Descontar las muestras del stock</b><br><span class="sm">Salen del maletín de quien registra ${TT('visita', 's', 'el', 'l', 'l')} (o del almacén central si no tiene), empezando por el lote que caduca antes. Así sabes cuántas muestras quedan y a quién llegó cada lote.</span></span></label>
       <div class="acts" style="justify-content:flex-end"><button class="btn" id="muok">Guardar</button></div></div>
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">📚 Material promocional</h2>
+    <div class="card cfgpanel"><h2>📚 Material promocional</h2>
       <p class="sm">Lo que aparece para marcar al registrar ${TT('visita', 's', 'un', 'l', 'l')}. En cada uno eliges si al registrar se anotan las unidades entregadas y, con el portal, si se puede pedir desde él y cuántas como máximo por petición.</p>
       <div class="matlista">${(vals || []).map(v => `<div class="matfila ${v.activo ? '' : 'off'}"><b>${esc(v.valor)}</b><span class="sm">${v.dato_tipo === 'numero' ? 'Pide cantidad' : 'Solo se marca'}</span>
         <label class="vfswitch mini"><input type="checkbox" data-mact="${v.id}" ${v.activo ? 'checked' : ''}><span class="sw"></span><span class="sm">${v.activo ? 'Activo' : 'Oculto'}</span></label></div>`).join('') || '<div class="sm">Todavía no hay material.</div>'}</div>
@@ -11047,18 +11047,18 @@ async function pintarAlmacenes2() {
   const { data: st } = await RPC_ORIG('stock_resumen', {});
   const sinMaletin = COMS.filter(u => rolPuede(u.rol, 'almacen_propio') && !ALMACENES.some(a => a.usuario_id === u.id));
   $('cfgcuerpo').innerHTML = `
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">Almacenes</h2>
+    <div class="card cfgpanel"><h2>Almacenes</h2>
       <p class="sm">Dónde está físicamente tu stock. Cada unidad está en un almacén y en un lote, así sabes qué hay, dónde y cuándo caduca.</p>
       <div class="mattipos"><div><b>🏢 Almacén central</b><span>Donde entra la mercancía al recibir las compras y de donde salen los pedidos.</span></div>
         <div><b>💼 Maletín de comercial</b><span>Las muestras que lleva cada comercial. Se reponen traspasando desde el central y se descuentan al registrar ${TT('visita', 'p', '', 'l', 'l')}.</span></div></div></div>
-    <div class="card cfgpanel"><h2 style="padding:0 0 8px">Tus almacenes</h2>
+    <div class="card cfgpanel"><h2>Tus almacenes</h2>
       <div class="almgrid">${ALMACENES.map(a => `<div class="almc"><span class="ic">${a.tipo === 'central' ? '🏢' : a.tipo === 'deposito' ? '🏢' : '💼'}</span>
         <b>${esc(a.nombre)}</b><span class="sm">${a.tipo === 'central' ? 'Almacén central' : a.tipo === 'deposito' ? 'Depósito en un centro' : 'Maletín de ' + esc(a.usuario || '—')}${a.activo ? '' : ' · inactivo'}</span>
         <span class="almu"><b>${num(a.unidades || 0)}</b> unidades</span></div>`).join('')}</div>
       ${sinMaletin.length ? `<div class="avisoh" style="margin-top:12px"><span>${sinMaletin.length === 1 ? esc(sinMaletin[0].nombre) + ' no tiene' : sinMaletin.length + ' comerciales no tienen'} maletín: sus muestras saldrán del almacén central.</span></div>` : ''}
       <div class="matadd" style="margin-top:12px"><select id="almu">${COMS.filter(u => rolPuede(u.rol, 'almacen_propio')).map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select>
         <button class="btn sec" id="almok">Crear maletín</button></div>
-      <p class="sm" style="margin-top:8px">Para pasar unidades del central a un maletín: Productos → Stock → abre el producto → «Traspasar».${Array.isArray(st) && st.length ? '' : ''}</p></div>`;
+      <p class="sm">Para pasar unidades del central a un maletín: Productos → Stock → abre el producto → «Traspasar».${Array.isArray(st) && st.length ? '' : ''}</p></div>`;
   $('almok').onclick = async () => {
     const u = COMS.find(x => x.id === $('almu').value); if (!u) return;
     const { error } = await db.rpc('guardar_almacen', { p: { nombre: 'Maletín ' + String(u.nombre).split(' ')[0], tipo: 'maletin', usuario_id: u.id } });
@@ -11270,7 +11270,6 @@ if (MAPA_I18N) traducir(document.body);
 
 /* ---------------- horizontal: no se muestra ningún aviso ---------------- */
 
-(function () { const g = $('girar'); if (g) g.remove(); })();
 
 /* ---------------- idioma ---------------- */
 
@@ -11375,18 +11374,18 @@ async function pintarCorreo() {
     telefono2: '', web: (AJUSTES.empresa || {}).web || '', direccion: [(AJUSTES.empresa || {}).direccion, (AJUSTES.empresa || {}).municipio].filter(Boolean).join(', '), aviso: '', logo: 'si' }, cfg.firma || {});
   const campo = (id, et, v, extra = '') => `<div><label for="${id}">${et}</label><input id="${id}" value="${esc(v || '')}" ${extra}></div>`;
   $('cfgcuerpo').innerHTML = `
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">Correo de la empresa</h2>
+    <div class="card cfgpanel"><h2>Correo de la empresa</h2>
       <p class="sm">Desde esta cuenta salen las facturas, los datos de pago y los resúmenes. Cada empresa usa su propio correo: los clientes ven vuestro remitente y vuestra firma.</p>
       <div class="g2"><div><label for="coprov">Proveedor</label><select id="coprov"><option value="">Elige tu proveedor…</option>${Object.entries(PROVEEDORES_CORREO).map(([k, p]) => `<option value="${k}" ${cfg.proveedor === k ? 'selected' : ''}>${p.n}</option>`).join('')}</select></div><div></div></div>
       <div class="avisoh ${cfg.proveedor ? '' : 'hide'}" id="coayuda"><span>${esc((PROVEEDORES_CORREO[cfg.proveedor] || {}).ayuda || '')}</span></div>
       <div class="g2">${campo('cohost', 'Servidor de salida (SMTP)', cfg.host, 'placeholder="smtp.tuproveedor.com"')}
-        <div class="g2" style="margin:0"><div><label for="copuer">Puerto</label><input id="copuer" type="number" value="${esc(cfg.puerto)}"></div>
+        <div class="g2 copuerg"><div><label for="copuer">Puerto</label><input id="copuer" type="number" value="${esc(cfg.puerto)}"></div>
           <div><label for="coseg">Seguridad</label><select id="coseg"><option value="ssl" ${cfg.seguridad === 'ssl' ? 'selected' : ''}>SSL</option><option value="starttls" ${cfg.seguridad === 'starttls' ? 'selected' : ''}>STARTTLS</option></select></div></div></div>
       <div class="g2">${campo('cousu', 'Identificador de acceso', cfg.usuario, 'autocomplete="off"')}
         <div><label for="copass">Clave de acceso</label><input id="copass" type="password" autocomplete="new-password" placeholder="${cfg.hay_clave ? '•••••••• guardada · escribe solo para cambiarla' : ''}"></div></div>
       <div class="g2">${campo('conom', 'Nombre del remitente', cfg.remitente_nombre, `placeholder="${esc(nombreApp())}"`)}${campo('coemail', 'Email del remitente', cfg.remitente_email || (AJUSTES.empresa || {}).email || PERFIL.email || '', 'type="email" placeholder="nombre@tuempresa.com"')}</div>
       <p class="sm">🔒 La clave de acceso se guarda aparte y nadie puede verla desde la plataforma, ni siquiera administración.</p></div>
-    <div class="card cfgpanel"><h2 style="padding:0 0 4px">Firma</h2>
+    <div class="card cfgpanel"><h2>Firma</h2>
       <p class="sm">Se añade al final de cada email, con el logo de la empresa si lo tienes en Marca y logo.</p>
       <div class="firmaed"><div>
         <div class="g2">${campo('fnom', 'Nombre', f.nombre)}${campo('fcar', 'Cargo', f.cargo, 'placeholder="p. ej. Atención al cliente"')}</div>
@@ -11394,12 +11393,12 @@ async function pintarCorreo() {
         <div class="g2">${campo('ftel', 'Teléfono', f.telefono)}${campo('ftel2', 'Otro teléfono', f.telefono2)}</div>
         ${campo('fdir', 'Dirección', f.direccion)}
         <label for="faviso">Aviso legal o de confidencialidad</label><textarea id="faviso" rows="3" placeholder="Texto que aparece en pequeño al final del correo">${esc(f.aviso || '')}</textarea>
-        <div class="g2"><div><label for="fcolor">Color</label><input id="fcolor" type="color" value="${esc(cfg.color || '#15528F')}" style="height:44px;padding:4px"></div>
-          <div><label class="vfswitch" style="margin-top:26px"><input type="checkbox" id="flogo" ${f.logo !== 'no' ? 'checked' : ''}><span class="sw"></span><span>Incluir el logo</span></label></div></div>
+        <div class="g2"><div><label for="fcolor">Color</label><input id="fcolor" type="color" value="${esc(cfg.color || '#15528F')}" style="height:44px"></div>
+          <div><label class="vfswitch"><input type="checkbox" id="flogo" ${f.logo !== 'no' ? 'checked' : ''}><span class="sw"></span><span>Incluir el logo</span></label></div></div>
       </div><div><div class="sm" style="margin-bottom:6px">Vista previa</div><div class="firmaprev" id="fprev"></div></div></div></div>
     <div class="card cfgpanel"><div class="acts" style="justify-content:flex-end;flex-wrap:wrap;margin:0">
       <button class="btn sec" id="coprueba">Guardar y enviarme un correo de prueba</button><button class="btn" id="cook">Guardar</button></div>
-      <p class="sm" id="comsg" style="margin:8px 0 0"></p></div>`;
+      <p class="sm" id="comsg"></p></div>`;
   const prev = () => {
     const v = id => $(id).value.trim(), color = $('fcolor').value, logo = $('flogo').checked && MARCA.logo;
     $('fprev').innerHTML = `<div style="height:4px;background:${color};border-radius:4px;margin-bottom:12px"></div><p style="margin:0 0 12px">Hola:<br><br>Te adjuntamos la factura de tu pedido.<br><br>Un saludo,</p>
@@ -11472,7 +11471,7 @@ async function pintarCorreo() {
 async function pintarCopias() {
   const { data: au } = await db.from('auditoria').select('creado_en').eq('accion', 'Copia de seguridad').order('creado_en', { ascending: false }).limit(1);
   const ultima = au && au[0] ? new Date(au[0].creado_en) : null, dias = ultima ? Math.floor((Date.now() - ultima) / 864e5) : null;
-  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Copias de seguridad</h2>
+  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2>Copias de seguridad</h2>
     <p class="sm">Descarga en un único archivo todos los datos de la empresa: ${TT('medico', 'p', '', 'l', 'l')}, ${TT('visita', 'p', '', 'l', 'l')}, agenda, clientes, pedidos, facturas, stock y configuración. Las contraseñas no se incluyen.</p>
     <div class="copiaest ${dias == null || dias > 7 ? 'mal' : 'bien'}"><b>${ultima ? 'Última copia: ' + ultima.toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }) : 'Todavía no se ha hecho ninguna copia'}</b>
       <span>${dias == null ? 'Haz la primera ahora.' : dias > 7 ? `Hace ${dias} días: conviene hacer una nueva.` : 'Al día.'}</span></div>
@@ -11969,7 +11968,7 @@ arbolConfig = (orig => function () {
     // Si al cabo de 20 segundos sigue cargando, se avisa en lugar de dejarlo en blanco
     setTimeout(() => { if (c.isConnected && c.querySelector(':scope > .cfgcarga')) mostrarError(new Error('El apartado no ha terminado de cargar. Revisa la conexión y vuelve a intentarlo.')); }, 20000);
     const mostrarError = e => {
-      c.innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">No se ha podido cargar</h2><p class="sm">${esc(e && e.message ? e.message : String(e))}</p>
+      c.innerHTML = `<div class="card cfgpanel"><h2>No se ha podido cargar</h2><p class="sm">${esc(e && e.message ? e.message : String(e))}</p>
         <div class="acts"><button class="btn sec" id="cfgreint">${svgIco(ICON_NOM['rotate-cw'])} Reintentar</button></div></div>`;
       $('cfgreint').onclick = () => envolver(f)();
     };
@@ -12038,7 +12037,7 @@ function detalleUsuario(u) {
         <span class="permmod">${svgIco(ICON_NOM[n ? 'check' : 'minus'])}${esc(nombres[m])}</span><span class="permniv nv${n}">${esc(NIVEL_TXT[n])}</span></div>`; }).join('')}</div>
       <div class="sm" style="margin-top:8px">${importes ? 'Ve los importes de las ventas.' : 'En ventas solo ve unidades, no importes.'}</div></div>
     <div class="blk"><h3>Actividad</h3>${rolPuede(u.rol, 'portal_prescriptor') ? `<p class="sm">Vinculado a <b>${esc(u.medico || 'ninguna ficha')}</b>.</p>` : `
-      <div class="uper" style="grid-template-columns:repeat(2,1fr)"><div><b>${num(u.cartera)}</b><span>en cartera</span></div><div><b>${num(u.visitas_mes)}</b><span>${TT('visita', 'p', '', 'l', 'l')} este mes</span></div></div>
+      <div class="uper" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><b>${num(u.cartera)}</b><span>en cartera</span></div><div><b>${num(u.visitas_mes)}</b><span>${TT('visita', 'p', '', 'l', 'l')} este mes</span></div></div>
       ${u.zonas && u.zonas.length ? `<div class="sm">Zona: ${esc(u.zonas.map(z => z.charAt(0) + z.slice(1).toLowerCase()).join(', '))}</div>` : ''}`}
       <div class="sm" style="margin-top:6px">${puede('administrar') ? esc(conexionTxt((USR_ACC || {})[u.id], true)) + '<br>' : ''}Última actividad: ${u.ultima_actividad ? new Date(u.ultima_actividad).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : 'ninguna registrada'}</div></div>
     <div class="usracc">
@@ -12186,7 +12185,7 @@ async function pintarErrores() {
   const { data } = await RPC_ORIG('errores_lista', { p_tipo: f.tipo || null, p_estado: f.estado || null });
   const l = data || [];
   const nom = { error: 'Error de programa', api: 'Error de base de datos', reporte: 'Reporte de usuario' };
-  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Errores y reportes</h2>
+  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2>Errores y reportes</h2>
     <p class="sm">Errores que se producen al usar la plataforma y problemas que reportan las personas. Descarga el archivo para enviárselo a quien da soporte técnico.</p>
     <div class="usrbar"><select id="erft"><option value="">Todos los tipos</option>${Object.entries(nom).map(([k, t]) => `<option value="${k}" ${f.tipo === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
       <select id="erfe">${['', 'Nuevo', 'Revisado', 'Resuelto'].map(e => `<option value="${e}" ${f.estado === e ? 'selected' : ''}>${e || 'Todos los estados'}</option>`).join('')}</select>
@@ -14116,7 +14115,7 @@ async function impDeshacer(id) {
 async function pintarImportaciones() {
   const { data } = await RPC_ORIG('importaciones_lista', {});
   const l = data || [], nom = Object.fromEntries(IMP_TIPOS().map(x => [x[0], x[1]]));
-  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Importaciones</h2>
+  $('cfgcuerpo').innerHTML = `<div class="card cfgpanel"><h2>Importaciones</h2>
     <p class="sm">Cada importación se puede deshacer: se borra lo que creó (lo que actualizó se conserva, y no se borra lo que ya se use en pedidos, facturas o citas).</p>
     <div class="errlista">${l.map(x => `<div class="errfila e-${x.estado === 'Deshecha' ? 'api' : 'reporte'}"><div><b>${esc(nom[x.entidad] || x.entidad)} · ${esc(x.archivo || '')}</b>
       <span class="sm">${new Date(x.creado_en).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(x.usuario || '—')} · ${num(x.filas)} filas: ${num(x.creados)} creados, ${num(x.actualizados)} actualizados, ${num(x.errores)} con errores · <b>${esc(x.estado)}</b></span></div>
@@ -15053,7 +15052,7 @@ pintarRoles = (orig => async function (...a) {
   const { data: caps } = await db.from('capacidades').select('clave,nombre,descripcion,orden').eq('grupo', 'Permisos').order('orden');
   if (!(caps || []).length || !$('cfgcuerpo') || $('rolperm')) return;
   const roles = rolesNombres().filter(r => !rolPuede(r, 'portal_prescriptor'));
-  $('cfgcuerpo').insertAdjacentHTML('beforeend', `<div class="card cfgpanel" id="rolperm"><h2 style="padding:0 0 4px">Permisos</h2>
+  $('cfgcuerpo').insertAdjacentHTML('beforeend', `<div class="card cfgpanel" id="rolperm"><h2>Permisos</h2>
     <p class="sm">Lo que puede hacer cada rol además de sus módulos. Se aplica a todas las personas del rol al guardar.</p>
     <div class="dgrid-wrap"><table class="rolmat"><thead><tr><th>Permiso</th>${roles.map(r => `<th>${esc(r)}</th>`).join('')}</tr></thead>
       <tbody>${caps.map(c => `<tr><td><b>${esc(c.nombre)}</b><span class="sm">${esc(c.descripcion || '')}</span></td>
@@ -16070,7 +16069,7 @@ async function portalMedico() {
       ${lp.length ? `<div class="g2"><div><label for="mdmatm">Material</label><select id="mdmatm">${lp.map(x => `<option value="${esc(x.valor)}" data-max="${x.max}">${esc(x.valor)}</option>`).join('')}</select></div>
         <div><label for="mdmatn">Cantidad</label><input id="mdmatn" type="number" min="1" value="1"><span class="sm" id="mdmatmax">Máximo ${num(lp[0].max)} por petición</span></div></div>
         <label for="mdmatt">Nota para tu comercial</label><input id="mdmatt" placeholder="Opcional">
-        <div class="acts" style="margin:8px 0 0;justify-content:flex-start"><button type="button" class="btn" id="mdmatok">Pedir</button></div>`
+        <div class="acts" style="justify-content:flex-start"><button type="button" class="btn" id="mdmatok">Pedir</button></div>`
       : '<p class="sm" style="padding:0 16px">Tu empresa todavía no ofrece material para pedir.</p>'}
       ${ls.length ? `<div class="lista" id="mdmatl">${ls.map(x => `<div class="item" style="cursor:default"><span class="tx"><b>${num(x.cantidad)} × ${esc(x.material)}</b>
           <span class="sm">${horaCorta(x.creado_en)}${x.nota ? ' · ' + esc(x.nota) : ''}</span></span>${pillMaterial(x.estado)}
@@ -16078,7 +16077,7 @@ async function portalMedico() {
     <div class="card ancard" id="mdmsg"><h2>Dudas a tu comercial</h2>
       <div id="mdhilo">${hiloMensajes(lm, true)}</div>
       <textarea id="mdmsgt" rows="2" placeholder="Escribe tu duda" aria-label="Tu mensaje"></textarea>
-      <div class="acts" style="margin:8px 0 0;justify-content:flex-start"><button type="button" class="btn" id="mdmsgok">Enviar</button></div></div>`;
+      <div class="acts" style="justify-content:flex-start"><button type="button" class="btn" id="mdmsgok">Enviar</button></div></div>`;
   if (puede('portal_centro') && $('mdcons')) $('mdcons').remove();
   // v2.277.0: sin máximo en el campo (rebajaba en silencio lo escrito); en cuanto lo escrito pasa del máximo, el aviso se pone en rojo
   const mdMatAviso = () => {
@@ -18421,7 +18420,7 @@ async function pintarSolicitudesPlan() {
   const l = error ? [] : (data || []);
   const f = v => new Date(v).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
   const cont = { correo: 'Por correo', llamada: 'Por teléfono', video: 'Videollamada' };
-  c.innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Solicitudes de las empresas</h2>
+  c.innerHTML = `<div class="card cfgpanel"><h2>Solicitudes de las empresas</h2>
     <p class="sm">Presupuestos A medida y conversaciones sobre el contrato. Llegan también como aviso. Cambia el estado cuando las atiendas: la empresa lo ve en su Plan.</p>
     ${error ? `<div class="banda-peligro">No se han podido leer: ${esc(error.message)}</div>` : ''}
     <div class="presulista">${l.map((s, i) => { const d = s.datos || {};
@@ -18564,7 +18563,7 @@ const PANEL_SECCIONES = [['pd-orgs', 'orgs', 'Clientes', 'building-2'], ['pd-sol
 async function pintarPlantillaDelcos(sub) {
   const c = $('cfgcuerpo'); if (!c) return;
   if (!sub) {
-    c.innerHTML = `<div class="card cfgpanel"><h2 style="padding:0 0 4px">Plantilla de las empresas nuevas</h2>
+    c.innerHTML = `<div class="card cfgpanel"><h2>Plantilla de las empresas nuevas</h2>
       <p class="sm">Lo que recibe cada empresa al darse de alta (desde la web o desde Clientes). Cambiarlo aquí no toca a las empresas que ya existen.</p>
       <div class="acts" style="justify-content:flex-start"><button type="button" class="btn sec" data-plsub="roles">Roles y permisos</button>
         <button type="button" class="btn sec" data-plsub="cat">Catálogos y estados</button></div></div>`;
@@ -23059,7 +23058,7 @@ const RM_MEM = new Map();   // ruta pedida → {t, r}: solo en memoria y 10 minu
 function rmLib() {
   if (window.maplibregl) return Promise.resolve(window.maplibregl);
   return RM_LIB || (RM_LIB = new Promise((res, rej) => {
-    document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">');
+    document.head.insertAdjacentHTML('beforeend', '<style>@import url("https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css") layer(lib);</style>');   // v2.356.0: en la capa de las librerías
     const s = document.createElement('script'); s.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'; s.crossOrigin = 'anonymous';
     s.onload = () => res(window.maplibregl); s.onerror = () => { RM_LIB = null; rej(new Error('mapa')); }; document.head.appendChild(s);
   }));
@@ -24733,7 +24732,7 @@ async function tdPintar() {
           <span><b>${abiertas}</b> por hacer</span>
           ${abiertas && !pasado ? `<span>Fin estimado <b style="color:${pasaTope ? 'var(--warn)' : 'var(--navy)'}">${hm(fin)}</b>${pasaTope ? ' · pasa de la hora de vuelta' : ''}${fin >= 24 * 60 ? ' <span class="sm">(día siguiente: revisa los avisos)</span>' : ''}</span>` : ''}
         </div></div>
-      <div class="acts" style="margin:0">
+      <div class="acts">
         ${propia ? '<button type="button" class="btn sec chico" id="tdtarea">+ Tarea</button>' : ''}
         ${!pasado && conSitio > 1 ? '<button class="btn sec chico" id="tdordenar" title="Ordena las citas abiertas para recorrer menos kilómetros. Las que tienen hora fija se respetan.">Ordenar por cercanía</button>' : ''}
         ${esHoy && !j && abiertas && agUid() === PERFIL.id ? '<button class="btn chico" id="tdempezar">▶ Empezar jornada</button>' : ''}
@@ -29446,10 +29445,12 @@ function cfgClonarEstilos() {
   const nuevo = sel => sel.split(',').filter(p => re.test(p) && !(re.lastIndex = 0)).map(p => p.replace(re, '#cfgcuerpo-hub .cfgsecc')).join(',');
   const recorrer = (lista, dentro) => {
     for (const r of [...lista]) {
-      if (r.cssRules && r.media) { recorrer(r.cssRules, r); continue; }
+      if (r.cssRules && (r.media || (typeof CSSLayerBlockRule !== 'undefined' && r instanceof CSSLayerBlockRule))) { recorrer(r.cssRules, r); continue; }   // v2.356.0: también dentro de las capas
       if (!r.selectorText || !r.selectorText.includes('#cfgcuerpo')) continue;
       re.lastIndex = 0; const sel = nuevo(r.selectorText); if (!sel) continue;
-      try { (dentro || r.parentStyleSheet).insertRule(`${sel}{${r.style.cssText}}`, (dentro || r.parentStyleSheet).cssRules.length); } catch (e) {}
+      // v2.361.0: la copia va justo detrás de su original (al final del bloque, la de escritorio quedaba detrás de la del @media y le ganaba)
+      const caja = dentro || r.parentStyleSheet;
+      try { caja.insertRule(`${sel}{${r.style.cssText}}`, [...caja.cssRules].indexOf(r) + 1); } catch (e) {}
     }
   };
   for (const h of document.styleSheets) { try { if (!h.href) recorrer(h.cssRules, null); } catch (e) {} }
