@@ -1,3 +1,4 @@
+// @ts-check
 // componentes/guardar_pagina.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
@@ -28,4 +29,4 @@ const PAG_NO_CAMBIA = 'input[type=search], #txq, #cfubus, [placeholder^="Busca"]
 const PAG_SUCIO = new Set();
 
 // Las páginas se pintan por partes y algunas se repintan al guardar: se vuelve a colocar al cambiar el contenido
-let PAG_GUARDA_RAF = 0;
+ // v2.440.0: PAG_GUARDA_RAF → estado de src/app (plan 6.6), accesible en window

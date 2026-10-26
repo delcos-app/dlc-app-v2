@@ -1,3 +1,4 @@
+// @ts-check
 // El índice de Configuración, su repaso y los detalles de la Agenda y del «+»: en src/app/core/layers (v2.424.0).
 var VISITA_FECHA = '';
 const ES_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -16,4 +17,4 @@ const ICU = {
 };
 window.delcos.layers.installAgendaListeners();
 window.delcos.layers.installFloatingButton();
-let KV_INI = null, KV_GRAF = null;
+ // v2.440.0: KV_INI, KV_GRAF → estado de src/app (plan 6.6), accesible en window

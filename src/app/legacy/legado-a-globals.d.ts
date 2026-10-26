@@ -2,14 +2,12 @@
 declare function pantallaRecuperacion(): void;
 declare function intentarCerrar(box: HTMLDialogElement): void;
 declare let temporizador: ReturnType<typeof setTimeout> | undefined;
-declare function pintarRutaBarra(): unknown;
 declare function pintarRutaEnCurso(): unknown;
 declare function cerrarSelector(): void;
 declare function arrancar(): unknown;
 declare function abrirEditor(id: string | null, kind?: string): unknown;
 declare const RPC_TTL: Record<string, number | undefined>;
-declare let NAV_CTRL: AbortController;
-declare let NAV_GEN: number;
+
 declare function volverTrasF5(screen: unknown): unknown;
 declare function verCartera(id: string): unknown;
 declare function veVentas(): unknown;
@@ -63,7 +61,7 @@ declare const RPC_ESCRITURA: RegExp;
 declare let RECUPERANDO: boolean;
 declare function PLANCFG(): unknown;
 declare const PERIODOS: readonly (readonly [string, string])[];
-declare let MAPA_I18N: unknown;
+
 declare function FROM_ORIG(table: string): unknown;
 declare const CFG_ADMIN: Readonly<Record<string, string | undefined>>;
 interface LegacyAuth { signInWithPassword(credentials: { email: string; password: string }): Promise<{ error: LegacyAuthError | null }>; signOut(): Promise<unknown>; updateUser(values: { password: string }): Promise<{ error: LegacyAuthError | null }>; onAuthStateChange(handler: (event: string) => void): unknown }

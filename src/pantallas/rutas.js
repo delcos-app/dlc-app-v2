@@ -1,3 +1,4 @@
+// @ts-check
 // pantallas/rutas.js · Rutas está en src/app/screens/routes (v2.414.0 y v2.418.0): «Mis rutas», el asistente, el planificador, el
 // plan del día, el mapa de hoy, la barra de la jornada, el editor de rutas y la frecuencia. Aquí queda el estado que comparten otros
 // archivos y los nombres que usan Configuración (pintarPlan), Agenda, Inicio, Analítica, Parque, legado 001/003/007/018/019/024/083,
@@ -7,19 +8,18 @@ const rutaActiva = () => { try { return JSON.parse(localStorage.getItem(RKEY()) 
 
 const RPKEY = () => 'dlc-ruta-pausa-' + (PERFIL ? PERFIL.id : '');
 
-let ULTIMO_PLAN = null;
+ // v2.440.0: ULTIMO_PLAN → estado de src/app (plan 6.6), accesible en window
 
-let SEM_BORRADOR = null;   // propuesta del planificador aún sin guardar
+ // v2.440.0: SEM_BORRADOR → estado de src/app (plan 6.6), accesible en window   // propuesta del planificador aún sin guardar
 
-let RPROP = null;   // propuestas del día (v2.145.0): ya no se pintan; rpPlanDe (Configuración) aún lo nombra
+ // v2.440.0: RPROP → estado de src/app (plan 6.6), accesible en window   // propuestas del día (v2.145.0): ya no se pintan; rpPlanDe (Configuración) aún lo nombra
 
 const RM_MEM = new Map();   // ruta pedida → {t, r}: solo en memoria y 10 minutos (legado 103 la lee)
 
-let RN = null;          // la ruta que se está creando o editando
+ // v2.440.0: RN → estado de src/app (plan 6.6), accesible en window          // la ruta que se está creando o editando
 
 function rnAbrir(item, paso) { return window.delcos.screens.routes.openRoute(item || null, paso || 1); }
 function pintarRutaEnCurso() { return window.delcos.screens.routes.paintDayInProgress(); }
-function pintarRutaBarra() { return window.delcos.screens.routes.paintRouteBar(); }
 function rutasMapaBase() { return window.delcos.screens.routes.loadDayMap(); }
 function planificar(rutaId, btn) { return window.delcos.screens.routes.planRoute(rutaId, btn); }
 function planDesdeLista(lista, nombre, btn) { return window.delcos.screens.routes.planFromList(lista, nombre, btn || null); }
@@ -32,7 +32,7 @@ function planAvisoSinSalida() { return window.delcos.screens.routes.planNoStartN
 function planFichasYNotas() { return window.delcos.screens.routes.planCardsAndNotes(); }
 function mapaDelPlan() { return window.delcos.screens.routes.showPlanMap(); }
 function programarVisitas(items, t0) { return window.delcos.screens.routes.scheduleVisits(items, t0); }
-function ordenarPorCercania(citas) { const r = window.delcos.screens.routes.orderByDistance(citas); ordenarPorCercania.fuera = r.left; return r.list; }
+function ordenarPorCercania(citas) { const r = window.delcos.screens.routes.orderByDistance(citas); /** @type {any} */ (ordenarPorCercania).fuera = r.left; return r.list; }
 function conHor(h, fn) { return window.delcos.screens.routes.withHours(h, fn); }
 function PLANCFG() { return window.delcos.screens.routes.planSettings(); }
 function prefsActivas() { return window.delcos.screens.routes.activePreferences(); }

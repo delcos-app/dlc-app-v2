@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    DLC OS 2.0 · v2.35.0 · Pedidos paginados y guardados en el dispositivo,
    factura en PDF como la de Holded y envío por email con el PDF adjunto,
@@ -16,7 +17,7 @@ window.delcos.legacyB.listenToOrderListLinks();
 
 /* ---------------- paginación también en facturas y llamadas ---------------- */
 
-let FACPAG = 0, LLPAG = 0;
+ // v2.440.0: FACPAG, LLPAG → estado de src/app (plan 6.6), accesible en window
 
 /* ---------------- email con los datos de pago: envío directo si está configurado ---------------- */
 

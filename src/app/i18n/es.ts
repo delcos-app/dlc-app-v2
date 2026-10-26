@@ -5,6 +5,7 @@
  * (see i18n/index.ts), so each company sees its own words.
  */
 import { accounts } from './es/accounts';
+import { legacyTexts } from './es/legacy-texts';
 import { settingsCore } from './es/settings-core';
 import { leftovers } from './es/leftovers';
 import { billingMore } from './es/billing-more';
@@ -99,6 +100,7 @@ export const es = {
   productsMore,
   leftovers,
   settingsCore,
+  legacyTexts,
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',
@@ -168,7 +170,7 @@ export const es = {
       pendingPaymentDetail: 'Pedidos confirmados que aún no están cobrados',
       urgentUnvisited: '{professionals} sin visitar',
       urgentUnvisitedDetail: 'Marcados como urgentes en su ficha',
-      surgeryRestock: 'Material de intervenciones por reponer',
+      surgeryRestock: 'Material de {surgeries} por reponer',
       surgeryRestockDetail: 'Reposición en 48 horas',
       packagesToPrepare: 'Paquetes por preparar',
       packagesToPrepareDetail: 'Pedidos confirmados sin enviar',

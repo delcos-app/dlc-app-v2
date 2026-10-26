@@ -8,7 +8,8 @@ import { accountListLegacy, cardSectionsLegacy, goTo, icon, legacyDb, permission
 import { t } from '../../i18n';
 import { escapeHtml, formatNumber } from '../../services/format';
 import { paintDoubtfulAddresses, paintSummary } from './data-quality';
-import { filterParams, followUpState, paintFollowUp } from './follow-up';
+import { followUpState, paintFollowUp } from './follow-up';
+import { markCurrent } from '../../core/navigation/current';
 
 interface FilterOptions { estados?: { v: string }[]; provincias?: { v: string }[]; municipios?: { v: string }[] }
 interface FollowUpSummary { embudo?: { n: number; estado: string }[]; visitados: number; visitas_total: number; muestras_total: number; con_direccion: number; con_dias: number; total: number }
@@ -77,12 +78,10 @@ function bindHeader(): void {
   const back = document.getElementById('calvolver'); if (back) back.onclick = (): void => { goTo('directorio'); };
   const duplicates = document.getElementById('caldup'); if (duplicates) duplicates.onclick = (): void => { goTo('duplicados'); };
   // The page belongs to Cuentas: its menu entry stays marked
-  document.querySelectorAll<HTMLElement>('nav.main [data-t]').forEach(button => { button.setAttribute('aria-selected', String(button.dataset.t === 'directorio')); });
-  // Downloads are switched off (servicios/archivos.js): the export menu still asks for the rows and shows why nothing is saved
-  qualityLegacy.setExport(async format => {
-    const { data } = await legacyDb().rpc<unknown[]>('exportar_seguimiento', filterParams());
-    qualityLegacy.download(data ?? [], 'Exportacion_seguimiento', format);
-  });
+  document.querySelectorAll<HTMLElement>('nav.main [data-t]').forEach(button => { markCurrent(button, button.dataset.t === 'directorio'); });
+  // Downloads are switched off (servicios/archivos.js): the export menu only shows why nothing is saved. v2.432.0: it no longer asks
+  // for the rows — exportar_seguimiento was dropped in SQL 20 (data protection) and the call always failed
+  qualityLegacy.setExport(format => { qualityLegacy.download([], 'Exportacion_seguimiento', format); });
 }
 
 /** Paints the whole screen. */

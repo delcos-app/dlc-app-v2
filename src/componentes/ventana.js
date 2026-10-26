@@ -1,3 +1,4 @@
+// @ts-check
 // componentes/ventana.js · las ventanitas (aviso, confirmación, pregunta, elección, campo), «¿Salir sin guardar?» y el horario de
 // consulta están en src/app/components (dialogs.ts y consultation-hours.ts, v2.416.0). Sus nombres se quedan como adaptadores:
 // toda la app los usa. Aquí sigue lo que va con la pila de ventanas y con el encaje en el panel de Configuración.
@@ -14,9 +15,9 @@
 // (sin fondo oscuro ni ventana flotante); al cerrarla vuelve el apartado. En el móvil las ventanas ya ocupan la pantalla.
 
 
-let DATOS_CAMBIADOS = false;
+ // v2.440.0: DATOS_CAMBIADOS → estado de src/app (plan 6.6), accesible en window
 
-let ULT_ACCION = 0;
+ // v2.440.0: ULT_ACCION → estado de src/app (plan 6.6), accesible en window
 
 
 

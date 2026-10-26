@@ -7,6 +7,336 @@
   };
   var __publicField = (obj, key, value27) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value27);
 
+  // src/app/state/legacy-names.ts
+  function exposeLegacyNames(state2, names) {
+    for (const [name, key] of names) {
+      Object.defineProperty(window, name, {
+        get: () => state2[key],
+        set: (value27) => {
+          state2[key] = value27;
+        },
+        configurable: true,
+        enumerable: true
+      });
+    }
+  }
+
+  // src/app/screens/agenda/store.ts
+  var agendaStore = {
+    selectedDate: null,
+    mode: "dia",
+    metrics: null,
+    pendingSuggestions: null,
+    suggestions: null,
+    weekOpen: false,
+    viewedUser: null,
+    stripStart: null,
+    dayTasks: null,
+    dayAppointments: [],
+    stopInfo: {},
+    dayStops: [],
+    presetDay: null,
+    lastPaintedDay: null,
+    trafficCalculated: false,
+    realTimes: null,
+    dialogEpoch: 0,
+    openWeekPlan: false
+  };
+  exposeLegacyNames(agendaStore, [
+    ["AG_FECHA", "selectedDate"],
+    ["AG_MODO", "mode"],
+    ["AG_MET", "metrics"],
+    ["AG_PEND", "pendingSuggestions"],
+    ["AG_SUG", "suggestions"],
+    ["AG_SEM_ABIERTA", "weekOpen"],
+    ["AG_VISTA", "viewedUser"],
+    ["CINTA_INI", "stripStart"],
+    ["TAREAS_DIA", "dayTasks"],
+    ["TD_CITAS", "dayAppointments"],
+    ["TD_INFO", "stopInfo"],
+    ["TD_PARADAS", "dayStops"],
+    ["TD_PRESET", "presetDay"],
+    ["TD_ULTIMO", "lastPaintedDay"],
+    ["TD_CALC", "trafficCalculated"],
+    ["TD_REAL", "realTimes"],
+    ["DLG_EPOCA", "dialogEpoch"],
+    ["ABRIR_PLAN_SEMANA", "openWeekPlan"]
+  ]);
+
+  // src/app/screens/routes/store.ts
+  var routesStore = {
+    plan: null,
+    routes: [],
+    proposals: null,
+    section: "mis",
+    wizard: null,
+    routeList: null,
+    wizardMapPoints: null,
+    todayMap: null,
+    todayMapAnimation: null,
+    dayProposals: null,
+    weekDraft: null,
+    lastPlan: null
+  };
+  exposeLegacyNames(routesStore, [
+    ["PLAN", "plan"],
+    ["RUTAS", "routes"],
+    ["PROPUESTAS", "proposals"],
+    ["RSEC", "section"],
+    ["RN", "wizard"],
+    ["RN_LISTA", "routeList"],
+    ["RN_MAPA_P", "wizardMapPoints"],
+    ["RM_MAPA", "todayMap"],
+    ["RM_ANIM", "todayMapAnimation"],
+    ["RPROP", "dayProposals"],
+    ["SEM_BORRADOR", "weekDraft"],
+    ["ULTIMO_PLAN", "lastPlan"]
+  ]);
+
+  // src/app/screens/settings/store.ts
+  var settingsStore = {
+    settings: {},
+    section: "prefs",
+    subsection: null,
+    detail: false,
+    adminSection: "usuarios",
+    catalogs: [],
+    users: [],
+    roles: [],
+    activePanel: null,
+    indexFrame: 0,
+    notificationCount: 0,
+    textsObserverTimer: 0,
+    invoiceLogo: null,
+    stacking: false,
+    unsavedChanges: false,
+    lastAction: 0
+  };
+  exposeLegacyNames(settingsStore, [
+    ["AJUSTES", "settings"],
+    ["CFG_SEC", "section"],
+    ["CFG_SUB", "subsection"],
+    ["CFG_DETALLE", "detail"],
+    ["ADM_SEC", "adminSection"],
+    ["CATS", "catalogs"],
+    ["USUARIOS", "users"],
+    ["ROLES_DEF", "roles"],
+    ["PANEL_ACTIVO", "activePanel"],
+    ["CFU_RAF", "indexFrame"],
+    ["NOTIF_N", "notificationCount"],
+    ["TX_OBS", "textsObserverTimer"],
+    ["LOGO_DATA", "invoiceLogo"],
+    ["APILANDO", "stacking"],
+    ["DATOS_CAMBIADOS", "unsavedChanges"],
+    ["ULT_ACCION", "lastAction"]
+  ]);
+
+  // src/app/screens/orders/store.ts
+  var ordersStore = {
+    section: "ventas",
+    filters: {},
+    page: 0,
+    orders: [],
+    contractPrices: { cuenta: null, precios: {} },
+    paymentState: null,
+    stores: [],
+    suppliers: [],
+    distributors: null,
+    pendingCall: null,
+    invoicePage: 0,
+    callsPage: 0
+  };
+  exposeLegacyNames(ordersStore, [
+    ["PEDSEC", "section"],
+    ["PEDF", "filters"],
+    ["PEDPAG", "page"],
+    ["PEDIDOS", "orders"],
+    ["PED_PRECIOS", "contractPrices"],
+    ["PAGO_ESTADO", "paymentState"],
+    ["ALMACENES", "stores"],
+    ["PROVEEDORES", "suppliers"],
+    ["DISTRIBUIDORES", "distributors"],
+    ["LLAMADA_PEND", "pendingCall"],
+    ["FACPAG", "invoicePage"],
+    ["LLPAG", "callsPage"]
+  ]);
+
+  // src/app/screens/products/store.ts
+  var productsStore = {
+    section: "productos",
+    filters: {},
+    products: [],
+    services: [],
+    productStates: {},
+    promoted: null,
+    presentationMaterials: null,
+    presentationTime: 0
+  };
+  exposeLegacyNames(productsStore, [
+    ["PSEC", "section"],
+    ["PRODF", "filters"],
+    ["PRODUCTOS", "products"],
+    ["SERVICIOS", "services"],
+    ["ESTADO_PROD", "productStates"],
+    ["PROMO_PRODS", "promoted"],
+    ["PRES_MAT", "presentationMaterials"],
+    ["PRES_T", "presentationTime"]
+  ]);
+
+  // src/app/screens/billing/store.ts
+  var billingStore = {
+    section: "facturas",
+    lastSection: "empresa",
+    pdfEditing: null,
+    pdfChosen: null,
+    chosenTemplates: { pago: null, factura: null }
+  };
+  exposeLegacyNames(billingStore, [
+    ["FSEC", "section"],
+    ["FAC_ULTIMA", "lastSection"],
+    ["PDF_EDITANDO", "pdfEditing"],
+    ["PDF_ELEGIDO", "pdfChosen"],
+    ["PLANT_ELEGIDA", "chosenTemplates"]
+  ]);
+
+  // src/app/screens/accounts/store.ts
+  var accountsStore = {
+    shownId: null,
+    cardPatients: null,
+    cardCentre: null,
+    cardEffect: 0,
+    nearby: null,
+    filterOptions: { provincias: [], municipios: [], especialidades: [], estados: [], centros: [] },
+    mapMode: false,
+    portalAccess: null,
+    duplicates: null,
+    currentVisit: null,
+    toolsContext: null
+  };
+  exposeLegacyNames(accountsStore, [
+    ["FICHA_ID", "shownId"],
+    ["FICHA_PAC", "cardPatients"],
+    ["FICHA_CENTRO", "cardCentre"],
+    ["FX_FICHA", "cardEffect"],
+    ["CERCA", "nearby"],
+    ["OPF", "filterOptions"],
+    ["MODO_MAPA", "mapMode"],
+    ["MED_ACCESO", "portalAccess"],
+    ["DUP_RES", "duplicates"],
+    ["VISITA_ACTUAL", "currentVisit"],
+    ["HERR_CTX", "toolsContext"]
+  ]);
+
+  // src/app/screens/home/store.ts
+  var homeStore = {
+    panel: null,
+    charts: null,
+    hiddenAlerts: null,
+    analyticsAccount: null,
+    analyticsSection: "resumen",
+    salesTeam: [],
+    commissionSchemes: [],
+    contractWarningDays: [90, 30],
+    manualReturn: null
+  };
+  exposeLegacyNames(homeStore, [
+    ["KV_INI", "panel"],
+    ["KV_GRAF", "charts"],
+    ["ALERTAS_OCULTAS", "hiddenAlerts"],
+    ["AN_MED", "analyticsAccount"],
+    ["ANSEC", "analyticsSection"],
+    ["COMS", "salesTeam"],
+    ["ESQUEMAS", "commissionSchemes"],
+    ["CON_AVISOS", "contractWarningDays"],
+    ["MANUAL_VUELTA", "manualReturn"]
+  ]);
+
+  // src/app/core/navigation/store.ts
+  var navigationStore = {
+    screen: "inicio",
+    previousScreen: "inicio",
+    appVisible: false,
+    via: null,
+    pageTabs: {},
+    view: null,
+    backClick: null,
+    backPending: false,
+    backReopening: false,
+    abort: new AbortController(),
+    generation: 0,
+    menuSignature: "",
+    fabResize: 0,
+    pendingReads: 0,
+    platformMode: false,
+    pageKey: "",
+    saveButtonFrame: 0,
+    pickerPopup: null,
+    pendingEnhancements: /* @__PURE__ */ new Set(),
+    enhanceFrame: 0,
+    scannerPending: false
+  };
+  exposeLegacyNames(navigationStore, [
+    ["TAB", "screen"],
+    ["TAB_ANTERIOR", "previousScreen"],
+    ["APP_VISIBLE", "appVisible"],
+    ["VIA_IR", "via"],
+    ["PAG_TAB", "pageTabs"],
+    ["VISTA", "view"],
+    ["VUELTA_CLIC", "backClick"],
+    ["VUELTA_PONER", "backPending"],
+    ["VUELTA_REABRIENDO", "backReopening"],
+    ["NAV_CTRL", "abort"],
+    ["NAV_GEN", "generation"],
+    ["MENU_FIRMA", "menuSignature"],
+    ["FAB_RZ", "fabResize"],
+    ["PEND", "pendingReads"],
+    ["MODO_PLATAFORMA", "platformMode"],
+    ["PAG_CLAVE", "pageKey"],
+    ["PAG_GUARDA_RAF", "saveButtonFrame"],
+    ["SELPOP", "pickerPopup"],
+    ["MEJ_PEND", "pendingEnhancements"],
+    ["MEJ_RAF", "enhanceFrame"],
+    ["ESC_PEND", "scannerPending"]
+  ]);
+
+  // src/app/core/session-store.ts
+  var sessionStore = {
+    profile: null,
+    language: "es",
+    translationMap: null,
+    terms: {},
+    commercialStates: [],
+    plan: { plan: "medida" },
+    provinces: null,
+    roundLogo: false,
+    writes: 0,
+    cacheEpoch: 0,
+    lastNetworkEnd: 0,
+    networkInFlight: 0,
+    versionSeen: 0,
+    live: null,
+    accessOut: false,
+    accessChecked: 0
+  };
+  exposeLegacyNames(sessionStore, [
+    ["PERFIL", "profile"],
+    ["IDIOMA", "language"],
+    ["MAPA_I18N", "translationMap"],
+    ["TERMINOS", "terms"],
+    ["ESTADOS_DEF", "commercialStates"],
+    ["PLAN_ACTUAL", "plan"],
+    ["PROV_CCAA", "provinces"],
+    ["LOGO_CIRC", "roundLogo"],
+    ["ESCRITURAS", "writes"],
+    ["RC_EPOCA", "cacheEpoch"],
+    ["RED_ULT", "lastNetworkEnd"],
+    ["RED_VUELO", "networkInFlight"],
+    ["VERSION_VISTA", "versionSeen"],
+    ["VIVO", "live"],
+    ["ACCESO_FUERA", "accessOut"],
+    ["ACCESO_MIRADO", "accessChecked"]
+  ]);
+
   // src/app/components/index.ts
   var components_exports = {};
   __export(components_exports, {
@@ -355,8 +685,8 @@
       depositNone: "Sin material en depósito.",
       depositOpen: "Abrir el depósito",
       depositLeave: "Dejar material en depósito",
-      surgeriesTitle: "Intervenciones",
-      surgery: "Intervención",
+      surgeriesTitle: "{Surgeries}",
+      surgery: "{Surgery}",
       tendersTitle: "Concursos",
       tenderExpired: "vencido",
       tenderExpiresOn: "vence el {date}",
@@ -370,6 +700,126 @@
       reactivate: "Volver a dar de alta",
       archive: "Dar de baja",
       delete: "Eliminar la ficha"
+    }
+  };
+
+  // src/app/i18n/es/legacy-texts.ts
+  var legacyTexts = {
+    timeout: "La petición ha tardado demasiado ({name})",
+    mailProviders: {
+      google: "Google Workspace o Gmail",
+      googleHelp: "Identificador: la dirección de correo. Clave: una «contraseña de aplicación» (Cuenta de Google → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones), no la contraseña normal.",
+      microsoft: "Microsoft 365 u Outlook",
+      microsoftHelp: "La cuenta debe tener activado «SMTP autenticado» (lo activa el administrador de Microsoft 365).",
+      mailjetHelp: "Identificador: la «API Key». Clave: la «Secret Key» (Mailjet → Account settings → API Key Management). El email del remitente debe estar validado en Mailjet.",
+      mailboxHelp: "Identificador: la dirección de correo completa. Clave: la contraseña del buzón.",
+      other: "Otro proveedor",
+      otherHelp: "Pide a tu proveedor el servidor de salida (SMTP), el puerto y el tipo de seguridad."
+    },
+    platformSections: {
+      organisations: "Clientes",
+      requests: "Solicitudes",
+      errors: "Errores",
+      access: "Accesos",
+      audit: "Auditoría",
+      team: "Equipo delcos",
+      template: "Plantilla"
+    },
+    platformPanel: {
+      organisations: "Las empresas que usan delcos: plan, dominios, extras y entrar a ayudarlas",
+      billing: "Quién paga, quién está en prueba y qué recibos vienen",
+      signups: "Empresas que se han dado de alta desde www.delcos.app",
+      requests: "Presupuestos A medida y conversaciones sobre el contrato",
+      errors: "Errores de la plataforma agrupados, de todas las empresas",
+      status: "Versiones en uso, SQL aplicado y cifras generales",
+      access: "Entradas y salidas de la plataforma",
+      audit: "Cambios hechos en el panel",
+      team: "Las personas de delcos con acceso al panel",
+      template: "Roles y catálogos que recibe cada empresa nueva"
+    },
+    orderPages: {
+      sales: "Pedidos de tus clientes, con sus unidades e importes",
+      opportunities: "Cada venta, se cierre con pedido o no, y por qué",
+      purchases: "Pedidos a proveedores y mercancía en camino",
+      suppliers: "A quién compras y en qué condiciones"
+    },
+    orderCards: {
+      payment: "Pendientes de cobro",
+      parcel: "Paquetes por preparar",
+      invoiceEmail: "Facturas por enviar"
+    },
+    samples: {
+      signature: "Falta la firma de quien recibe las muestras",
+      professional: "Las muestras solo se entregan a profesionales, no a un centro",
+      period: "Ese producto ya no se puede dar como muestra (han pasado 2 años desde su autorización)",
+      limit: "Se pasa del máximo de muestras de este año",
+      permission: "No puedes registrar muestras de esta ficha",
+      product: "Producto no encontrado",
+      account: "Ficha no encontrada",
+      failed: "No se han podido guardar las muestras",
+      left: " ({product}: quedan {left} de {max})"
+    },
+    fieldTypes: {
+      list: "Lista de valores",
+      text: "Texto",
+      number: "Número",
+      date: "Fecha",
+      yesNo: "Sí / No"
+    },
+    indicatorGroups: {
+      agenda: "Agenda",
+      portfolio: "Cartera",
+      quality: "Calidad del dato",
+      activity: "Actividad",
+      salesUnits: "Ventas (unidades)",
+      salesAmounts: "Ventas (importes)",
+      orders: "Pedidos"
+    },
+    billingSettings: {
+      week: "Semana",
+      month: "Mes",
+      year: "Año",
+      companyData: "Datos fiscales",
+      series: "Series y numeración",
+      log: "Registro"
+    },
+    productUses: {
+      orders: "pedidos",
+      drafts: "borradores",
+      service: "pedidos con este servicio",
+      purchases: "compras",
+      batches: "lotes",
+      stock: "movimientos de stock",
+      samples: "entregas de muestras",
+      surgeries: "intervenciones",
+      tenders: "precios de concurso",
+      equipment: "equipos",
+      commissions: "esquemas de comisión"
+    },
+    accountRemoval: {
+      visits: "visitas",
+      sales: "ventas",
+      samples: "muestras entregadas",
+      events: "eventos",
+      surgeries: "intervenciones",
+      tenders: "concursos",
+      equipment: "equipos",
+      portal: "acceso al portal"
+    },
+    products: {
+      fromOrder: "Producto del pedido",
+      noneActive: "Sin productos activos"
+    },
+    stockReception: {
+      units: "Unidades",
+      batch: "Nº de lote",
+      batchPlaceholder: "p. ej. L2609",
+      expiry: "Caducidad",
+      manufacture: "Fabricación",
+      store: "Almacén"
+    },
+    lists: {
+      orderDone: "Pedido hecho"
     }
   };
 
@@ -582,7 +1032,7 @@
     },
     menu: {
       cycle: "Ciclo de {visits}",
-      surgeries: "Intervenciones",
+      surgeries: "{Surgeries}",
       tenders: "Concursos",
       events: "Eventos",
       equipment: "Parque instalado",
@@ -934,7 +1384,7 @@
     },
     remove: {
       button: "Eliminar producto",
-      text: "Si no se ha vendido nunca, se borra del todo, también su stock, sus lotes y sus compras. Si tiene ventas, muestras firmadas, intervenciones o equipos, deja de salir en todas partes pero se conserva para el histórico (los pedidos y las facturas siguen con su nombre) y se puede recuperar.",
+      text: "Si no se ha vendido nunca, se borra del todo, también su stock, sus lotes y sus compras. Si tiene ventas, muestras firmadas, {surgeries} o equipos, deja de salir en todas partes pero se conserva para el histórico (los pedidos y las facturas siguen con su nombre) y se puede recuperar.",
       title: "¿Eliminar «{name}»?",
       ok: "Eliminar",
       stock: "Tiene ventas y {units} unidades en stock: sácalas o regulariza el stock antes de eliminarlo",
@@ -1001,7 +1451,7 @@
       order: "el pedido",
       invoice: "la factura",
       event: "el evento",
-      surgery: "la intervención",
+      surgery: "{surgeryThe} {surgery}",
       tender: "el concurso",
       equipment: "el equipo",
       deposit: "el depósito",
@@ -1117,6 +1567,8 @@
       locations: "ubicaciones",
       segment: "segmento",
       segments: "segmentos",
+      surgery: "intervención",
+      surgeries: "intervenciones",
       allMasculine: "Todos",
       allFeminine: "Todas",
       freeDelivery: "Entrega sin cargo",
@@ -1192,7 +1644,7 @@
       purchasesDetail: "Lo enviado, lo que está en camino y lo recibido",
       deposit: "Material en depósito",
       depositDetail: "Lo que tienes en cada centro, lo usado y su reposición",
-      surgeries: "Intervenciones con lote y número de serie",
+      surgeries: "{Surgeries} con lote y número de serie",
       surgeriesDetail: "Programación, lo usado por unidad, pedido y reposición en 48 horas",
       tenders: "Concursos y contratos",
       tendersDetail: "Pliegos, lotes adjudicados y precios de contrato en los pedidos",
@@ -1479,7 +1931,7 @@
         team: "Equipo"
       },
       surgeries: {
-        title: "Intervenciones",
+        title: "{Surgeries}",
         description: "Programación, material usado con lote y número de serie, y reposición en 48 horas"
       }
     },
@@ -1649,10 +2101,10 @@
       equipmentTab: "Equipos",
       equipmentHint: "Equipos instalados con su número de serie, contrato, garantía y revisiones",
       searchPlaceholder: "Buscar {professional}, centro o municipio",
-      replenishTitle: "Reposiciones de intervención",
-      replenishHint: "Cuando pasan 48 horas de una intervención sin reponer lo usado",
-      replenishWhat: "Una intervención hecha lleva más de 48 horas sin reponer lo que se usó en su almacén (depósito del centro o el de quien asistió).",
-      replenishTodo: "Abre la intervención y pulsa «Reponer ahora».",
+      replenishTitle: "Reposiciones de {surgery}",
+      replenishHint: "Cuando pasan 48 horas de {surgeryOne} {surgery} sin reponer lo usado",
+      replenishWhat: "{SurgeryOne} {surgery} hech{surgeryEnd} lleva más de 48 horas sin reponer lo que se usó en su almacén (depósito del centro o el de quien asistió).",
+      replenishTodo: "Abre {surgeryThe} {surgery} y pulsa «Reponer ahora».",
       contractTitle: "Contratos que vencen",
       contractHint: "Antes de que venza un contrato de concurso, con los días que elige la empresa",
       contractWhat: "Un contrato adjudicado de un concurso vence pronto. Avisa una vez por cada plazo que elige la administración (de partida, 90 y 30 días).",
@@ -2212,13 +2664,13 @@
     },
     blocks: {
       events: "eventos",
-      surgeries: "intervenciones",
+      surgeries: "{surgeries}",
       tenders: "concursos",
       equipment: "equipos",
       when: "Cuándo",
       block: "Bloque",
       allEvents: "Eventos",
-      allSurgeries: "Intervenciones",
+      allSurgeries: "{Surgeries}",
       allTenders: "Concursos",
       allEquipment: "Todos los equipos",
       event: "Evento",
@@ -2227,7 +2679,7 @@
       place: "Lugar",
       attendees: "Asistentes",
       spending: "Gasto",
-      surgery: "Intervención",
+      surgery: "{Surgery}",
       teamAndPlace: "Equipo y lugar",
       state: "Estado",
       tender: "Concurso",
@@ -2879,7 +3331,6 @@
       locationFailed: "No se ha podido obtener tu ubicación: revisa el permiso de ubicación del navegador",
       writeTown: "Escribe al menos la población",
       /** The name the private consultation is saved with */
-      savedName: "CONSULTA PRIVADA",
       ready: "{privateConsultation} lista: se guarda con la ficha",
       readyNoPoint: "Dirección puesta, sin punto en el mapa: se guarda con la ficha"
     },
@@ -3334,8 +3785,7 @@
       writeName: "Escribe el nombre del centro",
       elsewhere: "La dirección sale en {place}, no en {town}: se guarda sin mover el punto del mapa",
       couldNotSave: "No se ha podido guardar",
-      saved: "Centro guardado",
-      country: "España"
+      saved: "Centro guardado"
     },
     nearby: {
       noLocation: "Este dispositivo no tiene ubicación",
@@ -3926,7 +4376,8 @@
       range: "{from}–{to} de {total}",
       previous: "Página anterior",
       next: "Página siguiente",
-      show: "Mostrar"
+      show: "Mostrar",
+      pageSize: "Filas por página"
     },
     popover: {
       searchPlaceholder: "Buscar…",
@@ -5157,7 +5608,7 @@
       transferIn: "Traspaso (entra)",
       returned: "Devolución",
       depositUse: "Usado en un depósito",
-      surgeryUse: "Usado en una intervención"
+      surgeryUse: "Usado en {surgeryOne} {surgery}"
     },
     movement: {
       entryTitle: "Entrada de stock",
@@ -5246,7 +5697,7 @@
       left: "quedan {units}",
       usedOf: "Usadas de {name}",
       reference: "Referencia",
-      referencePlaceholder: "p. ej. Intervención del martes, sala 2 (sin datos del paciente)",
+      referencePlaceholder: "p. ej. {Surgery} del martes, sala 2 (sin datos del paciente)",
       record: "Apuntar",
       countTitle: "Recuento",
       countHint: "Escribe lo que hay ahora; lo que falte se apunta como usado.",
@@ -5614,7 +6065,20 @@
       companyTitle: "Errores y reportes",
       companyText: "Errores que se producen al usar la plataforma y problemas que reportan las personas. Descarga el archivo para enviárselo a quien da soporte técnico.",
       allKinds: "Todos los tipos",
-      allStates: "Todos los estados"
+      allStates: "Todos los estados",
+      view: "Ver",
+      byError: "Por error",
+      byVersion: "Por versión",
+      versionTitle: "Versión {version} · {count} errores distintos"
+    },
+    errorCode: {
+      show: "Ver en el código",
+      loading: "Leyendo el mapa del código…",
+      noStack: "Este error no guardó dónde ocurrió.",
+      otherVersion: "El error es de la versión {version} y el mapa del código solo sirve para la versión publicada ahora ({current}).",
+      notMinified: "La pila no apunta al código publicado (min/app.js): ya se lee tal cual arriba.",
+      noMap: "No se ha podido leer el mapa del código: {error}",
+      unmapped: "(sin correspondencia)"
     },
     billing: {
       all: "Todas",
@@ -7598,16 +8062,16 @@
 
   // src/app/i18n/es/surgeries.ts
   var surgeries = {
-    surgery: "Intervención",
+    surgery: "{Surgery}",
     list: {
-      couldNotLoad: "No se han podido cargar las intervenciones.",
-      newSurgery: "+ Nueva intervención",
+      couldNotLoad: "No se han podido cargar {surgeriesThe} {surgeries}.",
+      newSurgery: "+ Nuev{surgeryEnd} {surgery}",
       replenishmentsPending: "Reposiciones pendientes",
       usedNotRecorded: "Sin registrar lo usado",
       upcoming: "Próximas",
-      noUpcoming: "No hay intervenciones programadas.",
+      noUpcoming: "No hay {surgeries} programad{surgeryEnds}.",
       doneLast30: "Hechas en los últimos 30 días",
-      noneDone: "Todavía no hay intervenciones hechas.",
+      noneDone: "Todavía no hay {surgeries} hech{surgeryEnds}.",
       assists: " · asiste {name}",
       noOrder: "Sin pedido"
     },
@@ -7617,8 +8081,8 @@
       replenished: "Repuesta"
     },
     editor: {
-      changeTitle: "Cambiar la intervención",
-      newTitle: "Nueva intervención",
+      changeTitle: "Cambiar {surgeryThe} {surgery}",
+      newTitle: "Nuev{surgeryEnd} {surgery}",
       subtitle: "Sale también en la Agenda de quien asiste",
       date: "Fecha",
       time: "Hora",
@@ -7641,18 +8105,18 @@
       schedule: "Programar",
       missing: "Elige la fecha, el centro y el responsable",
       couldNotSave: "No se ha podido guardar: {error}",
-      cancelled: "Intervención anulada",
-      saved: "Intervención guardada",
-      scheduled: "Intervención programada",
+      cancelled: "{Surgery} anulad{surgeryEnd}",
+      saved: "{Surgery} guardad{surgeryEnd}",
+      scheduled: "{Surgery} programad{surgeryEnd}",
       cancelText: "La cita de la Agenda queda descartada.",
-      cancelTitle: "¿Anular la intervención?"
+      cancelTitle: "¿Anular {surgeryThe} {surgery}?"
     },
     origins: {
       deposito: "Depósito del centro",
       personal: "Material de quien asiste"
     },
     sheet: {
-      notFound: "No se ha encontrado la intervención",
+      notFound: "No se ha encontrado {surgeryThe} {surgery}",
       responsible: "Responsable",
       centre: "Centro",
       assists: "Asiste",
@@ -7695,17 +8159,17 @@
       savedWithoutOrder: "Guardado lo usado. Queda la reposición pendiente: hay 48 horas para reponer lo usado."
     },
     errors: {
-      permission: "No puedes cambiar esta intervención",
+      permission: "No puedes cambiar {surgeryThis} {surgery}",
       missing: "Faltan la fecha, el centro o el responsable",
       centre: "El centro tiene que ser una ficha de tipo centro",
       noDeposit: "Este centro no tiene depósito: déjale material desde su ficha o elige el material de quien asiste",
       noStore: "Quien asiste no tiene almacén propio con material",
-      done: "La intervención ya está hecha: no se puede cambiar",
-      noStock: "No hay bastante en el almacén de la intervención",
+      done: "{SurgeryThe} {surgery} ya está hech{surgeryEnd}: no se puede cambiar",
+      noStock: "No hay bastante en el almacén {surgeryOfThe} {surgery}",
       serials: "Hay más números de serie que unidades",
       line: "Revisa las unidades de cada línea",
       empty: "Apunta al menos una unidad usada",
-      cancelled: "La intervención está anulada",
+      cancelled: "{SurgeryThe} {surgery} está anulad{surgeryEnd}",
       notDone: "Primero registra lo usado",
       noSource: "No hay almacén central del que reponer",
       responsible: "Elige un responsable de tu empresa",
@@ -7862,6 +8326,7 @@
     productsMore,
     leftovers,
     settingsCore,
+    legacyTexts,
     common: {
       save: "Guardar",
       cancel: "Cancelar",
@@ -7931,7 +8396,7 @@
         pendingPaymentDetail: "Pedidos confirmados que aún no están cobrados",
         urgentUnvisited: "{professionals} sin visitar",
         urgentUnvisitedDetail: "Marcados como urgentes en su ficha",
-        surgeryRestock: "Material de intervenciones por reponer",
+        surgeryRestock: "Material de {surgeries} por reponer",
         surgeryRestockDetail: "Reposición en 48 horas",
         packagesToPrepare: "Paquetes por preparar",
         packagesToPrepareDetail: "Pedidos confirmados sin enviar",
@@ -7998,8 +8463,12 @@
   var catalogs = { es };
   var currentLanguage = "es";
   var vocabulary = {};
+  var resolveWord = null;
   function setLanguage(language) {
     currentLanguage = language;
+  }
+  function setVocabularyResolver(resolver) {
+    resolveWord = resolver;
   }
   function setVocabulary(words17) {
     vocabulary = { ...words17 };
@@ -8014,7 +8483,7 @@
   }
   function fill(text5, params2) {
     return text5.replace(/\{(\w+)\}/g, (whole2, name) => {
-      const value27 = params2[name] ?? vocabulary[name];
+      const value27 = params2[name] ?? vocabulary[name] ?? resolveWord?.(name);
       return value27 === void 0 ? whole2 : String(value27);
     });
   }
@@ -8907,33 +9376,33 @@
   });
 
   // src/app/legacy/routes2-bridge.ts
-  var profile = () => PERFIL;
+  var profile = () => sessionStore.profile;
   var routes2Legacy = {
     // Plan and route state
-    plan: () => PLAN,
+    plan: () => routesStore.plan,
     setPlan: (plan3) => {
-      PLAN = plan3;
+      routesStore.plan = plan3;
     },
-    lastPlan: () => ULTIMO_PLAN,
+    lastPlan: () => routesStore.lastPlan,
     setLastPlan: (value27) => {
-      ULTIMO_PLAN = value27;
+      routesStore.lastPlan = value27;
     },
     paintPlan: () => {
       pintarPlan();
     },
-    savedRoutes: () => Array.isArray(RUTAS) ? RUTAS : [],
+    savedRoutes: () => Array.isArray(routesStore.routes) ? routesStore.routes : [],
     setSection: (section2) => {
-      RSEC = section2;
+      routesStore.section = section2;
     },
-    proposals: () => PROPUESTAS,
+    proposals: () => routesStore.proposals,
     setProposals: (data) => {
-      PROPUESTAS = data;
+      routesStore.proposals = data;
     },
-    weekDraft: () => SEM_BORRADOR,
+    weekDraft: () => routesStore.weekDraft,
     setWeekDraft: (draft) => {
-      SEM_BORRADOR = draft;
+      routesStore.weekDraft = draft;
     },
-    draft: () => RN,
+    draft: () => routesStore.wizard,
     reloadRoutes: () => {
       void loadRoutesPage();
     },
@@ -8948,15 +9417,15 @@
       const own = profile();
       if (own) own.preferencias = preferences;
     },
-    viewedPreferences: () => AG_VISTA?.preferencias ?? null,
-    agendaOwner: () => agUid(),
-    selectedDate: () => AG_FECHA,
+    viewedPreferences: () => agendaStore.viewedUser?.preferencias ?? null,
+    agendaOwner: () => agendaOwnerId(),
+    selectedDate: () => agendaStore.selectedDate,
     // Places, hours and times
     start: () => salidaUsuario(),
     pointOf: (item) => xyCita(item),
     travelMinutes: (from2, to) => minutosEntre(from2, to),
     km: (from2, to) => km(from2, to),
-    minutesOf: (time) => minHora(time),
+    minutesOf: (time) => calendar_exports.timeToMinutes(time),
     possibleStart: (item, arrival, length) => inicioPosible(item, arrival, length),
     windowsOf: (days, isoDate) => ventanasDe(days, isoDate),
     windowsText: (windows) => txtVentanas(windows),
@@ -8985,29 +9454,29 @@
     workingDay: () => jornadaActiva(),
     endWorkingDay: () => terminarJornada(),
     // Stops of «Tu día» and their real times
-    stops: () => TD_PARADAS,
+    stops: () => agendaStore.dayStops,
     setStops: (list) => {
-      TD_PARADAS = list;
+      agendaStore.dayStops = list;
     },
-    realTraffic: () => TD_REAL,
+    realTraffic: () => agendaStore.realTimes,
     setRealTraffic: (value27) => {
-      TD_REAL = value27;
+      agendaStore.realTimes = value27;
     },
     realTrafficValid: () => tdRealVigente(),
     setCalculating: (on6) => {
-      TD_CALC = on6;
+      agendaStore.trafficCalculated = on6;
     },
     legKey: (from2, to) => tdClaveXY(from2, to),
     routeMemory: () => RM_MEM,
     // Maps
     mapLibre: () => window.maplibregl ?? null,
-    dayMap: () => RM_MAPA,
+    dayMap: () => routesStore.todayMap,
     setDayMap: (map2) => {
-      RM_MAPA = map2;
+      routesStore.todayMap = map2;
     },
-    animation: () => RM_ANIM,
+    animation: () => routesStore.todayMapAnimation,
     setAnimation: (frame) => {
-      RM_ANIM = frame;
+      routesStore.todayMapAnimation = frame;
     },
     invokeRoutes: (body4) => db.functions.invoke("rutas", { body: body4 })
   };
@@ -9068,7 +9537,8 @@
     return addDays(isoDate, -((date.getDay() + 6) % 7));
   }
   function formatMinutes(minutes2) {
-    return `${String(Math.floor(minutes2 / 60) % 24).padStart(2, "0")}:${String(Math.round(minutes2) % 60).padStart(2, "0")}`;
+    const total2 = Math.round(minutes2);
+    return `${String(Math.floor(total2 / 60) % 24).padStart(2, "0")}:${String(total2 % 60).padStart(2, "0")}`;
   }
   function formatDuration(milliseconds) {
     const minutes2 = Math.floor(milliseconds / 6e4);
@@ -9231,15 +9701,15 @@
 
   // src/app/legacy/routes-bridge.ts
   var routesLegacy = {
-    draft: () => RN,
+    draft: () => routesStore.wizard,
     setDraft: (draft) => {
-      RN = draft;
+      routesStore.wizard = draft;
     },
     setCards: (cards2) => {
-      RN_LISTA = cards2;
+      routesStore.routeList = cards2;
     },
     setRoutes: (list) => {
-      RUTAS = list;
+      routesStore.routes = list;
     },
     /** Repaints the whole page (list, day in progress and today's map). */
     reload: () => {
@@ -9249,7 +9719,7 @@
     schedule: (items, start4) => scheduleVisits(items, start4),
     settings: () => planSettings(),
     start: () => salidaUsuario(),
-    minutesOf: (time) => minHora(time),
+    minutesOf: (time) => calendar_exports.timeToMinutes(time),
     travelMinutes: (from2, to) => minutosEntre(from2, to),
     nextWorkingDay: () => siguienteLaborable(),
     mapLibrary: () => mapLibrary(),
@@ -9257,13 +9727,13 @@
     durationText: (minutes2) => durationText(minutes2),
     reasonText: (reason) => reasonText(reason),
     palette: () => PALETTE,
-    map: () => RM_MAPA,
+    map: () => routesStore.todayMap,
     setMap: (map2) => {
-      RM_MAPA = map2;
+      routesStore.todayMap = map2;
     },
-    pendingMap: () => RN_MAPA_P,
+    pendingMap: () => routesStore.wizardMapPoints,
     setPendingMap: (pending) => {
-      RN_MAPA_P = pending;
+      routesStore.wizardMapPoints = pending;
     },
     improveFields: (root) => {
       enhanceFields(root);
@@ -10425,12 +10895,12 @@
   var restLegacy = {
     appName: () => nombreApp(),
     setSettingsSection: (section2) => {
-      CFG_SEC = section2;
+      settingsStore.section = section2;
     },
     loadPlan: () => pagoCargarEstado(),
-    plan: () => PLAN_ACTUAL,
+    plan: () => sessionStore.plan,
     setAppVisible: (visible3) => {
-      APP_VISIBLE = visible3;
+      navigationStore.appVisible = visible3;
     },
     reloadHome: () => {
       void cargarInicio();
@@ -10938,13 +11408,13 @@
     imHere: (box5, index, button3) => {
       void estoyAqui(box5, index, button3);
     },
-    hasOwnTerm: () => Boolean(TERMINOS?.medico?.s),
+    hasOwnTerm: () => Boolean(sessionStore.terms?.medico?.s),
     allOf: (word) => todosLos(word),
-    filterOptions: () => OPF,
+    filterOptions: () => accountsStore.filterOptions,
     setFilterOptions: (options5) => {
-      OPF = options5;
+      accountsStore.filterOptions = options5;
     },
-    teamUsers: () => USUARIOS,
+    teamUsers: () => settingsStore.users,
     reloadAdmin: () => {
       void cargarAdmin();
     },
@@ -10962,6 +11432,7 @@
     return { nombre: t("accountsEditor.account"), nueva: t("accountsEditor.newAccount") };
   }
   var privateConsultation = (capital = "C") => capital === "U" ? term("consulta", { capital: "C", adjective: "privado" }).toUpperCase() : term("consulta", { capital, adjective: "privado" });
+  var PRIVATE_SAVED_NAME = "CONSULTA PRIVADA";
   function isPrivateConsultation(centre) {
     if (centre?.id) return false;
     const name = String(centre?.nombre ?? "").trim().toLowerCase();
@@ -12231,8 +12702,8 @@
   var MENU_FIXED = { id: "plataforma", t: t("navigationCore.menu.groupPlatform"), items: ["delcos"] };
   var MENU_ORDER = ["inicio", "agenda", "rutas", "directorio", "ventas", "pacientes", "productos", "facturacion", "analitica", "informe"];
   var redoFrame = 0;
-  var menuPrefs2 = () => PERFIL?.preferencias?.menu ?? {};
-  var menuNames = () => AJUSTES?.menu_nombres ?? {};
+  var menuPrefs2 = () => sessionStore.profile?.preferencias?.menu ?? {};
+  var menuNames = () => settingsStore.settings?.menu_nombres ?? {};
   var isDesktopMenu = () => innerWidth >= DESKTOP_FROM;
   function isMenuFolded() {
     try {
@@ -12305,7 +12776,7 @@
   }
   var originalName = (screen3) => screen3 && screen3 !== "directorio" ? document.querySelector(`nav.main [data-t="${screen3}"]`)?.dataset.txdef : void 0;
   function renameTitle(names) {
-    const screen3 = TAB, original = originalName(screen3);
+    const screen3 = navigationStore.screen, original = originalName(screen3);
     if (!original) return;
     const node = titleText(screen3), current = node?.nodeValue?.trim() ?? "", name = orFallback(names[screen3], original);
     const known = current === original || Object.values(names).includes(current);
@@ -12363,7 +12834,7 @@
   function placePageButton(nav, key, text5, shown5) {
     let button3 = nav.querySelector(`[data-t="${key}"]`);
     if (!button3 && shown5) {
-      nav.insertAdjacentHTML("beforeend", `<button data-t="${key}" aria-selected="false">${text5}</button>`);
+      nav.insertAdjacentHTML("beforeend", `<button data-t="${key}">${text5}</button>`);
       button3 = nav.querySelector(`[data-t="${key}"]`);
     }
     if (!button3) return;
@@ -12425,8 +12896,8 @@
   };
   function preview(session2) {
     const draft = session2.draft;
-    PERFIL.preferencias = menuWith(session2, { orden: [...draft.orden], items: JSON.parse(JSON.stringify(draft.items)), ocultos: [...draft.ocultos] });
-    MENU_FIRMA = "";
+    sessionStore.profile.preferencias = menuWith(session2, { orden: [...draft.orden], items: JSON.parse(JSON.stringify(draft.items)), ocultos: [...draft.ocultos] });
+    navigationStore.menuSignature = "";
     montarMenuLateral();
   }
   function lockOutOfPlan(box5) {
@@ -12440,7 +12911,7 @@
         toggle4.checked = false;
         toggle4.disabled = true;
       }
-      if (!row4.querySelector(".mlpcand")) row4.querySelector(".mlpn")?.insertAdjacentHTML("afterend", `<span class="mlpcand" aria-label="${t("navigationCore.menu.notInPlanShort")}"></span>`);
+      if (!row4.querySelector(".mlpcand")) row4.querySelector(".mlpn")?.insertAdjacentHTML("afterend", `<span class="mlpcand" role="img" aria-label="${t("navigationCore.menu.notInPlanShort")}"></span>`);
     });
     box5.querySelectorAll(".mlpg").forEach((group) => {
       const rows2 = [...group.querySelectorAll(".mlpi[data-k]")], count2 = group.querySelector(".mlpcnt");
@@ -12464,8 +12935,8 @@
     session2.box.remove();
     detach(session2);
     if (!session2.saved) {
-      PERFIL.preferencias = session2.original;
-      MENU_FIRMA = "";
+      sessionStore.profile.preferencias = session2.original;
+      navigationStore.menuSignature = "";
       montarMenuLateral();
     }
     document.getElementById("mlpers")?.focus();
@@ -12480,10 +12951,10 @@
       toast(t("navigationCore.menu.couldNotSave"), true);
       return;
     }
-    PERFIL.preferencias = data ?? prefs;
+    sessionStore.profile.preferencias = data ?? prefs;
     session2.saved = true;
     close(session2);
-    MENU_FIRMA = "";
+    navigationStore.menuSignature = "";
     montarMenuLateral();
     toast(t("navigationCore.menu.saved"));
   }
@@ -12550,7 +13021,7 @@
     document.body.insertAdjacentHTML("beforeend", `<div id="mlpanel" class="mlp2" role="dialog" aria-label="${t("navigationCore.menu.customise")}"></div>`);
     const box5 = document.getElementById("mlpanel");
     if (!box5) return;
-    const session2 = { box: box5, draft, saved: false, original: PERFIL.preferencias };
+    const session2 = { box: box5, draft, saved: false, original: sessionStore.profile.preferencias };
     const outside2 = (event) => {
       if (!event.target.closest("#mlpanel, #mlpers")) close(session2);
     };
@@ -12673,7 +13144,7 @@
   var CLOSE_MS = 180;
   var UNKNOWN = 999;
   var NEW_AFTER = 900;
-  var menuTab = () => TAB === "ventas" && SUBSECTION_MENU[pedsecVista()] ? SUBSECTION_MENU[pedsecVista()] ?? TAB : TAB;
+  var menuTab = () => navigationStore.screen === "ventas" && SUBSECTION_MENU[pedsecVista()] ? SUBSECTION_MENU[pedsecVista()] ?? navigationStore.screen : navigationStore.screen;
   function mobileName(key) {
     const button3 = document.querySelector(`nav.main [data-t="${key}"]`);
     if (!button3) return key;
@@ -12902,7 +13373,7 @@
   async function save5(state2, button3) {
     const prefs = menuPrefs2(), hidden2 = [.../* @__PURE__ */ new Set([...(prefs.ocultos ?? []).filter((key) => !state2.available.includes(key)), ...state2.groups.oculta])];
     const bar2 = state2.fixed ? [state2.fixed, ...state2.groups.barra] : [...state2.groups.barra];
-    const profile6 = PERFIL;
+    const profile6 = sessionStore.profile;
     const saved3 = { ...profile6.preferencias ?? {}, menu: { ...prefs, barra: bar2, mas: [...state2.groups.mas, ...state2.groups.oculta], ocultos: hidden2 } };
     button3.disabled = true;
     const { data, error } = await db.rpc("guardar_preferencias", { p: saved3 });
@@ -12914,7 +13385,7 @@
     profile6.preferencias = data ?? saved3;
     document.getElementById("dlg2")?.close();
     pintarBnav();
-    MENU_FIRMA = "";
+    navigationStore.menuSignature = "";
     try {
       montarMenuLateral();
     } catch {
@@ -13097,17 +13568,17 @@
       localStorage.setItem(PKEY, JSON.stringify(profile6));
     } catch {
     }
-    if (!await roles2 && !(ROLES_DEF.length && ESTADOS_DEF.length)) await cargarRoles().catch(() => false);
+    if (!await roles2 && !(settingsStore.roles.length && sessionStore.commercialStates.length)) await cargarRoles().catch(() => false);
     const changed = !saved3 || JSON.stringify(saved3) !== JSON.stringify(profile6);
-    if (!APP_VISIBLE) mostrarApp(profile6);
+    if (!navigationStore.appVisible) mostrarApp(profile6);
     else if (changed) {
       mostrarApp(profile6);
-      if (TAB === "inicio") void cargarInicio();
+      if (navigationStore.screen === "inicio") void cargarInicio();
     }
     Promise.resolve(db.rpc("registrar_acceso", { p_evento: "Entrada", p_agente: navigator.userAgent })).catch(() => void 0);
   }
   function showSaved(saved3) {
-    if (saved3 && ROLES_DEF.length && ESTADOS_DEF.length && localStorage.getItem("dlc-os-sesion") && !APP_VISIBLE) {
+    if (saved3 && settingsStore.roles.length && sessionStore.commercialStates.length && localStorage.getItem("dlc-os-sesion") && !navigationStore.appVisible) {
       mostrarApp(saved3);
       marca("app visible con el perfil guardado");
     }
@@ -13123,7 +13594,7 @@
     const { data: { session: session2 } } = await navLegacy.auth().getSession();
     marca("sesión comprobada");
     if (!session2) {
-      if (!navigator.onLine && saved3 && APP_VISIBLE) return;
+      if (!navigator.onLine && saved3 && navigationStore.appVisible) return;
       localStorage.removeItem(PKEY);
       mostrarLogin();
       return;
@@ -13150,8 +13621,8 @@
     pintarConexion();
     vaciarCola();
     void start3();
-    if (PERFIL) menuOrganizacion();
-    if (PAGO_IR_PLAN && PERFIL) setTimeout(() => {
+    if (sessionStore.profile) menuOrganizacion();
+    if (PAGO_IR_PLAN && sessionStore.profile) setTimeout(() => {
       if (PAGO_IR_PLAN) ir("plan");
     }, 0);
   }
@@ -13178,7 +13649,7 @@
   });
 
   // src/app/legacy/settings2-bridge.ts
-  var profile2 = () => PERFIL;
+  var profile2 = () => sessionStore.profile;
   var settingsMoreLegacy = {
     loading: (element4, text5) => {
       showLoading(element4, text5);
@@ -13192,9 +13663,9 @@
     settingsKey: () => CFG_KEY,
     stateRoles: () => PAPELES_ESTADO,
     // Classifiers: the catalog list, the custom field box and the list repaint stay in legacy
-    classifiers: () => CATS,
+    classifiers: () => settingsStore.catalogs,
     setClassifiers: (list) => {
-      CATS = list;
+      settingsStore.catalogs = list;
     },
     fieldBox: (classifier, complete2) => cajaCampo(classifier, complete2),
     fieldTable: (area) => CAMPO_TABLA[area ?? ""],
@@ -13218,7 +13689,7 @@
     setBrand: (brand2) => {
       MARCA = brand2;
       localStorage.setItem("app-marca", JSON.stringify(brand2));
-      LOGO_DATA = null;
+      settingsStore.invoiceLogo = null;
       applyBrand();
     },
     contactsLabel: () => etiquetaContactos(),
@@ -13227,7 +13698,7 @@
       aplicarEtiqueta();
     },
     termDefaults: () => TERM_DEF,
-    terms: () => TERMINOS ?? {},
+    terms: () => sessionStore.terms ?? {},
     saveTermsCopy: (terms) => {
       try {
         localStorage.setItem(TERMKEY, JSON.stringify(terms));
@@ -14383,13 +14854,13 @@
   });
 
   // src/app/legacy/settings3-bridge.ts
-  var profile3 = () => PERFIL;
+  var profile3 = () => sessionStore.profile;
   var settingsExtraLegacy = {
     // Settings and profile
-    loadSettings: () => cargarAjustes(),
-    setting: (key) => AJUSTES[key],
+    loadSettings: () => loadSettings(),
+    setting: (key) => settingsStore.settings[key],
     setSetting: (key, value27) => {
-      AJUSTES[key] = value27;
+      settingsStore.settings[key] = value27;
     },
     profileName: () => profile3().nombre ?? "",
     profileEmail: () => profile3().email ?? "",
@@ -14411,9 +14882,9 @@
     helpButton: (title2, text5) => pmAyu(title2, text5),
     sendTestEmail: () => db.functions.invoke("enviar_email", { body: { prueba: true } }),
     /** Template chosen when sending (shared with Pedidos and Facturación). */
-    chosenTemplate: (use) => PLANT_ELEGIDA[use] ?? null,
+    chosenTemplate: (use) => billingStore.chosenTemplates[use] ?? null,
     chooseTemplate: (use, id) => {
-      PLANT_ELEGIDA[use] = id;
+      billingStore.chosenTemplates[use] = id;
     },
     // Notifications
     notificationAreas: () => NOTIF_AREAS,
@@ -14421,9 +14892,9 @@
     areaOf: (type) => notificationArea(type),
     iconOf: (type) => notificationIcon(type),
     typesForMyRole: () => tiposDeMiRol(),
-    unread: () => NOTIF_N,
+    unread: () => settingsStore.notificationCount,
     setUnread: (count2) => {
-      NOTIF_N = count2;
+      settingsStore.notificationCount = count2;
     },
     refreshBell: () => {
       void refrescarCampana();
@@ -14439,7 +14910,7 @@
       void abrirVisita(accountId);
     },
     openNotificationSettings: () => {
-      CFG_SEC = "notif";
+      settingsStore.section = "notif";
       window.__CFG_DIRECTO = true;
       void ir("config");
     },
@@ -14450,7 +14921,7 @@
     menuText: (button3) => txTexto(button3),
     applyMenuNames: () => {
       aplicarNombresMenu();
-      MENU_FIRMA = "";
+      navigationStore.menuSignature = "";
       try {
         montarMenuLateral();
         pintarBnav();
@@ -15332,7 +15803,7 @@
   };
   var byId = (id) => document.getElementById(id);
   var chosenTab = (screen3, page) => {
-    const wanted = PAG_TAB[screen3];
+    const wanted = navigationStore.pageTabs[screen3];
     return page.tabs.some((tab) => tab[0] === wanted) && wanted ? wanted : page.tabs[0]?.[0] ?? "";
   };
   var painterOf = (page, key) => page.tabs.find((tab) => tab[0] === key)?.[2];
@@ -15352,7 +15823,7 @@
     return section2;
   }
   function platformTitle() {
-    const section2 = byId("v-delcos"), tab = PAG_TAB.delcos ?? "orgs", found = PANEL_SECCIONES.find((item) => item[1] === tab);
+    const section2 = byId("v-delcos"), tab = navigationStore.pageTabs.delcos ?? "orgs", found = PANEL_SECCIONES.find((item) => item[1] === tab);
     if (!section2 || !found) return;
     const title2 = section2.querySelector(".saludo h1"), description = section2.querySelector(".saludo .fecha");
     if (title2) title2.textContent = found[2] ?? "";
@@ -15379,12 +15850,12 @@
     section2.innerHTML = headerHtml(screen3, page, tab);
     section2.querySelectorAll(".pagtabs [data-ptab]").forEach((button3) => {
       button3.onclick = () => {
-        PAG_TAB[screen3] = button3.dataset.ptab;
+        navigationStore.pageTabs[screen3] = button3.dataset.ptab;
         loadPage(screen3);
       };
     });
     void Promise.resolve().then(painterOf(page, tab));
-    if (screen3 === "delcos" && MODO_PLATAFORMA) platformTitle();
+    if (screen3 === "delcos" && navigationStore.platformMode) platformTitle();
   }
   function switchListTab(screen3, page, box5, tabs) {
     const tab = chosenTab(screen3, page);
@@ -15400,7 +15871,7 @@
     const page = PAGES[screen3];
     if (!page) return void 0;
     const section2 = byId(`v-${screen3}`), box5 = section2?.querySelector("#cfgcuerpo"), tabs = section2?.querySelector(":scope > .pagtabs");
-    if (BLQ[screen3] && TAB === screen3 && box5 && tabs && section2?.classList.contains("plantilla")) {
+    if (BLQ[screen3] && navigationStore.screen === screen3 && box5 && tabs && section2?.classList.contains("plantilla")) {
       const switched = switchListTab(screen3, page, box5, tabs);
       if (switched) return switched;
     }
@@ -15412,12 +15883,12 @@
   var RELOAD_WINDOW_MS = 6e4;
   var OWN_PAGES = ["config", "perfil", "empresa", "plan"];
   var toToday = () => {
-    AG_MODO = "dia";
-    AG_FECHA = hoyISO();
+    agendaStore.mode = "dia";
+    agendaStore.selectedDate = hoyISO();
     return ir("agenda");
   };
   var toOrders = (section2) => {
-    PEDSEC = section2;
+    ordersStore.section = section2;
     return ir("ventas");
   };
   var LINKS = /* @__PURE__ */ new Map([
@@ -15431,7 +15902,7 @@
     ["llamadas", () => toOrders("llamadas")],
     ["ventas", () => toOrders("ventas")],
     ["stock", () => {
-      PSEC = "stock";
+      productsStore.section = "stock";
       return ir("productos");
     }],
     ["facturacion", () => ir("facturacion")],
@@ -15457,9 +15928,9 @@
     return point?.t && Date.now() - (point.h ?? 0) < RELOAD_WINDOW_MS ? point : null;
   }
   function returnAfterReload(point) {
-    if (point.c) CFG_SEC = point.c;
-    if (point.s) CFG_SUB = point.s;
-    if (point.p) Object.assign(PAG_TAB, point.p);
+    if (point.c) settingsStore.section = point.c;
+    if (point.s) settingsStore.subsection = point.s;
+    if (point.p) Object.assign(navigationStore.pageTabs, point.p);
     if (point.t && (OWN_PAGES.includes(point.t) || puedeModulo(point.t))) ir(point.t);
   }
   function screenName(screen3) {
@@ -16293,7 +16764,7 @@
   }
   var addedElements = (mutations) => mutations.flatMap((mutation) => [...mutation.addedNodes].filter((node) => node.nodeType === Node.ELEMENT_NODE));
   var matchingIn = (node, selector) => [...node.matches(selector) ? [node] : [], ...node.querySelectorAll(selector)];
-  var currentSection = () => byId2(`v-${TAB}`);
+  var currentSection = () => byId2(`v-${navigationStore.screen}`);
   function whenSignedIn(then, everyMs, times) {
     let tries = 0;
     const timer3 = setInterval(() => {
@@ -16303,7 +16774,7 @@
       } else if (++tries > times) clearInterval(timer3);
     }, everyMs);
   }
-  var signedIn = () => typeof PERFIL !== "undefined" && Boolean(PERFIL) && !document.body.classList.contains("sin-sesion") && typeof RPC_ORIG === "function";
+  var signedIn = () => Boolean(sessionStore.profile) && !document.body.classList.contains("sin-sesion") && typeof RPC_ORIG === "function";
 
   // src/app/core/legacy-c/user-menu.ts
   var hideUserMenus = () => {
@@ -16373,7 +16844,7 @@
       let done2 = false;
       const limit = new Promise((resolve) => {
         setTimeout(() => {
-          if (!done2) resolve({ data: null, error: { message: `La petición ha tardado demasiado (${name})`, code: "TIEMPO" } });
+          if (!done2) resolve({ data: null, error: { message: t("legacyTexts.timeout", { name }), code: "TIEMPO" } });
         }, TIMEOUT_MS);
       });
       const answer = Promise.resolve(result).then((value27) => {
@@ -16418,7 +16889,7 @@
     client().rpc = (name, params2, options5) => {
       const result = original.call(db, name, params2, options5);
       if (ES_ESCRITURA.test(name) && isThenable(result)) Promise.resolve(result).then((answer) => {
-        if (!answer.error) ESCRITURAS++;
+        if (!answer.error) sessionStore.writes++;
       }, () => void 0);
       return result;
     };
@@ -16465,7 +16936,7 @@
       try {
         if (name === "pagos" && options5?.body?.accion === "datos" && result.data?.ok) {
           PAGO_PROXIMO = result.data.proximo ?? null;
-          pintarProximoRecibo();
+          paintNextReceipt();
         }
       } catch {
       }
@@ -16479,7 +16950,7 @@
     document.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target.closest("button, a, [data-t], [data-cfg], .dr, .trow") : null;
       if (!target) return;
-      RASTRO.push({ t: (/* @__PURE__ */ new Date()).toISOString().slice(11, 19), pantalla: TAB, que: firstText(target.getAttribute("aria-label"), target.title, target.textContent).trim().replace(/\s+/g, " ").slice(0, TRAIL_TEXT) });
+      RASTRO.push({ t: (/* @__PURE__ */ new Date()).toISOString().slice(11, 19), pantalla: navigationStore.screen, que: firstText(target.getAttribute("aria-label"), target.title, target.textContent).trim().replace(/\s+/g, " ").slice(0, TRAIL_TEXT) });
       if (RASTRO.length > TRAIL_LENGTH) RASTRO.shift();
     }, true);
   }
@@ -16548,7 +17019,7 @@
     }, { childList: true, subtree: true });
   }
   function applyVocabularyToFixedTexts() {
-    if (!Object.keys(TERMINOS ?? {}).length) return;
+    if (!Object.keys(sessionStore.terms ?? {}).length) return;
     const search9 = byId2("q");
     if (search9) search9.placeholder = t("legacyC.fixedTexts.search", { professional: term("medico") });
     const latest = document.querySelector("#c-ultimas h2");
@@ -16566,7 +17037,7 @@
     const tools = byId2("tools"), openDialog3 = document.querySelector("dialog[open]");
     const container = tools?.classList.contains("abierto") ? tools : document.querySelector("dialog[open] .fh") ? openDialog3 : null;
     const save48 = byId2("guardarFiltro");
-    if (!container || container.querySelector("#hguardarf") || !save48 || TAB !== "directorio") return;
+    if (!container || container.querySelector("#hguardarf") || !save48 || navigationStore.screen !== "directorio") return;
     container.insertAdjacentHTML("beforeend", `<div class="acts" style="margin:12px 0 0"><button class="btn sec" id="hguardarf">${svgIco(ICON_NOM.star ?? "")} ${t("legacyC.tools.saveFilter")}</button></div>`);
     const button3 = byId2("hguardarf");
     if (button3) button3.onclick = () => {
@@ -16645,7 +17116,7 @@
   }
   function createColumnsPanel() {
     if (byId2("tools2")) return;
-    document.body.insertAdjacentHTML("beforeend", `<div class="tools tools2" id="tools2" aria-label="${t("legacyC.tools.columnsHeading")}"></div><div class="toolsfondo hide" id="toolsfondo"></div>`);
+    document.body.insertAdjacentHTML("beforeend", `<div class="tools tools2" id="tools2" role="group" aria-label="${t("legacyC.tools.columnsHeading")}"></div><div class="toolsfondo hide" id="toolsfondo"></div>`);
     const tools = byId2("tools"), second = byId2("tools2"), backdrop = byId2("toolsfondo");
     backdrop?.addEventListener("pointerdown", () => {
       second?.classList.remove("abierto");
@@ -16689,7 +17160,7 @@
     Object.defineProperty(panelFilters, "analitica", {
       configurable: true,
       enumerable: true,
-      get: () => ANSEC === "explorar" ? "#v-analitica .panel > .filtros" : "#anfil"
+      get: () => homeStore.analyticsSection === "explorar" ? "#v-analitica .panel > .filtros" : "#anfil"
     });
   }
   var MIN_COLUMN_PX = 60;
@@ -16820,15 +17291,15 @@
   }
   function watchModuleSections() {
     observe(byId2("v-directorio"), () => {
-      if (TAB === "directorio") barraCuentas();
+      if (navigationStore.screen === "directorio") barraCuentas();
     }, { childList: true, subtree: true, characterData: true });
     observe(byId2("v-facturacion"), () => {
-      if (TAB === "facturacion") billingSettingsSubnav();
+      if (navigationStore.screen === "facturacion") billingSettingsSubnav();
     }, { childList: true, subtree: true });
   }
   function watchAnalyticsChannel() {
     observe(byId2("v-analitica"), () => {
-      if (TAB === "analitica" && !byId2("ancanal")) graficoCanal();
+      if (navigationStore.screen === "analitica" && !byId2("ancanal")) graficoCanal();
     }, { childList: true, subtree: true });
   }
   function watchBillingSettings() {
@@ -17080,18 +17551,18 @@
   function watchDialogWrites() {
     const dialog13 = byId2("dlg");
     observe(dialog13, () => {
-      if (dialog13?.open) writesWhenOpened = ESCRITURAS;
-      else if (ESCRITURAS === writesWhenOpened) unchangedUntil = Date.now() + UNCHANGED_FOR_MS;
+      if (dialog13?.open) writesWhenOpened = sessionStore.writes;
+      else if (sessionStore.writes === writesWhenOpened) unchangedUntil = Date.now() + UNCHANGED_FOR_MS;
     }, { attributes: true, attributeFilter: ["open"] });
   }
   var moduleStates = () => ({
     inicio: () => "",
-    ventas: () => PEDSEC,
-    productos: () => PSEC,
-    facturacion: () => FSEC,
+    ventas: () => ordersStore.section,
+    productos: () => productsStore.section,
+    facturacion: () => billingStore.section,
     analitica: () => typeof ASEC !== "undefined" ? ASEC : "",
     pacientes: () => "",
-    agenda: () => [AG_MODO, AG_FECHA, AG_VISTA ? AG_VISTA.id : ""].join("|")
+    agenda: () => [agendaStore.mode, agendaStore.selectedDate, agendaStore.viewedUser ? agendaStore.viewedUser.id : ""].join("|")
   });
   var LOADERS = [
     ["inicio", "cargarInicio"],
@@ -17112,7 +17583,7 @@
           if (screen3 === "inicio") paintUpdated();
           return void 0;
         }
-        if (screen3 === "agenda" && Date.now() < unchangedUntil && !VIA_IR) return void 0;
+        if (screen3 === "agenda" && Date.now() < unchangedUntil && !navigationStore.via) return void 0;
         const result = await original.apply(this, args);
         markModuleCache(screen3);
         if (screen3 === "inicio") paintUpdated();
@@ -17152,7 +17623,7 @@
   }
   function keepUpdateTime() {
     setInterval(() => {
-      if (TAB === "inicio") paintUpdated();
+      if (navigationStore.screen === "inicio") paintUpdated();
     }, MINUTE_MS2);
     setTimeout(() => {
       document.body.classList.add("inilisto");
@@ -17195,7 +17666,7 @@
   }
   function stackWindows() {
     byId2("dlg")?.addEventListener("close", () => {
-      if (APILANDO || !PILA_VENT.length) return;
+      if (settingsStore.stacking || !PILA_VENT.length) return;
       const previous = PILA_VENT.pop(), dialog13 = byId2("dlg"), body4 = byId2("dbody");
       if (!previous || !dialog13 || !body4) return;
       body4.replaceChildren(...previous.nodos);
@@ -17265,21 +17736,21 @@
   function trackDialogEpoch() {
     const dialog13 = byId2("dlg");
     observe(dialog13, () => {
-      if (dialog13?.open) DLG_EPOCA = RC_EPOCA;
+      if (dialog13?.open) agendaStore.dialogEpoch = sessionStore.cacheEpoch;
     }, { attributes: true, attributeFilter: ["open"] });
   }
   function forgetVisitOnClose() {
     const dialog13 = byId2("dlg");
     dialog13?.addEventListener("close", () => {
       setTimeout(() => {
-        if (!dialog13.open) VISITA_ACTUAL = null;
+        if (!dialog13.open) accountsStore.currentVisit = null;
       }, 0);
     });
   }
   function repaintEventsOnClose() {
     const dialog13 = byId2("dlg");
     dialog13?.addEventListener("close", () => {
-      if (TAB === "eventos" && (PAG_TAB.eventos ?? "lista") === "lista" && byId2("cfgcuerpo")) setTimeout(() => {
+      if (navigationStore.screen === "eventos" && (navigationStore.pageTabs.eventos ?? "lista") === "lista" && byId2("cfgcuerpo")) setTimeout(() => {
         if (!dialog13.open) void pintarEventos();
       }, REPAINT_AFTER_CLOSE_MS);
     });
@@ -17287,13 +17758,13 @@
   function repaintCycleOnClose() {
     const repaint5 = () => {
       const tabs = PAGINAS.ciclo.tabs;
-      (tabs.find((tab) => tab[0] === (PAG_TAB.ciclo ?? "ciclo")) ?? tabs[0])?.[2]();
+      (tabs.find((tab) => tab[0] === (navigationStore.pageTabs.ciclo ?? "ciclo")) ?? tabs[0])?.[2]();
     };
     ["dlg", "ficha"].forEach((id) => {
       const dialog13 = byId2(id);
       dialog13?.addEventListener("close", () => {
-        if (TAB === "ciclo" && byId2("cfgcuerpo")) setTimeout(() => {
-          if (!dialog13.open && TAB === "ciclo") repaint5();
+        if (navigationStore.screen === "ciclo" && byId2("cfgcuerpo")) setTimeout(() => {
+          if (!dialog13.open && navigationStore.screen === "ciclo") repaint5();
         }, REPAINT_AFTER_CLOSE_MS);
       });
     });
@@ -17301,8 +17772,8 @@
   function repaintSurgeriesOnClose() {
     const dialog13 = byId2("dlg");
     dialog13?.addEventListener("close", () => {
-      if (TAB === "cirugias" && byId2("cfgcuerpo")) setTimeout(() => {
-        if (!dialog13.open && TAB === "cirugias") void pintarCirugias();
+      if (navigationStore.screen === "cirugias" && byId2("cfgcuerpo")) setTimeout(() => {
+        if (!dialog13.open && navigationStore.screen === "cirugias") void pintarCirugias();
       }, REPAINT_AFTER_CLOSE_MS);
     });
   }
@@ -17352,7 +17823,7 @@
         modal();
         return;
       }
-      if (dialog13.id === "dlg" && typeof PANEL_ACTIVO !== "undefined" && PANEL_ACTIVO?.tipo === "dbody") return;
+      if (dialog13.id === "dlg" && settingsStore.activePanel?.tipo === "dbody") return;
       if (dialog13.open) return;
       openEmbedded(dialog13, area);
     };
@@ -17445,7 +17916,7 @@
       });
       shortenFirstSentence(popup);
     }
-    const screen3 = TAB;
+    const screen3 = navigationStore.screen;
     popup.insertAdjacentHTML("beforeend", `<a href="#" class="aiman">${t("legacyC.help.moreInManual")}</a>`);
     const link2 = popup.querySelector(".aiman");
     if (link2) link2.onclick = (event) => {
@@ -17553,8 +18024,8 @@
       if (!f5 && !reload) return;
       const full = f5 ? event.ctrlKey || event.shiftKey : event.shiftKey;
       try {
-        if (full || !PERFIL) sessionStorage.removeItem("dlc-f5");
-        else sessionStorage.setItem("dlc-f5", JSON.stringify({ t: TAB, c: CFG_SEC, s: CFG_SUB, p: PAG_TAB, h: Date.now() }));
+        if (full || !sessionStore.profile) sessionStorage.removeItem("dlc-f5");
+        else sessionStorage.setItem("dlc-f5", JSON.stringify({ t: navigationStore.screen, c: settingsStore.section, s: settingsStore.subsection, p: navigationStore.pageTabs, h: Date.now() }));
       } catch {
       }
     });
@@ -17802,13 +18273,13 @@
     const panel = pages().delcos;
     if (!panel) return;
     const base = panel.tabs;
-    Object.defineProperty(panel, "tabs", { configurable: true, get: () => MODO_PLATAFORMA ? [...base, ["equipo", t("legacyC.pages.panel.team"), () => pintarUsuarios2()], ["plantilla", t("legacyC.pages.panel.template"), () => pintarPlantillaDelcos()]] : base });
+    Object.defineProperty(panel, "tabs", { configurable: true, get: () => navigationStore.platformMode ? [...base, ["equipo", t("legacyC.pages.panel.team"), () => pintarUsuarios2()], ["plantilla", t("legacyC.pages.panel.template"), () => pintarPlantillaDelcos()]] : base });
   }
   function addPanelButtons() {
     const nav = document.getElementById("nav");
     if (!nav) return;
     PANEL_SECCIONES.forEach(([key = "", , text5 = "", icon3 = ""]) => {
-      if (!nav.querySelector(`[data-t="${key}"]`)) nav.insertAdjacentHTML("beforeend", `<button data-t="${key}" aria-selected="false" class="hide pdsec">${escapeHtml(text5)}</button>`);
+      if (!nav.querySelector(`[data-t="${key}"]`)) nav.insertAdjacentHTML("beforeend", `<button data-t="${key}" class="hide pdsec">${escapeHtml(text5)}</button>`);
       navIcons()[key] = icon3;
     });
   }
@@ -17826,7 +18297,7 @@
     const group = groups().find((item) => item.id === "panel");
     if (group) group.items = sections2.map((section2) => section2[0] ?? "");
     const extra = { cobros: () => pintarCobrosDelcos(), altas: () => pintarAltasDelcos(), estado: () => pintarEstadoDelcos() };
-    wrapTabs("delcos", (base) => MODO_PLATAFORMA ? sections2.map(([, key = "", name = ""]) => {
+    wrapTabs("delcos", (base) => navigationStore.platformMode ? sections2.map(([, key = "", name = ""]) => {
       const tab = base.find((item) => item[0] === key);
       return tab ? [key, name, tab[2]] : extra[key] ? [key, name, extra[key]] : null;
     }).filter((tab) => tab !== null) : base);
@@ -17944,21 +18415,21 @@
     return result;
   }
   function applyPlatformMode() {
-    document.body.classList.toggle("modo-plataforma", MODO_PLATAFORMA);
+    document.body.classList.toggle("modo-plataforma", navigationStore.platformMode);
     document.querySelectorAll("#nav [data-t]").forEach((button3) => {
       const panelSection = button3.classList.contains("pdsec");
-      if (MODO_PLATAFORMA) button3.classList.toggle("hide", !panelSection);
+      if (navigationStore.platformMode) button3.classList.toggle("hide", !panelSection);
       else if (panelSection) button3.classList.add("hide");
     });
-    if (MODO_PLATAFORMA) document.querySelectorAll('[data-u="organizacion"], [data-u="plan"], [data-u="empresa"]').forEach((button3) => {
+    if (navigationStore.platformMode) document.querySelectorAll('[data-u="organizacion"], [data-u="plan"], [data-u="empresa"]').forEach((button3) => {
       button3.classList.add("hide");
     });
     quietly(() => {
-      MENU_FIRMA = "";
+      navigationStore.menuSignature = "";
       montarMenuLateral();
     });
     try {
-      localStorage.setItem("dlc-modo", MODO_PLATAFORMA ? "plataforma" : "empresa");
+      localStorage.setItem("dlc-modo", navigationStore.platformMode ? "plataforma" : "empresa");
     } catch {
     }
   }
@@ -17976,14 +18447,14 @@
   var hiddenSections = () => menuPrefs().ocultos ?? [];
   function wantsSideMenu(nav) {
     const shown5 = [...nav.querySelectorAll("button[data-t]")].filter((button3) => !button3.classList.contains("hide") && button3.dataset.t !== "seguimiento" && button3.style.display !== "none" && (button3.classList.contains("mloculto") || visible(button3) || document.body.classList.contains("menulat")));
-    return menuEscritorio() && typeof PERFIL !== "undefined" && Boolean(PERFIL) && !isPortal() && shown5.length > 1;
+    return menuEscritorio() && Boolean(sessionStore.profile) && !isPortal() && shown5.length > 1;
   }
   function paintBrand2(nav) {
     if (!nav.querySelector(".mlmarca")) {
       const logo = document.querySelector("header .logo")?.src ?? "./logo-app.png";
       nav.insertAdjacentHTML("afterbegin", `<div class="mlmarca"><img src="${escapeHtml(logo)}" alt=""><b class="mllab"></b></div>`);
     }
-    const brand2 = typeof AJUSTES !== "undefined" && AJUSTES.marca || {};
+    const brand2 = settingsStore.settings.marca || {};
     const name = nav.querySelector(".mlmarca b");
     if (name) name.textContent = brand2.nombre ? brand2.nombre : document.title;
   }
@@ -18019,13 +18490,14 @@
         else button3.insertAdjacentHTML("beforeend", `<span class="mllab">${escapeHtml(text5)}</span>`);
       }
       button3.dataset.tip = (button3.querySelector(".mllab") ?? button3).textContent?.trim() ?? "";
+      button3.setAttribute("aria-label", button3.dataset.tip);
     });
   }
   function paintFooter(nav) {
     if (!nav.querySelector(".mlpie")) {
       nav.insertAdjacentHTML("beforeend", `<div class="mlpie">
-      <button type="button" class="mlitem" id="mlcfg" data-tip="${t("legacyC.sideMenu.settings")}">${svgIco(ICON_NOM.settings ?? "")}<span class="mllab">${t("legacyC.sideMenu.settings")}</span></button>
-      <button type="button" class="mlitem" id="mlpers" data-tip="${t("legacyC.sideMenu.customise")}">${svgIco(ICON_NOM["sliders-horizontal"] ?? "")}<span class="mllab">${t("legacyC.sideMenu.customise")}</span></button>
+      <button type="button" class="mlitem" id="mlcfg" data-tip="${t("legacyC.sideMenu.settings")}" aria-label="${t("legacyC.sideMenu.settings")}">${svgIco(ICON_NOM.settings ?? "")}<span class="mllab">${t("legacyC.sideMenu.settings")}</span></button>
+      <button type="button" class="mlitem" id="mlpers" data-tip="${t("legacyC.sideMenu.customise")}" aria-label="${t("legacyC.sideMenu.customise")}">${svgIco(ICON_NOM["sliders-horizontal"] ?? "")}<span class="mllab">${t("legacyC.sideMenu.customise")}</span></button>
       <button type="button" class="mlplegar" id="mlplegar" aria-label="${t("legacyC.sideMenu.foldLabel")}">${svgIco(ICO_PLEGAR)}</button></div>`);
       const settings2 = byId2("mlcfg"), customise2 = byId2("mlpers"), fold2 = byId2("mlplegar");
       if (settings2) settings2.onclick = () => {
@@ -18043,7 +18515,7 @@
         }
         document.body.classList.toggle("menupleg", folded3);
         menuTip(null);
-        MENU_FIRMA = "";
+        navigationStore.menuSignature = "";
         montarMenuLateral();
       };
     }
@@ -18063,8 +18535,8 @@
     document.body.classList.toggle("menupleg", menuPlegado());
     const buttons = [...nav.querySelectorAll("button[data-t]")];
     const signature = buttons.map((button3) => `${button3.dataset.t ?? ""}${button3.classList.contains("hide") ? "-" : "+"}${(button3.textContent ?? "").trim()}`).join("|") + JSON.stringify(menuPrefs()) + String(document.body.classList.contains("menupleg"));
-    if (signature === MENU_FIRMA && nav.querySelector(".mlmarca")) return;
-    MENU_FIRMA = signature;
+    if (signature === navigationStore.menuSignature && nav.querySelector(".mlmarca")) return;
+    navigationStore.menuSignature = signature;
     paintBrand2(nav);
     placeGroups(nav);
     labelButtons(buttons);
@@ -18161,7 +18633,7 @@
     const marker = byId2("indpruebas");
     if (marker) marker.onclick = () => {
       if (puedeOrganizacion()) {
-        PAG_TAB.organizacion = "pruebas";
+        navigationStore.pageTabs.organizacion = "pruebas";
         ir("organizacion");
       } else toast(t("legacyC.testEnvironment.markerHint"));
     };
@@ -18251,7 +18723,7 @@
     document.querySelectorAll("#opcfg").forEach((gear2) => {
       gear2.remove();
     });
-    const profile6 = PERFIL;
+    const profile6 = sessionStore.profile;
     const mandatory = settings2?.valor?.obligatorios?.[profile6.rol] ?? [], preferences = profile6.preferencias?.avisos_pedidos ?? {};
     const shown5 = PK_TARJ.filter(([key]) => mandatory.includes(key) || preferences[key] !== false);
     const gear = `<button type="button" class="pkcfg" id="opcfg" aria-label="${t("legacyC.orderAlerts.choose")}" title="${t("legacyC.orderAlerts.choose")}">${svgIco(ICON_NOM.settings ?? "")}</button>`;
@@ -18303,7 +18775,7 @@
       applyPlatformMode();
     } catch {
     }
-    if (MODO_PLATAFORMA && TAB !== "delcos") ir("pd-orgs");
+    if (navigationStore.platformMode && navigationStore.screen !== "delcos") ir("pd-orgs");
     for (let step = 0; step < REVEAL_STEPS; step++) {
       await pause(REVEAL_STEP_MS);
       if (!document.querySelector("main > section.preparando, main > section.cargando")) break;
@@ -18331,7 +18803,7 @@
         clearInterval(timer3);
         return;
       }
-      if (!(typeof PERFIL !== "undefined" && PERFIL && !document.body.classList.contains("sin-sesion") && typeof RPC_ORIG === "function")) {
+      if (!(sessionStore.profile && !document.body.classList.contains("sin-sesion") && typeof RPC_ORIG === "function")) {
         if (!byId2("login")?.classList.contains("hide")) {
           clearInterval(timer3);
           clearTimeout(limit);
@@ -18358,7 +18830,7 @@
   var BACK_TO_PLAN_FOR_MS = 3e4;
   var ANNUAL_MONTHS = 10;
   var MIN_USERS = 3;
-  var currentPlan = () => PLAN_ACTUAL ?? {};
+  var currentPlan = () => sessionStore.plan ?? {};
   function annualFee(cards2, plan3) {
     if (plan3.pago !== "anual" || plan3.plan === "medida") return;
     cards2.forEach((card4) => {
@@ -18420,7 +18892,7 @@
   async function paintPlanPage(args) {
     const result = await pintarPaginaPlanBase10(...args);
     try {
-      pintarProximoRecibo();
+      paintNextReceipt();
     } catch {
     }
     return result;
@@ -18445,7 +18917,7 @@
     if (new URLSearchParams(location.search).get("pago") !== "baja") return;
     let tries = 0;
     const timer3 = setInterval(() => {
-      if (typeof PERFIL !== "undefined" && PERFIL && !document.body.classList.contains("sin-sesion")) {
+      if (sessionStore.profile && !document.body.classList.contains("sin-sesion")) {
         clearInterval(timer3);
         pagoEsperarBaja();
       } else if (++tries > CHECKS2) clearInterval(timer3);
@@ -18462,7 +18934,7 @@
       history.replaceState(null, "", location.pathname + location.hash);
       setTimeout(() => {
         const message4 = byId2("lmsg");
-        if (message4 && !(typeof PERFIL !== "undefined" && PERFIL)) {
+        if (message4 && !sessionStore.profile) {
           message4.style.color = "var(--ok)";
           message4.textContent = t("legacyC.plan.signupLogin");
         } else toast(t("legacyC.plan.signupToast"));
@@ -18578,8 +19050,8 @@
         showPull(PULL_READY);
         const started = Date.now();
         try {
-          if (TAB === "agenda") await cargarAgenda();
-          else await ir(TAB);
+          if (navigationStore.screen === "agenda") await cargarAgenda();
+          else await ir(navigationStore.screen);
         } catch {
         }
         await new Promise((resolve) => {
@@ -18618,7 +19090,7 @@
   function checkSamplesBeforeSaving() {
     document.addEventListener("click", (event) => {
       const button3 = closestTo(event.target, "#vguardar");
-      const visit2 = VISITA_ACTUAL;
+      const visit2 = accountsStore.currentVisit;
       if (!button3 || !visit2?.muestras) return;
       const message4 = visit2.muestras.validar();
       if (message4) {
@@ -18630,7 +19102,7 @@
   }
   function paintPlan(args) {
     const result = pintarPlanBase2(...args);
-    const box5 = byId2("rplan"), booked = PLAN?.citados ?? [];
+    const box5 = byId2("rplan"), booked = routesStore.plan?.citados ?? [];
     if (box5 && booked.length && !box5.querySelector(".plancitados")) {
       box5.insertAdjacentHTML("beforeend", `<div class="plancitados"><h3>${t("legacyC.plan.booked", { count: booked.length })}</h3>
       <p class="sm">${t("legacyC.plan.bookedHint")}</p>
@@ -18728,13 +19200,13 @@
     ];
   }
   function hasExtra(key) {
-    const plan3 = PLAN_ACTUAL ?? {};
+    const plan3 = sessionStore.plan ?? {};
     return (plan3.extras ?? []).includes(key) || (PLAN_EXTRAS[key] ?? []).includes(plan3.plan ?? "");
   }
 
   // src/app/core/legacy-c/agenda-notices.ts
   var FAR_MINUTES = 240;
-  var infoOf = (id) => TD_INFO[id];
+  var infoOf = (id) => agendaStore.stopInfo[id];
   function markFarStops(stops, date, estimate) {
     try {
       const start4 = salidaUsuario();
@@ -18761,7 +19233,7 @@
     });
     const estimate = estimarDiaBaseBase(withCentre, date);
     markFarStops(withCentre, date, estimate);
-    Object.values(TD_INFO).forEach((info) => {
+    Object.values(agendaStore.stopInfo).forEach((info) => {
       if (info.aviso && info.aviso.startsWith(t("legacyC.agenda.wouldArrive")) && !info.aviso.includes(t("legacyC.agenda.moveUpWord"))) {
         info.orden = true;
         info.aviso += t("legacyC.agenda.moveUp");
@@ -18791,7 +19263,7 @@
   var NOTE_CHARS = 180;
   function previewHtml2() {
     const value27 = (key) => (byId2(`em_${key}`)?.value ?? "").trim();
-    const brand2 = AJUSTES.marca ?? {};
+    const brand2 = settingsStore.settings.marca ?? {};
     const logo = MARCA.logo && brand2.logo_factura !== false;
     const address2 = [value27("direccion"), [value27("cp"), value27("municipio") || value27("poblacion")].filter(Boolean).join(" "), value27("provincia")].filter(Boolean).join(", ");
     const note = (document.querySelector("#fcuerpo textarea")?.value ?? "").slice(0, NOTE_CHARS);
@@ -19017,23 +19489,23 @@
 
   // src/app/legacy/misc-bridge.ts
   var miscLegacy = {
-    canUnify: () => puede("administrar") || (PERFIL?.areas?.M ?? 0) >= 3,
-    previousScreen: () => TAB_ANTERIOR,
+    canUnify: () => puede("administrar") || (sessionStore.profile?.areas?.M ?? 0) >= 3,
+    previousScreen: () => navigationStore.previousScreen,
     weekDays: () => DIAS_SEM,
     setCardCentre: (name) => {
-      FICHA_CENTRO = name;
+      accountsStore.cardCentre = name;
     },
-    nearby: () => CERCA,
+    nearby: () => accountsStore.nearby,
     setNearby: (value27) => {
-      CERCA = value27;
+      accountsStore.nearby = value27;
     },
-    duplicatesSummary: () => DUP_RES,
+    duplicatesSummary: () => accountsStore.duplicates,
     setDuplicatesSummary: (value27) => {
-      DUP_RES = value27;
+      accountsStore.duplicates = value27;
     },
-    hiddenAlerts: () => ALERTAS_OCULTAS,
+    hiddenAlerts: () => homeStore.hiddenAlerts,
     setHiddenAlerts: (value27) => {
-      ALERTAS_OCULTAS = value27;
+      homeStore.hiddenAlerts = value27;
     },
     alertKey: (title2, item) => claveAlerta(title2, item),
     commissionCard: () => tarjetaComision(),
@@ -19044,7 +19516,7 @@
     },
     canBuy: () => Boolean(permissions_exports.canBuy()),
     openStock: () => {
-      PSEC = "stock";
+      productsStore.section = "stock";
       ir("productos");
     },
     openPurchase: (id) => {
@@ -19995,16 +20467,16 @@
   }
   function refreshBelow() {
     if (document.querySelector("dialog[open]")) {
-      DATOS_CAMBIADOS = true;
+      settingsStore.unsavedChanges = true;
       return;
     }
-    DATOS_CAMBIADOS = false;
-    if (TAB === "agenda" && document.getElementById("agcuerpo")) navLegacy.refreshAgenda();
-    else if (TAB === "directorio") void buscar(true);
+    settingsStore.unsavedChanges = false;
+    if (navigationStore.screen === "agenda" && document.getElementById("agcuerpo")) navLegacy.refreshAgenda();
+    else if (navigationStore.screen === "directorio") void buscar(true);
   }
   function raisePageAction2() {
-    if (!PAGES[TAB]) return;
-    const section2 = document.getElementById(`v-${TAB}`), header5 = section2?.querySelector(":scope > .saludo");
+    if (!PAGES[navigationStore.screen]) return;
+    const section2 = document.getElementById(`v-${navigationStore.screen}`), header5 = section2?.querySelector(":scope > .saludo");
     if (!section2 || !header5) return;
     PAGE_ACTIONS.forEach((id) => {
       const button3 = document.getElementById(id);
@@ -20114,24 +20586,24 @@
     closeMonth: () => {
       cerrarMesCinta();
     },
-    dayAppointments: () => TD_CITAS,
+    dayAppointments: () => agendaStore.dayAppointments,
     openAppointment: (appointment) => {
       void verCita(appointment);
     },
-    mode: () => AG_MODO,
+    mode: () => agendaStore.mode,
     backToDay: () => {
-      AG_MODO = "dia";
-      AG_VISTA = null;
+      agendaStore.mode = "dia";
+      agendaStore.viewedUser = null;
       const select3 = document.getElementById("agvista");
       if (select3) select3.value = "";
       void cargarAgenda();
     },
-    calculating: () => TD_CALC,
+    calculating: () => agendaStore.trafficCalculated,
     baseEstimate: (appointments2, isoDate, rest) => estimarDiaBase2(appointments2, isoDate, ...rest),
     dayRoute: (appointments2, isoDate) => tdRutaDia(appointments2, isoDate),
-    realTimes: () => TD_REAL,
+    realTimes: () => agendaStore.realTimes,
     setRealTimes: (value27) => {
-      TD_REAL = value27;
+      agendaStore.realTimes = value27;
     },
     realTimesValid: () => Boolean(tdRealVigente()),
     today: () => hoyISO(),
@@ -20147,7 +20619,7 @@
       } catch {
       }
     },
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     searchAccounts: () => {
       void buscar(true);
     },
@@ -20157,7 +20629,7 @@
   };
   var pages2 = () => PAGINAS;
   var navigationGlueLegacy = {
-    profileLoaded: () => Boolean(PERFIL),
+    profileLoaded: () => Boolean(sessionStore.profile),
     addIconIfMissing: (name, svg) => {
       const icons = ICON_NOM;
       if (!icons[name]) icons[name] = svg;
@@ -20166,18 +20638,18 @@
     refillRoutes: () => {
       void refillRepeating();
     },
-    routeDraft: () => RN,
+    routeDraft: () => routesStore.wizard,
     forgetRouteDraft: () => {
-      RN = null;
+      routesStore.wizard = null;
     },
     wrapGlobal,
     applyMenuNames: () => {
       aplicarNombresMenu();
     },
     applyMenuNamesSoon: () => {
-      if (!Object.keys(menuNombres()).length || TX_OBS) return;
-      TX_OBS = requestAnimationFrame(() => {
-        TX_OBS = 0;
+      if (!Object.keys(menuNombres()).length || settingsStore.textsObserverTimer) return;
+      settingsStore.textsObserverTimer = requestAnimationFrame(() => {
+        settingsStore.textsObserverTimer = 0;
         try {
           aplicarNombresMenu();
         } catch {
@@ -20185,7 +20657,7 @@
       });
     },
     baseApplyLabel: (args) => aplicarEtiquetaBase(...args),
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     hasReadyCheck: (screen3) => Boolean(LISTA_PARA[screen3]),
     setReadyCheck: (screen3, check3) => {
       LISTA_PARA[screen3] = check3;
@@ -20229,7 +20701,7 @@
   var lists = () => PL;
   var listGlueLegacy = {
     leaveNearby: () => {
-      CERCA = null;
+      accountsStore.nearby = null;
       void buscar(true);
     },
     clearCustomerDoctor: () => {
@@ -20257,7 +20729,7 @@
       const sales = lists().ventas;
       sales.pedidos.card = card4;
     },
-    orders: () => typeof PEDIDOS === "undefined" ? [] : PEDIDOS,
+    orders: () => typeof ordersStore.orders === "undefined" ? [] : ordersStore.orders,
     number: (value27) => num(value27),
     isFree: (order) => Boolean(sinCargoP(order, order.total)),
     shortDate: (isoDate) => calendar_exports.shortDate(isoDate),
@@ -20279,13 +20751,13 @@
     isMobile: () => ES_MOVIL(),
     icon: (name) => svgIco(ICON_NOM[name] ?? ""),
     debounceAddButton: (work, ms) => {
-      clearTimeout(FAB_RZ);
-      FAB_RZ = setTimeout(work, ms);
+      clearTimeout(navigationStore.fabResize);
+      navigationStore.fabResize = setTimeout(work, ms);
     },
     addButtonToDesktop: () => {
       fabAOrdenador();
     },
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     syncListBar: (screen3) => {
       if (typeof plSync === "function") plSync(screen3);
     },
@@ -20307,10 +20779,10 @@
       void vaciarCola();
     },
     addScannerButtonsSoon: () => {
-      if (ESC_PEND) return;
-      ESC_PEND = true;
+      if (navigationStore.scannerPending) return;
+      navigationStore.scannerPending = true;
       queueMicrotask(() => {
-        ESC_PEND = false;
+        navigationStore.scannerPending = false;
         addScannerButtons(void 0);
       });
     },
@@ -20333,7 +20805,7 @@
     refreshBell: () => {
       void refrescarCampana();
     },
-    profileLoaded: () => Boolean(PERFIL?.id),
+    profileLoaded: () => Boolean(sessionStore.profile?.id),
     liveNotices: () => {
       avisosEnVivo();
     },
@@ -20344,7 +20816,7 @@
     toast: (message4, isError = false) => {
       toast(message4, isError);
     },
-    materials: () => PRES_MAT,
+    materials: () => productsStore.presentationMaterials,
     linkError: () => ENLACE_ERROR,
     accessWithoutActivation: (text5) => {
       accesoSinActivar(text5);
@@ -20918,7 +21390,7 @@
   // src/app/legacy/visit-bridge.ts
   var visitLegacy = {
     setCurrent: (draft) => {
-      VISITA_ACTUAL = draft;
+      accountsStore.currentVisit = draft;
     },
     /** The day chosen in the Agenda for the visit (used once). */
     takeDate: () => {
@@ -20937,7 +21409,7 @@
     promotedProducts: () => productosPromocionados(),
     reloadProducts: async () => {
       await cargarProductos();
-      return PRODUCTOS;
+      return productsStore.products;
     },
     readPhoto: (file) => leerJustificante(file),
     photosMax: () => FOTOS_VISITA_MAX,
@@ -20951,17 +21423,17 @@
     loading: (element4, text5) => {
       showLoading(element4, text5);
     },
-    materials: () => PRES_MAT,
-    materialsTime: () => PRES_T,
+    materials: () => productsStore.presentationMaterials,
+    materialsTime: () => productsStore.presentationTime,
     setMaterials: (list, time) => {
-      PRES_MAT = list;
-      PRES_T = time;
+      productsStore.presentationMaterials = list;
+      productsStore.presentationTime = time;
     },
     /** Downloaded material files by id (Productos forgets one when it is removed). */
     materialFiles: () => PRES_DATOS,
-    preferences: () => PERFIL.preferencias ?? {},
+    preferences: () => sessionStore.profile.preferencias ?? {},
     setPreferences: (value27) => {
-      PERFIL.preferencias = value27;
+      sessionStore.profile.preferencias = value27;
     }
   };
 
@@ -21307,6 +21779,12 @@
   }
   var historyRows = () => [...document.querySelectorAll("#fbody [data-vrow]")];
 
+  // src/app/api/client.ts
+  function rpc(name, ...params2) {
+    const [values2] = params2;
+    return legacyDb().rpc(name, values2);
+  }
+
   // src/app/screens/cycle/model.ts
   var CLASSES = ["A", "B", "C"];
   var cycleState = { owner: "", classFilter: "", classifyFilter: "sin", query: "" };
@@ -21358,7 +21836,7 @@
     return t("cycle.card.thisCycle", { done: cycle3.hechas, goal: visitsText(cycle3.objetivo), cycle: name });
   }
   async function paintCardCycle(id) {
-    const { data: cycle3 } = await legacyDb().rpc("ciclo_de_cuenta", { p_id: id });
+    const { data } = await rpc("ciclo_de_cuenta", { p_id: id }), cycle3 = data;
     const box5 = document.getElementById("fciclo");
     if (!cycle3 || !box5 || accountCardLegacy.shownId() !== id) return;
     box5.innerHTML = `<span class="sm cicfl">${t("cycle.classLabel")}</span>${cardBaseLegacy.canEdit() ? classButtons(id, cycle3.clase) : classPill(cycle3.clase)}
@@ -21694,6 +22172,35 @@
   }
   var centreCard = (centre, linked) => linked || !isPrivateConsultation(centre) ? centreCardHtml(centre, linked) : privateCardHtml(centre);
 
+  // src/app/legacy/organisation-bridge.ts
+  var organisationLegacy = {
+    setting: (key) => settingsStore.settings[key],
+    name: () => nombreApp()
+  };
+
+  // src/app/core/organisation.ts
+  var DEFAULT_COUNTRY = "España";
+  var COUNTRY_CODES = { "españa": "es", "portugal": "pt", "francia": "fr", "italia": "it", "andorra": "ad" };
+  var DEFAULT_GENERAL_VAT = 21;
+  var MAX_RATE = 100;
+  var MIN_NAME_LENGTH = 3;
+  function organisationCountry() {
+    const company = organisationLegacy.setting("empresa");
+    return String(company?.pais ?? "").trim() || DEFAULT_COUNTRY;
+  }
+  var countryCode = () => COUNTRY_CODES[organisationCountry().toLowerCase()] ?? "";
+  var addressQuery = (parts) => [...parts, organisationCountry()].filter(Boolean).join(", ");
+  function generalVat() {
+    const raw = organisationLegacy.setting("impuestos")?.general;
+    if (raw === void 0 || raw === null || raw === "") return DEFAULT_GENERAL_VAT;
+    const rate = Number(raw);
+    return Number.isFinite(rate) && rate >= 0 && rate <= MAX_RATE ? rate : DEFAULT_GENERAL_VAT;
+  }
+  function obviousPasswordWords() {
+    const first2 = /[a-zñ]+/.exec(organisationLegacy.name().toLowerCase())?.[0] ?? "";
+    return ["delcos", ...first2.length >= MIN_NAME_LENGTH ? [first2] : []];
+  }
+
   // src/app/screens/accounts/editor-form/private-form.ts
   var LOCATION_TIMEOUT_MS = 12e3;
   var LOCATION_MAX_AGE_MS = 3e4;
@@ -21733,7 +22240,7 @@
       if (!quiet) notices.toast(t("accountsEditor.centreForm.writeAddress"), true);
       return false;
     }
-    const query = [value27("d"), value27("c"), value27("m"), value27("p"), "España"].filter(Boolean).join(", ");
+    const query = addressQuery([value27("d"), value27("c"), value27("m"), value27("p")]);
     const found = await qualityLegacy.geocode(query, { direccion: value27("d"), municipio: value27("m"), cp: value27("c") }).catch(() => null);
     if (!found) {
       if (!quiet) notices.toast(t("accountsEditor.centreForm.notFound"), true);
@@ -21785,7 +22292,7 @@
       button3.disabled = false;
       if (!found) context.point = { lat: null, lon: null };
     }
-    setCentre(context.box, context.index, { nombre: t("accountsEditor.private.savedName"), direccion: value27("d"), cp: value27("c"), municipio: value27("m").toUpperCase(), provincia: value27("p").toUpperCase(), ...context.point });
+    setCentre(context.box, context.index, { nombre: PRIVATE_SAVED_NAME, direccion: value27("d"), cp: value27("c"), municipio: value27("m").toUpperCase(), provincia: value27("p").toUpperCase(), ...context.point });
     void paintCentrePicker(context.box, context.index);
     notices.toast(context.point.lat !== null ? t("accountsEditor.private.ready", { privateConsultation: privateConsultation() }) : t("accountsEditor.private.readyNoPoint"));
   }
@@ -21856,7 +22363,7 @@
       return;
     }
     button3.textContent = t("accountsEditor.centreForm.searching");
-    const query = [value27("d"), value27("c"), value27("m"), value27("p"), "España"].filter(Boolean).join(", ");
+    const query = addressQuery([value27("d"), value27("c"), value27("m"), value27("p")]);
     const found = await qualityLegacy.geocode(query, { direccion: value27("d"), municipio: value27("m"), cp: value27("c") }).catch(() => null);
     button3.textContent = t("accountsEditor.centreForm.findOnMap");
     if (!found) {
@@ -22147,7 +22654,7 @@
       if (field22) field22.value = name;
       const address2 = value5("edcd"), town = value5("edcm");
       if (!address2 || address2 === saved3.address && town === saved3.town && saved3.located) return;
-      const found = await qualityLegacy.geocode([address2, value5("edcc"), town, value5("edcp"), "España"].filter(Boolean).join(", "), { direccion: address2, municipio: town, cp: value5("edcc") }).catch(() => null);
+      const found = await qualityLegacy.geocode(addressQuery([address2, value5("edcc"), town, value5("edcp")]), { direccion: address2, municipio: town, cp: value5("edcc") }).catch(() => null);
       if (found && !found.fuera) {
         const lat = consultationField(box5, index, "lat"), lon = consultationField(box5, index, "lon");
         if (lat) lat.value = String(found.lat);
@@ -23659,7 +24166,7 @@
   async function pointOf3(centre) {
     const moved = value7("ecd") !== orFallback(centre.direccion, "") || value7("ecm") !== orFallback(centre.municipio, "") || value7("ecc") !== orFallback(centre.cp, "");
     if (!moved || !(value7("ecd") || value7("ecm"))) return { lat: centre.lat, lon: centre.lon };
-    const query = [value7("ecd"), value7("ecc"), value7("ecm"), value7("ecp"), t("accountsMore.centreEditor.country")].filter(Boolean).join(", ");
+    const query = addressQuery([value7("ecd"), value7("ecc"), value7("ecm"), value7("ecp")]);
     const found = await qualityLegacy.geocode(query, { direccion: value7("ecd"), municipio: value7("ecm"), cp: value7("ecc") }).catch(() => null);
     if (found && !found.fuera) return { lat: Number(found.lat), lon: Number(found.lon) };
     if (found?.fuera) notices.toast(t("accountsMore.centreEditor.elsewhere", { place: found.fuera, town: value7("ecm") }), true);
@@ -24296,7 +24803,7 @@
     },
     menuGroups: () => MENU_GRUPOS,
     dialog: () => document.getElementById("dlg"),
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     isProfessionalPortal: () => ES_MEDICO(),
     canUseModule: (module) => puedeModulo(module),
     planIncludesSection: (section2) => planIncluyeSeccion(section2),
@@ -24305,7 +24812,7 @@
     setPage: (key, page) => {
       pages3()[key] = page;
     },
-    pageTab: (key) => PAG_TAB[key],
+    pageTab: (key) => navigationStore.pageTabs[key],
     tendersMenu: () => {
       menuTenders();
     },
@@ -24350,18 +24857,18 @@
   };
   var polishLegacy = {
     normalise: (text5) => normaliseHeader(text5 ?? ""),
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     polishedKeys: () => CFG_PULIR,
     settingsKey: () => CFG_KEY,
     roleNames: () => rolesNombres(),
     adjustIndexSoon: () => {
-      cancelAnimationFrame(CFU_RAF);
-      CFU_RAF = requestAnimationFrame(() => {
+      cancelAnimationFrame(settingsStore.indexFrame);
+      settingsStore.indexFrame = requestAnimationFrame(() => {
         fitIndex();
       });
     },
     markOpenedFromMenu: () => {
-      CFG_SEC = "__cfg";
+      settingsStore.section = "__cfg";
       IR_DESDE_MENU_CFG = true;
     },
     setManualAnchor: (screen3, anchor) => {
@@ -24372,7 +24879,7 @@
     }
   };
   var pageLegacy = {
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     isMobile: () => ES_MOVIL(),
     freeze: (element4) => {
       congelar(element4);
@@ -24391,18 +24898,18 @@
       markUnsaved();
     },
     placeSaveButtonSoon: () => {
-      if (PAG_GUARDA_RAF || !PAG_GUARDA.some((page) => page.tab === TAB)) return;
-      PAG_GUARDA_RAF = requestAnimationFrame(() => {
-        PAG_GUARDA_RAF = 0;
+      if (navigationStore.saveButtonFrame || !PAG_GUARDA.some((page) => page.tab === navigationStore.screen)) return;
+      navigationStore.saveButtonFrame = requestAnimationFrame(() => {
+        navigationStore.saveButtonFrame = 0;
         pagPonerGuardar();
       });
     }
   };
   var dialogLegacy = {
     dialog: (id) => document.getElementById(id),
-    openingSheet: () => Boolean(FX_FICHA),
+    openingSheet: () => Boolean(accountsStore.cardEffect),
     sheetOpening: (step) => {
-      FX_FICHA = Number(FX_FICHA) + step;
+      accountsStore.cardEffect = Number(accountsStore.cardEffect) + step;
     },
     wrapGlobal: wrapGlobal2,
     openAccount: (id) => {
@@ -24412,29 +24919,29 @@
       void fichaCentro(id);
     },
     setLastAction: (time) => {
-      ULT_ACCION = time;
+      settingsStore.lastAction = time;
     },
-    lastAction: () => ULT_ACCION
+    lastAction: () => settingsStore.lastAction
   };
   var backStack = () => VUELTA;
   var backLegacy = {
     titledViews: () => Object.keys(VISTA_TITULO),
     wrapGlobal: wrapGlobal2,
-    view: () => VISTA,
+    view: () => navigationStore.view,
     setView: (view) => {
-      VISTA = view;
+      navigationStore.view = view;
     },
-    lastClick: () => VUELTA_CLIC,
+    lastClick: () => navigationStore.backClick,
     setLastClick: (click) => {
-      VUELTA_CLIC = click;
+      navigationStore.backClick = click;
     },
-    reopening: () => VUELTA_REABRIENDO,
+    reopening: () => navigationStore.backReopening,
     setReopening: (on6) => {
-      VUELTA_REABRIENDO = on6;
+      navigationStore.backReopening = on6;
     },
-    putButton: () => VUELTA_PONER,
+    putButton: () => navigationStore.backPending,
     setPutButton: (on6) => {
-      VUELTA_PONER = on6;
+      navigationStore.backPending = on6;
     },
     sameView: (first2, second) => vistaIgual(first2, second),
     push: (view, max) => {
@@ -24455,15 +24962,15 @@
   };
   var saveLegacy = {
     requestStarted: () => {
-      RED_VUELO++;
-      RED_ULT = performance.now();
+      sessionStore.networkInFlight++;
+      sessionStore.lastNetworkEnd = performance.now();
     },
     requestEnded: () => {
-      RED_VUELO = Math.max(0, RED_VUELO - 1);
-      RED_ULT = performance.now();
+      sessionStore.networkInFlight = Math.max(0, sessionStore.networkInFlight - 1);
+      sessionStore.lastNetworkEnd = performance.now();
     },
-    inFlight: () => RED_VUELO,
-    lastRequest: () => RED_ULT,
+    inFlight: () => sessionStore.networkInFlight,
+    lastRequest: () => sessionStore.lastNetworkEnd,
     isSaveButton: (button3) => Boolean(esBotonGuardar(button3)),
     raiseNotice: () => {
       subirAviso();
@@ -24486,7 +24993,7 @@
     logError: (type, message4, detail) => {
       registrarError(type, message4, detail);
     },
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     preloaded: () => DB_PRE,
     rememberedSortOf: (name) => Object.keys(ORD_MEM).find((kind) => ORD_MEM[kind]?.fn === name),
     sortRemembered: (kind, rows2) => ordMemOrdenar(kind, rows2),
@@ -24500,18 +25007,18 @@
     refreshBelow: () => {
       refrescarDebajo();
     },
-    dataChanged: () => DATOS_CAMBIADOS,
+    dataChanged: () => settingsStore.unsavedChanges,
     reportedFilter: () => AN_REP,
-    pdfEditing: () => PDF_EDITANDO,
+    pdfEditing: () => billingStore.pdfEditing,
     pdfTemplates: () => listaPDF(),
     savePdfTemplates: (templates) => guardarPDFPlantillas(templates),
     setInvoicePdf: (design) => {
-      AJUSTES.factura_pdf = design ? design : AJUSTES.factura_pdf;
+      settingsStore.settings.factura_pdf = design ? design : settingsStore.settings.factura_pdf;
     }
   };
   var sortLegacy = {
     setOrdersPage: (page) => {
-      PEDPAG = page;
+      ordersStore.page = page;
     },
     listOrders: () => {
       if (typeof listaPedidos === "function") void listaPedidos();
@@ -24554,10 +25061,10 @@
     rememberedHasField: (kind, index) => (ORD_MEM[kind]?.campos?.[index] ?? null) !== null,
     isRemembered: (kind) => Boolean(ORD_MEM[kind]),
     setInvoicesPage: (page) => {
-      FACPAG = page;
+      ordersStore.invoicePage = page;
     },
     setCallsPage: (page) => {
-      LLPAG = page;
+      ordersStore.callsPage = page;
     }
   };
   var listsConfig = () => PL;
@@ -24575,7 +25082,7 @@
     toast: (message4, isError = false) => {
       toast(message4, isError);
     },
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     searchAccounts: () => {
       void buscar(true);
     },
@@ -24956,7 +25463,7 @@
     if (navigationGlueLegacy.isProfessionalPortal() || !bar2) return navigationGlueLegacy.baseBottomBar(args);
     const modules = navigationGlueLegacy.mobileModules(), screen3 = navigationGlueLegacy.currentScreen();
     bar2.dataset.n = String(modules.length + 1);
-    bar2.innerHTML = modules.map((module) => `<button data-t="${module}" aria-selected="${String(screen3 === module)}"><span>${navigationGlueLegacy.moduleIcon(module) ?? "•"}</span>${escapeHtml(navigationGlueLegacy.mobileName(module))}</button>`).join("") + `<button id="bmasbtn" aria-selected="${String(!modules.includes(screen3))}"><span>⋯</span>${t("legacyD.navigation.more")}</button>`;
+    bar2.innerHTML = modules.map((module) => `<button data-t="${module}"${screen3 === module ? ' aria-current="page"' : ""}><span>${navigationGlueLegacy.moduleIcon(module) ?? "•"}</span>${escapeHtml(navigationGlueLegacy.mobileName(module))}</button>`).join("") + `<button id="bmasbtn"${!modules.includes(screen3) ? ' aria-current="page"' : ""}><span>⋯</span>${t("legacyD.navigation.more")}</button>`;
     bar2.querySelectorAll("[data-t]").forEach((button3) => {
       button3.onclick = () => {
         navigationGlueLegacy.goTo(button3.dataset.t ?? "");
@@ -26079,20 +26586,20 @@
 
   // src/app/legacy/shell-bridge.ts
   var shellLegacy = {
-    activePanel: () => PANEL_ACTIVO,
+    activePanel: () => settingsStore.activePanel,
     setActivePanel: (panel) => {
-      PANEL_ACTIVO = panel;
+      settingsStore.activePanel = panel;
     },
     setAdminSection: (section2) => {
-      ADM_SEC = section2;
+      settingsStore.adminSection = section2;
     },
     loadAdmin: () => cargarAdmin(),
-    openingCard: () => Boolean(FX_FICHA),
+    openingCard: () => Boolean(accountsStore.cardEffect),
     hasPage: (screen3) => Boolean(PAGINAS[screen3]),
     /** The stacked windows (legado 058 gives the previous one back when the top one closes). */
     windowStack: () => PILA_VENT,
     setStacking: (on6) => {
-      APILANDO = on6;
+      settingsStore.stacking = on6;
     },
     iconOf: (name) => svgIco(ICON_NOM[name ?? ""] ?? ""),
     tree: () => arbolCfgUnico(),
@@ -26108,9 +26615,9 @@
     setKey: (key) => {
       CFG_KEY = key;
     },
-    detail: () => CFG_DETALLE,
+    detail: () => settingsStore.detail,
     setDetail: (on6) => {
-      CFG_DETALLE = on6;
+      settingsStore.detail = on6;
     },
     /** Configuración again, through its global name (other code may wrap it). */
     reload: () => {
@@ -26118,7 +26625,7 @@
     },
     planIncludes: (module) => planIncluye(module),
     planMinimum: (module) => planMinimo(module),
-    currentPlanName: () => planDe(PLAN_ACTUAL.plan).nombre,
+    currentPlanName: () => planDe(sessionStore.plan.plan).nombre,
     canManageOrganisation: () => puedeOrganizacion(),
     canUseModule: (module) => puedeModulo(module),
     hasDeparture: () => Boolean(prefsActivas().salida),
@@ -26130,8 +26637,14 @@
     applyMenuPermissions: () => {
       aplicarPermisosMenu();
     },
-    platformTab: () => PAG_TAB.delcos ?? "orgs"
+    platformTab: () => navigationStore.pageTabs.delcos ?? "orgs"
   };
+
+  // src/app/core/navigation/current.ts
+  function markCurrent(button3, current) {
+    if (current) button3.setAttribute("aria-current", "page");
+    else button3.removeAttribute("aria-current");
+  }
 
   // src/app/screens/settings/shell/helpers.ts
   var INDEX_MIN_HEIGHT = 240;
@@ -26231,7 +26744,7 @@
     const aliases = shellLegacy.orderAliases(), view = shellLegacy.orderSectionView();
     const alias = Object.keys(aliases).find((key) => aliases[key] === view) ?? "ventas";
     document.querySelectorAll("nav.main [data-t], #bnav [data-t]").forEach((button3) => {
-      button3.setAttribute("aria-selected", String(button3.dataset.t === alias));
+      markCurrent(button3, button3.dataset.t === alias);
     });
   }
   function markBillingPlan() {
@@ -26244,7 +26757,7 @@
   function markPlatformPanel() {
     const tab = shellLegacy.platformTab();
     document.querySelectorAll("nav.main [data-t]").forEach((button3) => {
-      if (button3.classList.contains("pdsec") || button3.dataset.t === "delcos") button3.setAttribute("aria-selected", String(button3.dataset.t === `pd-${tab}`));
+      if (button3.classList.contains("pdsec") || button3.dataset.t === "delcos") markCurrent(button3, button3.dataset.t === `pd-${tab}`);
     });
   }
 
@@ -26563,13 +27076,13 @@
 
   // src/app/legacy/leftovers-bridge.ts
   var RANGE_READER = "__rango";
-  var profile4 = () => PERFIL;
+  var profile4 = () => sessionStore.profile;
   var rawDb = () => db;
   var leftoversLegacy = {
     // Session and permissions
-    hasProfile: () => Boolean(PERFIL),
+    hasProfile: () => Boolean(sessionStore.profile),
     userId: () => profile4().id,
-    screen: () => TAB,
+    screen: () => navigationStore.screen,
     can: (capability) => puede(capability),
     seesEverything: () => VE_TODO(),
     levelOf: (letter) => permissions_exports.levelOrNone(letter),
@@ -26579,8 +27092,8 @@
     canManageOrganization: () => puedeOrganizacion(),
     canReviewDuplicates: () => puedeDuplicados(),
     // Data access
-    cacheEpoch: () => RC_EPOCA,
-    dialogEpoch: () => DLG_EPOCA,
+    cacheEpoch: () => sessionStore.cacheEpoch,
+    dialogEpoch: () => agendaStore.dialogEpoch,
     today: () => hoyISO(),
     addDays: (isoDate, days) => isoMas(isoDate, days),
     shortDate: (isoDate) => calendar_exports.shortDate(isoDate),
@@ -26593,20 +27106,20 @@
       cargando(element4, text5);
     },
     // Agenda
-    viewedAgenda: () => AG_VISTA,
+    viewedAgenda: () => agendaStore.viewedUser,
     setViewedAgenda: (viewed) => {
-      AG_VISTA = viewed;
+      agendaStore.viewedUser = viewed;
     },
     reloadAgenda: () => {
       void cargarAgenda();
     },
     showWeekFromToday: () => {
-      AG_MODO = "semana";
-      AG_FECHA = hoyISO();
+      agendaStore.mode = "semana";
+      agendaStore.selectedDate = hoyISO();
     },
-    dayTasks: () => TAREAS_DIA,
+    dayTasks: () => agendaStore.dayTasks,
     setDayTasks: (tasks) => {
-      TAREAS_DIA = tasks;
+      agendaStore.dayTasks = tasks;
     },
     tasks: (isoDate) => rawDb().from("tareas").select("*").eq("fecha", isoDate).order("orden", { ascending: true, nullsFirst: false }).order("hora", { ascending: true, nullsFirst: false }).order("creado_en"),
     planned: (states, from2, limit) => rawDb().from("agenda").select("cuenta_id,fecha").eq("usuario_id", profile4().id).in("estado", states).gte("fecha", from2).order("fecha").limit(limit),
@@ -26620,24 +27133,24 @@
     },
     // Cuentas
     setAccountAccess: (access2) => {
-      MED_ACCESO = access2;
+      accountsStore.portalAccess = access2;
     },
     revisitNotice: () => avisoRevisita(),
     people: () => rawDb().from("perfiles").select("id,nombre,rol,activo").order("nombre"),
     setSalesTeam: (team3) => {
-      COMS = team3;
+      homeStore.salesTeam = team3;
     },
     salespersonFilter: () => F.com,
     // Pedidos, Concursos, Oportunidades
-    contractPrices: () => PED_PRECIOS,
+    contractPrices: () => ordersStore.contractPrices,
     setContractPrices: (prices2) => {
-      PED_PRECIOS = prices2;
+      ordersStore.contractPrices = prices2;
     },
     setPendingCall: (id) => {
-      LLAMADA_PEND = id;
+      ordersStore.pendingCall = id;
     },
     editOrder: (preset) => editorPedido(preset),
-    ordersSection: () => PEDSEC,
+    ordersSection: () => ordersStore.section,
     repaintCalls: () => {
       void pintarLlamadas();
     },
@@ -26649,9 +27162,9 @@
     saveTextPattern: () => PAG_GUARDA_RE,
     notSaveSelector: () => PAG_GUARDA_NO,
     changedBlocks: () => PAG_SUCIO,
-    pageKey: () => PAG_CLAVE,
+    pageKey: () => navigationStore.pageKey,
     setPageKey: (key) => {
-      PAG_CLAVE = key;
+      navigationStore.pageKey = key;
     },
     markChanged: () => {
       markUnsaved();
@@ -26660,7 +27173,7 @@
       void cargarConfig();
     },
     settingsKey: () => CFG_KEY,
-    requestsInFlight: () => RED_VUELO,
+    requestsInFlight: () => sessionStore.networkInFlight,
     navIcon: (screen3) => ICO_NAV[screen3],
     namedIcon: (name) => ICON_NOM[name] ?? "",
     emojiIcon: (emoji) => ICON_EMOJI[emoji] ?? "",
@@ -26669,14 +27182,14 @@
     icon: (name) => icono(name),
     canScan: () => Boolean(window.ESC_FORZAR) || PANTALLA_TACTIL && typeof navigator.mediaDevices?.getUserMedia === "function",
     // Facturación
-    billingSection: () => FSEC,
+    billingSection: () => billingStore.section,
     // The legacy value may be null (no last settings section): it is kept as it was
     setBillingSection: (section2) => {
-      FSEC = section2;
+      billingStore.section = section2;
     },
-    lastBillingSettings: () => FAC_ULTIMA,
+    lastBillingSettings: () => billingStore.lastSection,
     setLastBillingSettings: (section2) => {
-      FAC_ULTIMA = section2;
+      billingStore.lastSection = section2;
     },
     billingSettingsSections: () => FAC_CONFIG,
     loadBilling: () => {
@@ -27002,7 +27515,7 @@
     if (!button3) {
       const neighbour = entry2.after.map((screen3) => nav.querySelector(`[data-t="${screen3}"]`)).find(Boolean);
       if (!neighbour) return;
-      neighbour.insertAdjacentHTML("afterend", `<button data-t="${entry2.screen}" aria-selected="false">${entry2.title()}</button>`);
+      neighbour.insertAdjacentHTML("afterend", `<button data-t="${entry2.screen}">${entry2.title()}</button>`);
       button3 = nav.querySelector(`[data-t="${entry2.screen}"]`);
     }
     button3?.classList.toggle("hide", leftoversLegacy.isProfessionalPortal() || !leftoversLegacy.canUseModule(entry2.area));
@@ -27614,6 +28127,45 @@
     else if (!inSettings && row4) row4.remove();
   }
 
+  // src/app/services/money.ts
+  var money_exports = {};
+  __export(money_exports, {
+    AMOUNT_FIELD: () => AMOUNT_FIELD,
+    VAT_RATES: () => VAT_RATES,
+    duration: () => duration,
+    euros: () => euros,
+    eurosRounded: () => eurosRounded,
+    eurosWeb: () => eurosWeb,
+    isVatField: () => isVatField,
+    number: () => number,
+    percent: () => percent,
+    round2: () => round2,
+    vatOf: () => vatOf
+  });
+  var number = (value27) => formatNumber(value27 || 0);
+  var duration = (milliseconds) => formatDuration(milliseconds);
+  var euros = (value27) => Number(value27 || 0).toLocaleString("es", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+  function round2(value27) {
+    const amount3 = Number(value27) || 0, cents = Math.round(Number((Math.abs(amount3) * 100).toPrecision(12)));
+    return (amount3 < 0 ? -cents : cents) / 100;
+  }
+  var eurosRounded = (value27) => euros(round2(value27));
+  var percent = (part, whole2) => whole2 ? Math.round(part / whole2 * 100) : 0;
+  var VAT_RATES = [
+    [21, t("core.vat.general")],
+    [10, t("core.vat.reduced")],
+    [4, t("core.vat.superReduced")],
+    [0, t("core.vat.exempt")]
+  ];
+  var labelText = (input12) => input12.id ? document.querySelector(`label[for="${input12.id}"]`)?.textContent ?? "" : "";
+  var isVatField = (input12) => /iva/i.test(`${input12.id} ${input12.dataset.f ?? ""} ${input12.name}`) || /\bIVA\s*\(%\)|tipo de iva/i.test(labelText(input12));
+  var AMOUNT_FIELD = /imp|importe|total|base|precio|pvp|coste|cobro|con_iva|conIva|sin_iva/i;
+  var vatOf = (amount3) => Math.round(amount3 * 21) / 100;
+  var eurosWeb = (value27) => {
+    const text5 = euros(value27);
+    return Math.round(Number(value27) * 100) % 100 === 0 ? text5.replace(/,00(?=\s?€)/, "") : text5;
+  };
+
   // src/app/screens/opportunities/model.ts
   var ORDER_DONE = "Pedido hecho";
   var INCOMING = "Entrante";
@@ -27654,7 +28206,6 @@
     });
     return chosen5;
   }
-  var round2 = (value27) => Math.round((Number(value27) || 0) * 100) / 100;
   function lineAmount(productId, units2) {
     const product = opportunitiesLegacy.products().find((item) => item.id === productId);
     if (product?.precio === null || product?.precio === void 0) return 0;
@@ -27768,12 +28319,12 @@
     newSale: (preset) => {
       void nuevaVenta(preset);
     },
-    shownCustomer: () => FICHA_PAC,
+    shownCustomer: () => accountsStore.cardPatients,
     setShownCustomer: (id) => {
-      FICHA_PAC = id;
+      accountsStore.cardPatients = id;
     },
     forgetShownAccount: () => {
-      FICHA_ID = null;
+      accountsStore.shownId = null;
     },
     visibleFieldColumns: () => visibleFields("cliente"),
     fieldHeaders: (fields) => columnHeaders(fields),
@@ -28396,6 +28947,7 @@
   __export(vocabulary_exports, {
     DEFAULT_TERMS: () => DEFAULT_TERMS,
     DETERMINERS: () => DETERMINERS,
+    EXTRA_TERMS: () => EXTRA_TERMS,
     TERMS_KEY: () => TERMS_KEY,
     TITLE: () => TITLE,
     allOf: () => allOf,
@@ -28416,6 +28968,9 @@
     consulta: { s: t("core.terms.location"), p: t("core.terms.locations"), g: "f" },
     especialidad: { s: t("core.terms.segment"), p: t("core.terms.segments"), g: "m" }
   };
+  var EXTRA_TERMS = {
+    intervencion: { s: t("core.terms.surgery"), p: t("core.terms.surgeries"), g: "f" }
+  };
   var DETERMINERS = {
     el: ["el", "los", "la", "las"],
     un: ["un", "unos", "una", "unas"],
@@ -28431,8 +28986,15 @@
   };
   var TERMS_KEY = "dlc-terminos";
   var TITLE = /^(dr|dra|d|dña|dª|sr|sra|srta|prof|profa|lic|ldo|lda)\.?$/i;
+  function ownTerms() {
+    try {
+      return coreLegacy.terms();
+    } catch {
+      return {};
+    }
+  }
   function termOf(key) {
-    const fallback = DEFAULT_TERMS[key] ?? { s: key, p: `${key}s`, g: "m" }, own = coreLegacy.terms()[key] ?? {};
+    const fallback = DEFAULT_TERMS[key] ?? EXTRA_TERMS[key] ?? { s: key, p: `${key}s`, g: "m" }, own = ownTerms()[key] ?? {};
     return { s: String(own.s ?? "").trim() || fallback.s, p: String(own.p ?? "").trim() || fallback.p, g: own.g === "f" || own.g === "m" ? own.g : fallback.g };
   }
   var withCase = (text5, mode) => mode === "U" ? text5.toUpperCase() : mode === "C" ? text5.charAt(0).toUpperCase() + text5.slice(1) : text5;
@@ -28457,6 +29019,23 @@
   };
   var firstName = (name) => nameParts(name)[0] ?? "";
   var initials = (name) => nameParts(name).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
+  var ending = (key, plural2) => `${termOf(key).g === "f" ? "a" : "o"}${plural2 ? "s" : ""}`;
+  var SURGERY_WORDS = /* @__PURE__ */ new Map([
+    ["surgery", () => wordFor("intervencion", "s")],
+    ["surgeries", () => wordFor("intervencion", "p")],
+    ["Surgery", () => wordFor("intervencion", "s", { nounCase: "C" })],
+    ["Surgeries", () => wordFor("intervencion", "p", { nounCase: "C" })],
+    ["surgeryThe", () => termOf("intervencion").g === "f" ? "la" : "el"],
+    ["SurgeryThe", () => termOf("intervencion").g === "f" ? "La" : "El"],
+    ["surgeryOfThe", () => termOf("intervencion").g === "f" ? "de la" : "del"],
+    ["surgeriesThe", () => termOf("intervencion").g === "f" ? "las" : "los"],
+    ["surgeryOne", () => termOf("intervencion").g === "f" ? "una" : "un"],
+    ["SurgeryOne", () => termOf("intervencion").g === "f" ? "Una" : "Un"],
+    ["surgeryThis", () => termOf("intervencion").g === "f" ? "esta" : "este"],
+    ["surgeryEnd", () => ending("intervencion", false)],
+    ["surgeryEnds", () => ending("intervencion", true)]
+  ]);
+  setVocabularyResolver((name) => SURGERY_WORDS.get(name)?.());
 
   // src/app/core/session.ts
   var ACCESS_CHECK_MS2 = 3e3;
@@ -28931,11 +29510,11 @@
 
   // src/app/legacy/settings1-bridge.ts
   var settingsLegacy = {
-    user: () => PERFIL,
+    user: () => sessionStore.profile,
     setPreferences: (preferences) => {
-      PERFIL.preferencias = preferences;
+      sessionStore.profile.preferencias = preferences;
     },
-    place: (key) => PERFIL.preferencias?.[key] ?? null,
+    place: (key) => sessionStore.profile.preferencias?.[key] ?? null,
     changeNavigator: (name) => {
       void cambiarNavegador(name);
     },
@@ -28943,12 +29522,12 @@
     /** The legacy name answers whether it was saved (its declaration says void). */
     saveRevisitNotice: (value27) => guardarAvisoRevisita(value27),
     moduleIcon: (module) => ICO_MOD[module],
-    classifiers: () => CATS,
+    classifiers: () => settingsStore.catalogs,
     setClassifiers: (list) => {
-      CATS = list;
+      settingsStore.catalogs = list;
     },
     openClassifier: (id) => {
-      abrirClasificador(id);
+      openClassifier(id);
     },
     reloadCatalogs: () => {
       void loadCatalogs();
@@ -29282,7 +29861,7 @@
   }
 
   // src/app/screens/settings/preferences/places.ts
-  var SEARCH_URL = "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q=";
+  var searchUrl = () => `https://nominatim.openstreetmap.org/search?format=json&limit=1${countryCode() ? `&countrycodes=${countryCode()}` : ""}&q=`;
   var GPS_TIMEOUT_MS = 15e3;
   var GPS_DECIMALS = 6;
   var SHOWN_ADDRESS_PARTS = 3;
@@ -29310,7 +29889,7 @@
     button3.disabled = true;
     button3.textContent = t("settings.preferences.finding");
     try {
-      const found = await (await fetch(SEARCH_URL + encodeURIComponent(address2))).json();
+      const found = await (await fetch(searchUrl() + encodeURIComponent(address2))).json();
       button3.disabled = false;
       button3.textContent = t("settings.preferences.findAddress");
       const first2 = found[0];
@@ -29589,34 +30168,34 @@
   // src/app/legacy/settings-core-bridge.ts
   var settingsCoreLegacy = {
     // Settings, roles, words and states
-    settings: () => AJUSTES,
+    settings: () => settingsStore.settings,
     setSettings: (value27) => {
-      AJUSTES = value27;
+      settingsStore.settings = value27;
     },
-    roles: () => ROLES_DEF,
+    roles: () => settingsStore.roles,
     setRoles: (list) => {
-      ROLES_DEF = list;
+      settingsStore.roles = list;
     },
-    terms: () => TERMINOS,
+    terms: () => sessionStore.terms,
     setCommercialStates: (list) => {
-      ESTADOS_DEF = list;
+      sessionStore.commercialStates = list;
     },
     catalogs: () => CAT,
     customFields: () => CAMPOS,
     loadCustomFields: () => loadCustomFields(),
     // Session, permissions and plan
-    hasProfile: () => Boolean(PERFIL),
+    hasProfile: () => Boolean(sessionStore.profile),
     can: (capability) => puede(capability),
     canEditCatalogs: () => permissions_exports.canManageLists(),
     hasExtra: (extra) => hayExtra(extra),
-    currentPlan: () => PLAN_ACTUAL,
+    currentPlan: () => sessionStore.plan,
     roundEuros: (value27) => eurI(value27),
     // Brand and labels
     appName: () => nombreApp(),
     brand: () => MARCA,
     setInvoiceLogo: (logo) => {
-      LOGO_DATA = logo;
-      LOGO_CIRC = true;
+      settingsStore.invoiceLogo = logo;
+      sessionStore.roundLogo = true;
     },
     applyLabel: () => {
       aplicarEtiqueta();
@@ -29629,12 +30208,13 @@
     // Module cache, preferences and day proposals
     moduleCache: () => CACHE_MOD,
     moduleState: (screen3) => ESTADO_MOD[screen3]?.(),
-    writes: () => ESCRITURAS,
+    writes: () => sessionStore.writes,
     activePreferences: () => prefsActivas(),
-    dayProposals: () => RPROP,
+    dayProposals: () => routesStore.dayProposals,
     rememberProposal: (key, selection) => {
-      PROPUESTAS ?? (PROPUESTAS = {});
-      PROPUESTAS[key] = selection;
+      var _a;
+      (_a = routesStore).proposals ?? (_a.proposals = {});
+      routesStore.proposals[key] = selection;
     }
   };
   var treePainters = {
@@ -29710,7 +30290,10 @@
   }
   function menuLabelText(button3) {
     const setTip = (value27) => {
-      if (button3.dataset.tip) button3.dataset.tip = value27;
+      if (button3.dataset.tip) {
+        button3.dataset.tip = value27;
+        button3.setAttribute("aria-label", value27);
+      }
     };
     const label = button3.querySelector(".mllab, b, em, small, .lb");
     if (label && !label.querySelector("svg")) return { get: () => (label.textContent ?? "").trim(), set: (value27) => {
@@ -30114,7 +30697,7 @@
   };
   async function search4(query) {
     try {
-      const response = await fetch(`${NOMINATIM}/search?format=json&addressdetails=1&limit=5&countrycodes=es&${query}`);
+      const response = await fetch(`${NOMINATIM}/search?format=json&addressdetails=1&limit=5${countryCode() ? `&countrycodes=${countryCode()}` : ""}&${query}`);
       return response.ok ? await response.json() : [];
     } catch {
       return [];
@@ -30335,53 +30918,53 @@
     // ---- Session, profile and plan
     db: () => db,
     rpc: (name, params2) => RPC_ORIG(name, params2),
-    profile: () => PERFIL ?? null,
-    users: () => USUARIOS ?? [],
+    profile: () => sessionStore.profile ?? null,
+    users: () => settingsStore.users ?? [],
     roleCan: (role, capability) => roleCan(role, capability),
-    currentPlan: () => PLAN_ACTUAL,
+    currentPlan: () => sessionStore.plan,
     plans: () => PLANES,
     planPrice: (plan3) => precioPlan(plan3),
     billingReadOnly: () => facConsulta(),
     notificationTypes: () => TIPOS_NOTIF,
     sectionTitle: (section2) => TITULO_PEDSEC[section2]?.[0],
     openPlanSettings: () => {
-      CFG_SEC = "plan";
+      settingsStore.section = "plan";
       ir("config");
     },
-    paymentState: () => PAGO_ESTADO,
+    paymentState: () => ordersStore.paymentState,
     impersonationKey: () => SKEY,
     profileKey: () => PKEY,
-    accessLost: () => ACCESO_FUERA,
+    accessLost: () => sessionStore.accessOut,
     setAccessLost: () => {
-      ACCESO_FUERA = true;
+      sessionStore.accessOut = true;
     },
-    accessCheckedAt: () => ACCESO_MIRADO,
+    accessCheckedAt: () => sessionStore.accessChecked,
     setAccessCheckedAt: (time) => {
-      ACCESO_MIRADO = time;
+      sessionStore.accessChecked = time;
     },
     backToMySession: () => backToMySession(),
     isProfessionalPortal: () => ES_MEDICO(),
     // ---- Company words, states and language
-    terms: () => TERMINOS ?? {},
-    brandLabel: () => (AJUSTES.marca ?? {}).etiqueta,
+    terms: () => sessionStore.terms ?? {},
+    brandLabel: () => (settingsStore.settings.marca ?? {}).etiqueta,
     isFree: (order, total2) => Boolean(sinCargoP(order, total2)),
-    commercialStates: () => ESTADOS_DEF,
-    language: () => IDIOMA,
+    commercialStates: () => sessionStore.commercialStates,
+    language: () => sessionStore.language,
     setLanguage: (language) => {
-      IDIOMA = language;
+      sessionStore.language = language;
     },
-    translationMap: () => MAPA_I18N ?? null,
+    translationMap: () => sessionStore.translationMap ?? null,
     setTranslationMap: (map2) => {
-      MAPA_I18N = map2;
+      sessionStore.translationMap = map2;
     },
     greetings: () => SALUDOS,
     // ---- Screens and windows
-    currentScreen: () => TAB,
+    currentScreen: () => navigationStore.screen,
     appVersion: () => VERSION_APP,
     brandName: () => MARCA.nombre,
-    versionSeenAt: () => VERSION_VISTA,
+    versionSeenAt: () => sessionStore.versionSeen,
     setVersionSeenAt: (time) => {
-      VERSION_VISTA = time;
+      sessionStore.versionSeen = time;
     },
     trail: () => RASTRO,
     toast: (message4, isError = false) => {
@@ -30417,17 +31000,17 @@
       panelNotificaciones(list);
     },
     setUnreadNotifications: (count2) => {
-      NOTIF_N = count2;
+      settingsStore.notificationCount = count2;
     },
-    liveChannel: () => VIVO,
+    liveChannel: () => sessionStore.live,
     setLiveChannel: (channel) => {
-      VIVO = channel;
+      sessionStore.live = channel;
     },
     repaintPortal: (isCentre4) => {
       if (isCentre4 && typeof centroPintar === "function") centroPintar();
       else portalMedico();
     },
-    shownAccount: () => FICHA_ID,
+    shownAccount: () => accountsStore.shownId,
     refreshCardPortal: (id) => {
       window.delcos.screens.accounts.refreshPortal(id);
     },
@@ -30435,35 +31018,35 @@
     forgetReadCache: () => {
       RC.clear();
       RC_VUELO.clear();
-      RC_EPOCA++;
+      sessionStore.cacheEpoch++;
     },
     forgetSchemes: () => {
-      ESQUEMAS = [];
+      homeStore.commissionSchemes = [];
     },
-    writeCount: () => ESCRITURAS,
-    pendingReads: () => PEND,
-    arrivedVia: () => VIA_IR,
+    writeCount: () => sessionStore.writes,
+    pendingReads: () => navigationStore.pendingReads,
+    arrivedVia: () => navigationStore.via,
     moduleCache: (module) => CACHE_MOD[module],
     moduleState: (module) => ESTADO_MOD[module]?.(),
-    agendaPreset: () => TD_PRESET,
+    agendaPreset: () => agendaStore.presetDay,
     setAgendaPreset: (value27) => {
-      TD_PRESET = value27;
+      agendaStore.presetDay = value27;
     },
     setLastAgendaDay: (day, data) => {
-      TD_ULTIMO = { fecha: day, data };
+      agendaStore.lastPaintedDay = { fecha: day, data };
     },
     rememberAgendaDay: (day, data) => {
       AG_DIAS_DATOS[day] = data;
     },
     peekAgendaRange: (params2) => window.delcos.screens.agenda.data.peekRange(params2),
     setHomeData: (panel, charts) => {
-      KV_INI = panel;
-      KV_GRAF = charts;
+      homeStore.panel = panel;
+      homeStore.charts = charts;
     },
     ordersSort: () => HT_ORDEN.peds2,
-    visitDraft: () => VISITA_ACTUAL,
+    visitDraft: () => accountsStore.currentVisit,
     setVisitDraft: (value27) => {
-      VISITA_ACTUAL = value27;
+      accountsStore.currentVisit = value27;
     },
     sampleError: (result) => muestraError(result),
     uploadVisitPhotos: (activity, photos) => subirFotosVisita(activity, photos),
@@ -30471,7 +31054,7 @@
     isIos: () => ES_IOS,
     isAndroid: () => ES_ANDROID,
     km: (from2, to) => km(from2, to),
-    routePlan: () => PLAN,
+    routePlan: () => routesStore.plan,
     paintRoutePlan: () => {
       pintarPlan();
     },
@@ -30638,7 +31221,7 @@
   var today = () => todayIso();
   var plusDays = (isoDate, days) => addDays(isoDate, days);
   var mondayOfWeek = (isoDate) => mondayOf(isoDate);
-  var minutesToTime = (minutes2) => `${String(Math.floor(minutes2 / 60) % 24).padStart(2, "0")}:${String(Math.round(minutes2) % 60).padStart(2, "0")}`;
+  var minutesToTime = (minutes2) => formatMinutes(minutes2);
   var timeToMinutes = (time) => time ? Number(String(time).slice(0, 2)) * 60 + Number(String(time).slice(3, 5)) : null;
   var rangeBuilders = (base) => {
     const year = base.getFullYear(), month = base.getMonth(), quarter = Math.floor(month / 3);
@@ -30732,42 +31315,6 @@
     ["pers", t("core.periods.custom")]
   ];
 
-  // src/app/services/money.ts
-  var money_exports = {};
-  __export(money_exports, {
-    AMOUNT_FIELD: () => AMOUNT_FIELD,
-    VAT_RATES: () => VAT_RATES,
-    duration: () => duration,
-    euros: () => euros,
-    eurosRounded: () => eurosRounded,
-    eurosWeb: () => eurosWeb,
-    isVatField: () => isVatField,
-    number: () => number,
-    percent: () => percent,
-    round2: () => round22,
-    vatOf: () => vatOf
-  });
-  var number = (value27) => formatNumber(value27 || 0);
-  var duration = (milliseconds) => formatDuration(milliseconds);
-  var euros = (value27) => Number(value27 || 0).toLocaleString("es", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
-  var round22 = (value27) => Math.round((Number(value27) || 0) * 100) / 100;
-  var eurosRounded = (value27) => euros(round22(value27));
-  var percent = (part, whole2) => whole2 ? Math.round(part / whole2 * 100) : 0;
-  var VAT_RATES = [
-    [21, t("core.vat.general")],
-    [10, t("core.vat.reduced")],
-    [4, t("core.vat.superReduced")],
-    [0, t("core.vat.exempt")]
-  ];
-  var labelText = (input12) => input12.id ? document.querySelector(`label[for="${input12.id}"]`)?.textContent ?? "" : "";
-  var isVatField = (input12) => /iva/i.test(`${input12.id} ${input12.dataset.f ?? ""} ${input12.name}`) || /\bIVA\s*\(%\)|tipo de iva/i.test(labelText(input12));
-  var AMOUNT_FIELD = /imp|importe|total|base|precio|pvp|coste|cobro|con_iva|conIva|sin_iva/i;
-  var vatOf = (amount3) => Math.round(amount3 * 21) / 100;
-  var eurosWeb = (value27) => {
-    const text5 = euros(value27);
-    return Math.round(Number(value27) * 100) % 100 === 0 ? text5.replace(/,00(?=\s?€)/, "") : text5;
-  };
-
   // src/app/services/files.ts
   var files_exports = {};
   __export(files_exports, {
@@ -30793,8 +31340,8 @@
   var NOTICE_DELAY_MS = 2600;
   var THUMB_MAX = 120;
   var KB = 1024;
-  var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-  var XLSX_HASH = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
+  var XLSX_URL = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+  var XLSX_HASH = "sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT";
   function download2() {
     coreLegacy.toast(t("core.files.downloadOff"), true);
   }
@@ -31029,29 +31576,29 @@
 
   // src/app/legacy/billing2-bridge.ts
   var billing2Legacy = {
-    settings: () => AJUSTES,
-    loadSettings: () => cargarAjustes(),
-    products: () => PRODUCTOS,
-    services: () => SERVICIOS,
+    settings: () => settingsStore.settings,
+    loadSettings: () => loadSettings(),
+    products: () => productsStore.products,
+    services: () => productsStore.services,
     loadProducts: () => cargarProductos(),
     refreshProducts: () => {
       void refrescarProductos();
     },
     logo: () => logoData(),
-    roundLogo: () => Boolean(LOGO_CIRC),
+    roundLogo: () => Boolean(sessionStore.roundLogo),
     rawRpc: (name, params2) => RPC_ORIG(name, params2),
     /** guardar_ajuste that also refreshes the copies of other tabs (legado 156's v2.342 write). */
     saveSettingEverywhere: (name, params2) => RPC_V2342(name, params2),
-    pdfChosen: () => PDF_ELEGIDO,
+    pdfChosen: () => billingStore.pdfChosen,
     setPdfChosen: (id) => {
-      PDF_ELEGIDO = id;
+      billingStore.pdfChosen = id;
     },
-    pdfEditing: () => PDF_EDITANDO,
+    pdfEditing: () => billingStore.pdfEditing,
     setPdfEditing: (id) => {
-      PDF_EDITANDO = id;
+      billingStore.pdfEditing = id;
     },
     setInvoiceMailChosen: (id) => {
-      PLANT_ELEGIDA.factura = id;
+      billingStore.chosenTemplates.factura = id;
     },
     mailTemplate: (kind, part, values2) => plantillaCorreo(kind, part, values2),
     mailValues: (values2) => varsCorreo(values2),
@@ -31067,15 +31614,15 @@
     openDesigner: () => {
       void disenoPDF();
     },
-    paymentState: () => PAGO_ESTADO,
-    currentPlan: () => String(PLAN_ACTUAL?.plan ?? ""),
+    paymentState: () => ordersStore.paymentState,
+    currentPlan: () => String(sessionStore.plan?.plan ?? ""),
     freeOfCharge: (order, total2) => Boolean(sinCargoP(order, total2)),
     configKey: () => CFG_KEY,
-    pageTab: (page) => PAG_TAB[page],
-    productStates: () => ESTADO_PROD,
-    promoted: () => PROMO_PRODS,
+    pageTab: (page) => navigationStore.pageTabs[page],
+    productStates: () => productsStore.productStates,
+    promoted: () => productsStore.promoted,
     setPromoted: (list) => {
-      PROMO_PRODS = list;
+      productsStore.promoted = list;
     },
     productUses: () => PROD_USOS,
     loadCatalogs: () => {
@@ -31259,7 +31806,7 @@
   var COMPANY_GAP = 4.2;
   var logoSizeOf = (design) => LOGO_SIZES[design.logoTam] ?? LOGO_SIZES.m ?? 0;
   var dmy = (isoDate) => isoDate ? isoDate.split("-").reverse().join("/") : "";
-  var pdfEuros = (value27) => `${(Math.round((Number(value27) || 0) * 100) / 100).toLocaleString(t("dates.locale"), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`;
+  var pdfEuros = (value27) => `${round2(value27).toLocaleString(t("dates.locale"), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`;
   var documentTitle = (design) => orFallback(design.titulo, t("billingMore.pdf.title"));
   var companyName = (company) => orFallback(company.razon_social, appName());
   async function drawLogo(drawing) {
@@ -32480,12 +33027,12 @@
   // src/app/legacy/bridge.ts
   var legacyDb = () => db;
   var callRpc = (name, params2 = {}) => RPC_ORIG(name, params2);
-  var currentScreen = () => TAB;
+  var currentScreen = () => navigationStore.screen;
   var goTo = (screen3) => {
     ir(screen3);
   };
   var goToOrders = (section2) => {
-    PEDSEC = section2;
+    ordersStore.section = section2;
     ir("ventas");
   };
   function term(word, options5 = {}) {
@@ -32504,11 +33051,11 @@
     canReviewDuplicates: () => typeof puedeDuplicados === "function" && puedeDuplicados()
   };
   var homeCache = {
-    panel: () => KV_INI,
+    panel: () => homeStore.panel,
     setPanel: (value27) => {
-      KV_INI = value27;
+      homeStore.panel = value27;
     },
-    charts: () => KV_GRAF
+    charts: () => homeStore.charts
   };
   var appointments = {
     ofDay: citasDelDia,
@@ -32519,13 +33066,13 @@
   var indicatorCatalog = {
     definitions: () => KPI_CAT,
     settings: () => kpiConfig(),
-    allowed: (definition) => kpiPermitido(definition),
+    allowed: (definition) => indicatorAllowed(definition),
     help: (id) => AYUDA_KPI[id],
     icon: (id) => KPI_ICO[id],
     description: (id) => KPI_TXT[id]
   };
   var commercialStates = {
-    all: () => ESTADOS_DEF,
+    all: () => sessionStore.commercialStates,
     color: (state2) => EST_COL[state2]
   };
   var cachedRpc = (name, params2, key) => rpcCache(name, params2, key);
@@ -32540,25 +33087,25 @@
   };
   var isMobile = () => ES_MOVIL();
   var legacyAgenda = {
-    selectedDate: () => AG_FECHA,
+    selectedDate: () => agendaStore.selectedDate,
     /** The person whose agenda is shown (null: everybody the user sees, or the user). */
     userFilter: () => agendaUserFilter(),
-    viewedUserId: () => AG_VISTA?.id ?? null,
+    viewedUserId: () => agendaStore.viewedUser?.id ?? null,
     showDay: (isoDate) => {
       void agVerDia(isoDate);
     },
     isDayView: () => agN(),
-    metrics: () => AG_MET,
+    metrics: () => agendaStore.metrics,
     setMetrics: (value27) => {
-      AG_MET = value27;
+      agendaStore.metrics = value27;
     },
     /** Today's appointments as painted in «Tu día», and the day they were loaded for. */
-    dayAppointments: () => TD_CITAS,
-    loadedDay: () => TD_ULTIMO?.fecha ?? null
+    dayAppointments: () => agendaStore.dayAppointments,
+    loadedDay: () => agendaStore.lastPaintedDay?.fecha ?? null
   };
   var agendaSuggestions = {
-    forDay: () => AG_SUG,
-    pending: () => AG_PEND ?? []
+    forDay: () => agendaStore.suggestions,
+    pending: () => agendaStore.pendingSuggestions ?? []
   };
   var agendaActions = {
     openAccount: (id) => {
@@ -32569,45 +33116,45 @@
     }
   };
   var sidePanel = {
-    context: () => HERR_CTX,
+    context: () => accountsStore.toolsContext,
     setContext: (value27) => {
-      HERR_CTX = value27;
+      accountsStore.toolsContext = value27;
     }
   };
   var legacyAgendaParts = {
-    mode: () => AG_MODO,
+    mode: () => agendaStore.mode,
     blockedDays: (fromIsoDate2, days) => agBloqueos(fromIsoDate2, days)
   };
   var agendaSources = {
     /** The person whose agenda is shown (the user, or the colleague administration is looking at). */
-    ownerId: () => agUid(),
-    isOwnAgenda: () => agUid() === PERFIL.id,
-    stripStart: () => CINTA_INI,
+    ownerId: () => agendaOwnerId(),
+    isOwnAgenda: () => agendaOwnerId() === sessionStore.profile.id,
+    stripStart: () => agendaStore.stripStart,
     /** «Tu día» of this date arrives already loaded (from Inicio). */
-    hasPresetDay: (isoDate) => TD_PRESET?.fecha === isoDate,
+    hasPresetDay: (isoDate) => agendaStore.presetDay?.fecha === isoDate,
     dayTasks: (isoDate) => tareasDelDia(isoDate),
     blockedDays: (fromIsoDate2, toIsoDate2) => bloqueadosSemanaBase(fromIsoDate2, toIsoDate2),
     setSuggestions: (isoDate, suggestions) => {
-      AG_PEND = suggestions.pend;
-      AG_SUG = { fecha: isoDate, toca: suggestions.toca, centros: suggestions.centros };
+      agendaStore.pendingSuggestions = suggestions.pend;
+      agendaStore.suggestions = { fecha: isoDate, toca: suggestions.toca, centros: suggestions.centros };
     }
   };
   var stripState = {
-    start: () => CINTA_INI,
+    start: () => agendaStore.stripStart,
     setStart: (isoDate) => {
-      CINTA_INI = isoDate;
+      agendaStore.stripStart = isoDate;
     },
-    weekOpen: () => AG_SEM_ABIERTA,
+    weekOpen: () => agendaStore.weekOpen,
     setWeekOpen: (open2) => {
-      AG_SEM_ABIERTA = open2;
+      agendaStore.weekOpen = open2;
     }
   };
   var agendaState = {
     setMode: (mode) => {
-      AG_MODO = mode;
+      agendaStore.mode = mode;
     },
     setSelectedDate: (isoDate) => {
-      AG_FECHA = isoDate;
+      agendaStore.selectedDate = isoDate;
     },
     /** The last day the agenda was opened on «today» (to jump to the new today after midnight). */
     lastTodaySeen: () => AG_HOY_VISTO,
@@ -32615,20 +33162,20 @@
       AG_HOY_VISTO = isoDate;
     },
     forgetDayTasks: () => {
-      TAREAS_DIA = null;
+      agendaStore.dayTasks = null;
     },
     /** Someone asked to open Agenda straight on «Repartir la semana». */
     takeWeekPlanRequest: () => {
-      const asked2 = ABRIR_PLAN_SEMANA;
-      ABRIR_PLAN_SEMANA = false;
+      const asked2 = agendaStore.openWeekPlan;
+      agendaStore.openWeekPlan = false;
       return asked2;
     },
-    viewed: () => AG_VISTA
+    viewed: () => agendaStore.viewedUser
   };
   var salesTeam = {
-    members: () => COMS,
+    members: () => homeStore.salesTeam,
     load: () => cargarComerciales(),
-    currentUserId: () => PERFIL.id,
+    currentUserId: () => sessionStore.profile.id,
     showAgendaOf: (userId) => {
       void showAgendaOf(userId);
     }
@@ -32641,9 +33188,9 @@
     }
   };
   var weekPlanner = {
-    draft: () => SEM_BORRADOR,
+    draft: () => routesStore.weekDraft,
     discardDraft: () => {
-      SEM_BORRADOR = null;
+      routesStore.weekDraft = null;
     },
     /** Estimated end of a day (minutes) and the latest return time. */
     estimateDay: (list, isoDate) => estimarDia(list, isoDate),
@@ -32665,10 +33212,10 @@
   };
   var yourDayLegacy = {
     setDayAppointments: (list) => {
-      TD_CITAS = list;
+      agendaStore.dayAppointments = list;
     },
     estimateDay: (list, isoDate) => estimarDia(list, isoDate),
-    stopInfo: () => TD_INFO,
+    stopInfo: () => agendaStore.stopInfo,
     explainWarning: (info) => explicarAviso(info),
     windowsText: (windows) => txtVentanas(windows),
     canRecordOn: (isoDate) => puedeRegistrarEnDia(isoDate),
@@ -32695,10 +33242,10 @@
       void abrirVisita(accountId);
     },
     openAccountFromCentre: (accountId, centre) => {
-      FICHA_CENTRO = centre ?? null;
+      accountsStore.cardCentre = centre ?? null;
       void abrirFicha(accountId);
     },
-    lastDayData: () => TD_ULTIMO && TD_ULTIMO.fecha === AG_FECHA ? TD_ULTIMO.data ?? null : null,
+    lastDayData: () => agendaStore.lastPaintedDay && agendaStore.lastPaintedDay.fecha === agendaStore.selectedDate ? agendaStore.lastPaintedDay.data ?? null : null,
     isJoinedDayView: () => agUnida(),
     /** Opens the sheet through its global name, so «‹ Volver» (legado 126) records it. */
     openSheet: (item) => {
@@ -32719,22 +33266,22 @@
     },
     /** The next «Tu día» paint of `isoDate` uses this data (no network), and it becomes the last painted day. */
     preset: (isoDate, data) => {
-      TD_PRESET = { fecha: isoDate, data };
-      TD_ULTIMO = { fecha: isoDate, data };
+      agendaStore.presetDay = { fecha: isoDate, data };
+      agendaStore.lastPaintedDay = { fecha: isoDate, data };
     },
-    lastPainted: (isoDate) => TD_ULTIMO?.fecha === isoDate ? TD_ULTIMO.data ?? null : null,
+    lastPainted: (isoDate) => agendaStore.lastPaintedDay?.fecha === isoDate ? agendaStore.lastPaintedDay.data ?? null : null,
     setLastPainted: (isoDate, data) => {
-      TD_ULTIMO = { fecha: isoDate, data };
+      agendaStore.lastPaintedDay = { fecha: isoDate, data };
     },
     /** Every day read alone (agenda_rango of one day), as it arrived. */
     dayData: (isoDate) => AG_DIAS_DATOS[isoDate],
     /** What is saved from now on is already shown: closing a dialog will not refresh again. */
     markDialogSeen: () => {
-      DLG_EPOCA = RC_EPOCA;
+      agendaStore.dialogEpoch = sessionStore.cacheEpoch;
     },
-    dayTasks: (isoDate) => TAREAS_DIA?.f === isoDate ? TAREAS_DIA.l : null,
+    dayTasks: (isoDate) => agendaStore.dayTasks?.f === isoDate ? agendaStore.dayTasks.l : null,
     setDayTasks: (isoDate, list) => {
-      TAREAS_DIA = list ? { f: isoDate, l: list } : null;
+      agendaStore.dayTasks = list ? { f: isoDate, l: list } : null;
     }
   };
   var editorLegacy = {
@@ -32744,19 +33291,19 @@
     recentContacts: (accountId, isoDate) => recientesDe([accountId], isoDate).then((found) => found[accountId] ?? []),
     recentText: (list) => txtReciente(list),
     turnOffRecentNotice: () => guardarAvisoRevisita({ ...avisoRevisita(), on: false }),
-    centreFromCard: () => FICHA_CENTRO,
-    viewedUserId: () => currentScreen() === "agenda" && AG_VISTA ? AG_VISTA.id : null
+    centreFromCard: () => accountsStore.cardCentre,
+    viewedUserId: () => currentScreen() === "agenda" && agendaStore.viewedUser ? agendaStore.viewedUser.id : null
   };
   var accountCardLegacy = {
-    shownId: () => FICHA_ID,
+    shownId: () => accountsStore.shownId,
     setShownId: (id) => {
-      FICHA_ID = id;
+      accountsStore.shownId = id;
     },
     forgetPatients: () => {
-      FICHA_PAC = null;
+      accountsStore.cardPatients = null;
     },
     forgetCentreFromAppointment: () => {
-      FICHA_CENTRO = null;
+      accountsStore.cardCentre = null;
     },
     planIncludes: (section2) => planIncluyeSeccion(section2),
     canEditType: (type) => permissions_exports.canEditType(type),
@@ -32808,7 +33355,7 @@
   var cardSectionsLegacy = {
     can: (capability) => puede(capability),
     /** Sales level of the user (area V). */
-    salesArea: () => PERFIL.areas?.V ?? 0,
+    salesArea: () => sessionStore.profile.areas?.V ?? 0,
     roleCan: (role, capability) => roleCan(role, capability),
     openPatient: (id) => {
       void fichaPaciente(id);
@@ -32830,8 +33377,8 @@
     hasPortal: () => hayExtra("portal"),
     materialPill: (state2) => pillMaterial(state2),
     products: async () => {
-      if (!PRODUCTOS.length) await cargarProductos();
-      return PRODUCTOS;
+      if (!productsStore.products.length) await cargarProductos();
+      return productsStore.products;
     },
     euros: (value27) => eurI(value27)
   };
@@ -32844,7 +33391,7 @@
       nuevoUsuario(preset);
     },
     forgetAccessCache: () => {
-      MED_ACCESO = null;
+      accountsStore.portalAccess = null;
     },
     /** A user is created with a separate client (no session kept), as the legacy sign-up did. */
     signUp: async (email, password, name) => {
@@ -32856,7 +33403,7 @@
   var accountListLegacy = {
     // eslint-disable-next-line id-length -- F is the legacy global state of the filters (a top-level const, not on window)
     filters: () => F,
-    mapMode: () => MODO_MAPA,
+    mapMode: () => accountsStore.mapMode,
     /** The database order key of a column (only the sortable ones). */
     sortKey: (column) => ORD_DIR[column],
     fieldChips: (state2) => clasChips("medico", state2),
@@ -32871,9 +33418,9 @@
     fieldText: (field22, value27) => campoTexto(field22, value27),
     firstName: (name) => nombrePila(name),
     /** Platform access by account (loaded once; null until it arrives). */
-    accessOf: () => MED_ACCESO,
+    accessOf: () => accountsStore.portalAccess,
     loadAccess: () => loadAccountAccess(),
-    storageKey: () => `dlc-cols-${PERFIL?.id ?? ""}`
+    storageKey: () => `dlc-cols-${sessionStore.profile?.id ?? ""}`
   };
   var eventsLegacy = {
     repaintList: () => {
@@ -32888,44 +33435,44 @@
     openOrder: (id) => {
       void verPedido(id);
     },
-    currentUserName: () => PERFIL.nombre ?? ""
+    currentUserName: () => sessionStore.profile.nombre ?? ""
   };
   var cycleLegacy = {
-    loadSettings: () => cargarAjustes(),
-    setting: (key) => AJUSTES[key],
+    loadSettings: () => loadSettings(),
+    setting: (key) => settingsStore.settings[key],
     setSetting: (key, value27) => {
-      AJUSTES[key] = value27;
+      settingsStore.settings[key] = value27;
     },
     openTab: (tab) => {
-      PAG_TAB.ciclo = tab;
+      navigationStore.pageTabs.ciclo = tab;
       cargarPagina("ciclo");
     }
   };
   var equipmentLegacy = {
-    warningDays: () => CON_AVISOS,
+    warningDays: () => homeStore.contractWarningDays,
     setWarningDays: (days) => {
-      CON_AVISOS = days;
+      homeStore.contractWarningDays = days;
     },
     contracts: () => EQ_CONTRATOS,
     loadProducts: async () => {
-      if (!PRODUCTOS.length) await cargarProductos();
+      if (!productsStore.products.length) await cargarProductos();
     }
   };
   var tendersLegacy = {
-    warningDays: () => CON_AVISOS,
+    warningDays: () => homeStore.contractWarningDays,
     setWarningDays: (days) => {
-      CON_AVISOS = days;
+      homeStore.contractWarningDays = days;
     }
   };
   var purchasesLegacy = {
-    section: () => PEDSEC,
+    section: () => ordersStore.section,
     canBuy: () => Boolean(permissions_exports.canBuy()),
     loadSuppliers: () => cargarProveedores(),
-    suppliers: () => PROVEEDORES,
+    suppliers: () => ordersStore.suppliers,
     loadStores: () => cargarAlmacenes(),
-    stores: () => ALMACENES,
+    stores: () => ordersStore.stores,
     loadProducts: () => cargarProductos(),
-    products: () => PRODUCTOS,
+    products: () => productsStore.products,
     /** The batch fields of «Recibir mercancía» (shared with the stock entries of Productos). */
     batchFields: (line3, units2, storeId) => loteRecepcion(line3, units2, storeId),
     reloadSales: () => {
@@ -32942,10 +33489,10 @@
       registrarError("error", message4);
     },
     countWrite: () => {
-      ESCRITURAS++;
+      sessionStore.writes++;
     },
     showHistory: () => {
-      CFG_SUB = "historial";
+      settingsStore.subsection = "historial";
     }
   };
   var manualLegacy = {
@@ -32960,22 +33507,22 @@
     canOpenModule: (id) => puedeModulo(id),
     moduleCount: () => Object.keys(MODULO_AREA).filter(puedeModulo).length,
     settingsOf: (id) => CFG_DE_MODULO[id],
-    profile: () => PERFIL,
+    profile: () => sessionStore.profile,
     planIncludes: (module) => planIncluye(module),
     cheapestPlan: (module) => planMinimo(module)?.nombre,
     showPlanNotice: (module) => {
       avisoPlan(module);
     },
     go: (screen3, configSection) => {
-      if (configSection !== void 0) CFG_SEC = configSection;
+      if (configSection !== void 0) settingsStore.section = configSection;
       ir(screen3);
     },
     vocabulary: () => ({ empresa: nombreApp(), terminos: Object.fromEntries(Object.keys(TERM_DEF).map((key) => [key, terminoDe(key)])) }),
     isIos: () => ES_IOS,
-    back: () => MANUAL_VUELTA,
+    back: () => homeStore.manualReturn,
     takeBack: () => {
-      const back = MANUAL_VUELTA;
-      MANUAL_VUELTA = null;
+      const back = homeStore.manualReturn;
+      homeStore.manualReturn = null;
       return back;
     },
     screenName: (screen3) => nombrePantalla(screen3),
@@ -33000,9 +33547,9 @@
     setCatalog: (key, list) => {
       CAT[key] = list;
     },
-    products: () => PRODUCTOS,
+    products: () => productsStore.products,
     loadProducts: async () => {
-      if (!PRODUCTOS.length) await cargarProductos();
+      if (!productsStore.products.length) await cargarProductos();
     },
     defaultProduct: () => productoPorDefecto(),
     searchClients: (query) => buscarClientes(query),
@@ -33014,7 +33561,7 @@
     },
     /** The order saved next is linked to this opportunity (legado 038). */
     setPendingCall: (id) => {
-      LLAMADA_PEND = id;
+      ordersStore.pendingCall = id;
     },
     /** The account picker; what is typed without choosing is kept in element.__texto. */
     pickReference: (options5) => {
@@ -33027,11 +33574,11 @@
     periodOf: (element4) => Reflect.get(element4 ?? {}, "__rango")?.() ?? { desde: null, hasta: null },
     barChart: (items, format) => rankingBars(items, format),
     emptyChart: (text5) => vacioGrafico(text5),
-    page: () => LLPAG,
+    page: () => ordersStore.callsPage,
     setPage: (page) => {
-      LLPAG = page;
+      ordersStore.callsPage = page;
     },
-    ordersSection: () => PEDSEC,
+    ordersSection: () => ordersStore.section,
     repaintList: () => {
       void pintarLlamadas();
     }
@@ -33136,9 +33683,9 @@
 
   // src/app/legacy/components-bridge.ts
   var componentsLegacy = {
-    popup: () => SELPOP,
+    popup: () => navigationStore.pickerPopup,
     setPopup: (popup) => {
-      SELPOP = popup;
+      navigationStore.pickerPopup = popup;
     },
     showValue: (input12) => {
       visibleValue(input12);
@@ -33149,10 +33696,10 @@
     emitChange: (input12) => {
       emitir(input12);
     },
-    pending: () => MEJ_PEND,
-    flushScheduled: () => Boolean(MEJ_RAF),
+    pending: () => navigationStore.pendingEnhancements,
+    flushScheduled: () => Boolean(navigationStore.enhanceFrame),
     setFlushScheduled: (scheduled) => {
-      MEJ_RAF = scheduled ? 1 : 0;
+      navigationStore.enhanceFrame = scheduled ? 1 : 0;
     },
     isVatField: (input12) => Boolean(ES_IVA(input12)),
     vatSelector: (input12) => {
@@ -33160,7 +33707,7 @@
     },
     touchScreen: () => PANTALLA_TACTIL,
     weekdayLetter: (isoDate) => LETRA_DIA(isoDate),
-    readOnlyCompany: () => Boolean(PAGO_ESTADO?.solo_lectura),
+    readOnlyCompany: () => Boolean(ordersStore.paymentState?.solo_lectura),
     hasStartPoint: () => Boolean(prefsActivas().salida),
     helpAnchors: () => ANCLAS_AYUDA,
     manualAnchors: () => MANUAL_ANCLA,
@@ -33174,16 +33721,16 @@
       PAC.pagina = 0;
       void listaPacientes();
     },
-    orderFilters: () => PEDF,
+    orderFilters: () => ordersStore.filters,
     reloadOrders: () => {
-      PEDPAG = 0;
+      ordersStore.page = 0;
       void listaPedidos();
     },
-    productFilters: () => PRODF,
+    productFilters: () => productsStore.filters,
     reloadProducts: () => {
       void pintarProductos();
     },
-    productsSection: () => PSEC
+    productsSection: () => productsStore.section
   };
 
   // src/app/components/charts/month-bars.ts
@@ -34323,7 +34870,7 @@
     name: "v2.300 · a new navigation empties the «Volver» stack",
     before: () => {
       VUELTA.length = 0;
-      VISTA = null;
+      navigationStore.view = null;
     }
   };
   var professionalPortalOnly = {
@@ -34335,7 +34882,7 @@
   var loadingComet = {
     name: "v2.267 · the loading line at the top when the screen changes",
     before: (nav) => {
-      if (nav.target && nav.target !== TAB) safely2(cometa);
+      if (nav.target && nav.target !== navigationStore.screen) safely2(cometa);
     }
   };
   var watchListPage = {
@@ -34363,7 +34910,7 @@
   var rememberManualReturn = {
     name: "v2.224 · entering the manual remembers where to come back to",
     before: (nav) => {
-      if (nav.target === "manual" && TAB !== "manual") MANUAL_VUELTA = { tab: TAB, y: window.scrollY || 0 };
+      if (nav.target === "manual" && navigationStore.screen !== "manual") homeStore.manualReturn = { tab: navigationStore.screen, y: window.scrollY || 0 };
     }
   };
   var NAVIGATION_START_EVENT = "delcos:navigation-start";
@@ -34374,34 +34921,34 @@
     }
   };
   function configKey(target) {
-    if (target === "config") return claveCfgVieja(CFG_SEC, CFG_SUB);
-    if (target === "perfil") return PAG_TAB.perfil === "notif" ? "notif" : "datos";
-    if (target === "organizacion" || target === "empresa") return `o.${orFallback(PAG_TAB[target], "marca")}`;
+    if (target === "config") return claveCfgVieja(settingsStore.section, settingsStore.subsection);
+    if (target === "perfil") return navigationStore.pageTabs.perfil === "notif" ? "notif" : "datos";
+    if (target === "organizacion" || target === "empresa") return `o.${orFallback(navigationStore.pageTabs[target], "marca")}`;
     if (target === "plan") return "o.plan";
-    if (target === "usuarios") return PAG_TAB.usuarios === "roles" ? "roles" : "usuarios";
+    if (target === "usuarios") return navigationStore.pageTabs.usuarios === "roles" ? "roles" : "usuarios";
     return null;
   }
   var singleConfiguration = {
     name: "v2.215/v2.340 · profile, company, plan and users are parts of the single Configuración page",
     before: (nav) => {
-      if (nav.target === "config" && ["seguridad", "orgs"].includes(CFG_SEC ?? "")) return;
+      if (nav.target === "config" && ["seguridad", "orgs"].includes(settingsStore.section ?? "")) return;
       const key = configKey(nav.target);
       if (key === null) return;
       if (key) {
         CFG_KEY = key;
-        CFG_DETALLE = true;
+        settingsStore.detail = true;
       } else if (IR_DESDE_MENU_CFG) {
-        CFG_DETALLE = false;
+        settingsStore.detail = false;
         CFG_KEY = "datos";
       }
       if (nav.target !== "config") {
-        PAG_TAB.perfil = void 0;
-        PAG_TAB.organizacion = void 0;
-        PAG_TAB.empresa = void 0;
-        PAG_TAB.usuarios = void 0;
+        navigationStore.pageTabs.perfil = void 0;
+        navigationStore.pageTabs.organizacion = void 0;
+        navigationStore.pageTabs.empresa = void 0;
+        navigationStore.pageTabs.usuarios = void 0;
       }
-      CFG_SEC = "__cfg";
-      CFG_SUB = null;
+      settingsStore.section = "__cfg";
+      settingsStore.subsection = null;
       IR_DESDE_MENU_CFG = false;
       nav.target = "config";
     }
@@ -34423,11 +34970,11 @@
     before: (nav) => {
       const section2 = PANEL_SECCIONES.find((entry2) => entry2[0] === nav.target);
       if (section2) {
-        PAG_TAB.delcos = section2[1];
+        navigationStore.pageTabs.delcos = section2[1];
         nav.target = "delcos";
         return;
       }
-      if (MODO_PLATAFORMA && !PLATFORM_SCREENS.includes(nav.target)) nav.target = "delcos";
+      if (navigationStore.platformMode && !PLATFORM_SCREENS.includes(nav.target)) nav.target = "delcos";
     },
     after: (target) => {
       if (target === "delcos") markPlatformPanel();
@@ -34436,7 +34983,7 @@
   var stripeReturnToPlan = {
     name: "v2.167 · coming back from Stripe opens «Plan y suscripción»",
     before: (nav) => {
-      if (!PAGO_IR_PLAN || !PERFIL) return;
+      if (!PAGO_IR_PLAN || !sessionStore.profile) return;
       pagoAlPlan();
       if (!ES_MEDICO() && puedeOrganizacion()) nav.target = "plan";
     }
@@ -34444,7 +34991,7 @@
   var planSections = {
     name: "v2.152 · sections outside the contracted plan show the plan notice instead",
     before: (nav) => {
-      if (nav.target in PLAN_SECCIONES && PERFIL && !ES_MEDICO() && !planIncluyeSeccion(nav.target)) {
+      if (nav.target in PLAN_SECCIONES && sessionStore.profile && !ES_MEDICO() && !planIncluyeSeccion(nav.target)) {
         avisoPlan(nav.target);
         nav.blocked = true;
       }
@@ -34454,8 +35001,8 @@
     name: "v2.140 · Agenda from the menu always opens today",
     before: (nav) => {
       if (nav.target === "agenda" && IR_DESDE_MENU) {
-        AG_MODO = "dia";
-        AG_FECHA = hoyISO();
+        agendaStore.mode = "dia";
+        agendaStore.selectedDate = hoyISO();
       }
     }
   };
@@ -34464,11 +35011,11 @@
     before: (nav) => {
       const section2 = ALIAS_PEDIDOS[nav.target];
       if (section2 !== void 0) {
-        PEDSEC = section2;
+        ordersStore.section = section2;
         nav.target = "ventas";
         return;
       }
-      if (nav.target === "ventas" && IR_DESDE_MENU) PEDSEC = "ventas";
+      if (nav.target === "ventas" && IR_DESDE_MENU) ordersStore.section = "ventas";
     },
     after: (target) => {
       if (target === "ventas") markOrderSection();
@@ -34492,25 +35039,25 @@
   // src/app/core/navigation/steps-inner.ts
   var COMPANY_SECTIONS = ["__empresa", "empresa", "marca", "correo", "copias"];
   var MAIL_SECTIONS = ["correo", "copias"];
-  var screenSection = () => document.getElementById(`v-${TAB}`);
+  var screenSection = () => document.getElementById(`v-${navigationStore.screen}`);
   var configToOwnPages = {
     name: "v2.128 · team, security and organizations open their own pages",
     before: (nav) => {
-      if (nav.target === "config" && CFG_SEC === "equipo") {
-        PAG_TAB.usuarios = CFG_SUB === "roles" ? "roles" : "usuarios";
-        CFG_SEC = "inicio";
-        CFG_SUB = null;
+      if (nav.target === "config" && settingsStore.section === "equipo") {
+        navigationStore.pageTabs.usuarios = settingsStore.subsection === "roles" ? "roles" : "usuarios";
+        settingsStore.section = "inicio";
+        settingsStore.subsection = null;
         nav.target = "usuarios";
       }
-      if (nav.target === "config" && CFG_SEC === "seguridad" && puede("gestionar_plataforma")) {
-        PAG_TAB.delcos = CFG_SUB === "accesos" ? "accesos" : "auditoria";
-        CFG_SEC = "inicio";
-        CFG_SUB = null;
+      if (nav.target === "config" && settingsStore.section === "seguridad" && puede("gestionar_plataforma")) {
+        navigationStore.pageTabs.delcos = settingsStore.subsection === "accesos" ? "accesos" : "auditoria";
+        settingsStore.section = "inicio";
+        settingsStore.subsection = null;
         nav.target = "delcos";
       }
-      if (nav.target === "config" && CFG_SEC === "orgs" && puede("gestionar_plataforma")) {
-        PAG_TAB.delcos = "orgs";
-        CFG_SEC = "inicio";
+      if (nav.target === "config" && settingsStore.section === "orgs" && puede("gestionar_plataforma")) {
+        navigationStore.pageTabs.delcos = "orgs";
+        settingsStore.section = "inicio";
         nav.target = "delcos";
       }
     }
@@ -34524,16 +35071,16 @@
   var organizationPage = {
     name: "v2.121 · company and plan are parts of the Organización page (only for who may configure it)",
     before: (nav) => {
-      const fromConfig = nav.target === "config" && CFG_SEC !== null ? ORG_DESDE[CFG_SEC] : void 0;
+      const fromConfig = nav.target === "config" && settingsStore.section !== null ? ORG_DESDE[settingsStore.section] : void 0;
       if (nav.target === "empresa") {
-        PAG_TAB.organizacion = orFallback(PAG_TAB.empresa, "marca");
+        navigationStore.pageTabs.organizacion = orFallback(navigationStore.pageTabs.empresa, "marca");
         nav.target = "organizacion";
       } else if (nav.target === "plan") {
-        PAG_TAB.organizacion = "plan";
+        navigationStore.pageTabs.organizacion = "plan";
         nav.target = "organizacion";
       } else if (fromConfig) {
-        PAG_TAB.organizacion = orFallback(CFG_SUB !== null ? ORG_DESDE[CFG_SUB] : void 0, fromConfig);
-        CFG_SEC = "rutas";
+        navigationStore.pageTabs.organizacion = orFallback(settingsStore.subsection !== null ? ORG_DESDE[settingsStore.subsection] : void 0, fromConfig);
+        settingsStore.section = "rutas";
         nav.target = "organizacion";
       }
       if (nav.target === "organizacion" && !puedeOrganizacion()) nav.target = "inicio";
@@ -34570,10 +35117,10 @@
     }
   };
   function billingSection() {
-    const map2 = { fiscal: "empresa", series: "series", vf: "verifactu", fact: orFallback(FAC_ULTIMA, "empresa") };
-    const section2 = CFG_SEC ?? "";
-    if (!(map2[section2] ?? (section2 === "fact" ? map2[CFG_SUB ?? ""] : void 0))) return void 0;
-    return orFallback(map2[section2 === "fact" ? orFallback(CFG_SUB, "fact") : section2], "empresa");
+    const map2 = { fiscal: "empresa", series: "series", vf: "verifactu", fact: orFallback(billingStore.lastSection, "empresa") };
+    const section2 = settingsStore.section ?? "";
+    if (!(map2[section2] ?? (section2 === "fact" ? map2[settingsStore.subsection ?? ""] : void 0))) return void 0;
+    return orFallback(map2[section2 === "fact" ? orFallback(settingsStore.subsection, "fact") : section2], "empresa");
   }
   var billingSettings = {
     name: "v2.57 · fiscal data, series and VeriFactu open in Facturación",
@@ -34581,8 +35128,8 @@
       if (nav.target !== "config") return;
       const section2 = billingSection();
       if (section2 !== void 0) {
-        FSEC = section2;
-        CFG_SEC = "rutas";
+        billingStore.section = section2;
+        settingsStore.section = "rutas";
         nav.target = "facturacion";
       }
     }
@@ -34593,42 +35140,42 @@
       const section2 = screenSection();
       if (section2?.classList.contains("cargando-pend")) {
         section2.classList.remove("cargando-pend");
-        if (PEND > 0) section2.classList.add("cargando");
+        if (navigationStore.pendingReads > 0) section2.classList.add("cargando");
       }
     }
   };
   var markNavigationInProgress = {
     name: "v2.56 · VIA_IR tells the screens they are being opened by a navigation",
     before: (nav) => {
-      VIA_IR = nav.target;
+      navigationStore.via = nav.target;
     },
     cleanup: () => {
       setTimeout(() => {
-        VIA_IR = null;
+        navigationStore.via = null;
       }, 0);
     }
   };
   function companyTab() {
-    if (CFG_SUB !== null && MAIL_SECTIONS.includes(CFG_SUB)) return CFG_SUB;
-    if (CFG_SEC !== null && MAIL_SECTIONS.includes(CFG_SEC)) return CFG_SEC;
+    if (settingsStore.subsection !== null && MAIL_SECTIONS.includes(settingsStore.subsection)) return settingsStore.subsection;
+    if (settingsStore.section !== null && MAIL_SECTIONS.includes(settingsStore.section)) return settingsStore.section;
     return "marca";
   }
   var legacyConfigPages = {
     name: "v2.53 · notifications, company and plan have their own page; pages are loaded after switching",
     before: (nav) => {
-      if (nav.target === "config" && CFG_SEC === "notif") {
-        PAG_TAB.perfil = "notif";
-        CFG_SEC = "rutas";
+      if (nav.target === "config" && settingsStore.section === "notif") {
+        navigationStore.pageTabs.perfil = "notif";
+        settingsStore.section = "rutas";
         nav.target = "perfil";
       }
-      if (nav.target === "config" && ["perfil", "prefs"].includes(CFG_SEC ?? "")) CFG_SEC = "rutas";
-      if (nav.target === "config" && COMPANY_SECTIONS.includes(CFG_SEC ?? "")) {
-        PAG_TAB.empresa = companyTab();
-        CFG_SEC = "rutas";
+      if (nav.target === "config" && ["perfil", "prefs"].includes(settingsStore.section ?? "")) settingsStore.section = "rutas";
+      if (nav.target === "config" && COMPANY_SECTIONS.includes(settingsStore.section ?? "")) {
+        navigationStore.pageTabs.empresa = companyTab();
+        settingsStore.section = "rutas";
         nav.target = "empresa";
       }
-      if (nav.target === "config" && CFG_SEC === "plan") {
-        CFG_SEC = "rutas";
+      if (nav.target === "config" && settingsStore.section === "plan") {
+        settingsStore.section = "rutas";
         nav.target = "plan";
       }
     },
@@ -34643,7 +35190,7 @@
       if (!section2?.classList.contains("cargando")) return;
       section2.classList.remove("cargando");
       section2.classList.add("cargando-pend");
-      if (PEND > 0) section2.classList.add("cargando");
+      if (navigationStore.pendingReads > 0) section2.classList.add("cargando");
       section2.classList.remove("cargando-pend");
     }
   };
@@ -35834,7 +36381,7 @@
   function headerHtml6() {
     return `
       <div class="saludo"><div><h1>${t("agenda.title")}</h1><div class="fecha" id="agtit">${escapeHtml(titleText2())}</div></div>
-        <div class="aghud" id="aghud" aria-label="${t("agenda.yourNumbers")}">${metricsHtml()}</div>
+        <div class="aghud" id="aghud" role="group" aria-label="${t("agenda.yourNumbers")}">${metricsHtml()}</div>
         <div class="acts u-m-0"><button class="btn" data-ag="nueva">${t("agenda.newAppointment")}</button></div></div>
       <div class="card" id="agcuerpo"></div>
       <div class="card" id="agsemlat"></div>`;
@@ -36660,7 +37207,7 @@
     const data = { day, today: today2, mine: all2.filter((item) => item.usuario_id === owner), others: all2.filter((item) => item.usuario_id !== owner) };
     yourDayLegacy.setDayAppointments(data.mine);
     const { context, summary: summary5, noFit } = buildContext(data, yourDayLegacy.estimateDay(data.mine, day));
-    const cards2 = data.mine.length ? `<div class="tdesc" aria-label="${t("agenda.yourDay.dayAppointments")}">${data.mine.map((item, index) => appointmentCard(item, index, context)).join("")}</div>` : `<div class="vacio">${t(summary5.isToday ? "agenda.yourDay.emptyToday" : "agenda.yourDay.emptyOther")}</div>`;
+    const cards2 = data.mine.length ? `<div class="tdesc" role="group" aria-label="${t("agenda.yourDay.dayAppointments")}">${data.mine.map((item, index) => appointmentCard(item, index, context)).join("")}</div>` : `<div class="vacio">${t(summary5.isToday ? "agenda.yourDay.emptyToday" : "agenda.yourDay.emptyOther")}</div>`;
     body4.innerHTML = `${headerHtml7(summary5)}
     ${workingDayHtml(summary5, summary5.workingDay ? formatDuration(Date.now() - summary5.workingDay.inicio) : "")}
     ${noFitHtml(noFit)}
@@ -37537,7 +38084,7 @@
     document.getElementById("evsel")?.querySelector("input")?.focus();
   }
   async function saveCost(attendee, input12, attendees) {
-    const concept = input12.dataset.asimp, amount3 = Math.max(0, Math.round((Number(input12.value) || 0) * 100) / 100);
+    const concept = input12.dataset.asimp, amount3 = Math.max(0, round2(input12.value));
     const { error } = await legacyDb().from("eventos_asistentes").update({ [concept]: amount3 }).eq("id", attendee.id);
     if (error) {
       notices.toast(t("events.sheet.couldNotSave"), true);
@@ -37660,35 +38207,35 @@
   // src/app/legacy/legado-b-bridge.ts
   var rawDb2 = () => db;
   var legacyBState = {
-    tab: () => TAB,
-    mapMode: () => MODO_MAPA,
+    tab: () => navigationStore.screen,
+    mapMode: () => accountsStore.mapMode,
     isMobile: () => ES_MOVIL(),
-    profile: () => PERFIL,
+    profile: () => sessionStore.profile,
     inTests: () => EN_PRUEBAS,
     rpcTtl: () => RPC_TTL,
-    navigationGeneration: () => NAV_GEN,
-    navigationSignal: () => NAV_CTRL.signal,
+    navigationGeneration: () => navigationStore.generation,
+    navigationSignal: () => navigationStore.abort.signal,
     addPendingRead: (delta2) => {
-      PEND = Math.max(0, PEND + delta2);
+      navigationStore.pendingReads = Math.max(0, navigationStore.pendingReads + delta2);
     },
-    pendingCall: () => LLAMADA_PEND,
+    pendingCall: () => ordersStore.pendingCall,
     forgetPendingCall: () => {
-      LLAMADA_PEND = null;
+      ordersStore.pendingCall = null;
     },
     setOrdersPage: (page) => {
-      PEDPAG = page;
+      ordersStore.page = page;
     },
     setSettingsSection: (section2) => {
-      CFG_SEC = section2;
+      settingsStore.section = section2;
     },
-    settings: () => AJUSTES,
+    settings: () => settingsStore.settings,
     setSetting: (key, value27) => {
-      AJUSTES[key] = value27;
+      settingsStore.settings[key] = value27;
     },
     paymentMethods: () => CAT.forma_pago ?? [],
-    adminSection: () => ADM_SEC,
-    selectedPopover: () => SELPOP,
-    i18nMap: () => MAPA_I18N,
+    adminSection: () => settingsStore.adminSection,
+    selectedPopover: () => navigationStore.pickerPopup,
+    i18nMap: () => sessionStore.translationMap,
     setRecovering: (on6) => {
       RECUPERANDO = on6;
     },
@@ -37701,23 +38248,23 @@
     },
     brand: () => MARCA,
     setPlan: (plan3) => {
-      PLAN_ACTUAL = plan3;
+      sessionStore.plan = plan3;
     },
     setAgendaWeek: (mode, isoDate) => {
-      AG_MODO = mode;
-      AG_FECHA = isoDate;
+      agendaStore.mode = mode;
+      agendaStore.selectedDate = isoDate;
     },
     setAgendaMode: (mode) => {
-      AG_MODO = mode;
+      agendaStore.mode = mode;
     },
     askWeekPlan: () => {
-      ABRIR_PLAN_SEMANA = true;
+      agendaStore.openWeekPlan = true;
     },
     setProductsSection: (section2) => {
-      PSEC = section2;
+      productsStore.section = section2;
     },
     forgetHiddenAlerts: () => {
-      ALERTAS_OCULTAS = null;
+      homeStore.hiddenAlerts = null;
     },
     navIcons: () => ICO_NAV,
     setModuleIcon: (key, svg) => {
@@ -37741,7 +38288,7 @@
     withCatch: (promise) => conCatch(promise),
     rpcOriginal: (name, params2) => RPC_ORIG(name, params2),
     canInvoice: () => Boolean(permissions_exports.canInvoice()),
-    loadSettings: () => cargarAjustes(),
+    loadSettings: () => loadSettings(),
     clearLocalData: () => {
       limpiarDatosLocales();
     },
@@ -38275,7 +38822,7 @@
   };
   var menuName = (tab) => document.querySelector(`nav.main [data-t="${tab}"]`)?.textContent ?? tab;
   function paintPortalBar(bar2) {
-    bar2.innerHTML = `<button data-t="informe" aria-selected="true"><span>◉</span>${t(legacyBActions.can("portal_centro") ? "legacyB.mobile.myCentre" : "legacyB.mobile.myReport")}</button>`;
+    bar2.innerHTML = `<button data-t="informe" aria-current="page"><span>◉</span>${t(legacyBActions.can("portal_centro") ? "legacyB.mobile.myCentre" : "legacyB.mobile.myReport")}</button>`;
     bar2.firstChild.onclick = () => {
       legacyBActions.goTo("informe");
     };
@@ -38288,7 +38835,7 @@
       return;
     }
     const tab = legacyBState.tab();
-    bar2.innerHTML = MAIN_TABS.map((main) => `<button data-t="${main}" aria-selected="${String(tab === main)}"><span>${MAIN_ICONS[main] ?? ""}</span>${escapeHtml(menuName(main) || main)}</button>`).join("") + `<button id="bmasbtn" aria-selected="${String(!MAIN_TABS.includes(tab))}"><span>⋯</span>${t("legacyB.mobile.more")}</button>`;
+    bar2.innerHTML = MAIN_TABS.map((main) => `<button data-t="${main}"${tab === main ? ' aria-current="page"' : ""}><span>${MAIN_ICONS[main] ?? ""}</span>${escapeHtml(menuName(main) || main)}</button>`).join("") + `<button id="bmasbtn"${!MAIN_TABS.includes(tab) ? ' aria-current="page"' : ""}><span>⋯</span>${t("legacyB.mobile.more")}</button>`;
     bar2.querySelectorAll("[data-t]").forEach((button3) => {
       button3.onclick = () => {
         legacyBActions.goTo(button3.dataset.t ?? "");
@@ -38662,8 +39209,8 @@
       return;
     }
     const billing2 = { vencimiento_dias: Number(value12("fcv")) || 0, forma_pago: value12("fcf"), emitir_al_validar: Boolean(document.getElementById("fce")?.checked) };
-    const rpc = rawDb2().rpc;
-    const [first2, second] = await Promise.all([rpc("guardar_ajuste", { p_clave: "empresa", p_valor: company }), rpc("guardar_ajuste", { p_clave: "facturacion", p_valor: billing2 })]);
+    const rpc2 = rawDb2().rpc;
+    const [first2, second] = await Promise.all([rpc2("guardar_ajuste", { p_clave: "empresa", p_valor: company }), rpc2("guardar_ajuste", { p_clave: "facturacion", p_valor: billing2 })]);
     if (first2?.error || second?.error) {
       notices.toast(t("legacyB.company.couldNotSave"), true);
       return;
@@ -39110,7 +39657,7 @@
     const text5 = button3.textContent;
     button3.disabled = true;
     button3.textContent = t("quality.addresses.searching");
-    const query = [place5.direccion, place5.cp, place5.municipio, place5.provincia, "España"].filter(Boolean).join(", ");
+    const query = addressQuery([place5.direccion, place5.cp, place5.municipio, place5.provincia]);
     const found = await qualityLegacy.geocode(query, { direccion: place5.direccion, municipio: place5.municipio, cp: place5.cp });
     button3.disabled = false;
     button3.textContent = text5;
@@ -39315,11 +39862,10 @@
       goTo("duplicados");
     };
     document.querySelectorAll("nav.main [data-t]").forEach((button3) => {
-      button3.setAttribute("aria-selected", String(button3.dataset.t === "directorio"));
+      markCurrent(button3, button3.dataset.t === "directorio");
     });
-    qualityLegacy.setExport(async (format) => {
-      const { data } = await legacyDb().rpc("exportar_seguimiento", filterParams());
-      qualityLegacy.download(data ?? [], "Exportacion_seguimiento", format);
+    qualityLegacy.setExport((format) => {
+      qualityLegacy.download([], "Exportacion_seguimiento", format);
     });
   }
   async function loadQuality() {
@@ -39364,7 +39910,7 @@
   };
   var switchLegacy = {
     isModule: (screen3) => screen3 in MODULO_AREA,
-    hasProfile: () => Boolean(PERFIL),
+    hasProfile: () => Boolean(sessionStore.profile),
     moduleAllowedV2400: (screen3) => puedeModuloV2400(screen3),
     moduleAllowed: (screen3) => puedeModulo(screen3),
     planIncludes: (screen3) => planIncluye(screen3),
@@ -39372,34 +39918,34 @@
       avisoPlan(screen3);
     },
     openAdminSection: () => {
-      CFG_SEC = CFG_ADMIN[ADM_SEC] ?? "usuarios";
+      settingsStore.section = CFG_ADMIN[settingsStore.adminSection] ?? "usuarios";
     },
     clearPending: () => {
-      PEND = 0;
+      navigationStore.pendingReads = 0;
     },
     leavePanel: () => {
       salirPanel();
     },
     abortNavigation: () => {
-      NAV_CTRL.abort();
-      NAV_CTRL = new AbortController();
-      NAV_GEN++;
+      navigationStore.abort.abort();
+      navigationStore.abort = new AbortController();
+      navigationStore.generation++;
     },
     closeSelector: () => {
       if (typeof cerrarSelector === "function") cerrarSelector();
     },
     isProfessionalPortal: () => ES_MEDICO(),
     rememberPrevious: (target) => {
-      if (target !== TAB) TAB_ANTERIOR = TAB;
+      if (target !== navigationStore.screen) navigationStore.previousScreen = navigationStore.screen;
     },
     forgetViewedAgenda: () => {
-      AG_VISTA = null;
+      agendaStore.viewedUser = null;
     },
     setScreen: (screen3) => {
-      TAB = screen3;
+      navigationStore.screen = screen3;
     },
-    screen: () => TAB,
-    pending: () => PEND,
+    screen: () => navigationStore.screen,
+    pending: () => navigationStore.pendingReads,
     loadModule: (screen3) => {
       MODULE_LOADERS[screen3]?.();
     },
@@ -39419,7 +39965,7 @@
     goTo: (screen3) => {
       ir(screen3);
     },
-    screen: () => TAB,
+    screen: () => navigationStore.screen,
     applySavedFilter: (filter) => {
       aplicarFiltroGuardado(filter);
     },
@@ -39486,7 +40032,7 @@
   var agendaClicksLegacy = {
     // Without an account: the editor asks for it (the legacy signature takes null)
     newAppointment: () => {
-      void nuevaCita(null, AG_FECHA);
+      void nuevaCita(null, agendaStore.selectedDate);
     },
     write: (name, payload14) => escribir(name, payload14),
     openAccount: (id) => {
@@ -39501,7 +40047,7 @@
     reloadHome: () => {
       void cargarInicio();
     },
-    screen: () => TAB,
+    screen: () => navigationStore.screen,
     windowChangedData: () => agCambiosEnVentana(),
     quietRefresh: () => {
       agRefrescoQuieto();
@@ -39513,7 +40059,7 @@
     },
     routeInProgress: () => Boolean(rutaActiva()),
     paintBar: () => {
-      void pintarRutaBarra();
+      void paintRouteBar();
     },
     paintInProgress: () => {
       void pintarRutaEnCurso();
@@ -39523,10 +40069,10 @@
     }
   };
   var adminLegacy = {
-    section: () => ADM_SEC,
-    users: () => USUARIOS,
+    section: () => settingsStore.adminSection,
+    users: () => settingsStore.users,
     setUsers: (users) => {
-      USUARIOS = users;
+      settingsStore.users = users;
     },
     initials: (name) => iniciales(name),
     canImpersonate: (user) => puedeVerComo(user),
@@ -39555,11 +40101,11 @@
       void restablecerPassword(user);
     },
     openSettingsSection: (section2) => {
-      CFG_SEC = section2;
+      settingsStore.section = section2;
       void cargarConfig();
     },
     openAdminSection: (section2) => {
-      ADM_SEC = section2;
+      settingsStore.adminSection = section2;
       void cargarAdmin();
     }
   };
@@ -39585,8 +40131,8 @@
       ir(screen3);
     },
     toggleMapMode: () => {
-      MODO_MAPA = !MODO_MAPA;
-      return MODO_MAPA;
+      accountsStore.mapMode = !accountsStore.mapMode;
+      return accountsStore.mapMode;
     },
     paintMap: () => {
       void paintMap2();
@@ -39624,13 +40170,13 @@
     }
   };
   var toolsPanelLegacy = {
-    context: () => HERR_CTX,
+    context: () => accountsStore.toolsContext,
     setContext: (context) => {
-      HERR_CTX = context;
+      accountsStore.toolsContext = context;
     },
     // eslint-disable-next-line id-length -- F is the legacy name of the directory filters
     filters: () => F,
-    options: () => OPF,
+    options: () => accountsStore.filterOptions,
     option: (list, value27, all2) => optFiltro(list, value27, all2),
     allOf: (word) => todosLos(word),
     seesEverything: () => VE_TODO(),
@@ -39670,7 +40216,7 @@
     withCatch: (request2) => conCatch(request2),
     storageKey: (key) => rcLS(key),
     copy: (answer) => rcCopia(answer),
-    epoch: () => RC_EPOCA,
+    epoch: () => sessionStore.cacheEpoch,
     cache: () => RC,
     flying: () => RC_VUELO
   };
@@ -39694,13 +40240,13 @@
     prepareLanguage: (language) => {
       prepararIdioma(language);
     },
-    appVisible: () => APP_VISIBLE,
+    appVisible: () => navigationStore.appVisible,
     setAppVisible: () => {
-      APP_VISIBLE = true;
+      navigationStore.appVisible = true;
     },
     indicatorCatalog: () => KPI_CAT,
     setProfile: (profile6) => {
-      PERFIL = profile6;
+      sessionStore.profile = profile6;
     },
     initials: (name) => iniciales(name),
     firstName: (name) => nombrePila(name),
@@ -39713,7 +40259,7 @@
       void loadCatalogs();
     },
     paintRouteBar: () => {
-      void pintarRutaBarra();
+      void paintRouteBar();
     },
     loadHome: () => {
       void cargarInicio();
@@ -39725,7 +40271,7 @@
       void cargarComerciales();
     },
     loadSettings: () => {
-      void cargarAjustes();
+      void loadSettings();
     },
     inTestEnvironment: () => EN_PRUEBAS,
     paintTestStrip: () => {
@@ -39760,7 +40306,7 @@
       }, () => void 0);
     },
     translatePage: () => {
-      if (MAPA_I18N) traducir(document.body);
+      if (sessionStore.translationMap) traducir(document.body);
     },
     bookIcon: () => svgIco(ICON_NOM["book-open"] ?? ""),
     menuIcons: () => {
@@ -39784,7 +40330,7 @@
     }
   };
   var periodLegacy = {
-    userId: () => PERFIL ? PERFIL.id : "",
+    userId: () => sessionStore.profile ? sessionStore.profile.id : "",
     periods: () => PERIODOS,
     rangeOf: (period) => rangoPeriodo(period),
     shortDate: (isoDate) => calendar_exports.shortDate(isoDate ?? "")
@@ -39792,7 +40338,7 @@
   var testStripLegacy = {
     inTests: () => EN_PRUEBAS,
     notConfigured: () => Boolean(CFG.sinConfigurar),
-    isAdmin: () => Boolean(PERFIL) && puede("administrar"),
+    isAdmin: () => Boolean(sessionStore.profile) && puede("administrar"),
     environment: () => RPC_ORIG_FROM("entorno_pruebas").select("maestro_guardado_en, ultimo_reset").eq("id", 1).single(),
     askText: (message4, value27, options5) => pedirTexto(message4, value27, options5),
     reset: () => RPC_ORIG("pruebas_resetear", { p_confirmacion: "RESTABLECER" })
@@ -39801,9 +40347,9 @@
     planSettings: () => PLANCFG(),
     // The legacy arithmetic takes the stored values as they are
     startPoint: () => salidaUsuario(),
-    minutesOf: (time) => minHora(time) ?? 0,
+    minutesOf: (time) => calendar_exports.timeToMinutes(time) ?? 0,
     // the settings always have their hours
-    minutesOrNull: (time) => minHora(time),
+    minutesOrNull: (time) => calendar_exports.timeToMinutes(time),
     pointOf: (appointment) => xyCita(appointment) ?? null,
     isOpen: (state2) => CITA_ABIERTA.includes(state2),
     windowsOf: (days, isoDate) => ventanasDe(days, isoDate),
@@ -39812,7 +40358,7 @@
     hourText: (minutes2) => hm(minutes2),
     windowsText: (windows) => txtVentanas(windows ?? []),
     setStopInfo: (info) => {
-      TD_INFO = info;
+      agendaStore.stopInfo = info;
     },
     routeHours: (appointments2) => horDeCitas(appointments2),
     withHours: (hours2, run) => conHor(hours2, run),
@@ -39900,7 +40446,7 @@
     if (target !== "agenda") switchLegacy.forgetViewedAgenda();
     switchLegacy.setScreen(target);
     document.querySelectorAll("nav.main [data-t], #bnav [data-t]").forEach((button3) => {
-      button3.setAttribute("aria-selected", String(button3.dataset.t === target));
+      markCurrent(button3, button3.dataset.t === target);
     });
     document.querySelectorAll("main > section").forEach((section2) => {
       section2.classList.toggle("hide", section2.id !== `v-${target}`);
@@ -40683,7 +41229,7 @@
     let report = document.querySelector('nav.main [data-t="informe"]');
     if (!report) {
       const label = t(showAppLegacy.can("portal_centro") ? "legacyA.showApp.myCentre" : "legacyA.showApp.myReport");
-      document.querySelector("nav.main .in")?.insertAdjacentHTML("afterbegin", `<button data-t="informe" aria-selected="true">${label}</button>`);
+      document.querySelector("nav.main .in")?.insertAdjacentHTML("afterbegin", `<button data-t="informe" aria-current="page">${label}</button>`);
       report = document.querySelector('nav.main [data-t="informe"]');
     }
     report?.classList.remove("hide");
@@ -41947,9 +42493,9 @@
 
   // src/app/legacy/settings4-bridge.ts
   var usersLegacy = {
-    list: () => USUARIOS,
+    list: () => settingsStore.users,
     setList: (list) => {
-      USUARIOS = list;
+      settingsStore.users = list;
     },
     setConnections: (connections) => {
       USR_ACC = connections;
@@ -41975,16 +42521,16 @@
     reloadAdmin: () => {
       void cargarAdmin();
     },
-    schemes: () => ESQUEMAS,
+    schemes: () => homeStore.commissionSchemes,
     setSchemes: (list) => {
-      ESQUEMAS = list;
+      homeStore.commissionSchemes = list;
     },
-    provinces: () => PROV_CCAA,
+    provinces: () => sessionStore.provinces,
     setProvinces: (value27) => {
-      PROV_CCAA = value27;
+      sessionStore.provinces = value27;
     },
     /** Configuración's open section (Usuarios repaints its list after creating or deleting). */
-    section: () => CFG_SEC,
+    section: () => settingsStore.section,
     settingsKey: () => CFG_KEY,
     /** Usuarios repaints through its legacy name (the page tabs and the tree of Configuración use it). */
     repaintList: () => {
@@ -42001,9 +42547,9 @@
     }
   };
   var planLegacy = {
-    current: () => PLAN_ACTUAL ?? {},
+    current: () => sessionStore.plan ?? {},
     setCurrent: (plan3) => {
-      PLAN_ACTUAL = plan3;
+      sessionStore.plan = plan3;
     },
     of: (id) => planDe(id),
     all: () => PLANES,
@@ -42012,7 +42558,7 @@
     rows: () => PLAN_FILAS(),
     moduleAreas: () => MODULO_AREA,
     paymentPlans: () => PAGO_PLANES,
-    paymentState: () => PAGO_ESTADO ?? {},
+    paymentState: () => ordersStore.paymentState ?? {},
     needs: () => PRESU_NECESITA,
     whenOptions: () => PRESU_CUANDO,
     requestState: (state2) => PRESU_ESTADO[state2] ?? state2,
@@ -42022,12 +42568,12 @@
     sectionTitle: (section2) => TITULO_PEDSEC[section2]?.[0],
     vatOf: (amount3) => ivaDe(amount3),
     euros: (value27) => eurI(value27),
-    brandName: () => (AJUSTES.marca ?? {}).nombre ?? ""
+    brandName: () => (settingsStore.settings.marca ?? {}).nombre ?? ""
   };
   var profileLegacy = {
-    me: () => PERFIL,
+    me: () => sessionStore.profile,
     languages: () => IDIOMAS,
-    language: () => IDIOMA,
+    language: () => sessionStore.language,
     applyLanguage: (id) => {
       aplicarIdioma(id);
     },
@@ -42228,9 +42774,9 @@
 
   // src/app/legacy/orders-bridge.ts
   var ordersLegacy = {
-    section: () => PEDSEC,
+    section: () => ordersStore.section,
     setSection: (section2) => {
-      PEDSEC = section2;
+      ordersStore.section = section2;
     },
     setLoadingSection: (section2) => {
       PEDSEC_CARGA = section2;
@@ -42241,13 +42787,13 @@
     },
     /** The open part of Configuración (Distribuidores lives there). */
     settingsSection: () => CFG_KEY,
-    page: () => PEDPAG,
+    page: () => ordersStore.page,
     setPage: (page) => {
-      PEDPAG = page;
+      ordersStore.page = page;
     },
-    fieldFilters: () => PEDF,
+    fieldFilters: () => ordersStore.filters,
     setRows: (rows2) => {
-      PEDIDOS = rows2;
+      ordersStore.orders = rows2;
     },
     /** Through the global name (legado 057 keeps the screen cached around it). */
     reload: () => {
@@ -42263,7 +42809,7 @@
     newSale: () => {
       void nuevaVenta();
     },
-    services: () => SERVICIOS,
+    services: () => productsStore.services,
     paymentState: (order) => cobroDe(order),
     channelLabel: (order, total2) => etiquetaCanal(order, total2),
     paymentMethods: () => CAT.forma_pago ?? [],
@@ -42284,7 +42830,7 @@
     fieldsForm: (values2) => customFieldsHtml("pedido", values2),
     readFields: (root) => camposLeer(root),
     saveFields: (read6, id) => camposGuardar(read6, id),
-    loadPdf: () => cargarJsPDF(),
+    loadPdf: () => pdf_exports.loadJsPdf(),
     appName: () => nombreApp(),
     askText: (message4, value27, options5) => askText(message4, value27, options5)
   };
@@ -42292,12 +42838,12 @@
     template: (kind, field22, values2) => plantillaCorreo(kind, field22, varsCorreo(values2)),
     chooseTemplate: (kind) => elegirPlantillaCorreo(kind),
     forgetChosenTemplate: (kind) => {
-      PLANT_ELEGIDA[kind] = null;
+      billingStore.chosenTemplates[kind] = null;
     },
-    companyIban: () => String(AJUSTES.empresa?.iban ?? "").trim(),
+    companyIban: () => String(settingsStore.settings.empresa?.iban ?? "").trim(),
     /** A server function (the answer is read by the caller). */
     invoke: (name, body4) => db.functions.invoke(name, { body: body4 }),
-    alertPreferences: () => PERFIL.preferencias?.avisos_pedidos ?? {},
+    alertPreferences: () => sessionStore.profile.preferencias?.avisos_pedidos ?? {},
     saveAlertPreferences: (alerts) => guardarPrefsAvisos(alerts),
     roleNames: () => rolesNombres()
   };
@@ -42305,10 +42851,10 @@
   // src/app/legacy/orders2-bridge.ts
   var orderEditorLegacy = {
     loadProducts: async () => {
-      if (!PRODUCTOS.length) await cargarProductos();
+      if (!productsStore.products.length) await cargarProductos();
     },
-    product: (id) => conPrecioContrato(PRODUCTOS.find((product) => product.id === id) ?? {}),
-    services: () => SERVICIOS,
+    product: (id) => conPrecioContrato(productsStore.products.find((product) => product.id === id) ?? {}),
+    services: () => productsStore.services,
     defaultProduct: () => productoPorDefecto(),
     productOptions: (id, name) => opcionesProducto(id, name),
     /** The prices of the contract in force of the account (Concursos); true if it has one. */
@@ -42321,22 +42867,22 @@
     readReceipt: (file) => leerJustificante(file),
     uploadReceipts: (id, list) => subirJustificantes(id, list),
     orderFields: () => CAMPOS.pedido ?? [],
-    customerCardOpen: () => FICHA_PAC,
+    customerCardOpen: () => accountsStore.cardPatients,
     openCustomer: (id) => {
       void fichaPaciente(id);
     },
     repaintCustomers: () => {
       void listaPacientes();
     },
-    distributors: () => DISTRIBUIDORES,
+    distributors: () => ordersStore.distributors,
     setDistributors: (list) => {
-      DISTRIBUIDORES = list;
+      ordersStore.distributors = list;
     }
   };
   var tpvLegacy = {
-    settings: () => AJUSTES.cobro_tpv ?? {},
+    settings: () => settingsStore.settings.cobro_tpv ?? {},
     setSettings: (value27) => {
-      AJUSTES.cobro_tpv = value27;
+      settingsStore.settings.cobro_tpv = value27;
     },
     /** Only in the test environment until the bank terminal exists (legado 147). */
     visible: () => Boolean(TPV_VISIBLE),
@@ -42345,22 +42891,22 @@
     whileWorking: (button3, text5, work) => conCarga(button3, text5, work)
   };
   var subscriptionLegacy = {
-    state: () => PAGO_ESTADO,
+    state: () => ordersStore.paymentState,
     setState: (value27) => {
-      PAGO_ESTADO = value27;
+      ordersStore.paymentState = value27;
     },
-    plan: () => PLAN_ACTUAL,
+    plan: () => sessionStore.plan,
     setPlan: (value27) => {
-      PLAN_ACTUAL = value27;
+      sessionStore.plan = value27;
     },
     planOf: (id) => planDe(id),
     isDowngrade: (from2, to) => esBajada(from2, to),
     losses: (from2, to, data) => perdidasPlan(from2, to, data),
     setupFee: () => PUESTA_EN_MARCHA,
     plans: () => PAGO_PLANES,
-    platformMode: () => MODO_PLATAFORMA,
+    platformMode: () => navigationStore.platformMode,
     setPlatformMode: (value27) => {
-      MODO_PLATAFORMA = value27;
+      navigationStore.platformMode = value27;
     },
     applyPlatformMode: () => {
       applyPlatformMode();
@@ -42537,15 +43083,14 @@
   var PAID = "Cobrado";
   var FREE = "Sin cargo";
   var PENDING_PAYMENT = "Pendiente de cobro";
-  var round23 = (value27) => Math.round((Number(value27) || 0) * 100) / 100;
-  var euros2 = (value27) => formatCurrency(round23(value27));
+  var euros2 = (value27) => formatCurrency(round2(value27));
   function lineBreakdown(line3) {
     const gross = Number(line3.importe) || 0, base = gross * (1 - (Number(line3.descuento) || 0) / 100), vat = base * (Number(line3.iva) || 0) / 100;
     return { bruto: gross, base, iva: vat, total: base + vat };
   }
   function shippingTotals(shipping) {
     if (!shipping?.on) return null;
-    const withVat3 = round23(shipping.con), rate = Number(shipping.iva) || 0, base = (Number(shipping.con) || 0) / (1 + rate / 100);
+    const withVat3 = round2(shipping.con), rate = Number(shipping.iva) || 0, base = (Number(shipping.con) || 0) / (1 + rate / 100);
     return { con: withVat3, iva: rate, base, nombre: shipping.nombre ?? t("orders.totals.shipping"), ivaImp: withVat3 - base };
   }
   function orderTotals(lines4, discount, discountType, shipping) {
@@ -42582,7 +43127,7 @@
       detail.lineas ?? [],
       Number(order.descuento) || 0,
       order.descuento_tipo,
-      { on: Boolean(order.envio), con: round23(Number(order.envio_base) * (1 + rate / 100)), iva: rate, nombre: service?.nombre ?? t("orders.totals.shipping") }
+      { on: Boolean(order.envio), con: round2(Number(order.envio_base) * (1 + rate / 100)), iva: rate, nombre: service?.nombre ?? t("orders.totals.shipping") }
     );
   }
   var statePill4 = (state2) => `<span class="pill ${state2 === STATES6.draft ? "p-bor" : state2 === STATES6.voided ? "p-anu" : "p-est"}">${escapeHtml(state2)}</span>`;
@@ -43120,12 +43665,13 @@
   var LEVELS = ["access.strength.veryWeak", "access.strength.weak", "access.strength.fair", "access.strength.strong", "access.strength.veryStrong"];
   var COLOURS2 = ["#C24141", "#D9480F", "#D97706", "#12805C", "#0F6E4C"];
   var CHARACTER_KINDS = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/];
-  var OBVIOUS = /^(1234|abcd|qwer|contrase|password|dlc)/i;
+  var OBVIOUS = /^(1234|abcd|qwer|contrase|password)/i;
+  var isObvious = (password) => OBVIOUS.test(password) || obviousPasswordWords().some((word) => password.toLowerCase().startsWith(word));
   function passwordStrength(password) {
     if (!password) return { level: -1, text: "" };
     let points = [MIN_LENGTH3, GOOD_LENGTH, LONG_LENGTH].filter((length) => password.length >= length).length;
     points += Math.max(0, CHARACTER_KINDS.filter((kind) => kind.test(password)).length - 1);
-    if (/^(.)\1+$/.test(password) || OBVIOUS.test(password) && password.length < GOOD_LENGTH) points = Math.min(points, 1);
+    if (/^(.)\1+$/.test(password) || isObvious(password) && password.length < GOOD_LENGTH) points = Math.min(points, 1);
     const level2 = password.length < MIN_LENGTH3 ? 0 : Math.min(MAX_LEVEL, Math.max(1, points - 1));
     return { level: level2, text: t(LEVELS[level2] ?? "access.strength.veryWeak") };
   }
@@ -43443,7 +43989,7 @@
   var shownOf = (list, marked) => list.filter((item, index, all2) => all2.findIndex((other) => other.n === item.n && pretty(other.p).slice(0, PREFIX) === pretty(item.p).slice(0, PREFIX)) === index || item.n > 0 || marked.has(item.p));
   function regionHtml(region, list, marked) {
     const shown5 = shownOf(list, marked);
-    return `<details ${shown5.some((item) => marked.has(item.p)) ? "open" : ""}><summary><label onclick="event.stopPropagation()"><input type="checkbox" data-zcc="${escapeHtml(region)}" ${shown5.every((item) => marked.has(item.p)) ? "checked" : ""}> ${escapeHtml(region)}</label>
+    return `<details ${shown5.some((item) => marked.has(item.p)) ? "open" : ""}><summary><label><input type="checkbox" data-zcc="${escapeHtml(region)}" ${shown5.every((item) => marked.has(item.p)) ? "checked" : ""}> ${escapeHtml(region)}</label>
         <span class="sm">${formatNumber(sum(shown5.map((item) => item.n)))} ${words11().professionals}</span></summary>
         <div class="zprov">${shown5.map((item) => `<label><input type="checkbox" data-zp="${escapeHtml(item.p)}" data-zpc="${escapeHtml(region)}" ${marked.has(item.p) ? "checked" : ""}> ${escapeHtml(pretty(item.p))} <span class="sm">${formatNumber(item.n)}</span></label>`).join("")}</div></details>`;
   }
@@ -43479,6 +44025,9 @@
           box5.checked = region.checked;
         });
       };
+      region.closest("label")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
     });
     const save48 = document.getElementById("uzok");
     if (save48) save48.onclick = () => {
@@ -44177,7 +44726,7 @@
       ${buttons}
       <button data-pg="${page + 1}" ${page >= pages4 - 1 ? "disabled" : ""} aria-label="${t("listComponents.pagination.next")}">›</button>
     </span>
-    <span class="ptam">${t("listComponents.pagination.show")} <select class="chico" data-pgtam>${listsLegacy.pageSizes().map((option7) => `<option value="${option7}" ${option7 === size ? "selected" : ""}>${option7}</option>`).join("")}</select></span></div>`;
+    <span class="ptam">${t("listComponents.pagination.show")} <select class="chico" data-pgtam aria-label="${t("listComponents.pagination.pageSize")}">${listsLegacy.pageSizes().map((option7) => `<option value="${option7}" ${option7 === size ? "selected" : ""}>${option7}</option>`).join("")}</select></span></div>`;
   }
   var paging = /* @__PURE__ */ new WeakMap();
   var barList = /* @__PURE__ */ new WeakMap();
@@ -44630,9 +45179,9 @@
   // src/app/legacy/panels-bridge.ts
   var panelsLegacy = {
     /** Analítica tab: 'resumen' or 'explorar'. */
-    section: () => ANSEC,
+    section: () => homeStore.analyticsSection,
     setSection: (section2) => {
-      ANSEC = section2;
+      homeStore.analyticsSection = section2;
     },
     reportFilter: () => AN_REP,
     setReportFilter: (value27) => {
@@ -44640,15 +45189,15 @@
     },
     seriesCache: () => AN_SERIE,
     setProfessional: (account) => {
-      AN_MED = account ? { id: account.id, nombre: account.nombre ?? "" } : null;
+      homeStore.analyticsAccount = account ? { id: account.id, nombre: account.nombre ?? "" } : null;
     },
     /** The user's Analítica settings (preferencias.analitica). */
     analyticsPreferences: () => Reflect.get(prefsActivas(), "analitica"),
-    profilePreferences: () => PERFIL?.preferencias ?? {},
+    profilePreferences: () => sessionStore.profile?.preferencias ?? {},
     setProfilePreferences: (preferences) => {
-      PERFIL.preferencias = preferences;
+      sessionStore.profile.preferencias = preferences;
     },
-    products: () => PRODUCTOS,
+    products: () => productsStore.products,
     loadProducts: () => cargarProductos(),
     stateWithRole: (role) => estadoPapel(role),
     canUseModule: (screen3) => puedeModulo(screen3),
@@ -44659,7 +45208,7 @@
     pickProfessional: (element4, options5) => {
       selectorMedico(element4, { valor: options5.value, placeholder: options5.placeholder, alElegir: options5.onPick });
     },
-    professional: () => AN_MED,
+    professional: () => homeStore.analyticsAccount,
     /** The second panel with the columns of a table (legado 056/057/065). */
     columnsPanel: (title2, columns, onChange) => {
       showColumnsPanel(title2, columns, onChange);
@@ -44668,7 +45217,7 @@
     filterTargets: () => HT_FILTROS,
     tableFilters: () => HT_ESTADO,
     /** Facturación outside its invoices has no table to filter. */
-    billingSection: () => typeof FSEC === "undefined" ? null : FSEC
+    billingSection: () => typeof billingStore.section === "undefined" ? null : billingStore.section
   };
 
   // src/app/components/filters-panel/side.ts
@@ -45119,14 +45668,14 @@
   // src/app/legacy/listbar-bridge.ts
   var listBarLegacy = {
     pageSize: () => tamPagina(),
-    userId: () => PERFIL?.id ?? "",
+    userId: () => sessionStore.profile?.id ?? "",
     /** First icon found among the names (line icons, then emoji ones). */
     icon: (names) => svgIco(names.map((name) => ICON_NOM[name] ?? ICON_EMOJI[name]).find(Boolean) ?? ""),
     lineIcon: (name) => svgIco(ICON_NOM[name] ?? ""),
-    cacheEpoch: () => typeof RC_EPOCA === "undefined" ? 0 : RC_EPOCA,
-    salesSection: () => typeof PEDSEC === "undefined" ? null : PEDSEC,
-    billingSection: () => typeof FSEC === "undefined" ? null : FSEC,
-    productsSection: () => typeof PSEC === "undefined" ? null : PSEC,
+    cacheEpoch: () => typeof sessionStore.cacheEpoch === "undefined" ? 0 : sessionStore.cacheEpoch,
+    salesSection: () => typeof ordersStore.section === "undefined" ? null : ordersStore.section,
+    billingSection: () => typeof billingStore.section === "undefined" ? null : billingStore.section,
+    productsSection: () => typeof productsStore.section === "undefined" ? null : productsStore.section,
     // eslint-disable-next-line id-length -- F is the legacy name of the Cuentas filters
     accountFilters: () => F,
     customerFilters: () => PAC,
@@ -45142,7 +45691,7 @@
     openAccountColumns: () => {
       abrirColumnas();
     },
-    toolsContext: () => HERR_CTX,
+    toolsContext: () => accountsStore.toolsContext,
     /** What the «Filtros y columnas» panel chose per table (the bar's search writes its free text when the screen has no search). */
     tableFilters: () => HT_ESTADO,
     countRows: (name, params2) => RPC_ORIG(name, params2)
@@ -46871,7 +47420,7 @@
   var CLOSED_STATES = [STATES7.received, STATES7.cancelled];
   var DEFAULT_LEAD_DAYS = 90;
   var errorText4 = (error, result) => error?.message ?? result?.error ?? "";
-  var euros3 = (value27) => formatCurrency(Math.round((Number(value27) || 0) * 100) / 100);
+  var euros3 = (value27) => formatCurrency(round2(value27));
   function purchasePill(state2) {
     const kind = state2 === STATES7.received ? "p-est" : state2 === STATES7.cancelled ? "p-anu" : state2 === STATES7.draft ? "p-bor" : "p-per";
     return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
@@ -47668,7 +48217,7 @@
       descuento: order.descuento ?? 0,
       descuento_tipo: order.descuento_tipo,
       envio: Boolean(order.envio),
-      envio_con_iva: order.envio ? round23(Number(order.envio_base) * (1 + rate / 100)) : 0,
+      envio_con_iva: order.envio ? round2(Number(order.envio_base) * (1 + rate / 100)) : 0,
       envio_iva: order.envio_iva,
       servicio_id: order.servicio_id,
       lineas: (detail.lineas ?? []).map((line3) => ({ producto_id: line3.producto_id, unidades: line3.unidades, importe: line3.importe, descuento: line3.descuento, iva: line3.iva }))
@@ -48389,7 +48938,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       const visible3 = sees && (!needsTeam || permissions.seesEverything() && permissions.hasOpportunities());
       let button3 = nav.querySelector(`[data-t="${key}"]`);
       if (!button3) {
-        after.insertAdjacentHTML("afterend", `<button data-t="${key}" aria-selected="false">${t(label)}</button>`);
+        after.insertAdjacentHTML("afterend", `<button data-t="${key}">${t(label)}</button>`);
         button3 = nav.querySelector(`[data-t="${key}"]`);
       }
       if (!button3) return;
@@ -48547,14 +49096,13 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/screens/orders/editor/state.ts
   var CHANNELS = { patient: "paciente", centre: "centro" };
-  var DEFAULT_SERVICE_VAT = 21;
   var WEB_ORIGINS = ["web", "portal"];
   var MANUAL2 = "manual";
   var PERCENT2 = "porcentaje";
   var productOf = (id) => orderEditorLegacy.product(id);
   function autoAmount(line3) {
     const product = productOf(line3.producto_id);
-    if (!line3.manual && product.precio !== null && product.precio !== void 0) line3.importe = round23(product.precio * (Number(line3.unidades) || 0));
+    if (!line3.manual && product.precio !== null && product.precio !== void 0) line3.importe = round2(product.precio * (Number(line3.unidades) || 0));
     if (product.iva !== null && product.iva !== void 0) line3.iva = Number(product.iva);
   }
   var newLine2 = () => ({ producto_id: orderEditorLegacy.defaultProduct(), unidades: 1, importe: null, descuento: 0, iva: null });
@@ -48562,7 +49110,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     if (!preset?.lineas?.length) return [newLine2()];
     return preset.lineas.map((line3) => {
       const product = productOf(line3.producto_id), price = product.precio;
-      const manual2 = price === null || price === void 0 || round23(price * Number(line3.unidades)) !== round23(line3.importe);
+      const manual2 = price === null || price === void 0 || round2(price * Number(line3.unidades)) !== round2(line3.importe);
       return {
         producto_id: line3.producto_id ?? null,
         producto: line3.producto ?? null,
@@ -48586,11 +49134,11 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   var defaultService = () => orderEditorLegacy.services().find((service) => service.por_defecto && service.activo);
   function serviceOfOrder(order) {
     const vat = Number(order.envio_iva) || 0, first2 = orderEditorLegacy.services()[0]?.id ?? "";
-    return { servicio_id: orFallback(order.servicio_id, first2), envio: true, envio_iva: Number(order.envio_iva), envio_con: round23(Number(order.envio_base) * (1 + vat / 100)) };
+    return { servicio_id: orFallback(order.servicio_id, first2), envio: true, envio_iva: Number(order.envio_iva), envio_con: round2(Number(order.envio_base) * (1 + vat / 100)) };
   }
   function serviceFields(order) {
     if (order?.envio) return serviceOfOrder(order);
-    const service = defaultService(), fallback = { envio_iva: Number(service?.iva ?? DEFAULT_SERVICE_VAT), envio_con: nonZeroOr(service?.pvp, 0) };
+    const service = defaultService(), fallback = { envio_iva: Number(service?.iva ?? generalVat()), envio_con: nonZeroOr(service?.pvp, 0) };
     return order ? { servicio_id: "", envio: false, ...fallback } : { servicio_id: service?.id ?? "", envio: Boolean(service), ...fallback };
   }
   var newForm = (preset) => ({
@@ -48692,7 +49240,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     const box5 = document.getElementById("ptot");
     if (box5) box5.innerHTML = totalsHtml(totals);
   }
-  var amountWithVat = (line3) => line3.importe !== null ? String(round23(line3.importe * (1 + (Number(line3.iva) || 0) / 100))) : "";
+  var amountWithVat = (line3) => line3.importe !== null ? String(round2(line3.importe * (1 + (Number(line3.iva) || 0) / 100))) : "";
   function setField(line3, field22, raw) {
     const value27 = raw === "" ? null : Number(raw);
     if (field22 === "importeiva") {
@@ -48892,7 +49440,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/screens/orders/editor/view.ts
   var isConfirmed = (order) => order?.estado === STATES6.confirmed;
-  var withVat = (line3) => line3.importe !== null ? String(round23(line3.importe * (1 + (Number(line3.iva) || 0) / 100))) : "";
+  var withVat = (line3) => line3.importe !== null ? String(round2(line3.importe * (1 + (Number(line3.iva) || 0) / 100))) : "";
   function headerHtml13(order) {
     const title2 = order ? t(isConfirmed(order) ? "ordersMore.editor.editOrder" : "ordersMore.editor.editDraft") : t("ordersMore.editor.newOrder");
     return `
@@ -49002,7 +49550,6 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   // src/app/screens/orders/editor/index.ts
   var FULL_DISCOUNT2 = 100;
   var SALES_SCREEN4 = "ventas";
-  var DEFAULT_SERVICE_VAT2 = 21;
   var element = (id) => document.getElementById(id);
   var choice = (id) => document.getElementById(id);
   var on3 = (id, handler) => {
@@ -49111,8 +49658,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       const chosen5 = orderEditorLegacy.services().find((item) => item.id === service.value), shipping = element("penv"), amount3 = element("penvi"), vat = element("penvv");
       if (shipping) shipping.checked = Boolean(chosen5);
       if (chosen5 && amount3 && vat) {
-        amount3.value = String(round23(chosen5.pvp ?? 0));
-        vat.value = String(chosen5.iva ?? DEFAULT_SERVICE_VAT2);
+        amount3.value = String(round2(chosen5.pvp ?? 0));
+        vat.value = String(chosen5.iva ?? generalVat());
       }
       paintBreakdown(state2);
     };
@@ -49246,17 +49793,17 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     /** The platform's own plan may have changed. */
     reloadPlan: async () => {
       const { data } = await RPC_ORIG("plan_uso", {});
-      if (data?.plan) PLAN_ACTUAL = data.plan;
+      if (data?.plan) sessionStore.plan = data.plan;
     },
     askText: (message4, value27, options5) => askText(message4, value27, options5),
     prepareOrganizationChange: (name) => {
       prepararCambioOrg(name);
     },
-    hasProfile: () => Boolean(PERFIL),
+    hasProfile: () => Boolean(sessionStore.profile),
     can: (capability) => puede(capability),
     appVersion: () => VERSION_APP,
     isTestEnvironment: () => EN_PRUEBAS,
-    panelTab: () => PAG_TAB.delcos,
+    panelTab: () => navigationStore.pageTabs.delcos,
     skeleton: () => pdEsqueleto(),
     kpis: (figures) => pdKpis(figures),
     billingState: (organization) => pdCobroEstado(organization),
@@ -49416,9 +49963,9 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/legacy/products-bridge.ts
   var productsLegacy = {
-    section: () => PSEC,
+    section: () => productsStore.section,
     setSection: (section2) => {
-      PSEC = section2;
+      productsStore.section = section2;
     },
     /** Through the global names: legado 057 caches the screen and legado 089 wraps fichaStock and verDeposito («‹ Volver»). */
     reload: () => {
@@ -49440,8 +49987,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     showLoading: (element4, text5) => {
       showLoading(element4, text5);
     },
-    matchesFieldFilters: (values2) => Boolean(matchesFilters(values2, PRODF)),
-    hasFieldFilters: () => Object.keys(PRODF).length > 0,
+    matchesFieldFilters: (values2) => Boolean(matchesFilters(values2, productsStore.filters)),
+    hasFieldFilters: () => Object.keys(productsStore.filters).length > 0,
     visibleFieldColumns: () => visibleFields("producto"),
     fieldHeaders: (fields) => columnHeaders(fields),
     fieldCells: (fields, values2) => columnCells(fields, values2),
@@ -49453,8 +50000,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   // src/app/screens/products/model.ts
   var ORDER_MARGIN_DAYS = 14;
   var EXPIRY_SOON_DAYS = 90;
-  var euros4 = (value27) => formatCurrency(Math.round((Number(value27) || 0) * 100) / 100);
-  var round24 = (value27) => Math.round(value27 * 100) / 100;
+  var euros4 = (value27) => formatCurrency(round2(value27));
   function stockState(line3) {
     if (line3.stock <= 0) return [t("products.stock.outOfStock"), "p-anu"];
     if (line3.stock_minimo !== null && line3.stock_minimo !== void 0 && line3.stock < line3.stock_minimo) return [t("products.stock.belowMinimum"), "p-bor"];
@@ -49816,7 +50362,6 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   }
 
   // src/app/screens/products/services.ts
-  var DEFAULT_VAT = 21;
   var PRICE_DECIMALS = 4;
   var money2 = (value27) => isPresent(value27) ? euros4(value27) : "—";
   var field15 = (id) => document.getElementById(id);
@@ -49850,11 +50395,11 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   }
   function prices(service) {
     if (!isPresent(service.precio)) return ["", ""];
-    return [String(Number(Number(service.precio).toFixed(PRICE_DECIMALS))), String(round24(service.precio * (1 + (service.iva ?? 0) / 100)))];
+    return [String(Number(Number(service.precio).toFixed(PRICE_DECIMALS))), String(round2(service.precio * (1 + (service.iva ?? 0) / 100)))];
   }
   var checkbox = (id, on6, locked) => `<input type="checkbox" id="${id}" ${on6 ? "checked" : ""} ${locked}>`;
   function editorHtml15(service, admin) {
-    const locked = admin ? "" : "disabled", vat = service.iva ?? DEFAULT_VAT, [price, withVat3] = prices(service);
+    const locked = admin ? "" : "disabled", vat = service.iva ?? generalVat(), [price, withVat3] = prices(service);
     return `
     <div class="fh"><div><h2>${service.id ? escapeHtml(service.nombre ?? "") : t("products.services.newTitle")}</h2>
       <div class="sm">${t("products.services.hint")}</div></div>
@@ -49874,13 +50419,13 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     if (!without || !vat || !withVat3) return;
     const rate = () => (Number(vat.value) || 0) / 100;
     without.oninput = () => {
-      withVat3.value = without.value === "" ? "" : String(round24(Number(without.value) * (1 + rate())));
+      withVat3.value = without.value === "" ? "" : String(round2(Number(without.value) * (1 + rate())));
     };
     withVat3.oninput = () => {
       without.value = withVat3.value === "" ? "" : String(Number((Number(withVat3.value) / (1 + rate())).toFixed(PRICE_DECIMALS)));
     };
     vat.oninput = () => {
-      if (without.value !== "") withVat3.value = String(round24(Number(without.value) * (1 + rate())));
+      if (without.value !== "") withVat3.value = String(round2(Number(without.value) * (1 + rate())));
     };
   }
   function payload8(service, name) {
@@ -49912,7 +50457,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     if (currentScreen() === "productos") void paintServices();
   }
   function editService(existing) {
-    const admin = cardSectionsLegacy.can("administrar"), service = existing ?? { iva: DEFAULT_VAT, activo: true };
+    const admin = cardSectionsLegacy.can("administrar"), service = existing ?? { iva: generalVat(), activo: true };
     const body4 = document.getElementById("dbody"), box5 = document.getElementById("dlg");
     if (!body4 || !box5) return;
     body4.innerHTML = editorHtml15(service, admin);
@@ -50554,17 +51099,16 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   // src/app/screens/products/editor/form.ts
   var field16 = (id) => document.getElementById(id);
   var valueOf12 = (id) => field16(id)?.value ?? "";
-  var round25 = (value27) => Math.round(value27 * 100) / 100;
   function bindPrices2() {
     const vat = () => (Number(valueOf12("priva")) || 0) / 100, net = field16("prpr"), gross = field16("prpvp"), rate = field16("priva");
     if (net && gross) net.oninput = () => {
-      gross.value = net.value === "" ? "" : String(round25(Number(net.value) * (1 + vat())));
+      gross.value = net.value === "" ? "" : String(round2(Number(net.value) * (1 + vat())));
     };
     if (net && gross) gross.oninput = () => {
       net.value = gross.value === "" ? "" : String(Number((Number(gross.value) / (1 + vat())).toFixed(4)));
     };
     if (net && gross && rate) rate.oninput = () => {
-      if (net.value !== "") gross.value = String(round25(Number(net.value) * (1 + vat())));
+      if (net.value !== "") gross.value = String(round2(Number(net.value) * (1 + vat())));
     };
   }
   function bindPhoto() {
@@ -50649,7 +51193,6 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/screens/products/editor/editor.ts
   var EXTRAS = "muestra_regulada,muestra_desde,muestra_max,promocionado,es_equipo,revision_meses,packs,pvp_recomendado";
-  var round26 = (value27) => Math.round(value27 * 100) / 100;
   var disabled2 = (admin) => admin ? "" : "disabled";
   function headerHtml14(product, admin) {
     const photo = product.foto_url ?? "";
@@ -50662,7 +51205,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   }
   function pricesHtml(product, off) {
     const price = product.precio ?? null, vat = product.iva ?? 10;
-    const net = price === null ? "" : String(Number(Number(price).toFixed(4))), gross = price === null ? "" : String(round26(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
+    const net = price === null ? "" : String(Number(Number(price).toFixed(4))), gross = price === null ? "" : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
     return `<div class="pvp">
       <div><label for="prpr">${t("productsMore.editor.priceWithoutVat")}</label><input id="prpr" type="number" step="0.01" min="0" value="${net}" ${off}></div>
       <div><label for="priva">${t("productsMore.editor.vat")}</label><input id="priva" type="number" step="1" min="0" max="21" value="${vat}" ${off}></div>
@@ -50863,13 +51406,13 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/legacy/billing-bridge.ts
   var billingLegacy = {
-    section: () => FSEC,
+    section: () => billingStore.section,
     setSection: (section2) => {
-      FSEC = section2;
+      billingStore.section = section2;
     },
-    page: () => FACPAG,
+    page: () => ordersStore.invoicePage,
     setPage: (page) => {
-      FACPAG = page;
+      ordersStore.invoicePage = page;
     },
     canInvoice: () => Boolean(permissions_exports.canInvoice()),
     /** Through the global names: legado 057 caches the screen and legado 089 / the wide window wrap verFactura. */
@@ -50884,7 +51427,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       showLoading(element4, text5);
     },
     readOnly: () => Boolean(facConsulta()),
-    planName: () => planDe(String(PLAN_ACTUAL.plan)).nombre,
+    planName: () => planDe(String(sessionStore.plan.plan)).nombre,
     paintCompany: () => {
       void pintarEmpresa();
     },
@@ -50901,17 +51444,17 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     sendByEmail: (invoice2, rectifies) => {
       void enviarFacturaEmail(invoice2, rectifies);
     },
-    loadSettings: () => cargarAjustes(),
-    setting: (key) => AJUSTES[key],
+    loadSettings: () => loadSettings(),
+    setting: (key) => settingsStore.settings[key],
     setSetting: (key, value27) => {
-      AJUSTES[key] = value27;
+      settingsStore.settings[key] = value27;
     },
     paymentMethods: () => CAT.forma_pago ?? []
   };
 
   // src/app/screens/billing/model.ts
   var PAYMENT = { paid: "Cobrada", overdue: "Vencida", pending: "Pendiente" };
-  var euros5 = (value27) => formatCurrency(Math.round((Number(value27) || 0) * 100) / 100);
+  var euros5 = (value27) => formatCurrency(round2(value27));
   function paymentPill2(state2) {
     const kind = state2 === PAYMENT.paid ? "p-est" : state2 === PAYMENT.overdue ? "p-anu" : "p-bor";
     return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
@@ -51602,7 +52145,6 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/screens/billing/issue/preview.ts
   var PREVIEW_HASH2 = "#toolbar=0&navpanes=0&view=FitH";
-  var round27 = (value27) => Math.round(value27 * 100) / 100;
   var numberOf2 = (value27) => Number(value27) || 0;
   function linesOf2(detail) {
     const order = detail.pedido, gross = numberOf2(detail.totales?.bruto), share = gross ? numberOf2(detail.totales?.base_productos) / gross : 1;
@@ -51612,7 +52154,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       precio: numberOf2(line3.unidades) ? numberOf2(line3.importe) / numberOf2(line3.unidades) : 0,
       descuento: numberOf2(line3.descuento),
       iva: numberOf2(line3.iva),
-      base: round27(numberOf2(line3.importe) * (1 - numberOf2(line3.descuento) / 100) * share)
+      base: round2(numberOf2(line3.importe) * (1 - numberOf2(line3.descuento) / 100) * share)
     }));
     if (!order.envio) return lines4;
     const service = billing2Legacy.services().find((item) => item.id === order.servicio_id);
@@ -51622,7 +52164,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       precio: numberOf2(order.envio_base),
       descuento: 0,
       iva: numberOf2(order.envio_iva),
-      base: round27(numberOf2(order.envio_base)),
+      base: round2(numberOf2(order.envio_base)),
       servicio: true
     }];
   }
@@ -51631,8 +52173,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     lines4.forEach((line3) => {
       byRate.set(numberOf2(line3.iva), (byRate.get(numberOf2(line3.iva)) ?? 0) + numberOf2(line3.base));
     });
-    const vat = [...byRate.keys()].sort((first2, second) => first2 - second).map((rate) => ({ iva: rate, base: round27(byRate.get(rate) ?? 0), cuota: round27((byRate.get(rate) ?? 0) * rate / 100) }));
-    const base = round27(vat.reduce((total3, item) => total3 + item.base, 0)), total2 = round27(vat.reduce((all2, item) => all2 + item.base + item.cuota, 0));
+    const vat = [...byRate.keys()].sort((first2, second) => first2 - second).map((rate) => ({ iva: rate, base: round2(byRate.get(rate) ?? 0), cuota: round2((byRate.get(rate) ?? 0) * rate / 100) }));
+    const base = round2(vat.reduce((total3, item) => total3 + item.base, 0)), total2 = round2(vat.reduce((all2, item) => all2 + item.base + item.cuota, 0));
     return {
       numero: t("billingMore.preview.number"),
       fecha: todayIso(),
@@ -51990,6 +52532,204 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     paintRows4(rows2, "todas");
   }
 
+  // src/app/services/source-map.ts
+  var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  var DIGIT = new Map([...BASE64].map((char, index) => [char, index]));
+  var VLQ_SHIFT = 5;
+  var VLQ_CONTINUE = 32;
+  var VLQ_MASK = 31;
+  function decodeVlq(segment) {
+    const values2 = [];
+    let value27 = 0, shift = 0;
+    for (const char of segment) {
+      const digit = DIGIT.get(char);
+      if (digit === void 0) throw new Error(`VLQ: invalid character «${char}»`);
+      value27 += (digit & VLQ_MASK) << shift;
+      if (digit & VLQ_CONTINUE) {
+        shift += VLQ_SHIFT;
+        continue;
+      }
+      values2.push(value27 & 1 ? -(value27 >>> 1) : value27 >>> 1);
+      value27 = 0;
+      shift = 0;
+    }
+    if (shift !== 0) throw new Error("VLQ: unfinished segment");
+    return values2;
+  }
+  function parseMappings(mappings) {
+    const lines4 = [];
+    let source = 0, line3 = 0, sourceColumn = 0, name = 0;
+    for (const text5 of mappings.split(";")) {
+      const current = [];
+      let column = 0;
+      for (const segment of text5.split(",")) {
+        if (!segment) continue;
+        const [delta2 = 0, sourceDelta, lineDelta, columnDelta, nameDelta] = decodeVlq(segment);
+        column += delta2;
+        if (sourceDelta === void 0 || lineDelta === void 0 || columnDelta === void 0) continue;
+        source += sourceDelta;
+        line3 += lineDelta;
+        sourceColumn += columnDelta;
+        if (nameDelta !== void 0) name += nameDelta;
+        current.push({ column, source, line: line3, sourceColumn, name: nameDelta === void 0 ? null : name });
+      }
+      current.sort((first2, second) => first2.column - second.column);
+      lines4.push(current);
+    }
+    return lines4;
+  }
+  function readSourceMap(data) {
+    const root = data.sourceRoot ? data.sourceRoot.replace(/\/?$/, "/") : "";
+    return { sources: data.sources.map((source) => root + source), names: data.names ?? [], lines: parseMappings(data.mappings) };
+  }
+  function originalPosition(map2, line3, column) {
+    const segments2 = map2.lines[line3 - 1];
+    if (!segments2?.length) return null;
+    const target = column - 1;
+    let low = 0, high = segments2.length - 1, found = -1;
+    while (low <= high) {
+      const middle = low + high >> 1, segment = segments2[middle];
+      if (segment && segment.column <= target) {
+        found = middle;
+        low = middle + 1;
+      } else high = middle - 1;
+    }
+    const hit = segments2[found];
+    if (!hit) return null;
+    return { source: map2.sources[hit.source] ?? "?", line: hit.line + 1, column: hit.sourceColumn + 1, name: hit.name === null ? null : map2.names[hit.name] ?? null };
+  }
+  var FRAME = /((?:min\/)?app\.js)(?:\?v=([\d.]+))?:(\d+):(\d+)/;
+  function stackFrames(stack) {
+    return stack.split("\n").map((text5) => {
+      const match = FRAME.exec(text5);
+      return match ? { file: match[1] ?? "", version: match[2] ?? null, line: Number(match[3]), column: Number(match[4]), text: text5.trim() } : null;
+    }).filter((frame) => frame !== null);
+  }
+
+  // src/app/screens/platform/error-code.ts
+  var MAP_PATH = "min/app.js.map";
+  var MINIFIED = "min/app.js";
+  var mapRequest = null;
+  function loadMap() {
+    mapRequest ?? (mapRequest = fetch(new URL(MAP_PATH, location.href).href, { cache: "force-cache" }).then(async (response) => {
+      if (!response.ok) throw new Error(String(response.status));
+      return readSourceMap(await response.json());
+    }));
+    mapRequest.catch(() => {
+      mapRequest = null;
+    });
+    return mapRequest;
+  }
+  var stackOf = (detail) => {
+    const stack = detail && typeof detail === "object" ? detail.pila : null;
+    return typeof stack === "string" ? stack : "";
+  };
+  function frameLine(map2, frame) {
+    const position = frame.file === MINIFIED ? originalPosition(map2, frame.line, frame.column) : null;
+    if (!position) return `${escapeHtml(frame.text)}  ${t("platform.errorCode.unmapped")}`;
+    const source = position.source.replace(/^(\.\.\/)+/, "");
+    return `${escapeHtml(source)}:${position.line}:${position.column}${position.name ? `  (${escapeHtml(position.name)})` : ""}`;
+  }
+  async function codeOfStack(detail, currentVersion) {
+    const frames = stackFrames(stackOf(detail));
+    if (!frames.length) return t("platform.errorCode.noStack");
+    const other = frames.find((frame) => frame.version && frame.version !== currentVersion);
+    if (other) return t("platform.errorCode.otherVersion", { version: other.version ?? "", current: currentVersion });
+    if (!frames.some((frame) => frame.file === MINIFIED)) return t("platform.errorCode.notMinified");
+    try {
+      const map2 = await loadMap();
+      return frames.map((frame) => frameLine(map2, frame)).join("\n");
+    } catch (error) {
+      return t("platform.errorCode.noMap", { error: escapeHtml(error instanceof Error ? error.message : String(error)) });
+    }
+  }
+
+  // src/app/screens/platform/error-signature.ts
+  var STATE_ORDER = ["Nuevo", "Revisado", "Resuelto"];
+  function normaliseMessage(message4) {
+    return message4.replace(/https?:\/\/\S+/g, "<url>").replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>").replace(/(["'«`])[^"'»`]{0,120}(["'»`])/g, "$1…$2").replace(/\d+([.,]\d+)?/g, "<n>").replace(/\s+/g, " ").trim();
+  }
+  var stackOf2 = (detail) => {
+    if (!detail || typeof detail !== "object") return "";
+    const stack = detail.pila;
+    return typeof stack === "string" ? stack : "";
+  };
+  function firstAppFrame(detail) {
+    const frame = stackFrames(stackOf2(detail))[0];
+    if (!frame) return "";
+    const name = /^\s*(?:at\s+)?([\w$.<>]+)\s*[(@]/.exec(frame.text)?.[1];
+    return name && name !== "at" ? name : frame.file;
+  }
+  var signatureOf2 = (group) => `${group.tipo}|${normaliseMessage(group.mensaje)}|${firstAppFrame(group.detalle)}`;
+  var versionsOf = (group) => String(group.versiones ?? "").split(",").map((version) => version.trim()).filter(Boolean);
+  function compareVersions(first2, second) {
+    const parts = (version) => version.replace(/^v/, "").split(".").map(Number);
+    const one = parts(first2), other = parts(second);
+    for (let index = 0; index < Math.max(one.length, other.length); index++) {
+      const difference2 = (other[index] ?? 0) - (one[index] ?? 0);
+      if (difference2) return difference2;
+    }
+    return 0;
+  }
+  var earliest = (first2, second) => first2 <= second ? first2 : second;
+  var openest = (first2, second) => STATE_ORDER.indexOf(first2) <= STATE_ORDER.indexOf(second) ? first2 : second;
+  function mergeInto(target, group) {
+    target.veces += group.veces;
+    target.personas = Math.max(target.personas, group.personas);
+    target.primera = earliest(target.primera, group.primera);
+    if (group.ultima > target.ultima) {
+      target.ultima = group.ultima;
+      target.detalle = group.detalle;
+      target.mensaje = group.mensaje;
+    }
+    target.estado = openest(target.estado, group.estado);
+    if (group.pantalla && !target.pantallas.includes(group.pantalla)) target.pantallas.push(group.pantalla);
+    versionsOf(group).forEach((version) => {
+      if (!target.versiones.includes(version)) target.versiones.push(version);
+    });
+    target.members.push(group);
+  }
+  function mergeBySignature(groups3) {
+    const bySignature = /* @__PURE__ */ new Map();
+    groups3.forEach((group) => {
+      const signature = signatureOf2(group), found = bySignature.get(signature);
+      if (found) {
+        mergeInto(found, group);
+        return;
+      }
+      bySignature.set(signature, {
+        signature,
+        tipo: group.tipo,
+        mensaje: group.mensaje,
+        veces: group.veces,
+        personas: group.personas,
+        primera: group.primera,
+        ultima: group.ultima,
+        estado: group.estado,
+        pantallas: group.pantalla ? [group.pantalla] : [],
+        versiones: versionsOf(group),
+        detalle: group.detalle,
+        members: [group]
+      });
+    });
+    const merged = [...bySignature.values()];
+    merged.forEach((error) => {
+      error.versiones.sort(compareVersions);
+    });
+    return merged.sort((first2, second) => second.ultima.localeCompare(first2.ultima));
+  }
+  function byVersion(errors) {
+    const versions = /* @__PURE__ */ new Map();
+    errors.forEach((error) => {
+      (error.versiones.length ? error.versiones : ["?"]).forEach((version) => {
+        const list = versions.get(version);
+        if (list) list.push(error);
+        else versions.set(version, [error]);
+      });
+    });
+    return [...versions.entries()].sort(([first2], [second]) => compareVersions(first2, second));
+  }
+
   // src/app/screens/platform/errors.ts
   var STATES8 = ["Nuevo", "Revisado", "Resuelto"];
   var SOLVED = "Resuelto";
@@ -52001,15 +52741,27 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   };
   var stateOptions2 = (current) => STATES8.map((state2) => `<option ${current === state2 ? "selected" : ""}>${state2}</option>`).join("");
   var select = (id) => document.getElementById(id);
-  function groupRow(group, index) {
-    const solved = group.resuelto_en_version ? t(group.resuelto_auto ? "platform.errors.solvedAuto" : "platform.errors.solvedIn", { version: escapeHtml(group.resuelto_en_version) }) : "";
-    return `<div class="errfila e-${group.tipo}">
-        <div><b>${escapeHtml(kindName(group.tipo))}</b> <span class="sm">· ${escapeHtml(orFallback(group.pantalla, "—"))} · ${formatNumber(group.veces)} ${t(group.veces === 1 ? "platform.errors.time" : "platform.errors.times")} · ${formatNumber(group.personas)} ${t(group.personas === 1 ? "platform.errors.person" : "platform.errors.people")}
-          · ${t("platform.errors.last", { date: shortDateTime4(group.ultima) })}${solved}</span>
-          <div class="errmsg">${escapeHtml(group.mensaje)}</div>
-          <details class="errdet"><summary class="sm">${t("platform.errors.details")}</summary><div class="sm">${t("platform.errors.versions", { versions: escapeHtml(orFallback(group.versiones, "—")), date: shortDateTime4(group.primera) })}</div>
-            <pre>${escapeHtml(JSON.stringify(group.detalle ?? {}, null, 1))}</pre></details></div>
-        <select class="chico" data-egh="${index}" aria-label="${t("platform.errors.groupState")}">${stateOptions2(group.estado)}</select></div>`;
+  var errorView = "error";
+  function solvedText(error) {
+    const solved = error.members.find((member) => member.resuelto_en_version);
+    if (!solved?.resuelto_en_version) return "";
+    return t(solved.resuelto_auto ? "platform.errors.solvedAuto" : "platform.errors.solvedIn", { version: escapeHtml(solved.resuelto_en_version) });
+  }
+  function errorRow(error, index) {
+    const screens = error.pantallas.length ? error.pantallas.join(", ") : "—";
+    return `<div class="errfila e-${error.tipo}">
+        <div><b>${escapeHtml(kindName(error.tipo))}</b> <span class="sm">· ${escapeHtml(screens)} · ${formatNumber(error.veces)} ${t(error.veces === 1 ? "platform.errors.time" : "platform.errors.times")} · ${formatNumber(error.personas)} ${t(error.personas === 1 ? "platform.errors.person" : "platform.errors.people")}
+          · ${t("platform.errors.last", { date: shortDateTime4(error.ultima) })}${solvedText(error)}</span>
+          <div class="errmsg">${escapeHtml(error.mensaje)}</div>
+          <details class="errdet"><summary class="sm">${t("platform.errors.details")}</summary><div class="sm">${t("platform.errors.versions", { versions: escapeHtml(error.versiones.join(", ") || "—"), date: shortDateTime4(error.primera) })}</div>
+            <pre>${escapeHtml(JSON.stringify(error.detalle ?? {}, null, 1))}</pre>
+            <button type="button" class="btn sec chico" data-egmap="${index}">${t("platform.errorCode.show")}</button><pre class="errcode" hidden></pre></details></div>
+        <select class="chico" data-egh="${index}" aria-label="${t("platform.errors.groupState")}">${stateOptions2(error.estado)}</select></div>`;
+  }
+  function listHtml6(list) {
+    if (errorView === "error") return list.map(errorRow).join("");
+    return byVersion(list).map(([version, errors]) => `<h3 class="errver">${t("platform.errors.versionTitle", { version: escapeHtml(version), count: formatNumber(errors.length) })}</h3>
+      ${errors.map((error) => errorRow(error, list.indexOf(error))).join("")}`).join("");
   }
   function platformHtml(list, error) {
     const filters3 = platformState.platformErrors;
@@ -52019,18 +52771,32 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     ${error ? `<div class="banda-peligro">${t("platform.errors.couldNotRead", { error: escapeHtml(errorMessage3(error)) })}</div>` : ""}
     <div class="usrbar"><select id="egest">${states.map(([key, label]) => `<option value="${key}" ${filters3.estado === key ? "selected" : ""}>${t(label)}</option>`).join("")}</select>
       <select id="egdias">${DAY_OPTIONS.map((days) => `<option value="${days}" ${filters3.dias === days ? "selected" : ""}>${t("platform.errors.lastDays", { days })}</option>`).join("")}</select>
+      <select id="egvista" aria-label="${t("platform.errors.view")}"><option value="error" ${errorView === "error" ? "selected" : ""}>${t("platform.errors.byError")}</option><option value="version" ${errorView === "version" ? "selected" : ""}>${t("platform.errors.byVersion")}</option></select>
       <button class="btn sec" id="egdesc">${icon("download")} ${t("platform.errors.download")}</button></div>
-    <div class="errlista">${list.map(groupRow).join("") || `<div class="vacio">${t(filters3.estado === "abiertos" ? "platform.errors.noneOpen" : "platform.errors.none")}</div>`}</div></div>`;
+    <div class="errlista">${listHtml6(list) || `<div class="vacio">${t(filters3.estado === "abiertos" ? "platform.errors.noneOpen" : "platform.errors.none")}</div>`}</div></div>`;
   }
   var shown2 = (group) => {
     const filter = platformState.platformErrors.estado;
     return filter === "todos" || (filter === "abiertos" ? group.estado !== SOLVED : group.estado === SOLVED);
   };
-  async function markGroup(group, state2) {
-    const { data: result } = await callRpc("marcar_errores_huella", { p_huella: group.huella, p_estado: state2 });
-    const ok = Boolean(result?.ok);
+  async function markGroup(error, state2) {
+    const results = await Promise.all(error.members.map((member) => callRpc("marcar_errores_huella", { p_huella: member.huella, p_estado: state2 })));
+    const ok = results.every(({ data: result }) => Boolean(result?.ok));
     notices.toast(ok ? t(state2 === SOLVED ? "platform.errors.groupSolved" : "platform.errors.stateChanged") : t("platform.errors.couldNotChange"), !ok);
     if (ok) void paintPlatformErrors();
+  }
+  function bindCode(box5, list) {
+    box5.querySelectorAll("[data-egmap]").forEach((button3) => {
+      button3.onclick = async () => {
+        const error = list[Number(button3.dataset.egmap)], out = button3.nextElementSibling;
+        if (!error || !out) return;
+        button3.disabled = true;
+        out.hidden = false;
+        out.textContent = t("platform.errorCode.loading");
+        out.innerHTML = await codeOfStack(error.detalle, platformLegacy.appVersion());
+        button3.disabled = false;
+      };
+    });
   }
   async function paintPlatformErrors() {
     const start4 = panelBox();
@@ -52039,7 +52805,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     const { data, error } = await callRpc("errores_resumen", { p_dias: platformState.platformErrors.dias });
     const box5 = panelBox();
     if (!box5) return;
-    const all2 = error ? [] : data ?? [], list = all2.filter(shown2);
+    const all2 = error ? [] : data ?? [], list = mergeBySignature(all2).filter(shown2);
     box5.innerHTML = platformHtml(list, error);
     const refilter = () => {
       platformState.platformErrors = { estado: select("egest")?.value ?? "abiertos", dias: Number(select("egdias")?.value) };
@@ -52048,12 +52814,18 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     const states = select("egest"), days = select("egdias");
     if (states) states.onchange = refilter;
     if (days) days.onchange = refilter;
+    const view = select("egvista");
+    if (view) view.onchange = () => {
+      errorView = view.value === "version" ? "version" : "error";
+      void paintPlatformErrors();
+    };
     box5.querySelectorAll("[data-egh]").forEach((field22) => {
       field22.onchange = () => {
         const group = list[Number(field22.dataset.egh)];
         if (group) void markGroup(group, field22.value);
       };
     });
+    bindCode(box5, list);
     const save48 = document.getElementById("egdesc");
     if (save48) save48.onclick = () => {
       downloadJson({ generado: (/* @__PURE__ */ new Date()).toISOString(), version: platformLegacy.appVersion(), errores: all2 }, `errores_${todayIso()}.json`);
@@ -52589,14 +53361,14 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   var ROUTES_PER_USER = 30;
   var WARNING_SHARE = 0.8;
   function versionsHtml(list) {
-    const byVersion = /* @__PURE__ */ new Map();
+    const byVersion2 = /* @__PURE__ */ new Map();
     list.forEach((item) => {
-      byVersion.set(item.version, [...byVersion.get(item.version) ?? [], item]);
+      byVersion2.set(item.version, [...byVersion2.get(item.version) ?? [], item]);
     });
-    const versions = [...byVersion.keys()].sort((first2, second) => second.localeCompare(first2, "es", { numeric: true }));
+    const versions = [...byVersion2.keys()].sort((first2, second) => second.localeCompare(first2, "es", { numeric: true }));
     if (!versions.length) return `<div class="vacio">${t("platform.status.noVersions")}</div>`;
     return versions.map((version) => {
-      const users = byVersion.get(version) ?? [], number3 = version.replace(/^v/, "");
+      const users = byVersion2.get(version) ?? [], number3 = version.replace(/^v/, "");
       return `<div class="pdver"><div class="pdvercab"><b>v${escapeHtml(number3)}</b>${number3 === platformLegacy.appVersion() ? ` <span class="pill p-est">${t("platform.status.current")}</span>` : ` <span class="pill p-warn">${t("platform.status.previous")}</span>`}
         <span class="sm">${users.length} ${t(users.length === 1 ? "platform.status.company" : "platform.status.companies")}</span></div>
       <div class="sm">${users.map((item) => `${escapeHtml(item.organizacion)} (${platformLegacy.timeAgo(item.ultima_vez)})`).join(" · ")}</div></div>`;
@@ -52717,7 +53489,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     skeletonCard: (title2) => cardSkeleton(title2),
     /** A company word with its singular, plural and gender. */
     wordOf: (key) => terminoDe(key),
-    userName: () => PERFIL?.nombre ?? "",
+    userName: () => sessionStore.profile?.nombre ?? "",
     mountPeriod: (element4, options5) => {
       montarPeriodo(element4, options5);
     },
@@ -52725,15 +53497,15 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     /** On entering the portal the period is always «Esta semana»: the remembered one is forgotten. */
     forgetPeriod: () => {
       try {
-        localStorage.removeItem(`dlc-per-informe-${PERFIL?.id ?? ""}`);
+        localStorage.removeItem(`dlc-per-informe-${sessionStore.profile?.id ?? ""}`);
       } catch {
       }
     },
     /** At start the plan may not have arrived yet. */
     loadPlan: async () => {
-      if ("estado" in PLAN_ACTUAL) return;
+      if ("estado" in sessionStore.plan) return;
       const { data } = await RPC_ORIG("plan_uso", {});
-      if (data?.plan) PLAN_ACTUAL = data.plan;
+      if (data?.plan) sessionStore.plan = data.plan;
     },
     /** Saves the invoice as PDF with the company design (and `overrides`, e.g. the proforma title). */
     saveInvoice: async (invoice2, rectifies, overrides, fileName) => {
@@ -52853,12 +53625,11 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   var MAX_UNITS = 1e3;
   var MAX_PACKS = 50;
   var euros6 = (value27) => portalLegacy.euros(value27);
-  var round28 = (value27) => Math.round((Number(value27) || 0) * 100) / 100;
-  var withVat2 = (product) => round28((Number(product.precio) || 0) * (1 + (Number(product.iva) || 0) / 100));
+  var withVat2 = (product) => round2((Number(product.precio) || 0) * (1 + (Number(product.iva) || 0) / 100));
   var percent2 = (value27) => `${(Math.round(value27 * 1e3) / 10).toLocaleString(t("dates.locale"), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
   function packRow(product, pack, index) {
     const unitPrice = withVat2(product), bought = Number(pack.compra) || 0, free = Number(pack.regalo) || 0, retail = Number(product.pvp_recomendado) || 0;
-    const amount3 = round28(bought * unitPrice), cost = bought + free ? amount3 / (bought + free) : 0, name = `${formatNumber(bought)}${free ? `+${formatNumber(free)}` : ""}`;
+    const amount3 = round2(bought * unitPrice), cost = bought + free ? amount3 / (bought + free) : 0, name = `${formatNumber(bought)}${free ? `+${formatNumber(free)}` : ""}`;
     return `<div class="pclin pcpack"><span class="pcpk"><b>${t("portal.order.pack", { pack: `${formatNumber(bought)}${free ? ` + ${formatNumber(free)}` : ""}` })}</b><span class="sm">${t("portal.order.packUnits", { units: formatNumber(bought + free) })}${free ? t("portal.order.packFree", { free: formatNumber(free) }) : ""}</span></span>
           <span class="pcdato"><b>${euros6(amount3)}</b><span class="sm">${t("portal.order.withVat")}</span></span>
           <span class="pcdato"><b>${euros6(cost)}</b><span class="sm">${t("portal.order.perUnit")}</span></span>
@@ -53775,7 +54546,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/legacy/analytics-bridge.ts
   var analyticsLegacy = {
-    professional: () => AN_MED,
+    professional: () => homeStore.analyticsAccount,
     /** The range of a period picker (montarPeriodo). */
     period: (id) => {
       const range2 = Reflect.get(document.getElementById(id) ?? {}, "__rango");
@@ -54289,7 +55060,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       case "txt":
         return escapeHtml(value27);
       case "eur":
-        return formatCurrency(Math.round((number3 || 0) * 100) / 100);
+        return formatCurrency(round2(number3));
       case "pct":
         return `${oneDecimal(number3)} %`;
       case "dec":
@@ -55474,12 +56245,12 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
 
   // src/app/legacy/commissions-bridge.ts
   var commissionsLegacy = {
-    schemes: () => ESQUEMAS,
+    schemes: () => homeStore.commissionSchemes,
     setSchemes: (list) => {
-      ESQUEMAS = list;
+      homeStore.commissionSchemes = list;
     },
-    team: () => COMS,
-    whatUserSees: () => PERFIL?.comision_ver
+    team: () => homeStore.salesTeam,
+    whatUserSees: () => sessionStore.profile?.comision_ver
   };
 
   // src/app/screens/commissions/home-card.ts
@@ -55572,8 +56343,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     forgetSchemes();
     repaint5();
   }
-  async function remove9(user, since2, ending) {
-    const asked2 = ending ? { text: "commissions.people.endText", titulo: "commissions.people.endTitle", ok: "commissions.people.endOk" } : { text: "commissions.people.cancelText", titulo: "commissions.people.cancelTitle", ok: "commissions.people.cancelIt" };
+  async function remove9(user, since2, ending2) {
+    const asked2 = ending2 ? { text: "commissions.people.endText", titulo: "commissions.people.endTitle", ok: "commissions.people.endOk" } : { text: "commissions.people.cancelText", titulo: "commissions.people.cancelTitle", ok: "commissions.people.cancelIt" };
     if (!await notices.confirm(t(asked2.text), { titulo: t(asked2.titulo), ok: t(asked2.ok), peligro: true })) return;
     await legacyDb().rpc("asignar_esquema", { p_usuario: user, p_esquema: null, p_quitar: true, p_desde: since2 });
   }
@@ -57718,7 +58489,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     body4.querySelectorAll("[data-cobj]").forEach((input12) => {
       value27[input12.dataset.cobj ?? ""] = visits(input12.value);
     });
-    const { data: result, error } = await legacyDb().rpc("guardar_ajuste", { p_clave: "ciclo_visitas", p_valor: value27 });
+    const { data, error } = await rpc("guardar_ajuste", { p_clave: "ciclo_visitas", p_valor: value27 }), result = data;
     if (error || result?.ok === false) {
       notices.toast(t("cycle.editor.couldNotSave"), true);
       return;
@@ -57822,7 +58593,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   }
   async function paintCycle() {
     if (!document.getElementById("cfgcuerpo")) return;
-    const [{ data, error }, selector] = await Promise.all([legacyDb().rpc("ciclo_cuentas", { p_usuario: ownerParam() }), ownerSelector()]);
+    const [{ data: answer, error }, selector] = await Promise.all([rpc("ciclo_cuentas", { p_usuario: ownerParam() }), ownerSelector()]);
+    const data = answer;
     const box5 = document.getElementById("cfgcuerpo");
     if (!box5 || currentScreen() !== "ciclo") return;
     if (error || !data) {
@@ -57843,7 +58615,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
         <span class="cicfal"><b>${formatNumber(item.actividades_12m)}</b><span class="sm">${t("cycle.classifyPage.in12Months")}</span></span>
         ${classButtons(item.id, item.clase)}</div>`;
   }
-  function listHtml6(rows2) {
+  function listHtml7(rows2) {
     if (!rows2.length) return `<div class="vacio vlinea">${t(cycleState.classifyFilter === "sin" && !cycleState.query ? "cycle.classifyPage.allClassified" : "cycle.classifyPage.noneWithFilter")}</div>`;
     return `<section class="card cicbloque"><div class="lista">${rows2.map(rowHtml41).join("")}</div></section>${rows2.length >= SHOWN7 ? `<p class="sm">${t("cycle.classifyPage.firstOnly")}</p>` : ""}`;
   }
@@ -57852,7 +58624,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     return `<div class="cicpag"><div class="ciccab"><span class="segs" id="cicclf" role="group" aria-label="${t("cycle.classifyPage.show")}">${filters3}</span>
       <span class="cicacc"><input id="cicq" type="search" placeholder="${t("cycle.classifyPage.search", words3())}" value="${escapeHtml(cycleState.query)}" aria-label="${t("cycle.classifyPage.searchLabel")}">${selector}</span></div>
     <p class="sm">${t("cycle.classifyPage.hint", words3())}</p>
-    ${listHtml6(rows2)}</div>`;
+    ${listHtml7(rows2)}</div>`;
   }
   var searchTimer9;
   function bind43(box5, wasSearching) {
@@ -57882,9 +58654,10 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   async function paintClassify() {
     if (!document.getElementById("cfgcuerpo")) return;
     const [{ data, error }, selector] = await Promise.all([
-      legacyDb().rpc("cuentas_para_clasificar", { p_usuario: ownerParam(), p_filtro: cycleState.classifyFilter, p_q: cycleState.query || null }),
+      rpc("cuentas_para_clasificar", { p_usuario: ownerParam(), p_filtro: cycleState.classifyFilter, p_q: cycleState.query || null }),
       ownerSelector()
     ]);
+    const rows2 = data;
     const box5 = document.getElementById("cfgcuerpo");
     if (!box5 || currentScreen() !== "ciclo") return;
     if (error) {
@@ -57892,7 +58665,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       return;
     }
     const search9 = document.getElementById("cicq"), wasSearching = Boolean(search9) && document.activeElement === search9;
-    box5.innerHTML = pageHtml25(data ?? [], selector);
+    box5.innerHTML = pageHtml25(rows2 ?? [], selector);
     bind43(box5, wasSearching);
   }
   async function classify(button3, onCard) {
@@ -57902,7 +58675,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
     buttons.forEach((other) => {
       other.disabled = true;
     });
-    const { data: result, error } = await legacyDb().rpc("clasificar_cuentas", { p_ids: [id], p_clase: chosen5 });
+    const { data, error } = await rpc("clasificar_cuentas", { p_ids: [id], p_clase: chosen5 }), result = data;
     buttons.forEach((other) => {
       other.disabled = false;
     });
@@ -57954,7 +58727,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   }
   async function paintCoverage() {
     if (!document.getElementById("cfgcuerpo")) return;
-    const [{ data, error }, selector] = await Promise.all([legacyDb().rpc("ciclo_cobertura", { p_usuario: ownerParam() }), ownerSelector()]);
+    const [{ data: answer, error }, selector] = await Promise.all([rpc("ciclo_cobertura", { p_usuario: ownerParam() }), ownerSelector()]);
+    const data = answer;
     const box5 = document.getElementById("cfgcuerpo");
     if (!box5 || currentScreen() !== "ciclo") return;
     if (error || !data) {
@@ -57988,7 +58762,8 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
   }
   async function paintCycleTeam() {
     if (!document.getElementById("cfgcuerpo")) return;
-    const [{ data: members2 }, { data: ranges }] = await Promise.all([legacyDb().rpc("ciclo_equipo"), legacyDb().rpc("ciclo_rango")]);
+    const [{ data: memberRows }, { data: rangeRows }] = await Promise.all([rpc("ciclo_equipo"), rpc("ciclo_rango")]);
+    const members2 = memberRows, ranges = rangeRows;
     const box5 = document.getElementById("cfgcuerpo");
     if (!box5 || currentScreen() !== "ciclo") return;
     const range2 = (ranges ?? [])[0];
@@ -58000,6 +58775,19 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
         cycleState.owner = button3.dataset.cde ?? "";
         goToTab("ciclo");
       };
+    });
+  }
+
+  // src/app/core/csp-watch.ts
+  var MAX_SAMPLE = 80;
+  function describe(event) {
+    const blocked = event.blockedURI || "inline";
+    const where = event.sourceFile ? ` (${event.sourceFile}:${event.lineNumber})` : "";
+    return `${event.effectiveDirective} ${blocked}${where}`;
+  }
+  function listenToPolicyViolations() {
+    document.addEventListener("securitypolicyviolation", (event) => {
+      registerError("csp", describe(event), { muestra: event.sample.slice(0, MAX_SAMPLE), politica: event.disposition });
     });
   }
 
@@ -58230,6 +59018,7 @@ ${t("orders.distributor.mailNote", { note: order.nota })}` : ""
       cycle: cycle_exports
     }
   };
+  listenToPolicyViolations();
   listenToSameCentre();
   listenToDuplicates();
   listenToDayPickers();

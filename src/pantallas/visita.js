@@ -1,3 +1,4 @@
+// @ts-check
 // pantallas/visita.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
@@ -20,7 +21,7 @@ const esMuestras = d => (CAT.resultado_visita || []).some(x => x.valor === d.val
      actividad_fotos al registrar la visita. Sin conexión la visita se guarda igual y las fotos se añaden después desde su historial
      («📷 Fotos»), donde también se ven y se borran. */
 
-let VISITA_ACTUAL = null;   // { id, modo, fotos } de la ventana «Registrar visita» abierta
+ // v2.440.0: VISITA_ACTUAL → estado de src/app (plan 6.6), accesible en window   // { id, modo, fotos } de la ventana «Registrar visita» abierta
 
 /* v2.192.0 · Muestras con control legal (primera tanda del estudio por sectores, SQL 119; RD 1416/1994, art. 16).
    - Producto: «Muestra con control legal» con fecha de autorización (se pueden dar los 2 años siguientes) y máximo por profesional y año.
@@ -28,12 +29,12 @@ let VISITA_ACTUAL = null;   // { id, modo, fotos } de la ventana «Registrar vis
      profesional; si se entrega alguna, pide la firma (con el dedo o el ratón) y el nombre de quien firma. Se comprueba antes de guardar
      la visita; después, registrar_muestras guarda todo o nada (también desde la cola sin conexión, enlazada por el op_id de la visita).
    - Ficha: «Muestras este año» con lo entregado y lo que queda de cada producto regulado. */
-const MUESTRA_ERR = { firma: 'Falta la firma de quien recibe las muestras', profesional: 'Las muestras solo se entregan a profesionales, no a un centro',
-  plazo: 'Ese producto ya no se puede dar como muestra (han pasado 2 años desde su autorización)', limite: 'Se pasa del máximo de muestras de este año',
-  permiso: 'No puedes registrar muestras de esta ficha', producto: 'Producto no encontrado', no_existe: 'Ficha no encontrada' };
+const MUESTRA_ERR = { firma: window.delcos.t('legacyTexts.samples.signature'), profesional: window.delcos.t('legacyTexts.samples.professional'),
+  plazo: window.delcos.t('legacyTexts.samples.period'), limite: window.delcos.t('legacyTexts.samples.limit'),
+  permiso: window.delcos.t('legacyTexts.samples.permission'), producto: window.delcos.t('legacyTexts.samples.product'), no_existe: window.delcos.t('legacyTexts.samples.account') };
 
-const muestraError = r => (MUESTRA_ERR[r && r.error] || 'No se han podido guardar las muestras') +
-  (r && r.error === 'limite' ? ` (${r.producto}: quedan ${r.quedan} de ${r.max})` : r && r.error === 'plazo' ? ` (${r.producto})` : '');
+const muestraError = r => (MUESTRA_ERR[r && r.error] || window.delcos.t('legacyTexts.samples.failed')) +
+  (r && r.error === 'limite' ? window.delcos.t('legacyTexts.samples.left', { product: r.producto, left: r.quedan, max: r.max }) : r && r.error === 'plazo' ? ` (${r.producto})` : '');
 
 /* ============================================================
    v2.259.0 · Visita sin conexión (pendiente de la auditoría del 8/10, cerrado el 11/10/2026). Antes, sin cobertura la ventana

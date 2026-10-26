@@ -7,6 +7,9 @@
  */
 import { t } from '../../../i18n';
 import { orFallback } from '../../../services/values';
+import { sessionStore } from '../../session-store';
+import { settingsStore } from '../../../screens/settings/store';
+import { navigationStore } from '../store';
 
 export interface MenuGroup { id: string; t: string; items: string[] }
 interface MenuPrefs { orden?: string[]; items?: Record<string, string[] | undefined>; ocultos?: string[]; barra?: string[]; mas?: string[] }
@@ -26,8 +29,8 @@ const MENU_ORDER = ['inicio', 'agenda', 'rutas', 'directorio', 'ventas', 'pacien
 let redoFrame = 0;
 
 /** The menu preferences of the person (order, hidden sections, phone bar). */
-export const menuPrefs = (): MenuPrefs => ((PERFIL as { preferencias?: { menu?: MenuPrefs } } | null)?.preferencias?.menu) ?? {};
-export const menuNames = (): Record<string, string> => ((AJUSTES as { menu_nombres?: Record<string, string> } | null)?.menu_nombres) ?? {};
+export const menuPrefs = (): MenuPrefs => ((sessionStore.profile as { preferencias?: { menu?: MenuPrefs } } | null)?.preferencias?.menu) ?? {};
+export const menuNames = (): Record<string, string> => ((settingsStore.settings as { menu_nombres?: Record<string, string> } | null)?.menu_nombres) ?? {};
 export const isDesktopMenu = (): boolean => innerWidth >= DESKTOP_FROM;
 export function isMenuFolded(): boolean {
   try { const saved = localStorage.getItem('dlc-menu-plegado'); if (saved === '1' || saved === '0') return saved === '1'; } catch { /* the default */ }
@@ -93,7 +96,7 @@ const originalName = (screen: string): string | undefined =>
   (screen && screen !== 'directorio' ? document.querySelector<HTMLElement>(`nav.main [data-t="${screen}"]`)?.dataset.txdef : undefined);
 
 function renameTitle(names: Record<string, string>): void {
-  const screen = TAB, original = originalName(screen); if (!original) return;
+  const screen = navigationStore.screen, original = originalName(screen); if (!original) return;
   const node = titleText(screen), current = node?.nodeValue?.trim() ?? '', name = orFallback(names[screen], original);
   const known = current === original || Object.values(names).includes(current);
   if (node && known && current !== name) node.nodeValue = (node.nodeValue ?? '').replace(current, name);
@@ -146,7 +149,7 @@ export function showAllowedModules(): void {
 
 function placePageButton(nav: Element, key: string, text: string, shown: boolean): void {
   let button = nav.querySelector(`[data-t="${key}"]`);
-  if (!button && shown) { nav.insertAdjacentHTML('beforeend', `<button data-t="${key}" aria-selected="false">${text}</button>`); button = nav.querySelector(`[data-t="${key}"]`); }
+  if (!button && shown) { nav.insertAdjacentHTML('beforeend', `<button data-t="${key}">${text}</button>`); button = nav.querySelector(`[data-t="${key}"]`); }
   if (!button) return;
   button.classList.toggle('hide', !shown);
   // v2.132.0: if it is already in its block of the side menu, it stays

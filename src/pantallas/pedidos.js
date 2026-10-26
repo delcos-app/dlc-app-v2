@@ -1,3 +1,4 @@
+// @ts-check
 // pantallas/pedidos.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
@@ -15,15 +16,15 @@ let VSEC = 'pedidos';
 
 const txtVentanas = v => v && v.length ? v.map(([a, b]) => `${txtMin(a)}–${txtMin(b)}`).join(' y ') : '';
 
-let PEDPAG = 0;
+ // v2.440.0: PEDPAG → estado de src/app (plan 6.6), accesible en window
 
-let PEDF = {};   // v2.88.0: filtros por campos del pedido (Clasificadores)
+ // v2.440.0: PEDF → estado de src/app (plan 6.6), accesible en window   // v2.88.0: filtros por campos del pedido (Clasificadores)
 
 // Pedidos, Oportunidades, Compras y Proveedores: cada uno su entrada en el menú (por dentro, el mismo módulo con su sección)
 const ALIAS_PEDIDOS = { oportunidades: 'llamadas', compras: 'compras', proveedores: 'proveedores' };
 
-const TITULO_PEDSEC = { ventas: ['Pedidos', 'Pedidos de tus clientes, con sus unidades e importes'], llamadas: ['Oportunidades', 'Cada venta, se cierre con pedido o no, y por qué'],
-  compras: ['Compras', 'Pedidos a proveedores y mercancía en camino'], proveedores: ['Proveedores', 'A quién compras y en qué condiciones'] };
+const TITULO_PEDSEC = { ventas: ['Pedidos', window.delcos.t('legacyTexts.orderPages.sales')], llamadas: ['Oportunidades', window.delcos.t('legacyTexts.orderPages.opportunities')],
+  compras: ['Compras', window.delcos.t('legacyTexts.orderPages.purchases')], proveedores: ['Proveedores', window.delcos.t('legacyTexts.orderPages.suppliers')] };
 
 /* v2.162.0 · Suscripciones y pagos con Stripe (decisiones de Eric, 4/10/2026). «Plan y suscripción» ya no manda correos: «Contratar»
    abre el pago seguro de Stripe (tarjeta), «Cambiar a…» y «Añadir o quitar usuarios» cambian la suscripción con
@@ -32,7 +33,7 @@ const TITULO_PEDSEC = { ventas: ['Pedidos', 'Pedidos de tus clientes, con sus un
    arriba durante 14 días y después la empresa queda en solo lectura (la base no deja crear, cambiar ni borrar) hasta que pague. */
 const PAGO_PLANES = ['campo', 'comercial', 'empresa'];
 
-let PAGO_ESTADO = null;   // la respuesta de plan_uso (plan, usuarios, solo_lectura)
+ // v2.440.0: PAGO_ESTADO → estado de src/app (plan 6.6), accesible en window   // la respuesta de plan_uso (plan, usuarios, solo_lectura)
 
 const pagoAlPlan = () => {
   PAGO_IR_PLAN = false;
@@ -46,7 +47,7 @@ const pagoAlPlan = () => {
 let PAGO_PROXIMO = null;
 
 // Pedidos: el precio del contrato en vigor de la ficha (editorPedido lo consulta en su sitio)
-let PED_PRECIOS = { cuenta: null, precios: {} };
+ // v2.440.0: PED_PRECIOS → estado de src/app (plan 6.6), accesible en window
 
 /* v2.230.0 · KPIs de Pedidos y Analítica (Eric eligió la A de https://claude.ai/artifact/PTBZBvZ3yZrQxpxXCNKyrs).
    - Pedidos: #operativa deja de ser el cartel con los avisos desplegables y pasa a tres tarjetas vivas (pagos por validar, paquetes por
@@ -55,8 +56,8 @@ let PED_PRECIOS = { cuenta: null, precios: {} };
      (#opcfg) sigue eligiendo qué tarjetas se ven.
    - Analítica: cada indicador cuenta hasta su cifra y dibuja la línea de los últimos seis meses (analitica_kpis_periodo por mes, con
      el filtro propio del indicador). Sin línea los de «a día de hoy» y los de texto. */
-const PK_TARJ = [['pago', 'pago', 'Pendientes de cobro', 'credit-card'], ['paquete', 'paquete', 'Paquetes por preparar', 'package'],
-  ['email_factura', 'email', 'Facturas por enviar', 'mail']];
+const PK_TARJ = [['pago', 'pago', window.delcos.t('legacyTexts.orderCards.payment'), 'credit-card'], ['paquete', 'paquete', window.delcos.t('legacyTexts.orderCards.parcel'), 'package'],
+  ['email_factura', 'email', window.delcos.t('legacyTexts.orderCards.invoiceEmail'), 'mail']];
 
 // Aviso arriba si hay un cobro pendiente o la cuenta está en solo lectura
 

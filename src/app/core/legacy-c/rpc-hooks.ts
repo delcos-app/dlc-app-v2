@@ -4,6 +4,10 @@
  * network counters of the atomic reveal (v2.60.0), and the next receipt read with the payment data (v2.166.0). Folded from legado 051,
  * 053, 057, 059 and 076 (v2.425.0).
  */
+import * as legacyFreeCoreLegacyC from './';
+import { sessionStore } from '../session-store';
+import { t } from '../../i18n';
+import { navigationStore } from '../navigation/store';
 interface RpcAnswer { data?: unknown; error?: { message?: string; code?: string } | null }
 type Rpc = (name: string, params?: unknown, options?: unknown) => unknown;
 type Invoke = (name: string, options?: { body?: { accion?: string } }, ...rest: unknown[]) => Promise<{ data?: { ok?: boolean; proximo?: unknown } | null }>;
@@ -21,7 +25,7 @@ export function limitCallTime(): void {
     const result = original.call(db, name, params, options);
     if (!isThenable(result)) return result;
     let done = false;
-    const limit = new Promise<RpcAnswer>(resolve => { setTimeout(() => { if (!done) resolve({ data: null, error: { message: `La petición ha tardado demasiado (${name})`, code: 'TIEMPO' } }); }, TIMEOUT_MS); });
+    const limit = new Promise<RpcAnswer>(resolve => { setTimeout(() => { if (!done) resolve({ data: null, error: { message: t('legacyTexts.timeout', { name }), code: 'TIEMPO' } }); }, TIMEOUT_MS); });
     const answer = Promise.resolve(result).then(value => { done = true; return value; }, (error: unknown) => { done = true; return { data: null, error } as RpcAnswer; });
     return conCatch(Promise.race([answer, limit]));
   };
@@ -64,7 +68,7 @@ export function countWrites(): void {
   const original = client().rpc;
   client().rpc = (name, params, options) => {
     const result = original.call(db, name, params, options);
-    if (ES_ESCRITURA.test(name) && isThenable(result)) Promise.resolve(result).then(answer => { if (!answer.error) ESCRITURAS++; }, () => undefined);
+    if (ES_ESCRITURA.test(name) && isThenable(result)) Promise.resolve(result).then(answer => { if (!answer.error) sessionStore.writes++; }, () => undefined);
     return result;
   };
 }
@@ -107,7 +111,7 @@ export function readNextReceipt(): void {
   functions.invoke = async (name, options, ...rest) => {
     const result = await original(name, options, ...rest);
     try {
-      if (name === 'pagos' && options?.body?.accion === 'datos' && result.data?.ok) { PAGO_PROXIMO = result.data.proximo ?? null; pintarProximoRecibo(); }
+      if (name === 'pagos' && options?.body?.accion === 'datos' && result.data?.ok) { PAGO_PROXIMO = result.data.proximo ?? null; legacyFreeCoreLegacyC.paintNextReceipt(); }
     } catch { /* the receipt is optional */ }
     return result;
   };
@@ -122,7 +126,7 @@ const firstText = (...texts: (string | null | undefined)[]): string => texts.fin
 export function recordTrail(): void {
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button, a, [data-t], [data-cfg], .dr, .trow') : null; if (!target) return;
-    RASTRO.push({ t: new Date().toISOString().slice(11, 19), pantalla: TAB, que: firstText(target.getAttribute('aria-label'), target.title, target.textContent).trim().replace(/\s+/g, ' ').slice(0, TRAIL_TEXT) });
+    RASTRO.push({ t: new Date().toISOString().slice(11, 19), pantalla: navigationStore.screen, que: firstText(target.getAttribute('aria-label'), target.title, target.textContent).trim().replace(/\s+/g, ' ').slice(0, TRAIL_TEXT) });
     if (RASTRO.length > TRAIL_LENGTH) RASTRO.shift();
   }, true);
 }

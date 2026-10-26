@@ -1,3 +1,4 @@
+// @ts-check
 // pantallas/acceso.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
@@ -13,11 +14,11 @@ const CLAVES_NEUTRAS = { cuenta: 'medico', cuentas: 'medicos', ubicaciones: 'con
   cuentas_visitadas: 'medicos_visitados', n_ubicaciones: 'n_consultas', n_actividades: 'n_visitas', por_cuenta: 'por_medico',
   ultimas_actividades: 'ultimas_visitas', actividades_dia: 'visitas_dia', actividades_total: 'visitas_total' };
 
-let MED_ACCESO = null;
+ // v2.440.0: MED_ACCESO → estado de src/app (plan 6.6), accesible en window
 
 const claveAnchos = tipo => `ht-anchos-${(PERFIL || {}).id || ''}-${tipo}`;
 
-let PAG_CLAVE = '';
+ // v2.440.0: PAG_CLAVE → estado de src/app (plan 6.6), accesible en window
 
 // Acceso está en src/app/screens/access (v2.414.0). Estos nombres se quedan: el acceso, la navegación, Configuración,
 // legado 001, 047, 076 y 129 y las pruebas los usan.

@@ -1,3 +1,4 @@
+// @ts-check
 // pantallas/productos.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
@@ -5,11 +6,11 @@ async function cargarAlmacenes() { const { data } = await db.rpc('almacenes_list
 
 function loteRecepcion(l, uds, almId) {
   return `<div class="g2 rcl">
-    <div class="g2" style="margin:0"><div><label>Unidades</label><input type="number" min="0" data-r="u" value="${uds}"></div>
-      <div><label>Nº de lote</label><input data-r="lote" placeholder="p. ej. L2609"></div></div>
-    <div class="g2" style="margin:0"><div><label>Caducidad</label><input type="date" data-r="cad"></div>
-      <div><label>Fabricación</label><input type="date" data-r="fab"></div></div>
-    <div><label>Almacén</label><select data-r="alm">${ALMACENES.filter(a => a.activo).map(a => `<option value="${a.id}" ${a.id === almId ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></div></div>`;
+    <div class="g2" style="margin:0"><div><label>${window.delcos.t('legacyTexts.stockReception.units')}</label><input type="number" min="0" data-r="u" value="${uds}"></div>
+      <div><label>${window.delcos.t('legacyTexts.stockReception.batch')}</label><input data-r="lote" placeholder="${window.delcos.t('legacyTexts.stockReception.batchPlaceholder')}"></div></div>
+    <div class="g2" style="margin:0"><div><label>${window.delcos.t('legacyTexts.stockReception.expiry')}</label><input type="date" data-r="cad"></div>
+      <div><label>${window.delcos.t('legacyTexts.stockReception.manufacture')}</label><input type="date" data-r="fab"></div></div>
+    <div><label>${window.delcos.t('legacyTexts.stockReception.store')}</label><select data-r="alm">${ALMACENES.filter(a => a.activo).map(a => `<option value="${a.id}" ${a.id === almId ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></div></div>`;
 }
 
 
@@ -30,15 +31,15 @@ async function refrescarProductos() {
 
 
 
-let SERVICIOS = [];
+ // v2.440.0: SERVICIOS → estado de src/app (plan 6.6), accesible en window
 
-let PSEC = 'productos';
+ // v2.440.0: PSEC → estado de src/app (plan 6.6), accesible en window
 
-let PRODF = {};   // v2.88.0: filtros por campos del producto (Clasificadores)
+ // v2.440.0: PRODF → estado de src/app (plan 6.6), accesible en window   // v2.88.0: filtros por campos del producto (Clasificadores)
 
 
 
-let ESTADO_PROD = {};
+ // v2.440.0: ESTADO_PROD → estado de src/app (plan 6.6), accesible en window
 
 const vendible = p => (p.estado || 'Activo') === 'Activo';
 
@@ -58,7 +59,7 @@ const depCaducaPronto = f => f && f <= isoMas(hoyISO(), 60);
    - Producto: casilla «Se promociona en las visitas».
    - Registrar visita: «Productos presentados» (los que se promocionan); el historial de la ficha dice qué se presentó.
    - Ciclo de visitas → «Por producto»: por cada producto, cuántos de A, B y C lo han oído este ciclo y a quiénes les falta (con «+ Cita»). */
-let PROMO_PRODS = null;   // [{ id, nombre }] de los productos que se promocionan (última lista leída)
+ // v2.440.0: PROMO_PRODS → estado de src/app (plan 6.6), accesible en window   // [{ id, nombre }] de los productos que se promocionan (última lista leída)
 
 
 async function cargarProductosBase() {
@@ -87,9 +88,9 @@ function opcionesProducto(id, nombre) {
   // En los pedidos solo aparecen los productos activos (y el que ya tuviera la línea)
   const lista = PRODUCTOS.filter(p => (p.tipo !== 'servicio' && vendible(p)) || p.id === id);
   const falta = id && !lista.some(p => p.id === id);
-  return (falta ? `<option value="${id}" selected>${esc(nombre || 'Producto del pedido')}</option>` : '') +
+  return (falta ? `<option value="${id}" selected>${esc(nombre || window.delcos.t('legacyTexts.products.fromOrder'))}</option>` : '') +
     lista.map(p => `<option value="${p.id}" ${p.id === id ? 'selected' : ''}>${esc(p.nombre)}${vendible(p) ? '' : ' (' + esc(p.estado.toLowerCase()) + ')'}</option>`).join('')
-    || '<option value="">Sin productos activos</option>';
+    || '<option value="">' + window.delcos.t('legacyTexts.products.noneActive') + '</option>';
 }
 
 // Productos está en src/app/screens/products (v2.413.0). Estos nombres se quedan: el menú, la caché de pantallas (legado 057),

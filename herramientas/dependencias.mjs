@@ -1,6 +1,6 @@
 // Revisión de las librerías de fuera (plan de migración, 2.6). Uso: node herramientas/dependencias.mjs [--actualizaciones]
 //
-// Busca en src/, estilos/ y sw.js cada dirección de cdnjs, jsdelivr o unpkg y comprueba:
+// Busca en src/, estilos/ y sw.js cada dirección de cdnjs, jsdelivr, unpkg o cdn.sheetjs.com y comprueba:
 //   1. que lleva una versión exacta (nada de «@2» ni «latest»): una versión nueva de la librería no puede entrar sola;
 //   2. que la huella de integridad (integrity="sha384-…") coincide con lo que sirve hoy la CDN: si la cambiaran, el navegador
 //      no la ejecutaría (las hojas de estilo con @import no admiten huella: se avisa);
@@ -14,21 +14,22 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const archivos = ['sw.js', ...['src', 'estilos'].flatMap(d => fs.readdirSync(path.join(RAIZ, d), { recursive: true }).map(f => path.join(d, String(f))))]
   .filter(f => /\.(js|css|html)$/.test(f));
-const URL_RE = /https:\/\/(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)\/[^'"`\s)]+/g;
+const URL_RE = /https:\/\/(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|cdn\.sheetjs\.com)\/[^'"`\s)]+/g;
 const usos = new Map();
 for (const f of archivos) {
   const t = fs.readFileSync(path.join(RAIZ, f), 'utf8');
   for (const m of t.matchAll(URL_RE)) {
     const u = m[0];
     // la huella va en el mismo elemento o en la línea siguiente de código: se busca cerca
-    const cerca = t.slice(m.index, m.index + 400).match(/integrity\s*=\s*['"]?(sha384-[A-Za-z0-9+/=]+)/);
+    // v2.435.0: también en una constante junto a la dirección (XLSX_HASH = 'sha384-…', INTEGRITY = 'sha384-…')
+    const cerca = t.slice(m.index, m.index + 400).match(/(?:integrity\s*=\s*['"]?|_HASH\s*=\s*['"]|INTEGRITY\s*=\s*['"])(sha384-[A-Za-z0-9+/=]+)/i);
     const e = usos.get(u) || { archivos: new Set(), huella: null };
     e.archivos.add(f.replace(/\\/g, '/')); if (cerca) e.huella = cerca[1];
     usos.set(u, e);
   }
 }
 let mal = 0;
-const ver = u => (u.match(/@(\d[\w.-]*)\//) || u.match(/\/(\d+\.\d+\.\d+)\//) || [])[1];
+const ver = u => (u.match(/@(\d[\w.-]*)\//) || u.match(/\/(\d+\.\d+\.\d+)\//) || u.match(/\/xlsx-(\d+\.\d+\.\d+)\//) || [])[1];
 for (const [u, e] of usos) {
   const v = ver(u), exacta = v && /^\d+\.\d+\.\d+$/.test(v);
   const linea = [`${exacta ? '✓' : '✗'} ${u}`];
@@ -37,12 +38,18 @@ for (const [u, e] of usos) {
   else if (!e.huella) { linea.push('   sin huella de integridad'); mal++; }
   else {
     try {
-      const r = await fetch(u); const b = Buffer.from(await r.arrayBuffer());
+      // Una dirección sin extensión es la base de la librería (MapLibre): el código le añade «.js»
+      const r = await fetch(/\.(js|css)$/.test(u) ? u : u + '.js'); const b = Buffer.from(await r.arrayBuffer());
       const h = 'sha384-' + crypto.createHash('sha384').update(b).digest('base64');
       if (h !== e.huella) { linea.push(`   ✗ la huella no coincide con lo que sirve la CDN (${h})`); mal++; } else linea.push('   huella correcta');
     } catch (err) { linea.push('   no se ha podido descargar: ' + err.message); mal++; }
   }
-  if (process.argv.includes('--actualizaciones') && exacta) {
+  if (process.argv.includes('--actualizaciones') && exacta && u.includes('cdn.sheetjs.com')) {
+    // v2.437.0: SheetJS publica en su propia CDN (en npm se quedó en 0.18.5)
+    try { const ult = (await (await fetch('https://cdn.sheetjs.com/xlsx-latest/package/package.json')).json()).version;
+      if (ult && ult !== v) linea.push(`   hay una versión más nueva: ${ult}`);
+    } catch { }
+  } else if (process.argv.includes('--actualizaciones') && exacta) {
     const pk = (u.match(/\/npm\/(@?[^@]+)@/) || u.match(/unpkg\.com\/(@?[^@]+)@/) || u.match(/\/ajax\/libs\/([^/]+)\//) || [])[1];
     try { const j = await (await fetch(`https://registry.npmjs.org/${pk === 'leaflet' || pk === 'xlsx' ? pk : pk}`)).json();
       const ult = j['dist-tags'] && j['dist-tags'].latest;

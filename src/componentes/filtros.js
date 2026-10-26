@@ -1,10 +1,11 @@
+// @ts-check
 // componentes/filtros.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
 
 const HT = ['15:00-19:00', '16:00-19:00', '16:00-20:00', '17:00-20:00'];
 
-let HERR_CTX = null;
+ // v2.440.0: HERR_CTX → estado de src/app (plan 6.6), accesible en window
 
 // Pantallas con filtros propios que pasan al panel (la búsqueda por texto sigue a la vista)
 const HT_FILTROS = { pacientes: '#v-pacientes .filtros', facturacion: '#v-facturacion .filtros', analitica: '#anper' };

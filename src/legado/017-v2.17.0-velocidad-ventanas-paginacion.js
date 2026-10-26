@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    DLC OS 2.0 · v2.17.0 · Velocidad, ventanas, paginación,
    duplicados, auditoría y ayudas
@@ -11,7 +12,7 @@ const FROM_ORIG = db.from.bind(db);
 const RC = new Map(), RC_VUELO = new Map();
 window.delcos.legacyA.installRequestCache();
 
-let DUP_RES = null;
+ // v2.440.0: DUP_RES → estado de src/app (plan 6.6), accesible en window
 window.delcos.legacyA.listenToOutsideClicks();
 window.delcos.legacyA.watchListsAndHelp();
 

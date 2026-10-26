@@ -1,3 +1,4 @@
+// @ts-check
 // pantallas/panel_delcos.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
@@ -36,17 +37,17 @@ const ORG_DESDE = { marca: 'marca', correo: 'correo', copias: 'copias', __empres
    la organización de plataforma (SQL 107); allí la app enseña SOLO el Panel delcos, con su menú: Clientes, Solicitudes, Errores, Accesos,
    Auditoría, Equipo delcos y Plantilla (roles y catálogos que reciben las empresas nuevas). Para ayudar a una empresa, «Entrar» desde
    Clientes (la app normal de esa empresa, con la franja «Estás viendo…») y «Salir» vuelve al panel. plan_uso dice si es la de plataforma. */
-let MODO_PLATAFORMA = false;
+ // v2.440.0: MODO_PLATAFORMA → estado de src/app (plan 6.6), accesible en window
 
-const PANEL_SECCIONES = [['pd-orgs', 'orgs', 'Clientes', 'building-2'], ['pd-solicitudes', 'solicitudes', 'Solicitudes', 'mail'],
-  ['pd-errores', 'errores', 'Errores', 'bug'], ['pd-accesos', 'accesos', 'Accesos', 'lock-keyhole'], ['pd-auditoria', 'auditoria', 'Auditoría', 'history'],
-  ['pd-equipo', 'equipo', 'Equipo delcos', 'users'], ['pd-plantilla', 'plantilla', 'Plantilla', 'clipboard-list']];
+const PANEL_SECCIONES = [['pd-orgs', 'orgs', window.delcos.t('legacyTexts.platformSections.organisations'), 'building-2'], ['pd-solicitudes', 'solicitudes', window.delcos.t('legacyTexts.platformSections.requests'), 'mail'],
+  ['pd-errores', 'errores', window.delcos.t('legacyTexts.platformSections.errors'), 'bug'], ['pd-accesos', 'accesos', window.delcos.t('legacyTexts.platformSections.access'), 'lock-keyhole'], ['pd-auditoria', 'auditoria', window.delcos.t('legacyTexts.platformSections.audit'), 'history'],
+  ['pd-equipo', 'equipo', window.delcos.t('legacyTexts.platformSections.team'), 'users'], ['pd-plantilla', 'plantilla', window.delcos.t('legacyTexts.platformSections.template'), 'clipboard-list']];
 
-const PANEL_DESC = { orgs: 'Las empresas que usan delcos: plan, dominios, extras y entrar a ayudarlas', cobros: 'Quién paga, quién está en prueba y qué recibos vienen',
-  altas: 'Empresas que se han dado de alta desde www.delcos.app', solicitudes: 'Presupuestos A medida y conversaciones sobre el contrato',
-  errores: 'Errores de la plataforma agrupados, de todas las empresas', estado: 'Versiones en uso, SQL aplicado y cifras generales',
-  accesos: 'Entradas y salidas de la plataforma', auditoria: 'Cambios hechos en el panel', equipo: 'Las personas de delcos con acceso al panel',
-  plantilla: 'Roles y catálogos que recibe cada empresa nueva' };
+const PANEL_DESC = { orgs: window.delcos.t('legacyTexts.platformPanel.organisations'), cobros: window.delcos.t('legacyTexts.platformPanel.billing'),
+  altas: window.delcos.t('legacyTexts.platformPanel.signups'), solicitudes: window.delcos.t('legacyTexts.platformPanel.requests'),
+  errores: window.delcos.t('legacyTexts.platformPanel.errors'), estado: window.delcos.t('legacyTexts.platformPanel.status'),
+  accesos: window.delcos.t('legacyTexts.platformPanel.access'), auditoria: window.delcos.t('legacyTexts.platformPanel.audit'), equipo: window.delcos.t('legacyTexts.platformPanel.team'),
+  plantilla: window.delcos.t('legacyTexts.platformPanel.template') };
 
 // Organizaciones (panel delcos): impago y cancelada a la vista
 

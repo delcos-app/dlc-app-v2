@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    DLC OS 2.0 · Entrega 2: inicio, navegación y directorio
    v2.424.0: lo que hacía este archivo está en src/app (core/legacy-a: arranque, base de datos, cambio de pantalla y escuchas
@@ -20,7 +21,7 @@ const RE_NEUTRAS = new RegExp('"(' + Object.keys(CLAVES_NEUTRAS).join('|') + ')"
 
 const db = window.supabase.createClient(CFG.url, CFG.anon, window.delcos.legacyA.databaseOptions());
 
-let PERFIL = null, TAB = 'inicio';
+ // v2.440.0: PERFIL, TAB → estado de src/app (plan 6.6), accesible en window
 
 TERMINOS = window.delcos.legacyA.storedObject(TERMKEY);
 ROLES_DEF = window.delcos.legacyA.storedList(ROLKEY);
