@@ -6,6 +6,8 @@
  */
 import { accounts } from './es/accounts';
 import { legacyTexts } from './es/legacy-texts';
+import { startup } from './es/startup';
+import { timeZone } from './es/time-zone';
 import { settingsCore } from './es/settings-core';
 import { leftovers } from './es/leftovers';
 import { billingMore } from './es/billing-more';
@@ -54,6 +56,7 @@ import { agenda } from './es/agenda';
 import { events } from './es/events';
 import { surgeries } from './es/surgeries';
 import { cycle } from './es/cycle';
+import { privacy } from './es/privacy';
 
 export const es = {
   equipment,
@@ -101,6 +104,8 @@ export const es = {
   leftovers,
   settingsCore,
   legacyTexts,
+  startup,
+  timeZone,
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',
@@ -133,6 +138,7 @@ export const es = {
   events,
   surgeries,
   cycle,
+  privacy,
   home: {
     showIndicators: 'Ver tus indicadores',
     hideIndicators: 'Ocultar tus indicadores',
