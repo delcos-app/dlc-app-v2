@@ -23,6 +23,9 @@ import { markPortalOrderRows } from './order-alerts';
 import { coverWhenLeavingOrganization, extrasAreExceptions, finishOrganizationChange } from './platform';
 import { cancellationOnStart, forgetPlanReturnLater, paymentOnStart, reportVersionInUse, signUpNotices } from './plan-page';
 import { addToAgendaFromCard, checkSamplesBeforeSaving, closePopupOutside, decorateVisitResults, openCentreFromSearch, pullToReload, toggleDayMenu } from './agenda-extras';
+import * as legacyFreeCoreNavigationApi from '../navigation/api';
+import * as legacyFreeCoreSettings from '../settings';
+import * as legacyFreeComponents from '../../components';
 
 export { addIconsOf } from './icons';
 export { notificationExplanations } from './notifications';
@@ -41,7 +44,7 @@ export { estimateDay, explainNotice } from './agenda-notices';
 export { paintPlan } from './agenda-extras';
 export { paintCompany, fieldNames } from './company';
 
-export function start050(): void { addIconsOf('050'); watchVersionNotice(); ordenarMenu(); addProfileAndPlan(); }
+export function start050(): void { addIconsOf('050'); watchVersionNotice(); legacyFreeCoreNavigationApi.orderMenu(); addProfileAndPlan(); }
 export function start051(): void { addIconsOf('051'); limitCallTime(); keepContactsLabel(); addCompany(); Object.assign(CFG_ANTES, { marca: ['__empresa', 'marca'], correo: ['__empresa', 'correo'], copias: ['__empresa', 'copias'], empresa: ['__empresa', 'marca'] }); }
 export function start053(): void { addIconsOf('053'); logErrors(); addReportProblem(); listenToSeeMore(); }
 export function start054(): void { prepareToolsOnChanges(); openOwnPages(); }
@@ -59,12 +62,12 @@ export function start060(): void { rememberPressedTab(); summariseNewHelps(); wa
 export function start065(): void { listenToFieldChips(); }
 export const start069 = applyVocabularyToFixedTexts;
 export function start071(): void {
-  mejorarCamposNuevos(document); improveNumbers(); navigateSuggestions(); rememberScreenOnReload(); focusOpenedWindows();
+  legacyFreeComponents.enhanceNewFieldKinds(document); improveNumbers(); navigateSuggestions(); rememberScreenOnReload(); focusOpenedWindows();
 }
 export function start072(): void { pages.defineOrganization(); openOrganizationPage(); embedWindows(); }
 export function start073(): void {
   pages.defineUsersAndPanel(); buildMenusSoon(); watchSideMenu(); stripWithBringButton(); markPortalOrderRows(); pages.addTestEnvironmentTab(); markerInsteadOfStrip();
-  colocarIndPruebas(); markMenuNavigation(); pages.addSalesSections(); buildSalesMenusSoon();
+  legacyFreeCoreSettings.placeTestBadge(); markMenuNavigation(); pages.addSalesSections(); buildSalesMenusSoon();
 }
 export function start074(): void { addIconsOf('074'); closePopupOutside('.agpop', '[data-agdia]'); setPanelFilters(); raisePageAction(); closePopupOutside('.ankpop', '[data-ancfg]'); }
 export function start075(): void {

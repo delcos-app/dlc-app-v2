@@ -12,6 +12,9 @@ import { sessionStore } from '../core/session-store';
 import { billingStore } from '../screens/billing/store';
 import { ordersStore } from '../screens/orders/store';
 import { navigationStore } from '../core/navigation/store';
+import * as legacyFreeCoreServices from '../core/services';
+import * as legacyFreeComponents from '../components';
+import * as legacyFreeScreensOrders from '../screens/orders';
 export interface CatalogItem { id: string; nombre: string; foto_url?: string | null; tipo?: string | null; estado?: string; precio?: number | null; iva?: number | null }
 export interface MailTemplate { id: string; nombre: string; defecto?: boolean }
 
@@ -22,7 +25,7 @@ export const billing2Legacy = {
   services: (): readonly CatalogItem[] => productsStore.services as CatalogItem[],
   loadProducts: (): Promise<void> => cargarProductos(),
   refreshProducts: (): void => { void refrescarProductos(); },
-  logo: (): Promise<string | null> => logoData(),
+  logo: (): Promise<string | null> => legacyFreeCoreSettings.invoiceLogo(),
   roundLogo: (): boolean => Boolean(sessionStore.roundLogo),
   rawRpc: <T>(name: string, params: Record<string, unknown>): PromiseLike<LegacyResult<T>> => RPC_ORIG<T>(name, params),
   /** guardar_ajuste that also refreshes the copies of other tabs (legado 156's v2.342 write). */
@@ -32,19 +35,19 @@ export const billing2Legacy = {
   pdfEditing: (): string | null => billingStore.pdfEditing,
   setPdfEditing: (id: string | null): void => { billingStore.pdfEditing = id; },
   setInvoiceMailChosen: (id: string | null): void => { billingStore.chosenTemplates.factura = id; },
-  mailTemplate: (kind: string, part: string, values: Record<string, unknown>): string => plantillaCorreo(kind, part, values),
-  mailValues: (values: Record<string, unknown>): Record<string, unknown> => varsCorreo(values),
+  mailTemplate: (kind: string, part: string, values: Record<string, unknown>): string => legacyFreeScreensSettingsExtra.fillTemplate(kind, part as Parameters<typeof legacyFreeScreensSettingsExtra.fillTemplate>[1], values as Parameters<typeof legacyFreeScreensSettingsExtra.fillTemplate>[2]),
+  mailValues: (values: Record<string, unknown>): Record<string, unknown> => legacyFreeScreensSettingsExtra.emailVariables(values),
   mailTemplates: (kind: string): MailTemplate[] => legacyFreeScreensSettingsExtra.templatesFor(kind) as MailTemplate[],
-  firstName: (name: string): string => nombrePila(name),
-  askText: (message: string, value: string, options: { titulo: string; ok: string }): Promise<string | null> => pedirTexto(message, value, options),
-  newTemplateId: (): string => idPlant(),
+  firstName: (name: string): string => legacyFreeCoreServices.vocabulary.firstName(name),
+  askText: (message: string, value: string, options: { titulo: string; ok: string }): Promise<string | null> => legacyFreeComponents.askText(message, value, options),
+  newTemplateId: (): string => legacyFreeScreensSettingsExtra.newTemplateId(),
   helpButton: (title: string, text: string): string => pmAyu(title, text),
   openInvoice: (id: string): void => { void verFactura(id); },
   /** The legacy name: legado 058 and the wide window wrap disenoPDF. */
-  openDesigner: (): void => { void disenoPDF(); },
+  openDesigner: (): void => { void legacyFreeCoreServices.pdf.openDesigner(); },
   paymentState: (): { facturas?: unknown } | null => ordersStore.paymentState as { facturas?: unknown } | null,
   currentPlan: (): string => String((sessionStore.plan as { plan?: string } | null)?.plan ?? ''),
-  freeOfCharge: (order: object, total: unknown): boolean => Boolean(sinCargoP(order, total)),
+  freeOfCharge: (order: object, total: unknown): boolean => Boolean(legacyFreeScreensOrders.isFree(order, total as number | null | undefined)),
   configKey: (): string => CFG_KEY,
   pageTab: (page: string): string | undefined => navigationStore.pageTabs[page],
   productStates: (): Record<string, string> => productsStore.productStates,

@@ -12,6 +12,9 @@ import { navigationStore } from '../core/navigation/store';
 import { accountsStore } from '../screens/accounts/store';
 import { homeStore } from '../screens/home/store';
 import { productsStore } from '../screens/products/store';
+import * as legacyFreeComponentsList from '../components/list';
+import * as legacyFreeScreensCommissions from '../screens/commissions';
+import * as legacyFreeCoreLeftovers from '../core/leftovers';
 export type NearbyAccount = LegacyNearbyAccount;
 export type NearbyResult = LegacyNearbyResult;
 export type HiddenAlert = LegacyHiddenAlert;
@@ -27,10 +30,10 @@ export const miscLegacy = {
   setDuplicatesSummary: (value: { pendientes?: number; parecidos?: number } | null): void => { accountsStore.duplicates = value; },
   hiddenAlerts: (): HiddenAlert[] | null => homeStore.hiddenAlerts,
   setHiddenAlerts: (value: HiddenAlert[] | null): void => { homeStore.hiddenAlerts = value; },
-  alertKey: (title: string, item: Element): string => claveAlerta(title, item),
-  commissionCard: (): Promise<unknown> => tarjetaComision(),
+  alertKey: (title: string, item: Element): string => legacyFreeCoreLeftovers.alertKey(title, item as HTMLElement),
+  commissionCard: (): Promise<unknown> => legacyFreeScreensCommissions.paintCommissionCard(),
   routeCards: (): Promise<unknown> => legacyFreeScreensRoutes.paintRouteCards(),
-  item: (id: string, look: { icon: string; kind: string }, name: string, detail: string): string => itemHTML(id, look.icon, look.kind, name, detail),
+  item: (id: string, look: { icon: string; kind: string }, name: string, detail: string): string => legacyFreeComponentsList.itemHtml({ id, icon: look.icon, iconClass: look.kind || '', title: name, detail: detail }),
   paintUpdated: (): void => { legacyFreeCoreLegacyC.paintUpdated(); },
   canBuy: (): boolean => Boolean(legacyFreeCoreServices.permissions.canBuy()),
   openStock: (): void => { productsStore.section = 'stock'; ir('productos'); },

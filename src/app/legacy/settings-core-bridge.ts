@@ -11,6 +11,12 @@ import * as legacyFreeScreensSettingsExtra from '../screens/settings/extra';
 import { settingsStore } from '../screens/settings/store';
 import { sessionStore } from '../core/session-store';
 import { routesStore } from '../screens/routes/store';
+import * as legacyFreeScreensRoutes from '../screens/routes';
+import * as legacyFreeScreensSettingsRest from '../screens/settings/rest';
+import * as legacyFreeScreensCycle from '../screens/cycle';
+import * as legacyFreeScreensProducts from '../screens/products';
+import * as legacyFreeScreensImport from '../screens/import';
+import * as legacyFreeCoreLeftovers from '../core/leftovers';
 
 /** A role as the database defines it (roles and roles_capacidades). */
 export interface RoleDefinition { nombre: string; orden?: number; color?: string | null; plantilla?: Record<string, unknown>; por_defecto?: boolean; capacidades?: string[] }
@@ -35,13 +41,13 @@ export const settingsCoreLegacy = {
   canEditCatalogs: (): boolean => legacyFreeCoreServices.permissions.canManageLists(),
   hasExtra: (extra: string): boolean => hayExtra(extra),
   currentPlan: (): { plan?: unknown; usuarios?: unknown } => sessionStore.plan,
-  roundEuros: (value: number): string => eurI(value),
+  roundEuros: (value: number): string => legacyFreeCoreServices.money.eurosRounded(value),
   // Brand and labels
-  appName: (): string => nombreApp(),
+  appName: (): string => legacyFreeCoreServices.appName(),
   brand: (): { logo: string | null } => MARCA,
   setInvoiceLogo: (logo: string): void => { settingsStore.invoiceLogo = logo; sessionStore.roundLogo = true; },
   applyLabel: (): void => { aplicarEtiqueta(); },
-  organisationMenu: (): void => { menuOrganizacion(); },
+  organisationMenu: (): void => { legacyFreeCoreLeftovers.menuOrganization(); },
   contactsLabel: (): string => etiquetaContactos(),
   notificationTypes: (): readonly (readonly string[])[] => TIPOS_NOTIF,
   // Module cache, preferences and day proposals
@@ -49,29 +55,29 @@ export const settingsCoreLegacy = {
   moduleState: (screen: string): unknown => ESTADO_MOD[screen]?.(),
   writes: (): number => sessionStore.writes,
   activePreferences: (): { salida?: { nombre: string; lat: number | null; lon: number | null; falta?: boolean } } =>
-    prefsActivas() as { salida?: { nombre: string; lat: number | null; lon: number | null; falta?: boolean } },
+    legacyFreeScreensRoutes.activePreferences() as { salida?: { nombre: string; lat: number | null; lon: number | null; falta?: boolean } },
   dayProposals: (): DayProposals | null => routesStore.dayProposals as DayProposals | null,
   rememberProposal: (key: string, selection: unknown): void => { routesStore.proposals ??= {}; routesStore.proposals[key] = selection; },
 };
 
 /** The painter of each Configuración entry (the legacy names, looked up when the entry is opened). */
 export const treePainters = {
-  window: (painter: () => unknown): unknown => panelDeVentana(painter),
+  window: (painter: () => unknown): unknown => legacyFreeComponentsEmbeddedWindow.showWindowInPanel(painter),
   module: (name: string): unknown => legacyFreeComponentsEmbeddedWindow.showModuleInPanel(name),
-  preferencesPart: (part: string): unknown => pintarPrefsParte(part),
+  preferencesPart: (part: string): unknown => legacyFreeScreensSettingsRest.paintPreferencesPart(part),
   indicators: (): unknown => abrirKpis(),
   planTimes: (): unknown => { abrirHorarioPlan(); return undefined; },
-  portfolioRules: (): unknown => editorReglasCartera(),
-  visitFrequency: (): unknown => editorFrecuencia(),
-  cycle: (): unknown => editorCiclo(),
+  portfolioRules: (): unknown => legacyFreeScreensSettingsMore.editPortfolioRules(),
+  visitFrequency: (): unknown => legacyFreeScreensRoutes.editFrequency(),
+  cycle: (): unknown => legacyFreeScreensCycle.editCycle(),
   classifiers: (): unknown => legacyFreeScreensSettings.paintClassifiers(),
-  stores: (): unknown => pintarAlmacenes2(),
-  visitMaterial: (): unknown => pintarMaterial(),
+  stores: (): unknown => legacyFreeScreensProducts.paintStores(),
+  visitMaterial: (): unknown => legacyFreeScreensProducts.paintVisitMaterial(),
   brand: (): unknown => legacyFreeScreensSettingsMore.paintBrand(),
   email: (): unknown => legacyFreeScreensSettingsExtra.paintEmail(),
-  backups: (): unknown => pintarCopias(),
-  newImport: (): unknown => pintarImportar(),
-  imports: (): unknown => pintarImportaciones(),
+  backups: (): unknown => legacyFreeScreensSettingsMore.paintBackups(),
+  newImport: (): unknown => { legacyFreeScreensImport.paintImport(); return undefined; },
+  imports: (): unknown => legacyFreeScreensImport.paintImports(),
   portalSettings: (): unknown => pintarCfgPortal(),
 };
 

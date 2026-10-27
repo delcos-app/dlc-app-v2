@@ -8,6 +8,10 @@ import { sessionStore } from '../core/session-store';
 import { settingsStore } from '../screens/settings/store';
 import { billingStore } from '../screens/billing/store';
 import { navigationStore } from '../core/navigation/store';
+import * as legacyFreeCoreServices from '../core/services';
+import * as legacyFreeCoreNavigationApi from '../core/navigation/api';
+import * as legacyFreeCoreLegacyC from '../core/legacy-c';
+import * as legacyFreeCoreLeftovers from '../core/leftovers';
 export interface EmailProvider { n: string; host: string; puerto: number; seg: string; ayuda: string }
 export type NotificationType = readonly [string, string, string, string];
 export type NotificationArea = readonly [string, string, readonly string[]];
@@ -27,15 +31,15 @@ export const settingsExtraLegacy = {
   profileEmail: (): string => profile().email ?? '',
   preferences: (): Record<string, unknown> => profile().preferencias ?? {},
   setPreferences: (value: Record<string, unknown>): void => { profile().preferencias = value; },
-  appName: (): string => nombreApp(),
-  firstName: (name: string): string => nombrePila(name),
+  appName: (): string => legacyFreeCoreServices.appName(),
+  firstName: (name: string): string => legacyFreeCoreServices.vocabulary.firstName(name),
   /** Whole euros, as the legacy eurI writes them in the emails. */
-  euros: (value: number): string => eurI(value),
+  euros: (value: number): string => legacyFreeCoreServices.money.eurosRounded(value),
   brandLogo: (): string | null => MARCA.logo ?? null,
   // Email page
   emailProviders: (): Readonly<Record<string, EmailProvider>> => PROVEEDORES_CORREO,
-  withButtonLoading: <T>(button: HTMLElement | null, text: string, work: () => Promise<T>): Promise<T> => conCarga(button, text, work),
-  validateEmailLive: (input: HTMLElement | null): void => { if (input) validarEmailEnVivo(input); },
+  withButtonLoading: <T>(button: HTMLElement | null, text: string, work: () => Promise<T>): Promise<T> => legacyFreeCoreLegacyC.withLoading(button, text, work) as Promise<T>,
+  validateEmailLive: (input: HTMLElement | null): void => { if (input) legacyFreeCoreLeftovers.liveEmailCheck(input as HTMLInputElement); },
   helpButton: (title: string, text: string): string => pmAyu(title, text),
   sendTestEmail: (): Promise<FunctionResult<{ ok?: boolean; error?: string }>> =>
     (db as unknown as { functions: Functions }).functions.invoke('enviar_email', { body: { prueba: true } }),
@@ -47,12 +51,12 @@ export const settingsExtraLegacy = {
   dailyNotifications: (): readonly string[] => NOTIF_DIARIOS,
   areaOf: (type: string): string => legacyFreeCoreSettings.notificationArea(type),
   iconOf: (type: string): string => legacyFreeCoreSettings.notificationIcon(type),
-  typesForMyRole: (): readonly NotificationType[] => tiposDeMiRol(),
+  typesForMyRole: (): readonly NotificationType[] => legacyFreeCoreServices.plans.notificationTypesOfRole() as readonly NotificationType[],
   unread: (): number => settingsStore.notificationCount,
   setUnread: (count: number): void => { settingsStore.notificationCount = count; },
   refreshBell: (): void => { void refrescarCampana(); },
   icon: (name: string): string => svgIco(ICON_NOM[name] ?? ''),
-  followLink: (link: string): void => { void irEnlace(link); },
+  followLink: (link: string): void => { void legacyFreeCoreNavigationApi.followLink(link); },
   newSale: (preset: Record<string, unknown>): void => { void nuevaVenta(preset); },
   recordVisit: (accountId: string): void => { void abrirVisita(accountId); },
   openNotificationSettings: (): void => { settingsStore.section = 'notif'; (window as unknown as { __CFG_DIRECTO?: boolean }).__CFG_DIRECTO = true; void ir('config'); },
@@ -60,7 +64,7 @@ export const settingsExtraLegacy = {
   menuNames: (): Record<string, string> => menuNombres(),
   menuExcluded: (): readonly string[] => MENU_FUERA,
   moduleIcon: (module: string): string | undefined => ICO_MOD[module],
-  menuText: (button: Element): { get: () => string } | null => txTexto(button),
+  menuText: (button: Element): { get: () => string } | null => legacyFreeCoreSettings.menuLabelText(button as HTMLElement),
   applyMenuNames: (): void => { aplicarNombresMenu(); navigationStore.menuSignature = ''; try { montarMenuLateral(); pintarBnav(); } catch { /* the menu repaints later */ } },
   applyLabel: (): void => { aplicarEtiqueta(); },
 };

@@ -2,11 +2,8 @@
 // componentes/guardar_pagina.js · funciones llevadas aquí desde src/legado (bloque 6 del plan): todavía sin separar la vista de los datos.
 // Solo declaraciones de función: el orden dentro del archivo no cambia nada. Normas: docs/normas_codigo.md.
 
-function pagActual() { return window.delcos.leftovers.currentPage(); }
 
-function pagBloque(el, cuerpo) { return window.delcos.leftovers.blockOf(el, cuerpo); }
 
-function pagPonerGuardar() { window.delcos.leftovers.placeSave(); }
 
 /* ============================================================
     v2.376.0 · D-042 (Eric): en una página, un solo «Guardar», arriba a la derecha. En Configuración cada bloque traía su

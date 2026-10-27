@@ -15,7 +15,6 @@
 // v2.117.0 · Organizaciones: plan de cada empresa, estado (prueba, terminada, desactivada), descargar sus datos y borrar las de prueba
 
 // Menú de usuario: una sola entrada «Organización» en lugar de Empresa y Plan
-function menuOrganizacion() { window.delcos.leftovers.menuOrganization(); }
 
 // Organizaciones: los extras de cada empresa (los activa la plataforma)
 
@@ -61,15 +60,5 @@ const PANEL_DESC = { orgs: window.delcos.t('legacyTexts.platformPanel.organisati
 
 // Panel delcos está en src/app/screens/platform (v2.413.0). Estos nombres se quedan: las pestañas del panel (legado 073, 075 y 076),
 // Configuración → Errores, el arranque (franjaVista) y las pruebas los usan.
-function pintarOrganizaciones() { return window.delcos.screens.platform.paintOrganizations(); }
-function pintarCobrosDelcos() { return window.delcos.screens.platform.paintBilling(); }
-function pintarAltasDelcos() { return window.delcos.screens.platform.paintSignups(); }
-function pintarSolicitudesPlan() { return window.delcos.screens.platform.paintRequests(); }
-function pintarErroresDelcos() { return window.delcos.screens.platform.paintPlatformErrors(); }
-function pintarEstadoDelcos() { return window.delcos.screens.platform.paintStatus(); }
-function pintarPlantillaDelcos(sub) { return window.delcos.screens.platform.paintTemplate(sub); }
-function pintarErrores() { return window.delcos.screens.platform.paintCompanyErrors(); }
-function franjaVista() { return window.delcos.screens.platform.paintViewBand(); }
 
 // La ventana dentro del panel está en src/app/components/embedded-window (v2.422.0); este nombre se queda: Configuración y legado 001 lo usan.
-function salirPanel() { return window.delcos.components.embeddedWindow.leavePanel(); }

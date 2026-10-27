@@ -10,6 +10,8 @@ import * as legacyFreeCoreSettings from '../settings';
 import { settingsStore } from '../../screens/settings/store';
 import { sessionStore } from '../session-store';
 import { navigationStore } from '../navigation/store';
+import * as legacyFreeScreensAccess from '../../screens/access';
+import * as legacyFreeCoreLeftovers from '../leftovers';
 
 const RETRIES = 2, RETRY_WAIT_MS = 1500, NOT_FOUND = 'PGRST116', MOBILE_QUERY = '(max-width: 760px)';
 
@@ -52,12 +54,12 @@ async function refuse(profile: Profile | null): Promise<void> {
   const text = await refusalText(profile);
   localStorage.removeItem(PKEY);
   await db.auth.signOut();
-  mostrarLogin(text);
+  legacyFreeScreensAccess.showLogin(text);
 }
 
 async function enter(profile: Profile, saved: Profile | null, roles: Promise<unknown>): Promise<void> {
   try { localStorage.setItem(PKEY, JSON.stringify(profile)); } catch { /* not remembered on this device */ }
-  if (!(await roles) && !(settingsStore.roles.length && sessionStore.commercialStates.length)) await cargarRoles().catch(() => false);
+  if (!(await roles) && !(settingsStore.roles.length && sessionStore.commercialStates.length)) await legacyFreeCoreSettings.loadRoles().catch(() => false);
   const changed = !saved || JSON.stringify(saved) !== JSON.stringify(profile);
   if (!navigationStore.appVisible) mostrarApp(profile);
   else if (changed) { mostrarApp(profile); if (navigationStore.screen === 'inicio') void cargarInicio(); }
@@ -79,9 +81,9 @@ export async function start(): Promise<void> {
   marca('sesión comprobada');
   if (!session) {
     if (!navigator.onLine && saved && navigationStore.appVisible) return;   // v2.259.0: offline, the saved profile goes on
-    localStorage.removeItem(PKEY); mostrarLogin(); return;
+    localStorage.removeItem(PKEY); legacyFreeScreensAccess.showLogin(undefined); return;
   }
-  const roles = cargarRoles().catch(() => false);
+  const roles = legacyFreeCoreSettings.loadRoles().catch(() => false);
   const { profile, error } = await profileOrSaved(session.user.id, saved);
   marca('perfil recibido');
   if (error || !profile?.activo) { await refuse(profile); return; }
@@ -99,9 +101,9 @@ export function openApp(): void {
   navLegacy.improveFields();
   legacyFreeCoreSettings.applyBrand(); legacyFreeCoreSettings.applyBrand();
   if (RECUPERANDO) pantallaRecuperacion();
-  pintarBnav(); pintarConexion(); vaciarCola();
+  pintarBnav(); pintarConexion(); void legacyFreeCoreServices.queue.sendQueue();
   void start();
-  if (sessionStore.profile) menuOrganizacion();
+  if (sessionStore.profile) legacyFreeCoreLeftovers.menuOrganization();
   // Back from Stripe (v2.167.0): if the app already entered (saved profile), it goes to «Plan y suscripción»
   if (PAGO_IR_PLAN && sessionStore.profile) setTimeout(() => { if (PAGO_IR_PLAN) ir('plan'); }, 0);
 }

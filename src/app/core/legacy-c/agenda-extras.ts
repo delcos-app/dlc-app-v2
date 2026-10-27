@@ -12,6 +12,8 @@ import * as legacyFreeCoreServices from '../services';
 import { navigationStore } from '../navigation/store';
 import { accountsStore } from '../../screens/accounts/store';
 import { routesStore } from '../../screens/routes/store';
+import * as legacyFreeScreensSettingsMore from '../../screens/settings/more';
+import * as legacyFreeCoreSettings from '../settings';
 
 const PULL_FACTOR = 0.6, PULL_READY = 80, PULL_MAX = 90, PULL_SHOW = 70, PULL_OFFSET = 50, PULL_MIN_MS = 600;
 
@@ -99,7 +101,7 @@ export function openCentreFromSearch(): void {
 export function decorateVisitResults(): void {
   const body = byId('dbody'); if (!body) return;
   observe(body, () => {
-    if (body.querySelector('[data-vdest]:not([data-vend])')) { body.querySelectorAll<HTMLElement>('[data-vdest]').forEach(item => { item.dataset.vend = '1'; }); decorarResultados(); }
+    if (body.querySelector('[data-vdest]:not([data-vend])')) { body.querySelectorAll<HTMLElement>('[data-vdest]').forEach(item => { item.dataset.vend = '1'; }); legacyFreeScreensSettingsMore.decorateResults(); }
   }, { childList: true, subtree: true });
 }
 
@@ -118,7 +120,8 @@ interface Booked { m: { nombre: string; municipio?: string | null }; fecha: stri
 
 /** v2.64.0: the plan shows apart the professionals that already have an appointment (the legacy pintarPlan). */
 export function paintPlan(args: readonly unknown[]): unknown {
-  const result = pintarPlanBase2(...args);
+  void args;   // the legacy callers pass their arguments; the plan card takes none
+  legacyFreeCoreSettings.paintPlanCard();
   const box = byId('rplan'), booked = (routesStore.plan as { citados?: Booked[] } | null)?.citados ?? [];
   if (box && booked.length && !box.querySelector('.plancitados')) {
     box.insertAdjacentHTML('beforeend', `<div class="plancitados"><h3>${t('legacyC.plan.booked', { count: booked.length })}</h3>
@@ -126,5 +129,5 @@ export function paintPlan(args: readonly unknown[]): unknown {
       <div class="lista">${booked.map(item => `<div class="item u-cursor-default"><span class="ic">📅</span><span class="txt"><b>${escapeHtml(item.m.nombre)}</b>
         <span class="sm">${t('legacyC.plan.bookedOn', { date: escapeHtml(legacyFreeCoreServices.calendar.longDate((new Date(`${item.fecha}T12:00:00`)))) })}${item.m.municipio ? ` · ${escapeHtml(item.m.municipio)}` : ''}</span></span></div>`).join('')}</div></div>`);
   }
-  return result;
+  return undefined;
 }
