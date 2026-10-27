@@ -38,7 +38,7 @@ const MODULE_LOADERS: Readonly<Record<string, () => unknown>> = {
   directorio: () => { if (!document.getElementById('lista')?.children.length) buscar(true); },
   inicio: () => cargarInicio(), agenda: () => cargarAgenda(), rutas: () => legacyFreeScreensRoutes.loadRoutesPage(), seguimiento: () => legacyFreeScreensQuality.loadQuality(),
   ventas: () => cargarVentas(), analitica: () => cargarAnalitica(), config: () => cargarConfig(), duplicados: () => legacyFreeScreensAccounts.loadDuplicates(),
-  pacientes: () => cargarPacientes(), productos: () => cargarProductosModulo(), manual: () => { legacyFreeScreensManual.paintManual(); },
+  pacientes: () => cargarPacientes(), productos: () => cargarProductosModulo(), manual: () => { void legacyFreeScreensManual.paintManual(); },
   facturacion: () => cargarFacturacion(), informe: () => legacyFreeScreensPortal.loadReport(),
 };
 
@@ -140,7 +140,8 @@ export const adminLegacy = {
   setUsers: (users: AdminUser[]): void => { settingsStore.users = users; },
   initials: (name: string): string => legacyFreeCoreServices.vocabulary.initials(name),
   canImpersonate: (user: AdminUser): boolean => legacyFreeCoreServices.permissions.canImpersonateUser(user as unknown as Parameters<typeof legacyFreeCoreServices.permissions.canImpersonateUser>[0]),
-  paintCommissions: (): void => { void pintarComisiones(); },
+  // Plan 7.3: the promise is returned so Administración waits for the page (its code may still be loading)
+  paintCommissions: (): unknown => pintarComisiones(),
   paintAccesses: (): void => { void legacyFreeScreensSettingsMore.paintAccesses(); },
   paintAudit: (): void => { void legacyFreeScreensSettings.paintAudit(); },
   newUser: (): void => { nuevoUsuario({}); },
