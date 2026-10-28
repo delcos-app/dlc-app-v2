@@ -7,8 +7,6 @@
 import { backLegacy, dialogLegacy } from '../../legacy/legado-d-bridge';
 import { closestOf } from './events';
 
-const SHEETS = ['verPedido', 'verFactura', 'verEvento', 'verCirugia', 'verConcurso', 'verEquipo', 'fichaCentro', 'fichaStock', 'verDeposito'];
-
 /** Wraps showModal of a dialog: `before` runs first and may stop it (returning false); `after` runs once it is shown. */
 function aroundShowModal(dialog: HTMLDialogElement, before: () => boolean, after?: () => void): void {
   // eslint-disable-next-line @typescript-eslint/unbound-method -- the original is called with the dialog as `this`
@@ -20,18 +18,22 @@ function aroundShowModal(dialog: HTMLDialogElement, before: () => boolean, after
   };
 }
 
-/** v2.241.0: while a sheet opens, its window takes the sheet look. */
+type Opener = (...args: never[]) => Promise<unknown>;
+
+/** v2.241.0: while this sheet opens, its window takes the sheet look. Each screen wraps its own sheets (plan 7.3, cuts C and D). */
+export function sheetOpener<Open extends Opener>(open: Open): Open {
+  return async function (this: unknown, ...args: Parameters<Open>): Promise<unknown> {
+    dialogLegacy.sheetOpening(1);
+    try { return await open.apply(this, args); } finally { dialogLegacy.sheetOpening(-1); }
+  } as Open;
+}
+
+/** v2.241.0: while a sheet opens (sheetOpener), its window takes the sheet look. */
 export function installSheetLook(): void {
   const dialog = dialogLegacy.dialog('dlg');
   if (dialog) {
     aroundShowModal(dialog, () => { dialog.classList.toggle('dlgficha', dialogLegacy.openingSheet()); return true; });
     dialog.addEventListener('close', () => { dialog.classList.remove('dlgficha'); });
-  }
-  for (const name of SHEETS) {
-    dialogLegacy.wrapGlobal(name, original => async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      dialogLegacy.sheetOpening(1);
-      try { return await original.apply(this, args); } finally { dialogLegacy.sheetOpening(-1); }
-    });
   }
 }
 
@@ -50,23 +52,46 @@ export function installCentreLinks(): void {
 
 const BACK_MAX = 8, BACK_CLICK_MS = 1500, BACK_REOPEN_MS = 380;
 
-/** The windows opened by name (VISTA_TITULO) remember the window they came from. */
-function wrapOpeners(): void {
-  for (const name of backLegacy.titledViews()) {
-    backLegacy.wrapGlobal(name, original => async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const view = { fn: name, args, t: performance.now() }, previous = backLegacy.view(), click = backLegacy.lastClick();
-      // The previous one counts if it is still open or has just closed to open this one (buttons close and open in a row)
-      const fromPrevious = Boolean(previous?.dlg && (previous.dlg.open || (click?.d === previous.dlg && performance.now() - click.t < BACK_CLICK_MS)));
-      if (previous && !backLegacy.reopening() && fromPrevious && !backLegacy.sameView(previous, view)) backLegacy.push(previous, BACK_MAX);
-      backLegacy.setView(view); backLegacy.setPutButton(backLegacy.stackSize() > 0);
-      try {
-        const result = await original.apply(this, args);
-        if (backLegacy.view() === view) { const dialog = backLegacy.openDialog(); backLegacy.setViewDialog(view, dialog); backLegacy.button(view); }
-        return result;
-      } finally { if (backLegacy.view() === view) backLegacy.setPutButton(false); }
-    });
-  }
+type Openers = Map<string, (...args: unknown[]) => unknown>;
+
+/**
+ * The windows a screen opens through its own function (backOpener), by their name in VISTA_TITULO. A function
+ * and not a module constant: the screens register their openers while the core is being evaluated, maybe before this module.
+ */
+function directOpeners(): Openers {
+  const holder = directOpeners as typeof directOpeners & { openers?: Openers };
+  holder.openers ??= new Map();
+  return holder.openers;
 }
+
+/** The «‹ Volver» wrapper of a window: it remembers the window it came from (by `name`, its title in VISTA_TITULO). */
+function rememberingOrigin(name: string, open: (...args: unknown[]) => unknown): (...args: unknown[]) => Promise<unknown> {
+  return async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+    const view = { fn: name, args, t: performance.now() }, previous = backLegacy.view(), click = backLegacy.lastClick();
+    // The previous one counts if it is still open or has just closed to open this one (buttons close and open in a row)
+    const fromPrevious = Boolean(previous?.dlg && (previous.dlg.open || (click?.d === previous.dlg && performance.now() - click.t < BACK_CLICK_MS)));
+    if (previous && !backLegacy.reopening() && fromPrevious && !backLegacy.sameView(previous, view)) backLegacy.push(previous, BACK_MAX);
+    backLegacy.setView(view); backLegacy.setPutButton(backLegacy.stackSize() > 0);
+    try {
+      const result = await open.apply(this, args);
+      if (backLegacy.view() === view) { const dialog = backLegacy.openDialog(); backLegacy.setViewDialog(view, dialog); backLegacy.button(view); }
+      return result;
+    } finally { if (backLegacy.view() === view) backLegacy.setPutButton(false); }
+  };
+}
+
+/**
+ * A window a screen opens through its own function remembers where it came from (plan 7.3, cuts C and D: each screen wraps its
+ * opener; no global name is wrapped any more). Closing a window opened from it reopens it through this same function.
+ */
+export function backOpener<Open extends Opener>(name: string, open: Open): Open {
+  const wrapped = rememberingOrigin(name, open as unknown as (...args: unknown[]) => unknown);
+  directOpeners().set(name, wrapped);
+  return wrapped as unknown as Open;
+}
+
+/** Opens again a window of the back stack, through its screen's function. */
+const reopen = (view: { fn: string; args: unknown[] }): unknown => directOpeners().get(view.fn)?.(...view.args);
 
 /** Closing a window that was opened from another one reopens that one. */
 function reopenOnClose(dialog: HTMLDialogElement): void {
@@ -77,7 +102,7 @@ function reopenOnClose(dialog: HTMLDialogElement): void {
       if (backLegacy.view() !== view || !view.cerrada || dialog.open || !backLegacy.stackSize()) return;
       if (document.querySelector('dialog[open]')) return;   // something else opened over it: left alone
       const before = backLegacy.pop(); backLegacy.setView(null); backLegacy.setReopening(true);
-      if (before) void Promise.resolve(backLegacy.callGlobal(before.fn, before.args)).finally(() => { backLegacy.setReopening(false); const now = backLegacy.view(); if (now) backLegacy.button(now); });
+      if (before) void Promise.resolve(reopen(before)).finally(() => { backLegacy.setReopening(false); const now = backLegacy.view(); if (now) backLegacy.button(now); });
     }, BACK_REOPEN_MS);
   });
 }
@@ -90,7 +115,6 @@ export function installBack(): void {
     if (!dialog || closestOf(event.target, '[data-cerrar], .x, .vueltabtn')) return;
     backLegacy.setLastClick({ d: dialog, t: performance.now() });
   }, true);
-  wrapOpeners();
   for (const id of ['dlg', 'ficha']) {
     const dialog = dialogLegacy.dialog(id); if (!dialog) continue;
     // «‹ Volver» is put before the window shows (if it came later, the title would jump)

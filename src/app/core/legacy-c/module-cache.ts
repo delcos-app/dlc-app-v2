@@ -14,6 +14,7 @@ import { billingStore } from '../../screens/billing/store';
 import { agendaStore } from '../../screens/agenda/store';
 import { navigationStore } from '../navigation/store';
 import * as legacyFreeCoreServices from '../services';
+import * as legacyFreeScreensHome from '../../screens/home';
 
 const UNCHANGED_FOR_MS = 800, MINUTE_MS = 60000, SAFETY_MS = 6000;
 type Loader = (...args: unknown[]) => Promise<unknown>;
@@ -36,20 +37,21 @@ export const moduleStates = (): Record<string, () => string> => ({
   agenda: () => [agendaStore.mode, agendaStore.selectedDate, agendaStore.viewedUser ? agendaStore.viewedUser.id : ''].join('|'),
 });
 
-const LOADERS: readonly (readonly [string, string])[] = [['inicio', 'cargarInicio'], ['ventas', 'cargarVentas'], ['productos', 'cargarProductosModulo'],
-  ['facturacion', 'cargarFacturacion'], ['analitica', 'cargarAnalitica'], ['pacientes', 'cargarPacientes'], ['agenda', 'cargarAgenda']];
+/** A loader that uses the cache of its screen; the Agenda is not reloaded right after closing a window without changes. */
+function cached(screen: string, original: Loader): Loader {
+  return async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+    if (legacyFreeCoreServices.reads.canReuseScreen(screen)) { if (screen === 'inicio') legacyFreeCoreLegacyC.paintUpdated(); return undefined; }
+    if (screen === 'agenda' && Date.now() < unchangedUntil && !navigationStore.via) return undefined;   // a window closed without changes
+    const result = await original.apply(this, args); legacyFreeCoreSettings.markModuleCache(screen); if (screen === 'inicio') legacyFreeCoreLegacyC.paintUpdated(); return result;
+  };
+}
 
-/** Each loader uses the cache of its screen; the Agenda is not reloaded right after closing a window without changes. */
-export function cacheModuleLoaders(): void {
-  const globals = window as unknown as Record<string, Loader>;
-  LOADERS.forEach(([screen, name]) => {
-    const original = globals[name]; if (!original) return;
-    globals[name] = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      if (legacyFreeCoreServices.reads.canReuseScreen(screen)) { if (screen === 'inicio') legacyFreeCoreLegacyC.paintUpdated(); return undefined; }
-      if (screen === 'agenda' && Date.now() < unchangedUntil && !navigationStore.via) return undefined;   // a window closed without changes
-      const result = await original.apply(this, args); legacyFreeCoreSettings.markModuleCache(screen); if (screen === 'inicio') legacyFreeCoreLegacyC.paintUpdated(); return result;
-    };
-  });
+/**
+ * The loader of a screen with the cache of its screen: each screen wraps its own loader instead of having its global name wrapped
+ * (plan 7.3, cuts C and D).
+ */
+export function cachedModuleLoader<Load extends (...args: never[]) => Promise<unknown>>(screen: string, load: Load): Load {
+  return cached(screen, load as unknown as Loader) as unknown as Load;
 }
 
 /** The update button of Inicio, created on its header the first time (null header: only an existing button). */
@@ -60,7 +62,7 @@ function updateButton(): { button: HTMLElement | null; inHeader: boolean } {
   if (!button) {
     actions.insertAdjacentHTML('beforeend', `<button class="btn sec iniact" id="iniact" type="button" title="${t('legacyC.home.update')}">${svgIco(ICON_NOM['refresh-cw'] ?? '')}<span></span></button>`);
     button = byId('iniact');
-    if (button) { const target = button; target.onclick = (): void => { delete CACHE_MOD.inicio; void legacyFreeCoreLegacyC.withLoading(target, (t('legacyC.home.updating')), (() => cargarInicio())); }; }
+    if (button) { const target = button; target.onclick = (): void => { delete CACHE_MOD.inicio; void legacyFreeCoreLegacyC.withLoading(target, (t('legacyC.home.updating')), (() => legacyFreeScreensHome.loadWithCache())); }; }
   }
   return { button, inHeader: true };
 }

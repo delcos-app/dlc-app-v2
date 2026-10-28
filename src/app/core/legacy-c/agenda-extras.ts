@@ -14,6 +14,10 @@ import { accountsStore } from '../../screens/accounts/store';
 import { routesStore } from '../../screens/routes/store';
 import * as legacyFreeScreensSettingsMore from '../../screens/settings/more';
 import * as legacyFreeCoreSettings from '../settings';
+import { navigate } from '../navigation';
+import * as legacyFreeScreensAgenda from '../../screens/agenda';
+import * as legacyFreeScreensAccounts from '../../screens/accounts';
+import * as legacyFreeComponents from '../../components';
 
 const PULL_FACTOR = 0.6, PULL_READY = 80, PULL_MAX = 90, PULL_SHOW = 70, PULL_OFFSET = 50, PULL_MIN_MS = 600;
 
@@ -22,7 +26,7 @@ export function addToAgendaFromCard(): void {
   window.addEventListener('click', event => {
     const button = closestTo(event.target, '[data-agendar]'); if (!button) return;
     event.stopImmediatePropagation(); event.stopPropagation(); event.preventDefault();
-    void (nuevaCita as (account: string, isoDate: string | null, options: object) => unknown)(button.dataset.agendar ?? '', null, { origen: 'Ficha' });
+    void legacyFreeScreensAgenda.newAppointment(button.dataset.agendar ?? '', null, { origen: 'Ficha' });
   }, true);
 }
 
@@ -81,7 +85,7 @@ export function pullToReload(): void {
     if (distance * PULL_FACTOR <= PULL_READY) { hidePull(); return; }
     loading = true; pullIndicator().classList.add('gira'); showPull(PULL_READY);
     const started = Date.now();
-    try { if (navigationStore.screen === 'agenda') await cargarAgenda(); else await ir(navigationStore.screen); } catch { /* the indicator goes anyway */ }
+    try { if (navigationStore.screen === 'agenda') await legacyFreeScreensAgenda.loadAgenda(); else navigate(navigationStore.screen); } catch { /* the indicator goes anyway */ }
     await new Promise(resolve => { setTimeout(resolve, Math.max(0, PULL_MIN_MS - (Date.now() - started))); });
     loading = false; hidePull();
   })(); });
@@ -93,7 +97,7 @@ export function openCentreFromSearch(): void {
     const button = closestTo(event.target, '[data-gcid]'); if (!button) return;
     event.stopImmediatePropagation(); event.stopPropagation(); event.preventDefault();
     byId('gsug')?.classList.add('hide'); const search = byId<HTMLInputElement>('q'); if (search) search.value = '';
-    void fichaCentro(button.dataset.gcid ?? '');
+    void legacyFreeScreensAccounts.showCentre(button.dataset.gcid ?? '');
   }, true);
 }
 
@@ -112,16 +116,22 @@ export function checkSamplesBeforeSaving(): void {
     const visit = accountsStore.currentVisit as { muestras?: { validar: () => string | null } } | null;
     if (!button || !visit?.muestras) return;
     const message = visit.muestras.validar();
-    if (message) { event.stopImmediatePropagation(); event.preventDefault(); toast(message, true); }
+    if (message) { event.stopImmediatePropagation(); event.preventDefault(); legacyFreeComponents.toast(message, true); }
   }, true);
 }
 
 interface Booked { m: { nombre: string; municipio?: string | null }; fecha: string }
 
-/** v2.64.0: the plan shows apart the professionals that already have an appointment (the legacy pintarPlan). */
-export function paintPlan(args: readonly unknown[]): unknown {
+/**
+ * v2.64.0: the plan shows apart the professionals that already have an appointment (the legacy pintarPlan). The plan card is in the
+ * Rutas chunk (plan 7.3, cut C): once it is here the card is painted at once and the booked list right after, in the same task.
+ */
+export function paintPlan(args: readonly unknown[]): Promise<void> {
   void args;   // the legacy callers pass their arguments; the plan card takes none
-  legacyFreeCoreSettings.paintPlanCard();
+  return legacyFreeCoreSettings.paintPlanCard().then(paintBooked);
+}
+
+function paintBooked(): void {
   const box = byId('rplan'), booked = (routesStore.plan as { citados?: Booked[] } | null)?.citados ?? [];
   if (box && booked.length && !box.querySelector('.plancitados')) {
     box.insertAdjacentHTML('beforeend', `<div class="plancitados"><h3>${t('legacyC.plan.booked', { count: booked.length })}</h3>
@@ -129,5 +139,4 @@ export function paintPlan(args: readonly unknown[]): unknown {
       <div class="lista">${booked.map(item => `<div class="item u-cursor-default"><span class="ic">📅</span><span class="txt"><b>${escapeHtml(item.m.nombre)}</b>
         <span class="sm">${t('legacyC.plan.bookedOn', { date: escapeHtml(legacyFreeCoreServices.calendar.longDate((new Date(`${item.fecha}T12:00:00`)))) })}${item.m.municipio ? ` · ${escapeHtml(item.m.municipio)}` : ''}</span></span></div>`).join('')}</div></div>`);
   }
-  return undefined;
 }
