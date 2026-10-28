@@ -3218,7 +3218,8 @@
       loading: "Cargando los accesos…",
       title: "Accesos",
       hint: "Últimas entradas y salidas de la plataforma.",
-      none: "Todavía no hay accesos registrados."
+      none: "Todavía no hay accesos registrados.",
+      impersonatedBy: " · Impersonalizado por {name}"
     },
     audit: {
       yes: "sí",
@@ -5622,6 +5623,12 @@
   ]);
   setVocabularyResolver((name) => SURGERY_WORDS.get(name)?.());
 
+  // src/app/api/client.ts
+  function rpc(name, ...params) {
+    const [values2] = params;
+    return legacyDb().rpc(name, values2);
+  }
+
   // src/app/core/session.ts
   var ACCESS_CHECK_MS = 3e3;
   var SESSION_ERRORS = [];
@@ -5740,6 +5747,12 @@
     if (!known || code === "sesion") logFailure(code || message, error, detail);
     coreLegacy.hideLoading();
   }
+  async function markImpersonatedSession() {
+    try {
+      await rpc("suplantar_marcar_sesion");
+    } catch {
+    }
+  }
   async function impersonate(id) {
     const user = coreLegacy.users().find((item) => item.id === id) ?? { id, nombre: t("core.session.thisPerson"), rol: "" };
     const text = t(isGuest(user) ? "core.session.confirmGuest" : "core.session.confirmUser", { name: user.nombre });
@@ -5775,6 +5788,7 @@
       coreLegacy.hideLoading();
       return;
     }
+    await markImpersonatedSession();
     clearLocalData();
     location.reload();
   }
@@ -6467,7 +6481,7 @@
     const when = new Date(entry2.creado_en).toLocaleString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
     return `<div class="item u-cursor-default">
       <span class="ic ${entering ? "o" : ""}">${entering ? "→" : "←"}</span>
-      <span class="tx"><b>${escapeHtml(entry2.usuario)}</b><span class="sm">${escapeHtml(entry2.evento)} ·
+      <span class="tx"><b>${escapeHtml(entry2.usuario)}</b><span class="sm">${escapeHtml(entry2.evento)}${entry2.suplantado_por ? escapeHtml(t("settingsMore.access.impersonatedBy", { name: entry2.suplantado_por })) : ""} ·
         ${when}
         ${entry2.agente ? ` · ${escapeHtml(String(entry2.agente).slice(0, AGENT_LENGTH))}` : ""}</span></span></div>`;
   }
@@ -6586,7 +6600,7 @@
     return `<div class="card cfgpanel"><h2>${t("settingsMore.backups.title")}</h2>
     <p class="sm">${t("settingsMore.backups.intro", { professionals: term("medico", { number: "p" }), visits: term("visita", { number: "p" }) })}</p>
     ${stateHtml(last)}
-    <div class="acts" style="margin:12px 0 0"><button class="btn" id="copok">${t("settingsMore.backups.download")}</button></div>
+    <div class="acts u-m-12-0-0"><button class="btn" id="copok">${t("settingsMore.backups.download")}</button></div>
     <h3 class="mansub">${t("settingsMore.backups.tips")}</h3><ul class="manlist">
       <li><span>📅</span><span>${t("settingsMore.backups.tipWeekly")}</span></li>
       <li><span>🔐</span><span>${t("settingsMore.backups.tipPrivate")}</span></li>
@@ -7207,7 +7221,7 @@
     const marked = new Set(value10.en_estados ?? []);
     return `<div class="venbox"><span class="sm">${t("settingsMore.results.hint", { name: escapeHtml(value10.valor), theVisit: term("visita", { article: "el" }) })}</span>
         <div class="chips">${cardBaseLegacy.states().map((state) => `<button type="button" class="chip ${marked.has(state) ? "on" : ""}" data-vene="${escapeHtml(state)}" aria-pressed="${String(marked.has(state))}">${escapeHtml(state)}</button>`).join("")}</div>
-        <div class="acts" style="justify-content:flex-end;margin:6px 0 0"><button type="button" class="btn sec" data-vencerrar>${t("common.cancel")}</button><button type="button" class="btn" data-venok>${t("common.save")}</button></div></div>`;
+        <div class="acts u-end u-m-6-0-0"><button type="button" class="btn sec" data-vencerrar>${t("common.cancel")}</button><button type="button" class="btn" data-venok>${t("common.save")}</button></div></div>`;
   }
   async function save4(value10, item, box3, button3) {
     const chosen4 = [...box3.querySelectorAll('[data-vene][aria-pressed="true"]')].map((chip) => chip.dataset.vene ?? ""), all = cardBaseLegacy.states().length;
@@ -7469,7 +7483,7 @@
     const parts = Object.entries(check2.por_entidad ?? {}).map(([entity, count]) => t("settingsMore.undo.inEntity", { count: formatNumber(count), entity: entityName2(entity) })).join(", ");
     return `${t("settingsMore.undo.wouldUndo", { changes: formatNumber(check2.cambios), fields: formatNumber(check2.campos), parts })}
       ${check2.sin_deshacer ? ` ${t("settingsMore.undo.notUndoable", { count: formatNumber(check2.sin_deshacer) })}` : ""}
-      <div class="acts" style="margin:8px 0 0"><button type="button" class="btn" id="audok">${t("settingsMore.undo.undoCount", { count: formatNumber(check2.cambios) })}</button></div>`;
+      <div class="acts u-m-8-0-0"><button type="button" class="btn" id="audok">${t("settingsMore.undo.undoCount", { count: formatNumber(check2.cambios) })}</button></div>`;
   }
   var personParams = (undo, simulate2) => ({ p_usuario: undo.user, p_desde: `${undo.from}T00:00:00`, p_simular: simulate2 });
   async function undoAll(undo, check2, button3) {
@@ -7512,7 +7526,7 @@
     }
     undo.box.innerHTML = `<div class="card" id="audpersona" style="margin:0 16px 10px"><h3>${t("settingsMore.undo.personTitle", { name: escapeHtml(undo.name.trim()) })}</h3>
     <p class="sm">${t("settingsMore.undo.personHint", { places: term("consulta", { number: "p" }), date: formatShortDate(undo.from) })}</p>
-    <div class="acts" style="margin:6px 0 0"><button type="button" class="btn sec" id="audsim">${t("settingsMore.undo.preview")}</button></div><div id="audres" class="sm"></div></div>`;
+    <div class="acts u-m-6-0-0"><button type="button" class="btn sec" id="audsim">${t("settingsMore.undo.preview")}</button></div><div id="audres" class="sm"></div></div>`;
     const button3 = document.getElementById("audsim");
     if (button3) button3.onclick = () => {
       void simulate(undo, button3);
@@ -7647,7 +7661,7 @@
     if (!list) return;
     list.classList.add("matlista2");
     list.innerHTML = values2.map((value10) => rowHtml2(value10, allowed.find((item) => item.valor === value10.valor), withPortal)).join("") || `<div class="sm">${t("settingsMore.material.none")}</div>`;
-    if (values2.length) list.insertAdjacentHTML("afterend", `<div class="acts mtacts" style="justify-content:space-between;align-items:center">
+    if (values2.length) list.insertAdjacentHTML("afterend", `<div class="acts mtacts u-between u-items-center">
       <span class="sm">${withPortal && !portal2?.material ? t("settingsMore.material.portalDefault") : ""}</span>
       <button class="btn" id="matguardar">${t("settingsMore.material.save")}</button></div>`);
     bind3({ list, withPortal, portal: portal2 });
@@ -7801,6 +7815,163 @@
     steady: () => steady
   });
 
+  // src/app/core/legacy-c/side-menu.ts
+  var visible = (button3) => getComputedStyle(button3).display !== "none";
+  var shownSection = (button3) => !button3.classList.contains("hide") && !button3.classList.contains("mloculto") && button3.dataset.t !== "seguimiento" && visible(button3);
+  var isPortal = () => {
+    try {
+      return ES_MEDICO();
+    } catch {
+      return false;
+    }
+  };
+  var hiddenSections = () => menuPrefs().ocultos ?? [];
+  function wantsSideMenu(nav) {
+    const shown3 = [...nav.querySelectorAll("button[data-t]")].filter((button3) => !button3.classList.contains("hide") && button3.dataset.t !== "seguimiento" && button3.style.display !== "none" && (button3.classList.contains("mloculto") || visible(button3) || document.body.classList.contains("menulat")));
+    return menuEscritorio() && Boolean(sessionStore.profile) && !isPortal() && shown3.length > 1;
+  }
+  function paintBrand2(nav) {
+    if (!nav.querySelector(".mlmarca")) {
+      const logo = document.querySelector("header .logo")?.src ?? "./logo-app.png";
+      nav.insertAdjacentHTML("afterbegin", `<div class="mlmarca"><img src="${escapeHtml(logo)}" alt=""><b class="mllab"></b></div>`);
+    }
+    const brand = settingsStore.settings.marca || {};
+    const name = nav.querySelector(".mlmarca b");
+    if (name) name.textContent = brand.nombre ? brand.nombre : document.title;
+  }
+  function placeGroups(nav) {
+    const fixed = MENU_FIJO;
+    [...menuGroups(), fixed].forEach((group) => {
+      let box3 = nav.querySelector(`.mlgrupo[data-g="${group.id}"]`);
+      if (!box3) {
+        nav.insertAdjacentHTML("beforeend", `<div class="mlgrupo${group === fixed ? " fijo" : ""}" data-g="${group.id}"><div class="mltit">${escapeHtml(group.t)}</div><div class="mlbs"></div></div>`);
+        box3 = nav.querySelector(`.mlgrupo[data-g="${group.id}"]`);
+      }
+      if (!box3) return;
+      nav.appendChild(box3);
+      const buttons = box3.querySelector(".mlbs");
+      group.items.forEach((key) => {
+        const button3 = nav.querySelector(`button[data-t="${key}"]`);
+        if (button3) buttons?.appendChild(button3);
+      });
+    });
+  }
+  function labelButtons(buttons) {
+    const hidden = hiddenSections(), fixed = MENU_FIJO.items;
+    buttons.forEach((button3) => {
+      button3.classList.toggle("mloculto", hidden.includes(button3.dataset.t ?? "") && !fixed.includes(button3.dataset.t ?? "") && button3.dataset.t !== "inicio");
+      const texts2 = [...button3.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").trim());
+      if (texts2.length) {
+        const text = texts2.map((node) => node.textContent ?? "").join("").trim();
+        texts2.forEach((node) => {
+          node.remove();
+        });
+        const label = button3.querySelector(".mllab");
+        if (label) label.textContent = text;
+        else button3.insertAdjacentHTML("beforeend", `<span class="mllab">${escapeHtml(text)}</span>`);
+      }
+      button3.dataset.tip = (button3.querySelector(".mllab") ?? button3).textContent?.trim() ?? "";
+      button3.setAttribute("aria-label", button3.dataset.tip);
+    });
+  }
+  function paintFooter(nav) {
+    if (!nav.querySelector(".mlpie")) {
+      nav.insertAdjacentHTML("beforeend", `<div class="mlpie">
+      <button type="button" class="mlitem" id="mlcfg" data-tip="${t("legacyC.sideMenu.settings")}" aria-label="${t("legacyC.sideMenu.settings")}">${svgIco(ICON_NOM.settings ?? "")}<span class="mllab">${t("legacyC.sideMenu.settings")}</span></button>
+      <button type="button" class="mlitem" id="mlpers" data-tip="${t("legacyC.sideMenu.customise")}" aria-label="${t("legacyC.sideMenu.customise")}">${svgIco(ICON_NOM["sliders-horizontal"] ?? "")}<span class="mllab">${t("legacyC.sideMenu.customise")}</span></button>
+      <button type="button" class="mlplegar" id="mlplegar" aria-label="${t("legacyC.sideMenu.foldLabel")}">${svgIco(ICO_PLEGAR)}</button></div>`);
+      const settings2 = byId("mlcfg"), customise = byId("mlpers"), fold2 = byId("mlplegar");
+      if (settings2) settings2.onclick = () => {
+        navigate("config");
+      };
+      if (customise) customise.onclick = (event) => {
+        event.stopPropagation();
+        customiseDesktopMenu();
+      };
+      if (fold2) fold2.onclick = () => {
+        const folded = !document.body.classList.contains("menupleg");
+        try {
+          localStorage.setItem("dlc-menu-plegado", folded ? "1" : "0");
+        } catch {
+        }
+        document.body.classList.toggle("menupleg", folded);
+        menuTip(null);
+        navigationStore.menuSignature = "";
+        mountSideMenu();
+      };
+    }
+    const footer = nav.querySelector(".mlpie");
+    if (footer) nav.appendChild(footer);
+    const userSettings = document.querySelector('#umenu [data-u="cfg"]');
+    byId("mlcfg")?.classList.toggle("hide", !userSettings || userSettings.classList.contains("hide"));
+    const fold = byId("mlplegar");
+    if (fold) fold.dataset.tip = t(document.body.classList.contains("menupleg") ? "legacyC.sideMenu.unfold" : "legacyC.sideMenu.fold");
+  }
+  var markEmptyGroups = (nav) => {
+    nav.querySelectorAll(".mlgrupo").forEach((group) => {
+      group.classList.toggle("vacio", ![...group.querySelectorAll("button[data-t]")].some(shownSection));
+    });
+  };
+  function buildSideMenu(nav) {
+    document.body.classList.toggle("menupleg", menuPlegado());
+    const buttons = [...nav.querySelectorAll("button[data-t]")];
+    const signature = buttons.map((button3) => `${button3.dataset.t ?? ""}${button3.classList.contains("hide") ? "-" : "+"}${(button3.textContent ?? "").trim()}`).join("|") + JSON.stringify(menuPrefs()) + String(document.body.classList.contains("menupleg"));
+    if (signature === navigationStore.menuSignature && nav.querySelector(".mlmarca")) return;
+    navigationStore.menuSignature = signature;
+    paintBrand2(nav);
+    placeGroups(nav);
+    labelButtons(buttons);
+    markEmptyGroups(nav);
+    paintFooter(nav);
+  }
+  function markOutOfPlan(nav) {
+    const hidden = hiddenSections();
+    nav.querySelectorAll("button[data-t]").forEach((button3) => {
+      if (session_exports.outOfPlan(button3)) {
+        if (!button3.classList.contains("mlplan")) button3.classList.add("mlplan");
+        if (!button3.classList.contains("mloculto")) button3.classList.add("mloculto");
+      } else if (button3.classList.contains("mlplan")) {
+        button3.classList.remove("mlplan");
+        if (!hidden.includes(button3.dataset.t ?? "")) button3.classList.remove("mloculto");
+      }
+    });
+    markEmptyGroups(nav);
+  }
+  var afterMount = null;
+  function setAfterSideMenuMount(hook) {
+    afterMount = hook;
+  }
+  function mountSideMenu() {
+    buildMenu();
+    if (afterMount) {
+      try {
+        afterMount();
+      } catch {
+      }
+    }
+  }
+  function buildMenu() {
+    const nav = byId("nav");
+    if (nav) {
+      const side = wantsSideMenu(nav);
+      document.body.classList.toggle("menulat", side);
+      if (side) buildSideMenu(nav);
+    }
+    placeTestBadge();
+    if (!nav || !document.body.classList.contains("menulat")) return;
+    markOutOfPlan(nav);
+  }
+  function watchSideMenu() {
+    document.addEventListener("mouseover", (event) => {
+      const button3 = event.target instanceof Element ? event.target.closest("nav.main [data-tip]") : null;
+      menuTip(button3);
+    });
+    observe(byId("nav"), menuRehacer, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    addEventListener("resize", menuRehacer);
+    observe(byId("app"), menuRehacer, { attributes: true, attributeFilter: ["class"] });
+    menuRehacer();
+  }
+
   // src/app/core/navigation/menu/groups.ts
   var FOLD_BELOW = 1440;
   var DESKTOP_FROM = 900;
@@ -7831,7 +8002,7 @@
     if (redoFrame) return;
     redoFrame = requestAnimationFrame(() => {
       redoFrame = 0;
-      montarMenuLateral();
+      mountSideMenu();
     });
   }
   function orderedItems(group, prefs) {
@@ -8012,7 +8183,7 @@
     const draft = session2.draft;
     sessionStore.profile.preferencias = menuWith(session2, { orden: [...draft.orden], items: JSON.parse(JSON.stringify(draft.items)), ocultos: [...draft.ocultos] });
     navigationStore.menuSignature = "";
-    montarMenuLateral();
+    mountSideMenu();
   }
   function lockOutOfPlan(box3) {
     box3.querySelectorAll(".mlpi[data-k]").forEach((row3) => {
@@ -8051,7 +8222,7 @@
     if (!session2.saved) {
       sessionStore.profile.preferencias = session2.original;
       navigationStore.menuSignature = "";
-      montarMenuLateral();
+      mountSideMenu();
     }
     document.getElementById("mlpers")?.focus();
   }
@@ -8069,7 +8240,7 @@
     session2.saved = true;
     close(session2);
     navigationStore.menuSignature = "";
-    montarMenuLateral();
+    mountSideMenu();
     toast(t("navigationCore.menu.saved"), false);
   }
   function onClick(session2, event) {
@@ -8864,6 +9035,7 @@
     mountPeriod: () => mountPeriod2,
     openTools: () => openTools2,
     paintConnection: () => paintConnection2,
+    paintCurrentStrip: () => paintCurrentStrip,
     paintTestStrip: () => paintTestStrip,
     patchClassList: () => patchClassList,
     readLinkError: () => readLinkError,
@@ -9857,7 +10029,7 @@
     if (!use) return "";
     const band3 = use.estado === "excedido" ? `<div class="banda-aviso u-mt-8" id="limaviso" data-estado="excedido">${t("limits.exceeded")}${use.bloquear_archivos ? ` ${t("limits.filesBlocked")}` : ""}</div>` : use.estado === "aviso" ? `<div class="banda-aviso u-mt-8" id="limaviso" data-estado="aviso">${t("limits.warning")}</div>` : "";
     const fileMax = use.archivo_mb !== null && use.archivo_mb !== void 0 ? `<p class="sm">${t("limits.fileMax", { value: formatNumber(use.archivo_mb) })}</p>` : "";
-    return `<div class="card cfgpanel" id="limuso"><h2 style="padding:0 0 4px">${t("limits.title")}</h2>
+    return `<div class="card cfgpanel" id="limuso"><h2 class="u-p-0-0-4">${t("limits.title")}</h2>
     <p class="sm">${t("limits.intro")}</p>
     <div class="barrash">${meterRow(t("limits.records"), t("limits.recordsHint"), use.filas, (value10) => formatNumber(value10 ?? 0))}
       ${meterRow(t("limits.space"), t("limits.spaceHint"), use.almacenamiento_mb, megabytes)}</div>${fileMax}${band3}</div>`;
@@ -9900,6 +10072,7 @@
     indicatorsHtml: () => indicatorsHtml2,
     loadIndicators: () => loadIndicators,
     observe: () => observe2,
+    overridePageSize: () => overridePageSize,
     savePageSize: () => savePageSize,
     sections: () => sections,
     startBlocks: () => startBlocks,
@@ -10603,12 +10776,14 @@
   var model_exports5 = {};
   __export(model_exports5, {
     OPERATIONS: () => OPERATIONS,
+    ORDER_STEPS: () => ORDER_STEPS,
     STATES: () => STATES2,
     TRANSFER_ISSUE: () => TRANSFER_ISSUE,
     TRANSFER_STATES: () => TRANSFER_STATES,
     euros: () => euros2,
     isBankTransfer: () => isBankTransfer,
     isFree: () => isFree,
+    isStepCode: () => isStepCode,
     lineBreakdown: () => lineBreakdown,
     operationDone: () => operationDone,
     orderStep: () => orderStep,
@@ -10616,7 +10791,9 @@
     paymentPill: () => paymentPill,
     round2: () => round2,
     statePill: () => statePill2,
+    stepCode: () => stepCode,
     stepPill: () => stepPill,
+    storedStateOf: () => storedStateOf,
     storedTotals: () => storedTotals,
     totalsHtml: () => totalsHtml,
     transferPill: () => transferPill
@@ -12446,7 +12623,7 @@
   function searchHtml(draft) {
     const source = draft.source, typed2 = source.id ? orFallback(source.nombre, orFallback(source.telefono, "")) : "";
     return `<input id="nvq" type="search" placeholder="${t("opportunities.editor.searchPlaceholder")}" autocomplete="off" value="${escapeHtml(typed2)}"><div class="lista" id="nvres1"></div>
-      <div class="acts" style="margin:6px 0 0;justify-content:flex-start"><button type="button" class="btn sec" id="nvalta">${t("opportunities.editor.newCard")}</button>
+      <div class="acts u-m-6-0-0 u-start"><button type="button" class="btn sec" id="nvalta">${t("opportunities.editor.newCard")}</button>
         ${source.id || draft.previous ? "" : `<button type="button" class="lnk" id="nvsin">${t("opportunities.editor.orderWithoutClient")}</button>`}</div>
       ${draft.recording ? `<div class="sm u-mt-4">${t("opportunities.editor.nameIsEnough")}</div>` : ""}`;
   }
@@ -12529,10 +12706,10 @@
         <div class="g2 u-mt-6"><div><input id="nvpf" type="date" value="${escapeHtml(orFallback(draft.source.proxima_fecha, ""))}" aria-label="${t("opportunities.callAgainOn")}"></div>
           <div><input id="nvpa" value="${escapeHtml(orFallback(draft.source.proxima_accion, ""))}" placeholder="${t("opportunities.whatToDoPlaceholder")}" aria-label="${t("opportunities.whatToDo")}"></div></div>
         <div id="nvperd" class="sm u-mt-6"></div>
-        <div class="acts" style="margin:8px 0 0;justify-content:flex-start"><button type="button" class="btn" id="nvnook">${t("opportunities.editor.saveWithoutOrder")}</button></div></div>`;
+        <div class="acts u-m-8-0-0 u-start"><button type="button" class="btn" id="nvnook">${t("opportunities.editor.saveWithoutOrder")}</button></div></div>`;
   }
   function endsHtml(draft) {
-    const ends = draft.closed ? `<div class="banda-ok">${t("opportunities.editor.closedWith", { order: escapeHtml(orFallback(draft.source.pedido, "")) })}</div>` : `<div class="acts nvfin" style="margin:6px 0 0;justify-content:flex-start">
+    const ends = draft.closed ? `<div class="banda-ok">${t("opportunities.editor.closedWith", { order: escapeHtml(orFallback(draft.source.pedido, "")) })}</div>` : `<div class="acts nvfin u-m-6-0-0 u-start">
           <button type="button" class="btn" id="nvped">${t("opportunities.editor.makeOrder")}</button>
           ${draft.recording ? `<button type="button" class="btn sec ${draft.noSale ? "on" : ""}" id="nvno2">${t("opportunities.editor.noSale")}</button>` : ""}</div>`;
     return `<div class="llpaso" id="nvp3"><span class="lln">${draft.recording ? 3 : 2}</span><b>${t("opportunities.editor.howEnds")}</b>
@@ -12832,7 +13009,7 @@
     const list = data ?? [], today2 = todayIso(), box3 = document.getElementById("llsegz");
     if (!box3) return;
     box3.innerHTML = !list.length ? "" : `<div class="card" id="llsegs"><h2>${t("opportunities.list.callAgainTitle")}<span class="n">${list.length}</span></h2>
-      <p class="sm" style="padding:0 16px">${t("opportunities.list.callAgainHint")}</p>
+      <p class="sm u-p-0-16">${t("opportunities.list.callAgainHint")}</p>
       <div class="lista">${list.slice(0, SHOWN2).map((call2) => rowHtml3(call2, today2)).join("")}</div></div>`;
     box3.querySelectorAll("[data-llseg]").forEach((button3) => {
       button3.onclick = () => {
@@ -13086,21 +13263,35 @@
     const payment = paymentOf(order);
     return ` <span class="pill ${payment === PAID2 ? "p-trfok" : payment === FREE2 ? "p-sr" : "p-bor"}">${payment}</span>`;
   }
+  var ORDER_STEPS = [
+    ["borrador", "orders.steps.draft", "p-sr"],
+    ["esperando_pago", "orders.steps.awaitingPayment", "p-bor"],
+    ["por_cobrar", "orders.steps.toCollect", "p-bor"],
+    ["por_preparar", "orders.steps.toPack", "p-est"],
+    ["por_facturar", "orders.steps.toInvoice", "p-est"],
+    ["completado", "orders.steps.completed", "p-trfok"],
+    ["anulado", "orders.steps.voided", "p-anu"]
+  ];
+  var isStepCode = (code) => ORDER_STEPS.some(([step]) => step === code);
+  var storedStateOf = (code) => code === "anulado" ? STATES2.voided : code === "borrador" || code === "esperando_pago" ? STATES2.draft : STATES2.confirmed;
   function confirmedStep(order) {
     const onDelivery = /reembolso/i.test(order.forma_pago ?? ""), toCollect = paymentOf(order) === PENDING_PAYMENT;
-    if (toCollect && !onDelivery) return ["orders.steps.toCollect", "p-bor"];
-    if (!order.paquete_en) return ["orders.steps.toPack", "p-est"];
-    if (toCollect) return ["orders.steps.toCollect", "p-bor"];
-    if (order.completado === false || !order.factura && !order.factura_id && paymentOf(order) !== FREE2) return ["orders.steps.toInvoice", "p-est"];
-    return ["orders.steps.completed", "p-trfok"];
+    if (toCollect && !onDelivery) return "por_cobrar";
+    if (!order.paquete_en) return "por_preparar";
+    if (toCollect) return "por_cobrar";
+    if (order.completado === false || !order.factura && !order.factura_id && paymentOf(order) !== FREE2) return "por_facturar";
+    return "completado";
+  }
+  function stepCode(order) {
+    if (isStepCode(order.paso)) return order.paso;
+    if (order.estado === STATES2.voided) return "anulado";
+    if (order.estado === STATES2.draft) return order.email_pago_en ? "esperando_pago" : "borrador";
+    if (order.completado === true) return "completado";
+    return confirmedStep(order);
   }
   function orderStep(order) {
-    let step;
-    if (order.estado === STATES2.voided) step = ["orders.steps.voided", "p-anu"];
-    else if (order.estado === STATES2.draft) step = order.email_pago_en ? ["orders.steps.awaitingPayment", "p-bor"] : ["orders.steps.draft", "p-sr"];
-    else if (order.completado === true) step = ["orders.steps.completed", "p-trfok"];
-    else step = confirmedStep(order);
-    return [t(step[0]), step[1]];
+    const code = stepCode(order), [, key, pillClass] = ORDER_STEPS.find(([step]) => step === code) ?? ORDER_STEPS[0];
+    return [t(key), pillClass];
   }
   function stepPill(order) {
     const [text, pillClass] = orderStep(order);
@@ -14183,7 +14374,6 @@
 
   // src/app/legacy/listbar-bridge.ts
   var listBarLegacy = {
-    pageSize: () => tamPagina(),
     userId: () => sessionStore.profile?.id ?? "",
     /** First icon found among the names (line icons, then emoji ones). */
     icon: (names) => svgIco(names.map((name) => ICON_NOM[name] ?? ICON_EMOJI[name]).find(Boolean) ?? ""),
@@ -14831,7 +15021,7 @@
     const { state, onChange, onColumn, heading } = options3;
     if (!container) return;
     const fields = componentsLegacy.sortedFields(scope);
-    const title2 = heading === "h3" ? `<h3 style="margin-top:18px">${t("components.classifiers.title")}</h3>` : `<h4>${t("components.classifiers.title")}</h4>`;
+    const title2 = heading === "h3" ? `<h3 class="u-mt-18">${t("components.classifiers.title")}</h3>` : `<h4>${t("components.classifiers.title")}</h4>`;
     if (!fields.length) {
       container.innerHTML = componentsLegacy.canEditCatalogs() ? `<div class="htbloque clasif">${title2}<p class="sm">${t("components.classifiers.none")}</p></div>` : "";
       return;
@@ -16555,8 +16745,13 @@
   // src/app/components/list-bar/page-size.ts
   var PAGE_SIZES = [20, 50, 100];
   var DEFAULT_SIZE = 20;
+  var forcedSize = null;
   var storageKey2 = () => `dlc-tam-${listBarLegacy.userId()}`;
+  function overridePageSize(size) {
+    forcedSize = size;
+  }
   function storedPageSize() {
+    if (forcedSize !== null) return forcedSize;
     let size = 0;
     try {
       size = Number(localStorage.getItem(storageKey2()));
@@ -16588,7 +16783,7 @@
 
   // src/app/legacy/lists-bridge.ts
   var listsLegacy = {
-    pageSize: () => tamPagina(),
+    pageSize: () => storedPageSize(),
     setPageSize: (size) => {
       savePageSize(size);
     },
@@ -17521,7 +17716,7 @@
   }
   function askHtml(allowed) {
     const first = allowed[0];
-    if (!first) return `<p class="sm" style="padding:0 16px">${t("portal.material.nothingOffered")}</p>`;
+    if (!first) return `<p class="sm u-p-0-16">${t("portal.material.nothingOffered")}</p>`;
     return `<div class="g2"><div><label for="mdmatm">${t("portal.material.material")}</label><select id="mdmatm">${allowed.map((item) => `<option value="${escapeHtml(item.valor)}" data-max="${item.max}">${escapeHtml(item.valor)}</option>`).join("")}</select></div>
         <div><label for="mdmatn">${t("portal.material.quantity")}</label><input id="mdmatn" type="number" min="1" value="1"><span class="sm" id="mdmatmax">${t("portal.material.max", { max: formatNumber(first.max) })}</span></div></div>
         <label for="mdmatt">${t("portal.material.note")}</label><input id="mdmatt" placeholder="${t("portal.material.optional")}">
@@ -17900,7 +18095,7 @@
   function materialHtml(catalog2, allowed, saved3) {
     if (!catalog2.length) return `<div class="vacio">${t("portal.settings.noCatalog")}</div>`;
     return `<div class="lista" id="cfpmat">${catalog2.map((item) => materialRow(item, allowed.find((other) => other.valor === item.valor))).join("")}</div>
-      ${saved3 ? "" : `<p class="sm" style="padding:0 16px">${t("portal.settings.everything")}</p>`}
+      ${saved3 ? "" : `<p class="sm u-p-0-16">${t("portal.settings.everything")}</p>`}
       <div class="acts u-end"><button class="btn" id="cfpok">${t("common.save")}</button></div>`;
   }
   async function saveMaterial(box3, setting) {
@@ -18030,8 +18225,8 @@
   var AMOUNT = "importe";
   function nextHtml(period, withAmount) {
     const next = period.siguiente;
-    if (!next) return `<p class="sm" style="padding:0 16px 14px">${t(period.sin_esquema ? "commissions.homeCard.noScheme" : "commissions.homeCard.topTier")}</p>`;
-    return `<p class="sm" style="padding:0 16px 14px">
+    if (!next) return `<p class="sm u-p-0-16-14">${t(period.sin_esquema ? "commissions.homeCard.noScheme" : "commissions.homeCard.topTier")}</p>`;
+    return `<p class="sm u-p-0-16-14">
       ${t("commissions.homeCard.nextTier", { missing: formatNumber(next.faltan) })}${withAmount ? t("commissions.homeCard.nextTierAmount", { amount: formatCurrency(next.valor) }) : ""}.</p>`;
   }
   function cardHtml3(period, withAmount) {
@@ -19566,7 +19761,7 @@
       <div class="fh"><div><h2>${t("products.stores.title")}</h2><div class="sm">${t("products.stores.subtitle")}</div></div>
         <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
       <div class="lista">${list}</div>
-      <h3 style="margin-top:14px">${t("products.stores.newCase")}</h3>
+      <h3 class="u-mt-14">${t("products.stores.newCase")}</h3>
       <div class="g2"><div><label for="almu">${t("products.stores.salesperson")}</label><select id="almu">${members().map((member) => `<option value="${member.id}">${escapeHtml(member.nombre)}</option>`).join("")}</select></div>
         <div><label>&nbsp;</label><button class="btn" id="almok">${t("products.stores.createCase")}</button></div></div>
       <p class="sm">${t("products.stores.caseHint", { theVisit: term("visita", { article: "el" }) })}</p>`;
@@ -21058,7 +21253,7 @@
     },
     inTestEnvironment: () => EN_PRUEBAS,
     paintTestStrip: () => {
-      pintarFranjaPruebas();
+      void paintCurrentStrip();
     },
     paintImpersonationBar: () => {
       session_exports.paintImpersonationBar();
@@ -22164,6 +22359,14 @@
       location.reload();
     }, RELOAD_MS2);
   }
+  var currentPainter = paintTestStrip;
+  var currentStripPainter = () => currentPainter;
+  function setStripPainter(painter) {
+    currentPainter = painter;
+  }
+  function paintCurrentStrip() {
+    return currentPainter();
+  }
   function paintTestStrip() {
     if (!testStripLegacy.inTests()) return;
     document.title = TITLE_PREFIX + document.title.replace(/^\[PRUEBAS\] /, "");
@@ -22316,7 +22519,7 @@
       <option value="urgentes" ${selected(order === "urgentes")}>${t("legacyA.tools.urgentFirst")}</option>
       <option value="reciente" ${selected(order === "reciente")}>${t("legacyA.tools.recent", { Visit: term("visita", { capital: "C" }) })}</option></select>
     <div class="acts"><button class="btn sec" id="tlimpiar">${t("legacyA.tools.clear")}</button></div>
-    <h3 style="margin-top:18px">${t("legacyA.tools.columns")}</h3>
+    <h3 class="u-mt-18">${t("legacyA.tools.columns")}</h3>
     <p class="sm">${t("legacyA.tools.columnsHint")}</p>
     <div class="acts"><button class="btn sec" id="tcols">${t("legacyA.tools.chooseColumns")}</button></div>`;
   }
@@ -22755,7 +22958,7 @@
       <div><label for="aesp">${term("especialidad", { capital: "C" })}</label><select id="aesp">${optionsHtml2(options3.especialidades)}</select></div>
       <div><label for="aest">${t("legacyA.portfolio.state")}</label><select id="aest">${optionsHtml2(options3.estados)}</select></div></div>
     <label class="opt u-mt-10"><input type="checkbox" id="aurg"> ${t("legacyA.tools.onlyUrgent")}</label>
-    <div id="amsg" class="cuenta" style="padding:10px 0 0"></div>
+    <div id="amsg" class="cuenta u-p-10-0-0"></div>
     <div id="alista"></div>
     <div class="acts u-end">
       <button class="btn sec" id="aquitar">${t("legacyA.portfolio.removeSelected", { professionals })}</button>
@@ -23904,8 +24107,8 @@
     const today2 = todayIso(), due = (data ?? []).filter((call2) => call2.proxima_fecha <= today2);
     if (!due.length || document.getElementById("inillam")) return;
     document.getElementById("iniextra")?.insertAdjacentHTML("afterbegin", `<div class="card" id="inillam"><h2>${t("homeMore.calls.title")}<span class="n">${due.length}</span></h2>
-    <p class="sm" style="padding:0 16px">${t("homeMore.calls.hint", { late: due.some((call2) => call2.proxima_fecha < today2) ? t("homeMore.calls.late") : "" })}</p>
-    <div class="acts" style="padding:0 16px 14px"><button class="btn sec" id="inillamver">${t("homeMore.calls.seeOpportunities")}</button></div></div>`);
+    <p class="sm u-p-0-16">${t("homeMore.calls.hint", { late: due.some((call2) => call2.proxima_fecha < today2) ? t("homeMore.calls.late") : "" })}</p>
+    <div class="acts u-p-0-16-14"><button class="btn sec" id="inillamver">${t("homeMore.calls.seeOpportunities")}</button></div></div>`);
     const see = document.getElementById("inillamver");
     if (see) see.onclick = () => {
       goToOrders("llamadas");
@@ -24010,7 +24213,7 @@
       <div class="minis">${mini(formatNumber(visited), t("homeMore.week.visited"))}${mini(formatNumber(open2), t("homeMore.week.toDo"))}
         ${mini(compliance2 === null ? "—" : `${compliance2}%`, t("homeMore.week.compliance"), warn(compliance2 !== null && compliance2 < LOW_COMPLIANCE))}
         ${mini(formatNumber(data.due), t("homeMore.week.due", { visit: term("visita") }), warn(data.due > 0))}</div>
-      <div class="acts" style="padding:0 16px 14px"><button class="btn sec" data-inisem="semana">${t("homeMore.week.seeMyWeek")}</button>${data.due ? `<button class="btn sec" data-inisem="plan">${t("homeMore.week.planThem")}</button>` : ""}</div></div>`;
+      <div class="acts u-p-0-16-14"><button class="btn sec" data-inisem="semana">${t("homeMore.week.seeMyWeek")}</button>${data.due ? `<button class="btn sec" data-inisem="plan">${t("homeMore.week.planThem")}</button>` : ""}</div></div>`;
   }
   function salesHtml(data) {
     const units = Number(data.now.unidades ?? 0), unitsBefore = Number(data.before.unidades ?? 0), amount2 = Number(data.now.importe ?? 0);
@@ -24018,7 +24221,7 @@
       <div class="minis">${mini(formatNumber(units), `${t("homeMore.week.units")} ${delta(units, unitsBefore)}`)}
         ${permissions.canSeeAmounts() ? mini(portalLegacy.euros(amount2), `${t("homeMore.week.withoutVat")} ${delta(amount2, Number(data.before.importe ?? 0))}`) : ""}
         ${mini(formatNumber(data.now.medicos ?? 0), t("homeMore.week.withSales", { professionals: term("medico", { number: "p" }) }))}</div>
-      <p class="sm" style="padding:0 16px 14px">${t("homeMore.week.compared", { units: formatNumber(unitsBefore) })}</p></div>`;
+      <p class="sm u-p-0-16-14">${t("homeMore.week.compared", { units: formatNumber(unitsBefore) })}</p></div>`;
   }
   function teamHtml(team3) {
     const total = (key) => sum(team3.map((row3) => Number(row3[key]) || 0));
@@ -24030,7 +24233,7 @@
         ${mini(formatNumber(value10("visitadas")), t("homeMore.week.visited"))}
         ${mini(formatNumber(value10("sin_hacer")), t("homeMore.week.notDone"), warn(value10("sin_hacer") > 0))}
         ${mini(formatNumber(value10("atrasados")), t("homeMore.week.dueShort"), warn(value10("atrasados") > 0))}</div>
-      <div class="acts" style="padding:0 16px 14px"><button class="btn sec" id="iniequipo">${t("homeMore.week.seeTeam")}</button></div></div>`;
+      <div class="acts u-p-0-16-14"><button class="btn sec" id="iniequipo">${t("homeMore.week.seeTeam")}</button></div></div>`;
   }
   function bind14(box3) {
     const each = (attribute, action) => {
@@ -24666,10 +24869,6 @@
     hideLoadingScreen: () => {
       hideFullLoading();
     },
-    testStrip: () => pintarFranjaPruebas,
-    setTestStrip: (paint9) => {
-      pintarFranjaPruebas = paint9;
-    },
     applyBrand: () => {
       applyBrand();
     },
@@ -25086,9 +25285,9 @@
   }
   function guardTestReset() {
     if (!legacyBState.inTests()) return;
-    const original = legacyBActions.testStrip();
-    legacyBActions.setTestStrip(() => paintStrip(original));
-    if (document.getElementById("prreset")) void legacyBActions.testStrip()();
+    const original = currentStripPainter();
+    setStripPainter(() => paintStrip(original));
+    if (document.getElementById("prreset")) void currentStripPainter()();
   }
 
   // src/app/core/boot/entry-points.ts
@@ -25243,7 +25442,7 @@
     const tab = legacyBState.tab(), box3 = sheet;
     box3.innerHTML = `<div class="bmasbox"><div class="bmasasa" aria-hidden="true"></div>
     <div class="bmasgrid">${otherModules().map(([module, name]) => `<button data-bm="${module}" class="${tab === module ? "on" : ""}"><span>${legacyBActions.moduleIcon(module) ?? "•"}</span>${escapeHtml(name)}</button>`).join("")}</div>
-    <div class="sm" style="text-align:center;margin-top:8px">${t("legacyB.mobile.moreHint")}</div></div>`;
+    <div class="sm u-center u-mt-8">${t("legacyB.mobile.moreHint")}</div></div>`;
     box3.classList.remove("hide");
     requestAnimationFrame(() => {
       box3.classList.add("abierto");
@@ -26104,7 +26303,7 @@
     paintBottomBar([]);
     navigationStore.menuSignature = "";
     try {
-      montarMenuLateral();
+      mountSideMenu();
     } catch {
     }
     toast(t("navigationCore.menu.saved"), false);
@@ -27314,7 +27513,7 @@
     if (element.id) document.querySelectorAll(`#${element.id}`).forEach((other) => {
       if (other !== element) other.remove();
     });
-    const size = tamPagina();
+    const size = storedPageSize();
     if (total <= (TAMANOS[0] ?? 0)) {
       element.innerHTML = "";
       return;
@@ -27681,7 +27880,7 @@
       applyMenuNames();
       navigationStore.menuSignature = "";
       try {
-        montarMenuLateral();
+        mountSideMenu();
         paintBottomBar([]);
       } catch {
       }
@@ -30883,11 +31082,6 @@
   var loadRoutesPage = fromChunk10("loadRoutesPage");
 
   // src/app/legacy/legado-d-glue-bridge.ts
-  var globals = window;
-  function wrapGlobal(name, wrapper) {
-    const original = globals[name];
-    if (typeof original === "function") globals[name] = wrapper(original);
-  }
   var agendaGlueLegacy = {
     closeMonth: () => {
       void closeMonth();
@@ -30950,7 +31144,6 @@
     forgetRouteDraft: () => {
       routesStore.wizard = null;
     },
-    wrapGlobal,
     applyMenuNames: () => {
       applyMenuNames();
     },
@@ -31458,13 +31651,8 @@
     }, true);
   }
   function installMenuNames() {
-    navigationGlueLegacy.wrapGlobal("montarMenuLateral", (original) => function(...args) {
-      const result = original.apply(this, args);
-      try {
-        navigationGlueLegacy.applyMenuNames();
-      } catch {
-      }
-      return result;
+    setAfterSideMenuMount(() => {
+      navigationGlueLegacy.applyMenuNames();
     });
     new MutationObserver(() => {
       navigationGlueLegacy.applyMenuNamesSoon();
@@ -32284,7 +32472,7 @@
   function vocabularyCard(body3) {
     const vocabulary2 = body3.querySelector(".mkvoc"), label = body3.querySelector(".mketqbox");
     if (!vocabulary2 || byId19("mkvoccard")) return;
-    body3.insertAdjacentHTML("beforeend", `<div class="card cfgpanel" id="mkvoccard"><h2 style="padding:0 0 4px">${t("legacyD.polish.vocabularyTitle")}</h2>
+    body3.insertAdjacentHTML("beforeend", `<div class="card cfgpanel" id="mkvoccard"><h2 class="u-p-0-0-4">${t("legacyD.polish.vocabularyTitle")}</h2>
         <p class="sm">${t("legacyD.polish.vocabularyHint")}</p>
         <div id="mkvochueco"></div><div class="acts u-end"><button type="button" class="btn" id="mkvocok">${t("common.save")}</button></div></div>`);
     const place3 = byId19("mkvochueco");
@@ -33774,7 +33962,7 @@
     const container = tools?.classList.contains("abierto") ? tools : document.querySelector("dialog[open] .fh") ? openDialog2 : null;
     const save25 = byId("guardarFiltro");
     if (!container || container.querySelector("#hguardarf") || !save25 || navigationStore.screen !== "directorio") return;
-    container.insertAdjacentHTML("beforeend", `<div class="acts" style="margin:12px 0 0"><button class="btn sec" id="hguardarf">${svgIco(ICON_NOM.star ?? "")} ${t("legacyC.tools.saveFilter")}</button></div>`);
+    container.insertAdjacentHTML("beforeend", `<div class="acts u-m-12-0-0"><button class="btn sec" id="hguardarf">${svgIco(ICON_NOM.star ?? "")} ${t("legacyC.tools.saveFilter")}</button></div>`);
     const button3 = byId("hguardarf");
     if (button3) button3.onclick = () => {
       if (container instanceof HTMLDialogElement) container.close();
@@ -34612,12 +34800,6 @@
     paintCycleTeam: () => paintCycleTeam
   });
 
-  // src/app/api/client.ts
-  function rpc(name, ...params) {
-    const [values2] = params;
-    return legacyDb().rpc(name, values2);
-  }
-
   // src/app/screens/cycle/model.ts
   var CLASSES = ["A", "B", "C"];
   var cycleState = { owner: "", classFilter: "", classifyFilter: "sin", query: "" };
@@ -35246,7 +35428,7 @@
     });
     quietly(() => {
       navigationStore.menuSignature = "";
-      montarMenuLateral();
+      mountSideMenu();
     });
     try {
       localStorage.setItem("dlc-modo", navigationStore.platformMode ? "plataforma" : "empresa");
@@ -35254,153 +35436,8 @@
     }
   }
 
-  // src/app/core/legacy-c/side-menu.ts
-  var visible = (button3) => getComputedStyle(button3).display !== "none";
-  var shownSection = (button3) => !button3.classList.contains("hide") && !button3.classList.contains("mloculto") && button3.dataset.t !== "seguimiento" && visible(button3);
-  var isPortal = () => {
-    try {
-      return ES_MEDICO();
-    } catch {
-      return false;
-    }
-  };
-  var hiddenSections = () => menuPrefs().ocultos ?? [];
-  function wantsSideMenu(nav) {
-    const shown3 = [...nav.querySelectorAll("button[data-t]")].filter((button3) => !button3.classList.contains("hide") && button3.dataset.t !== "seguimiento" && button3.style.display !== "none" && (button3.classList.contains("mloculto") || visible(button3) || document.body.classList.contains("menulat")));
-    return menuEscritorio() && Boolean(sessionStore.profile) && !isPortal() && shown3.length > 1;
-  }
-  function paintBrand2(nav) {
-    if (!nav.querySelector(".mlmarca")) {
-      const logo = document.querySelector("header .logo")?.src ?? "./logo-app.png";
-      nav.insertAdjacentHTML("afterbegin", `<div class="mlmarca"><img src="${escapeHtml(logo)}" alt=""><b class="mllab"></b></div>`);
-    }
-    const brand = settingsStore.settings.marca || {};
-    const name = nav.querySelector(".mlmarca b");
-    if (name) name.textContent = brand.nombre ? brand.nombre : document.title;
-  }
-  function placeGroups(nav) {
-    const fixed = MENU_FIJO;
-    [...menuGroups(), fixed].forEach((group) => {
-      let box3 = nav.querySelector(`.mlgrupo[data-g="${group.id}"]`);
-      if (!box3) {
-        nav.insertAdjacentHTML("beforeend", `<div class="mlgrupo${group === fixed ? " fijo" : ""}" data-g="${group.id}"><div class="mltit">${escapeHtml(group.t)}</div><div class="mlbs"></div></div>`);
-        box3 = nav.querySelector(`.mlgrupo[data-g="${group.id}"]`);
-      }
-      if (!box3) return;
-      nav.appendChild(box3);
-      const buttons = box3.querySelector(".mlbs");
-      group.items.forEach((key) => {
-        const button3 = nav.querySelector(`button[data-t="${key}"]`);
-        if (button3) buttons?.appendChild(button3);
-      });
-    });
-  }
-  function labelButtons(buttons) {
-    const hidden = hiddenSections(), fixed = MENU_FIJO.items;
-    buttons.forEach((button3) => {
-      button3.classList.toggle("mloculto", hidden.includes(button3.dataset.t ?? "") && !fixed.includes(button3.dataset.t ?? "") && button3.dataset.t !== "inicio");
-      const texts2 = [...button3.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").trim());
-      if (texts2.length) {
-        const text = texts2.map((node) => node.textContent ?? "").join("").trim();
-        texts2.forEach((node) => {
-          node.remove();
-        });
-        const label = button3.querySelector(".mllab");
-        if (label) label.textContent = text;
-        else button3.insertAdjacentHTML("beforeend", `<span class="mllab">${escapeHtml(text)}</span>`);
-      }
-      button3.dataset.tip = (button3.querySelector(".mllab") ?? button3).textContent?.trim() ?? "";
-      button3.setAttribute("aria-label", button3.dataset.tip);
-    });
-  }
-  function paintFooter(nav) {
-    if (!nav.querySelector(".mlpie")) {
-      nav.insertAdjacentHTML("beforeend", `<div class="mlpie">
-      <button type="button" class="mlitem" id="mlcfg" data-tip="${t("legacyC.sideMenu.settings")}" aria-label="${t("legacyC.sideMenu.settings")}">${svgIco(ICON_NOM.settings ?? "")}<span class="mllab">${t("legacyC.sideMenu.settings")}</span></button>
-      <button type="button" class="mlitem" id="mlpers" data-tip="${t("legacyC.sideMenu.customise")}" aria-label="${t("legacyC.sideMenu.customise")}">${svgIco(ICON_NOM["sliders-horizontal"] ?? "")}<span class="mllab">${t("legacyC.sideMenu.customise")}</span></button>
-      <button type="button" class="mlplegar" id="mlplegar" aria-label="${t("legacyC.sideMenu.foldLabel")}">${svgIco(ICO_PLEGAR)}</button></div>`);
-      const settings2 = byId("mlcfg"), customise = byId("mlpers"), fold2 = byId("mlplegar");
-      if (settings2) settings2.onclick = () => {
-        navigate("config");
-      };
-      if (customise) customise.onclick = (event) => {
-        event.stopPropagation();
-        customiseDesktopMenu();
-      };
-      if (fold2) fold2.onclick = () => {
-        const folded = !document.body.classList.contains("menupleg");
-        try {
-          localStorage.setItem("dlc-menu-plegado", folded ? "1" : "0");
-        } catch {
-        }
-        document.body.classList.toggle("menupleg", folded);
-        menuTip(null);
-        navigationStore.menuSignature = "";
-        montarMenuLateral();
-      };
-    }
-    const footer = nav.querySelector(".mlpie");
-    if (footer) nav.appendChild(footer);
-    const userSettings = document.querySelector('#umenu [data-u="cfg"]');
-    byId("mlcfg")?.classList.toggle("hide", !userSettings || userSettings.classList.contains("hide"));
-    const fold = byId("mlplegar");
-    if (fold) fold.dataset.tip = t(document.body.classList.contains("menupleg") ? "legacyC.sideMenu.unfold" : "legacyC.sideMenu.fold");
-  }
-  var markEmptyGroups = (nav) => {
-    nav.querySelectorAll(".mlgrupo").forEach((group) => {
-      group.classList.toggle("vacio", ![...group.querySelectorAll("button[data-t]")].some(shownSection));
-    });
-  };
-  function buildSideMenu(nav) {
-    document.body.classList.toggle("menupleg", menuPlegado());
-    const buttons = [...nav.querySelectorAll("button[data-t]")];
-    const signature = buttons.map((button3) => `${button3.dataset.t ?? ""}${button3.classList.contains("hide") ? "-" : "+"}${(button3.textContent ?? "").trim()}`).join("|") + JSON.stringify(menuPrefs()) + String(document.body.classList.contains("menupleg"));
-    if (signature === navigationStore.menuSignature && nav.querySelector(".mlmarca")) return;
-    navigationStore.menuSignature = signature;
-    paintBrand2(nav);
-    placeGroups(nav);
-    labelButtons(buttons);
-    markEmptyGroups(nav);
-    paintFooter(nav);
-  }
-  function markOutOfPlan(nav) {
-    const hidden = hiddenSections();
-    nav.querySelectorAll("button[data-t]").forEach((button3) => {
-      if (session_exports.outOfPlan(button3)) {
-        if (!button3.classList.contains("mlplan")) button3.classList.add("mlplan");
-        if (!button3.classList.contains("mloculto")) button3.classList.add("mloculto");
-      } else if (button3.classList.contains("mlplan")) {
-        button3.classList.remove("mlplan");
-        if (!hidden.includes(button3.dataset.t ?? "")) button3.classList.remove("mloculto");
-      }
-    });
-    markEmptyGroups(nav);
-  }
-  function mountSideMenu() {
-    const nav = byId("nav");
-    if (nav) {
-      const side = wantsSideMenu(nav);
-      document.body.classList.toggle("menulat", side);
-      if (side) buildSideMenu(nav);
-    }
-    placeTestBadge();
-    if (!nav || !document.body.classList.contains("menulat")) return;
-    markOutOfPlan(nav);
-  }
-  function watchSideMenu() {
-    document.addEventListener("mouseover", (event) => {
-      const button3 = event.target instanceof Element ? event.target.closest("nav.main [data-tip]") : null;
-      menuTip(button3);
-    });
-    observe(byId("nav"), menuRehacer, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-    addEventListener("resize", menuRehacer);
-    observe(byId("app"), menuRehacer, { attributes: true, attributeFilter: ["class"] });
-    menuRehacer();
-  }
-
   // src/app/core/legacy-c/test-environment.ts
   var STRIP_DELAY_MS = 120;
-  var globals2 = () => window;
   function failureText11(answer, failed4) {
     const reason = answer ? MOTIVO_REFRESCO[answer.motivo ?? ""] : void 0;
     return reason ?? t("legacyC.testEnvironment.couldNotStart") + (failed4 && !answer ? t("legacyC.testEnvironment.missingFunction") : "");
@@ -35426,8 +35463,8 @@
     void refreshStatus();
   }
   function addBringButton() {
-    const previous = globals2().pintarFranjaPruebas;
-    globals2().pintarFranjaPruebas = async () => {
+    const previous = currentStripPainter();
+    setStripPainter(async () => {
       await previous();
       await new Promise((resolve) => {
         setTimeout(resolve, STRIP_DELAY_MS);
@@ -35442,8 +35479,8 @@
       if (bring) bring.onclick = () => {
         void bringProduction(bring);
       };
-    };
-    if (byId("prreset")) void globals2().pintarFranjaPruebas();
+    });
+    if (byId("prreset")) void currentStripPainter()();
   }
   function paintMarker() {
     byId("franjapruebas")?.remove();
@@ -35463,7 +35500,7 @@
   }
   function markerInsteadOfStrip() {
     if (!EN_PRUEBAS) return;
-    globals2().pintarFranjaPruebas = paintMarker;
+    setStripPainter(paintMarker);
     paintMarker();
   }
 
@@ -36575,6 +36612,7 @@
     navigateTo: () => navigateTo,
     navigationAttribute: () => navigationAttribute,
     openApp: () => openApp2,
+    overrideGeocoder: () => overrideGeocoder,
     reverseGeocode: () => reverseGeocode,
     webLink: () => webLink
   });
@@ -36699,7 +36737,14 @@
     }
   }
   var byParts = (street, hints) => `street=${encodeURIComponent(street)}&city=${encodeURIComponent(hints.municipio ?? "")}${hints.cp ? `&postalcode=${encodeURIComponent(hints.cp)}` : ""}`;
-  async function geocode(query, hints = {}) {
+  var replacementGeocoder = null;
+  function overrideGeocoder(geocoder) {
+    replacementGeocoder = geocoder;
+  }
+  function geocode(query, hints = {}) {
+    return replacementGeocoder ? replacementGeocoder(query, hints) : searchAddress(query, hints);
+  }
+  async function searchAddress(query, hints) {
     const town = geoText(hints.municipio), fits = inTown(town);
     let list = await search4(`q=${encodeURIComponent(query)}`);
     let found = list.find(fits);
@@ -38726,7 +38771,7 @@
     sortKey: (column) => ORD_DIR[column],
     fieldChips: (state) => filterChips("medico", state),
     contactsLabel: () => vocabulary_exports.contactsLabel(),
-    pageSize: () => tamPagina(),
+    pageSize: () => storedPageSize(),
     paginate: (options3) => {
       pager(options3.element, { total: options3.total, page: options3.page }, { onPage: options3.onPage, onSize: options3.onSize });
     }
@@ -38855,7 +38900,7 @@
     }
   };
   var qualityLegacy = {
-    geocode: (query, hints) => geocodificar(query, hints),
+    geocode: (query, hints) => maps_exports.geocode(query, hints),
     /** The «Descargar» entry of the tools menu calls window.__dlSeg (legado 014). */
     setExport: (exporter) => {
       Reflect.set(window, "__dlSeg", exporter);
@@ -39248,7 +39293,7 @@
       <div class="fh"><h2>${escapeHtml(titulo ?? t("components.dialogs.confirm"))}</h2></div>
       ${msg ? `<p style="margin:0 0 10px;white-space:pre-line">${escapeHtml(msg)}</p>` : ""}
       ${fieldHtml2(campo)}
-      ${opciones?.length ? `<div class="chips" style="padding:10px 0 0">${opciones.map((option3) => `<button type="button" class="chip" data-mop="${escapeHtml(option3)}">${escapeHtml(option3)}</button>`).join("")}</div>` : ""}
+      ${opciones?.length ? `<div class="chips u-p-10-0-0">${opciones.map((option3) => `<button type="button" class="chip" data-mop="${escapeHtml(option3)}">${escapeHtml(option3)}</button>`).join("")}</div>` : ""}
       <div class="acts u-end">
         ${cancel3 === false ? "" : `<button class="btn sec" id="mno">${escapeHtml(cancel3 ?? t("components.dialogs.cancel"))}</button>`}
         <button class="btn ${peligro ? "dang" : ""}" id="mok">${escapeHtml(ok ?? t("components.dialogs.accept"))}</button></div></div>`;

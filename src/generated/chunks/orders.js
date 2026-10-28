@@ -17,9 +17,6 @@ var orders = {
     saleTo: "Venta {customer}",
     saleToCentre: "Venta a centro",
     state: "Estado",
-    confirmed: "Confirmados",
-    drafts: "Borradores",
-    voided: "Anulados",
     search: "Buscar",
     searchPlaceholder: "{professional}, {customer} o nº de pedido",
     tabSales: "Ventas",
@@ -76,7 +73,7 @@ var orders = {
   operations: {
     title: "Operativa",
     onDelivery: " (se cobra al entregar)",
-    freeDelivery: "Entrega sin cargo: sin factura ni cobro. Las unidades cuentan al profesional de referencia.",
+    freeDelivery: "Entrega sin cargo: sin factura ni cobro.",
     reported: "Reportado {professional}",
     noEmail: "El cliente no tiene email en su ficha.",
     preparePaymentEmail: "✉️ Preparar email con los datos de pago",
@@ -315,8 +312,8 @@ var ordersMore = {
     discount: "% dto.",
     removeLine: "Quitar línea",
     addLine: "+ Añadir línea",
-    free: "Entrega sin cargo (muestra)",
-    freeHint: "Las unidades cuentan {toProfessional} de referencia y salen del stock, pero no es una venta: 0 €, sin factura, sin cobro y sin comisión.",
+    free: "Entrega/s de muestra/s",
+    freeHint: "Sin cargo/s.",
     paymentMethod: "Forma de pago",
     generalDiscount: "Descuento general",
     paymentReference: "Referencia del pago",
@@ -564,7 +561,7 @@ function ownHtml(mandatory, preferences) {
 function rolesHtml(fixed, roles) {
   return `<h3 style="margin:14px 0 4px">${t("orders.alerts.byRole")}</h3><p class="sm">${t("orders.alerts.byRoleHint")}</p>
       <div class="dgrid-wrap"><table class="tabla avrol"><thead><tr><th>${t("orders.alerts.role")}</th>${ALERTS.map(([, label]) => `<th>${t(label)}</th>`).join("")}</tr></thead>
-        <tbody>${roles.map((role) => `<tr><td>${escapeHtml(role)}</td>${ALERTS.map(([key]) => `<td style="text-align:center"><input type="checkbox" data-avr="${escapeHtml(role)}|${key}" ${(fixed[role] ?? []).includes(key) ? "checked" : ""} aria-label="${t("orders.alerts.mandatoryLabel", { role: escapeHtml(role) })}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+        <tbody>${roles.map((role) => `<tr><td>${escapeHtml(role)}</td>${ALERTS.map(([key]) => `<td class="u-center"><input type="checkbox" data-avr="${escapeHtml(role)}|${key}" ${(fixed[role] ?? []).includes(key) ? "checked" : ""} aria-label="${t("orders.alerts.mandatoryLabel", { role: escapeHtml(role) })}"></td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 async function save(body, admin) {
   const own = {};
@@ -628,11 +625,13 @@ var sum = /* @__PURE__ */ pick7("sum");
 var shared8 = globalThis["__delcosModules"]["screens/orders/model"];
 var pick8 = (name) => shared8[name];
 var OPERATIONS = /* @__PURE__ */ pick8("OPERATIONS");
+var ORDER_STEPS = /* @__PURE__ */ pick8("ORDER_STEPS");
 var STATES = /* @__PURE__ */ pick8("STATES");
 var TRANSFER_ISSUE = /* @__PURE__ */ pick8("TRANSFER_ISSUE");
 var TRANSFER_STATES = /* @__PURE__ */ pick8("TRANSFER_STATES");
 var euros = /* @__PURE__ */ pick8("euros");
 var isBankTransfer = /* @__PURE__ */ pick8("isBankTransfer");
+var isStepCode = /* @__PURE__ */ pick8("isStepCode");
 var lineBreakdown = /* @__PURE__ */ pick8("lineBreakdown");
 var operationDone = /* @__PURE__ */ pick8("operationDone");
 var orderTotals = /* @__PURE__ */ pick8("orderTotals");
@@ -640,6 +639,7 @@ var paymentPill = /* @__PURE__ */ pick8("paymentPill");
 var round2 = /* @__PURE__ */ pick8("round2");
 var statePill = /* @__PURE__ */ pick8("statePill");
 var stepPill = /* @__PURE__ */ pick8("stepPill");
+var storedStateOf = /* @__PURE__ */ pick8("storedStateOf");
 var storedTotals = /* @__PURE__ */ pick8("storedTotals");
 var totalsHtml = /* @__PURE__ */ pick8("totalsHtml");
 var transferPill = /* @__PURE__ */ pick8("transferPill");
@@ -921,7 +921,8 @@ var restoreFilters = /* @__PURE__ */ pick10("restoreFilters");
 var PAID = "Cobrado";
 var EXTRA_FILTERS = [
   { id: "popf", after: "pestado", html: () => `<div><label for="popf">${t("orders.list.operations")}</label><select id="popf">
-      <option value="">${t("orders.list.everything")}</option><option value="pago">${t("orders.list.toCollect")}</option><option value="paquete">${t("orders.list.toPack")}</option><option value="email">${t("orders.list.invoiceToSend")}</option></select></div>` },
+      <option value="">${t("orders.list.everything")}</option><option value="email">${t("orders.list.invoiceToSend")}</option>
+      <option value="pago" hidden>${t("orders.list.toCollect")}</option><option value="paquete" hidden>${t("orders.list.toPack")}</option></select></div>` },
   // v2.115.0: the order's origin (web or the rest)
   { id: "porigf", after: "popf", html: () => `<div><label for="porigf">${t("orders.list.origin")}</label><select id="porigf">
       <option value="">${t("orders.page.all")}</option><option value="web">${t("orders.list.web")}</option><option value="portal">${t("orders.list.portal")}</option><option value="otros">${t("orders.list.others")}</option></select></div>` },
@@ -1034,13 +1035,19 @@ function paint(list, data) {
     };
   });
 }
+var requestPage = (query) => cachedRpc("pedidos_pagina", query, `pedidos-${JSON.stringify(query)}`);
+async function loadPage(query) {
+  const result = await requestPage(query), step = query.p_estado;
+  if (!isStepCode(step) || !result.data || result.data.por_paso) return result;
+  return requestPage({ ...query, p_estado: storedStateOf(step) });
+}
 async function paintOrderList() {
   if (!document.getElementById("pedlista") || !document.getElementById("pper") || !document.getElementById("pcanal")) return;
   addExtraFilters();
   restoreFilters(document.getElementById("v-ventas"));
   const query = params(), loading = document.getElementById("pedlista");
   if (loading && !loading.querySelector(".dgrid")) customersLegacy.showLoading(loading, t("orders.list.loading"));
-  const result = await cachedRpc("pedidos_pagina", query, `pedidos-${JSON.stringify(query)}`);
+  const result = await loadPage(query);
   const list = document.getElementById("pedlista");
   if (!list || !document.getElementById("pestado")) return;
   if (!result.data) {
@@ -1071,6 +1078,7 @@ var PURCHASES = "compras";
 var SUPPLIERS = "proveedores";
 var CALLS = "llamadas";
 var searchTimer;
+var stepOptions = () => ORDER_STEPS.map(([code, key]) => `<option value="${code}">${t(key)}</option>`).join("");
 function baseHtml([title, subtitle]) {
   return `
     <div class="saludo"><div><h1>${escapeHtml(title)}</h1><div class="fecha">${escapeHtml(subtitle)}</div></div>
@@ -1083,8 +1091,7 @@ function baseHtml([title, subtitle]) {
             <option value="">${t("orders.page.all")}</option><option value="paciente">${t("orders.page.saleTo", { customer: term("paciente", { article: "al" }) })}</option>
             <option value="centro">${t("orders.page.saleToCentre")}</option></select></div>
           <div><label for="pestado">${t("orders.page.state")}</label><select id="pestado">
-            <option value="">${t("orders.page.all")}</option><option value="Confirmado">${t("orders.page.confirmed")}</option>
-            <option value="Borrador">${t("orders.page.drafts")}</option><option value="Anulado">${t("orders.page.voided")}</option></select></div>
+            <option value="">${t("orders.page.all")}</option>${stepOptions()}</select></div>
           <div><label for="pq">${t("orders.page.search")}</label><input id="pq" type="search" placeholder="${t("orders.page.searchPlaceholder", { professional: term("medico", { capital: "C" }), customer: term("paciente") })}"></div>
         </div>
         <div class="kpis vtot" id="ptotales"></div>
@@ -1763,7 +1770,7 @@ function blockHtml3(detail, allowed) {
     ${order.sin_cargo ? `<p class="sm">${t("orders.operations.freeDelivery")}</p>` : ""}${OPERATIONS.filter(([key]) => !(order.sin_cargo && key === "pago")).map(([key, label]) => operationHtml(order, key, t(label), allowed)).join("")}
     <label class="opchk ${order.reportar_profesional ? "on" : ""}"><input type="checkbox" data-reporte ${order.reportar_profesional ? "checked" : ""} ${allowed ? "" : "disabled"}>
       <span>${t("orders.operations.reported", { professional: escapeHtml(term("medico", { article: "al" })) })}</span></label>
-    <div class="acts" style="margin:6px 0 0">
+    <div class="acts u-m-6-0-0">
       ${mailHtml(detail)}
     </div></div>`;
 }
@@ -2353,6 +2360,7 @@ function lines2(state) {
   return state.lines.filter((line) => line.producto_id).map((line) => ({ producto_id: line.producto_id, unidades: nonZeroOr(line.unidades, 1), importe: line.importe, descuento: nonZeroOr(line.descuento, 0), iva: line.iva }));
 }
 function paymentFields() {
+  if (isFree()) return { forma_pago: null, pago_referencia: "", descuento: Number(value4("pdto")) || 0, descuento_tipo: value4("pdtot"), envio: false, envio_con_iva: 0, envio_iva: Number(value4("penvv")) || 0, servicio_id: null };
   const method = value4("ppago");
   return {
     forma_pago: nullIfEmpty(method),
@@ -2496,19 +2504,18 @@ function lineHtml2(line, index, count) {
         <div class="ldes" data-des="${index}"></div></div>`;
 }
 function linesHtml(state) {
-  const toProfessional = escapeHtml(term("medico", { article: "al" }));
   return `
       <label>${t("ordersMore.editor.lines")}</label>
       <div id="plineas">${state.lines.map((line, index) => lineHtml2(line, index, state.lines.length)).join("")}</div>
       <div class="acts u-mt-0"><button type="button" class="btn sec" id="plmas">${t("ordersMore.editor.addLine")}</button></div>
       <div class="pscbox"><label class="opt"><input type="checkbox" id="psincargo" ${state.form.sin_cargo ? "checked" : ""}> ${t("ordersMore.editor.free")}</label>
-        <span class="sm">${t("ordersMore.editor.freeHint", { toProfessional })}</span></div>`;
+        <span class="sm">${t("ordersMore.editor.freeHint")}</span></div>`;
 }
 function methodDiscountHtml(state) {
   const form = state.form, methods = orderEditorLegacy.paymentMethods().map((item) => `<option ${form.forma_pago === item.valor ? "selected" : ""}>${escapeHtml(item.valor)}</option>`).join("");
   return `
       <div class="g2 pscg2">
-        <div><label for="ppago">${t("ordersMore.editor.paymentMethod")}</label><select id="ppago"><option value=""></option>
+        <div><label for="ppago">${t("ordersMore.editor.paymentMethod")}</label><select id="ppago" ${form.sin_cargo ? "disabled" : ""}><option value=""></option>
           ${methods}</select></div>
         <div><label for="pdto">${t("ordersMore.editor.generalDiscount")}</label>
           <div style="display:flex;gap:6px"><input id="pdto" type="number" min="0" step="0.01" value="${escapeHtml(String(form.descuento))}">
@@ -2538,7 +2545,7 @@ function serviceHtml(state) {
   return `
       <div class="envbox">
         <label for="pserv" class="u-mt-0">${t("ordersMore.editor.service")}</label>
-        <select id="pserv"><option value="">${t("ordersMore.editor.noService")}</option>${options}</select>
+        <select id="pserv" ${form.sin_cargo ? "disabled" : ""}><option value="">${t("ordersMore.editor.noService")}</option>${options}</select>
         <input type="checkbox" id="penv" class="hide" ${form.envio ? "checked" : ""}>
         <div class="g2 ${form.envio ? "" : "hide"}" id="penvd">
           <div><label for="penvi">${t("ordersMore.editor.serviceAmount")}</label><input id="penvi" type="number" step="0.01" min="0" value="${escapeHtml(String(form.envio_con))}"></div>
@@ -2604,6 +2611,14 @@ function bindPickers(state) {
   } });
   mountAccount(state);
 }
+function clearPaymentAndService() {
+  for (const id of ["ppago", "pref", "pserv"]) {
+    const field3 = document.getElementById(id);
+    if (field3) field3.value = "";
+  }
+  const shipping = document.getElementById("penv");
+  if (shipping) shipping.checked = false;
+}
 function bindLines(state) {
   bindLineInputs(state);
   on("plmas", () => {
@@ -2624,6 +2639,7 @@ function bindLines(state) {
     state.lines.forEach((line) => {
       line.descuento = state.form.sin_cargo ? FULL_DISCOUNT2 : 0;
     });
+    if (state.form.sin_cargo) clearPaymentAndService();
     paint2(state);
   };
 }
