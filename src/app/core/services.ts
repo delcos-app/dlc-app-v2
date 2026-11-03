@@ -12,6 +12,8 @@ export * as states from './commercial-states';
 export * as permissions from './permissions';
 export * as plans from './plans';
 export * as organisation from './organisation';
+export * as holidays from './holidays';
+export * as catalogRoles from './catalog-roles';
 export * as session from './session';
 export * as errors from './errors';
 export * as report from './problem-report';
