@@ -101,8 +101,6 @@ var panels = {
     units: "Unidades",
     amount: "Importe",
     all: "Todos",
-    toCustomer: "Venta {toPatient}",
-    toCentre: "Venta a centro",
     reporting: "Reporting",
     allProfessionals: "Todos {theProfessionals}",
     withReporting: "Con reporting",
@@ -1056,7 +1054,7 @@ function cardHtml2(item, figures) {
   return `<div class="ankpi" data-anu="${escapeHtml(item.u)}">
         <div class="ankcab"><span class="anktit">${escapeHtml(title)}</span>
           <button type="button" class="ai" data-ayuda-txt="${escapeHtml(kpiHelp(item.k))}" data-ayuda-tit="${escapeHtml(kpiTitle(item.k))}" aria-label="${t("panels.kpis.whatIs")}">i</button>
-          <button type="button" class="ankcfg" data-ancfg="${escapeHtml(item.u)}" title="${t("panels.kpis.adjust")}" aria-label="${escapeHtml(t("panels.kpis.adjustOf", { name: title }))}">${icon("settings")}</button></div>
+          <button type="button" class="ankcfg" data-desktop-only data-ancfg="${escapeHtml(item.u)}" title="${t("panels.kpis.adjust")}" aria-label="${escapeHtml(t("panels.kpis.adjustOf", { name: title }))}">${icon("settings")}</button></div>
         <b class="ankval ${item.k.fmt === "txt" ? "txt" : ""}">${data.error ? "—" : formatValue(current, item.k.fmt)}</b>
         ${data.error ? `<span class="sm">${t("panels.kpis.couldNotCalculate")}</span>` : deltaHtml(item.k, current, previous, item.comp || (analyticsState.config?.comp ?? ""))}
         ${filter ? `<span class="ankfil">${escapeHtml(filter)}</span>` : ""}</div>`;
@@ -1433,6 +1431,18 @@ async function paintSummary() {
   moveFilters();
 }
 
+// delcos-shared:src/app/core/sales-channels.ts
+var shared21 = globalThis["__delcosModules"]["core/sales-channels"];
+var pick21 = (name) => shared21[name];
+var channelFilterOptions = /* @__PURE__ */ pick21("channelFilterOptions");
+var choosesChannel = /* @__PURE__ */ pick21("choosesChannel");
+
+// delcos-shared:src/app/core/mobile/gate.ts
+var shared22 = globalThis["__delcosModules"]["core/mobile/gate"];
+var pick22 = (name) => shared22[name];
+var blockedOnPhone = /* @__PURE__ */ pick22("blockedOnPhone");
+var paintScreenNotice = /* @__PURE__ */ pick22("paintScreenNotice");
+
 // src/app/screens/analytics/page/page.ts
 var SELECTS = ["adim", "acanal", "amedida", "aprod", "acom", "arep", "areprt"];
 var element2 = (id) => document.getElementById(id);
@@ -1449,12 +1459,10 @@ function filtersHtml() {
         <div><label for="adim">${t("panels.analytics.viewBy")}</label><select id="adim">
           ${option3("medico", term("medico", { capital: "C" }))}${option3("comercial", t("panels.analytics.commercial"))}
           ${option3("producto", t("panels.analytics.product"))}${option3("municipio", t("panels.analytics.municipality"))}
-          ${option3("mes", t("panels.analytics.month"))}${option3("canal", t("panels.analytics.channel"))}</select></div>
+          ${option3("mes", t("panels.analytics.month"))}${choosesChannel() ? option3("canal", t("panels.analytics.channel")) : ""}</select></div>
         <div><label for="amedida">${t("panels.analytics.sortBy")}</label><select id="amedida">
           ${option3("unidades", t("panels.analytics.units"))}${option3("importe", t("panels.analytics.amount"))}</select></div>
-        <div><label for="acanal">${t("panels.analytics.channel")}</label><select id="acanal">
-          ${option3("", t("panels.analytics.all"))}${option3("paciente", t("panels.analytics.toCustomer", { toPatient: term("paciente", { article: "al" }) }))}
-          ${option3("centro", t("panels.analytics.toCentre"))}</select></div>
+        ${choosesChannel() ? `<div><label for="acanal">${t("panels.analytics.channel")}</label><select id="acanal">${channelFilterOptions(t("panels.analytics.all"))}</select></div>` : ""}
         <div><label for="aprod">${t("panels.analytics.product")}</label><select id="aprod">${option3("", t("panels.analytics.all"))}
           ${panelsLegacy.products().map((product) => `<option value="${product.id}">${escapeHtml(product.nombre)}</option>`).join("")}</select></div>
         ${reportsHtml()}
@@ -1524,7 +1532,7 @@ function addTabs(view, panel) {
   const section = panelsLegacy.section();
   view.querySelector(".saludo")?.insertAdjacentHTML("afterend", `<div class="subnav" id="ansub">
     <button data-ansec="resumen" aria-pressed="${String(section === "resumen")}">${t("panels.analytics.summary")}</button>
-    <button data-ansec="explorar" aria-pressed="${String(section === "explorar")}">${t("panels.analytics.explore")}</button></div>
+    <button data-ansec="explorar" data-desktop-only aria-pressed="${String(section === "explorar")}">${t("panels.analytics.explore")}</button></div>
     <div id="anres" class="${section === "resumen" ? "" : "hide"}"></div>`);
   panel.classList.toggle("hide", section === "resumen");
   view.querySelectorAll("[data-ansec]").forEach((button) => {
@@ -1537,9 +1545,23 @@ function addTabs(view, panel) {
       element2("anres")?.classList.toggle("hide", !summary);
       panel.classList.toggle("hide", summary);
       if (summary && !element2("ankpis")) void paintSummary();
+      element2("anaviso")?.remove();
+      if (blockedOnPhone("analitica", panelsLegacy.section())) paintExploreNotice(view, panel);
       setTimeout(markTab, 0);
     };
   });
+  if (blockedOnPhone("analitica", section)) paintExploreNotice(view, panel);
+}
+function paintExploreNotice(view, panel) {
+  panel.classList.add("hide");
+  element2("anaviso")?.remove();
+  element2("anres")?.insertAdjacentHTML("afterend", '<div id="anaviso"></div>');
+  const box2 = element2("anaviso");
+  if (!box2) return;
+  paintScreenNotice(box2, "analitica/explorar", { label: t("panels.analytics.summary"), open: () => {
+    box2.remove();
+    view.querySelector('[data-ansec="resumen"]')?.click();
+  } });
 }
 function keepInView(panel) {
   const filters = panel.querySelector(":scope > .filtros");
@@ -1567,7 +1589,7 @@ function addCustomise(view) {
     greeting.insertAdjacentHTML("beforeend", '<div class="acts"></div>');
     acts = greeting.querySelector(":scope > .acts");
   }
-  acts?.insertAdjacentHTML("afterbegin", `<button type="button" class="btn sec" id="anpers">${t("panels.analytics.customise")}</button>`);
+  acts?.insertAdjacentHTML("afterbegin", `<button type="button" class="btn sec" id="anpers" data-desktop-only>${t("panels.analytics.customise")}</button>`);
   const button = element2("anpers");
   if (button) button.onclick = () => {
     analyticsState.config = analyticsState.config ?? loadConfig();

@@ -11,12 +11,15 @@ import * as componentsFiltersPanelPrepare from '../../components/filters-panel/p
 import * as componentsFiltersMemory from '../../components/filters/memory';
 import * as componentsIndex from '../../components/index';
 import * as componentsListBarIndex from '../../components/list-bar/index';
+import * as componentsListRow from '../../components/list/row';
 import * as componentsLoading from '../../components/loading';
 import * as coreCatalogRoles from '../../core/catalog-roles';
+import * as coreMobileGate from '../../core/mobile/gate';
 import * as coreNavigationCurrent from '../../core/navigation/current';
 import * as coreNoReports from '../../core/no-reports';
 import * as coreOrganisation from '../../core/organisation';
 import * as coreRules from '../../core/rules';
+import * as coreSalesChannels from '../../core/sales-channels';
 import * as coreVocabulary from '../../core/vocabulary';
 import * as i18nIndex from '../../i18n/index';
 import * as legacyAccounts2Bridge from '../../legacy/accounts2-bridge';
@@ -48,6 +51,7 @@ import * as screensAgendaPreload from '../../screens/agenda/preload';
 import * as screensAgendaSameCentre from '../../screens/agenda/same-centre';
 import * as screensAgendaTrafficTimes from '../../screens/agenda/traffic-times';
 import * as screensAgendaYourDayCompact from '../../screens/agenda/your-day/compact';
+import * as screensBillingModel from '../../screens/billing/model';
 import * as screensCustomersPicker from '../../screens/customers/picker';
 import * as screensCycleCard from '../../screens/cycle/card';
 import * as screensEquipmentModel from '../../screens/equipment/model';
@@ -101,12 +105,15 @@ export const sharedModules = (): Record<string, object> => ({
   'components/filters/memory': componentsFiltersMemory,
   'components/index': componentsIndex,
   'components/list-bar/index': componentsListBarIndex,
+  'components/list/row': componentsListRow,
   'components/loading': componentsLoading,
   'core/catalog-roles': coreCatalogRoles,
+  'core/mobile/gate': coreMobileGate,
   'core/navigation/current': coreNavigationCurrent,
   'core/no-reports': coreNoReports,
   'core/organisation': coreOrganisation,
   'core/rules': coreRules,
+  'core/sales-channels': coreSalesChannels,
   'core/vocabulary': coreVocabulary,
   'i18n/index': i18nIndex,
   'legacy/accounts2-bridge': legacyAccounts2Bridge,
@@ -138,6 +145,7 @@ export const sharedModules = (): Record<string, object> => ({
   'screens/agenda/same-centre': screensAgendaSameCentre,
   'screens/agenda/traffic-times': screensAgendaTrafficTimes,
   'screens/agenda/your-day/compact': screensAgendaYourDayCompact,
+  'screens/billing/model': screensBillingModel,
   'screens/customers/picker': screensCustomersPicker,
   'screens/cycle/card': screensCycleCard,
   'screens/equipment/model': screensEquipmentModel,

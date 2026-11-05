@@ -493,6 +493,7 @@
     reads: () => read_cache_exports,
     report: () => problem_report_exports,
     rules: () => rules_exports,
+    salesChannels: () => sales_channels_exports,
     session: () => session_exports,
     states: () => commercial_states_exports,
     vocabulary: () => vocabulary_exports,
@@ -518,7 +519,7 @@
     daysUntil: () => daysUntil2,
     easterSunday: () => easterSunday,
     localIso: () => localIso,
-    longDate: () => longDate,
+    longDate: () => longDate2,
     minutesToTime: () => minutesToTime,
     mondayOfWeek: () => mondayOfWeek,
     monthShortText: () => monthShortText,
@@ -1752,6 +1753,8 @@
     },
     files: {
       downloadOff: "La descarga de datos está desactivada para proteger la información.",
+      exportNotRecorded: "No se ha podido apuntar la exportación: no se ha descargado nada.",
+      exportFailed: "No se ha podido escribir el archivo de Excel.",
       pdfTooBig: "El PDF pesa más de 3 MB: haz una foto del justificante o reduce el PDF",
       photoOrPdf: "Adjunta una foto o un PDF",
       photoFailed: "No se ha podido preparar la foto",
@@ -2111,6 +2114,8 @@
       equipment: "Parque instalado",
       equipmentTab: "Equipos",
       equipmentHint: "Equipos instalados con su número de serie, contrato, garantía y revisiones",
+      depositsTab: "Centros",
+      depositsHint: "El material que tienes en cada centro, lo que vale, lo usado pendiente de reponer y los lotes que caducan pronto",
       searchPlaceholder: "Buscar {professional}, centro o municipio",
       replenishTitle: "Reposiciones de {surgery}",
       replenishHint: "Cuando pasa el plazo para reponer lo usado en {surgeryOne} {surgery}",
@@ -2679,12 +2684,14 @@
       surgeries: "{surgeries}",
       tenders: "concursos",
       equipment: "equipos",
+      deposits: "{deposits}",
       when: "Cuándo",
       block: "Bloque",
       allEvents: "Eventos",
       allSurgeries: "{Surgeries}",
       allTenders: "Concursos",
       allEquipment: "Todos los equipos",
+      allDeposits: "Todos los centros",
       event: "Evento",
       date: "Fecha",
       type: "Tipo",
@@ -2699,7 +2706,11 @@
       stateAndDeadlines: "Estado y plazos",
       equipmentName: "Equipo",
       serialCentreContract: "Serie, centro y contrato",
-      reviewAndExpiry: "Revisión y vencimientos"
+      reviewAndExpiry: "Revisión y vencimientos",
+      centre: "Centro",
+      material: "Material",
+      value: "Valor",
+      pending: "Por reponer"
     }
   };
 
@@ -3126,7 +3137,7 @@
       noData: "Aún no hay datos para este gráfico",
       channelTitle: "Ventas por canal",
       howToRead: "Cómo leerlo:",
-      channelHint: "qué parte de las unidades llega con {aProfessional} de referencia y qué parte por venta directa a un centro.",
+      channelHint: "qué parte de las unidades llega por cada canal de venta de la empresa.",
       channelEmpty: "Verás qué parte de las ventas llega por cada canal."
     },
     classifiers: {
@@ -3580,10 +3591,10 @@
       deposit: {
         title: "Material en {deposit}",
         none: "Todavía no usas {depositThe} {deposit}",
-        hint: "Deja material en un centro y apunta lo que se usa. Al crear {depositThe} primer{depositEnd}, la ficha de cada centro lo enseña.",
+        hint: "Deja material en un centro y apunta lo que se usa. Al crear {depositThe} primer{depositEnd}, «{Deposits}» aparece en el menú y la ficha de cada centro lo enseña.",
         create: "Crear {depositThe} primer{depositEnd}",
-        used: "La ficha de cada centro enseña su material en {deposit}.",
-        open: "",
+        used: "«{Deposits}» está en el menú y la ficha de cada centro enseña su material en {deposit}.",
+        open: "Ir a {Deposits}",
         chooseTitle: "Material en {deposit}",
         chooseHint: "Elige el centro donde dejas el material",
         centre: "Centro",
@@ -3727,6 +3738,88 @@
     }
   };
 
+  // src/app/i18n/es/sales-channels.ts
+  var salesChannels = {
+    entry: "Canales de venta",
+    entryHint: "Las formas de vender: quién compra y a quién cuenta",
+    entryWords: "canales venta paciente centro cliente empresa atribución portal descuento mayorista tienda web",
+    inactiveOption: "{name} (desactivado)",
+    list: {
+      title: "Canales de venta",
+      intro: "Cada pedido va por uno de estos canales. Con un solo canal activo, el pedido no lo pregunta.",
+      info: "Un canal de venta es una forma de vender de la empresa (p. ej. «Tienda», «Mayorista» o «Web»). Cada canal dice quién compra (un cliente con su cuenta de referencia, o una cuenta), a quién se atribuye la venta (cartera, comisiones y cifras de la cuenta), si la venta cuenta en el portal de la cuenta, el descuento que propone y a qué canal van los pedidos que llegan solos. Sale en Pedidos, en Analítica y en los esquemas de comisión. Lo que se guarda en cada pedido es su clave, que no cambia: cambiar el nombre no toca los pedidos de antes.",
+      infoTitle: "¿Qué es un canal de venta?",
+      openOf: "Abrir {name}",
+      open: "›",
+      isDefault: "Por defecto",
+      inactive: "Desactivado",
+      newChannel: "+ Nuevo canal",
+      none: "Todavía no hay canales."
+    },
+    summary: {
+      buysCustomer: "Compra: un cliente",
+      buysAccount: "Compra: una cuenta",
+      toReference: "Atribuye a la cuenta de referencia",
+      toBuyer: "Atribuye a la cuenta que compra",
+      toNobody: "Sin atribución",
+      inPortal: "Cuenta en el portal",
+      discount: "Descuento {discount} %",
+      receives: "Recibe: {origins}"
+    },
+    origins: {
+      importacion: "importación",
+      portal: "portal de la cuenta",
+      servicios: "servicios con material",
+      consigna: "consigna",
+      and: " y "
+    },
+    editor: {
+      editTitle: "Editar canal",
+      newTitle: "Nuevo canal",
+      in: "En Canales de venta",
+      name: "Nombre",
+      nameHelp: "Lo que se ve en Pedidos, Analítica y comisiones.",
+      namePlaceholder: "p. ej. Tienda",
+      key: "Clave interna: {key} (no cambia; es lo que guarda cada pedido).",
+      buyer: "Quién compra",
+      buyerHelp: "Un cliente: el pedido pide el cliente y su cuenta de referencia. Una cuenta: pide la cuenta que compra.",
+      buyerCustomer: "Un cliente",
+      buyerAccount: "Una cuenta",
+      attribution: "A quién se atribuye",
+      attributionHelp: "A quién cuenta la venta: cartera del comercial, comisiones y cifras de la cuenta. La cuenta que compra, cuando es un centro.",
+      toReference: "A la cuenta de referencia",
+      toBuyer: "A la cuenta que compra",
+      toNobody: "Sin atribución",
+      joins: "Une el cliente a su cuenta de referencia",
+      joinsHelp: "Con la primera venta, el cliente queda con esa cuenta si aún no tenía una.",
+      portal: "Cuenta en el portal de la cuenta",
+      portalHelp: "Sus ventas salen en el informe del portal, en la ficha de la cuenta y en el aviso de venta de cartera.",
+      discount: "Descuento de partida (%)",
+      discountHelp: "El pedido lo propone al elegir el canal. Vacío: sin descuento.",
+      origins: "Para pedidos que llegan de",
+      originsHelp: "Los pedidos que se crean solos van a este canal. Cada origen va a un solo canal: marcarlo aquí lo quita de otro.",
+      isDefault: "Por defecto",
+      defaultHelp: "El canal de un pedido nuevo.",
+      defaultFixed: "El canal de un pedido nuevo. Para cambiarlo, marca otro canal como por defecto.",
+      active: "Activo",
+      activeHelp: "Desactivado no sale al hacer un pedido; sus pedidos de antes y sus cifras siguen igual.",
+      activeFixed: "El canal por defecto siempre está activo.",
+      add: "Añadir",
+      saved: "Canal guardado",
+      added: "Canal añadido"
+    },
+    errors: {
+      nombre: "Escribe el nombre del canal",
+      nombre_largo: "El nombre es demasiado largo (60 letras como mucho)",
+      nombre_repetido: "Ya hay un canal con ese nombre",
+      descuento: "El descuento tiene que ser un número entre 0 y 100",
+      por_defecto: "El canal por defecto no se puede desactivar: antes marca otro como por defecto",
+      ultimo: "Tiene que quedar al menos un canal activo",
+      permiso: "Solo la administración cambia los canales",
+      other: "No se ha podido guardar el canal"
+    }
+  };
+
   // src/app/i18n/es/routes.ts
   var routes = {
     when: {
@@ -3791,6 +3884,201 @@
     },
     transfer: {
       notSent: "Sin enviar"
+    }
+  };
+
+  // src/app/i18n/es/list-selection.ts
+  var listSelection = {
+    selectRow: "Seleccionar {name}",
+    selectPage: "Seleccionar todos los de esta página",
+    selectAll: "Seleccionar los {count} del filtro",
+    selectAllFeminine: "Seleccionar las {count} del filtro",
+    count: "<b>{count}</b> {what} seleccionados",
+    countFeminine: "<b>{count}</b> {what} seleccionadas",
+    countOne: "<b>{count}</b> {what} seleccionado",
+    countOneFeminine: "<b>{count}</b> {what} seleccionada",
+    clear: "Quitar la selección",
+    export: "Exportar",
+    progress: "{what}… {index} de {count}",
+    limit: "Como mucho se eligen {count} a la vez.",
+    limitFilter: "Se han seleccionado los {count} primeros: afina el filtro para el resto.",
+    useComputer: "Las acciones en bloque se hacen desde el ordenador.",
+    open: "Abrir {name}",
+    confirm: {
+      skipped: "\n\n{count} de los {total} elegidos se saltan: {reasons}."
+    },
+    summary: {
+      title: "{done} de {total} hechos",
+      done: "{count} {what}.",
+      couldNot: "No se podían ({count}):",
+      andMore: "· y {count} más",
+      keepFailed: "Dejar seleccionados los {count}"
+    },
+    refused: {
+      permission: "sin permiso",
+      notFound: "ya no existe",
+      other: "no se pudo ({error})"
+    }
+  };
+  var ordersBulk = {
+    one: "pedido",
+    isAt: "en {step}",
+    invoiced: "con factura (se corrige con una rectificativa)",
+    packed: {
+      label: "Marcar preparado",
+      title: "Marcar como preparados",
+      text: "Se marcarán como preparados {count} pedidos (paquete listo). Pasan al paso siguiente: por cobrar o por facturar. No se envía ningún correo.",
+      ok: "Marcar {count} preparados",
+      progress: "Marcando como preparados",
+      done: "marcados como preparados"
+    },
+    invoice: {
+      label: "Emitir factura",
+      title: "Emitir facturas",
+      text: "Se emitirá una factura por pedido ({count}), con fecha de hoy y en la serie por defecto. Una factura emitida no se borra: solo se corrige con una rectificativa.",
+      ok: "Emitir {count} facturas",
+      progress: "Emitiendo facturas",
+      done: "facturas emitidas",
+      noSeries: "no hay serie de facturas activa",
+      already: "ya tenía factura",
+      free: "es una entrega sin cargo",
+      distributor: "lo factura el distribuidor"
+    },
+    paid: {
+      label: "Marcar cobrado",
+      title: "Marcar como cobrados",
+      text: "Se marcarán como cobrados {count} pedidos. Si ya tienen factura, se apunta el cobro en ella por lo que falte.",
+      ok: "Marcar {count} cobrados",
+      progress: "Marcando como cobrados",
+      done: "marcados como cobrados"
+    },
+    sent: {
+      label: "Marcar factura enviada",
+      title: "Marcar facturas como enviadas",
+      text: "Se marcarán {count} facturas como enviadas. No se envía ningún correo: es para las que se mandaron por fuera.",
+      ok: "Marcar {count} enviadas",
+      progress: "Marcando facturas como enviadas",
+      done: "facturas marcadas como enviadas",
+      noInvoice: "sin factura",
+      already: "ya enviada"
+    },
+    report: {
+      label: "Marcar reportado",
+      title: "Marcar como reportados",
+      text: "Se marcarán {count} pedidos como reportados {toTheProfessional}.",
+      ok: "Marcar {count} reportados",
+      progress: "Marcando como reportados",
+      done: "marcados como reportados"
+    },
+    void: {
+      label: "Anular",
+      title: "Anular pedidos",
+      reason: "Motivo de la anulación (se apunta en la nota de cada pedido; puede quedar vacío)",
+      reasonOk: "Seguir",
+      noReason: "sin motivo",
+      text: "Se anularán {count} pedidos: dejan de contar en las cifras y se quitan sus líneas. No se puede deshacer.\n\nMotivo: {reason}.",
+      ok: "Anular {count} pedidos",
+      progress: "Anulando",
+      done: "pedidos anulados"
+    },
+    delete: {
+      label: "Eliminar borrador",
+      title: "Eliminar borradores",
+      text: "Se eliminarán {count} borradores para siempre. No se puede deshacer.",
+      ok: "Eliminar {count} borradores",
+      progress: "Eliminando borradores",
+      done: "borradores eliminados"
+    }
+  };
+  var invoicesBulk = {
+    one: "factura",
+    paid: "ya cobrada",
+    nothingPending: "sin nada pendiente",
+    payment: {
+      label: "Registrar cobro",
+      title: "Registrar cobros",
+      text: "Se registrará el cobro de {count} facturas por lo que les queda pendiente, con fecha de hoy y la forma de pago de cada factura.",
+      ok: "Registrar {count} cobros",
+      progress: "Registrando cobros",
+      done: "cobros registrados"
+    }
+  };
+  var customersBulk = {
+    assign: {
+      label: "Asignar {professional}",
+      title: "Asignar {professional}",
+      ask: "¿A qué {professional} se asignan?",
+      pick: "Buscar {professional}",
+      next: "Seguir",
+      text: "Se asignarán {count} {customers} a {name}. Si ya tenían otro, pasan a este.",
+      ok: "Asignar {count}",
+      progress: "Asignando",
+      done: "asignados"
+    },
+    off: {
+      label: "Dar de baja",
+      title: "Dar de baja",
+      text: "Se darán de baja {count} {customers}: dejan de salir en la lista y en las búsquedas; sus pedidos y facturas se quedan. Se pueden volver a dar de alta.",
+      ok: "Dar de baja {count}",
+      progress: "Dando de baja",
+      done: "dados de baja"
+    },
+    delete: {
+      label: "Eliminar",
+      title: "Eliminar",
+      text: "Se eliminarán {count} {customers} para siempre. Solo se eliminan los que no tienen pedidos ni facturas (los demás se saltan: se pueden dar de baja). No se puede deshacer.",
+      ok: "Eliminar {count}",
+      progress: "Eliminando",
+      done: "eliminados",
+      history: "tiene pedidos o facturas (se puede dar de baja)"
+    }
+  };
+  var accountsBulk = {
+    chooseUser: "Elige el usuario",
+    userOk: "Seguir",
+    noUsers: "No hay usuarios que puedan llevar una cartera.",
+    owner: {
+      label: "Asignar responsable",
+      title: "Asignar responsable",
+      text: "Se asignará {name} como responsable de {count} {accounts}. Si tenían otro, deja de serlo.",
+      ok: "Asignar {count}",
+      progress: "Asignando responsable",
+      done: "con responsable nuevo"
+    },
+    portfolio: {
+      label: "Añadir a una cartera",
+      title: "Añadir a una cartera",
+      text: "Se añadirán {count} {accounts} a la cartera de {name}.",
+      ok: "Añadir {count}",
+      progress: "Añadiendo a la cartera",
+      done: "añadidos a la cartera"
+    },
+    classify: {
+      label: "Clasificar",
+      title: "Clasificar A, B o C",
+      ask: "¿Qué clase se pone?",
+      none: "Sin clase",
+      text: "Se pondrá la clase «{name}» a {count} {accounts}.",
+      ok: "Clasificar {count}",
+      progress: "Clasificando",
+      done: "clasificados"
+    },
+    off: {
+      label: "Dar de baja",
+      title: "Dar de baja",
+      text: "Se darán de baja {count} {accounts}: dejan de salir en la lista y sus citas pendientes salen de la agenda. Su historial se queda y se pueden volver a dar de alta.",
+      ok: "Dar de baja {count}",
+      progress: "Dando de baja",
+      done: "dados de baja"
+    },
+    delete: {
+      label: "Eliminar",
+      title: "Eliminar",
+      text: "Se eliminarán {count} {accounts} para siempre. Solo se eliminan los que no tienen historial (los demás se saltan: se pueden dar de baja). No se puede deshacer.",
+      ok: "Eliminar {count}",
+      progress: "Eliminando",
+      done: "eliminados",
+      history: "tiene historial (se puede dar de baja)"
     }
   };
 
@@ -4020,7 +4308,25 @@
       seeOrder: "Ver el pedido",
       replenishUsed: "Reponer lo usado",
       couldNotReplenish: "No se ha podido reponer",
-      usedReplenished: "Repuesto lo usado"
+      usedReplenished: "Repuesto lo usado",
+      readBatch: "Leer el lote",
+      readBatchPlaceholder: "Lote leído o escrito",
+      batchCounted: "Lote {batch}: {units} usadas",
+      batchNotHere: "El lote {batch} no está en {depositThe} {deposit}",
+      batchAllUsed: "Del lote {batch} ya no quedan más"
+    },
+    deposits: {
+      material: "{units} uds de {products}",
+      empty: "Sin material",
+      toReplenish: "Por reponer",
+      expiring: "Lotes que caducan",
+      upToDate: "Al día",
+      emptyState: "Vací{depositEnd}",
+      create: "Dejar material en un centro",
+      none: "Todavía no hay material en ningún centro",
+      pendingBlock: "Por reponer",
+      all: "Todos los centros · {count}",
+      couldNotLoad: "No se han podido cargar {depositsThe} {deposits}"
     }
   };
 
@@ -5472,8 +5778,55 @@
     panelUse: "Uso: {records} registros · {space}"
   };
 
+  // src/app/i18n/es/mobile.ts
+  var mobile = {
+    desktopOnly: {
+      title: "Esta pantalla se usa en el ordenador",
+      back: "Volver",
+      goTo: "Ir a {place}",
+      reasons: {
+        generic: "Es un ajuste o un trabajo de oficina: se hace con la pantalla grande.",
+        duplicates: "Hay que comparar dos fichas campo a campo y elegir qué queda.",
+        platform: "El Panel delcos actúa sobre las empresas de los clientes y sus tablas son anchas.",
+        classify: "Reclasificar muchas fichas a la vez se hace con la tabla y las cifras delante.",
+        expenseReport: "Es un informe con tabla e importes para presentar.",
+        invoiceLog: "Es un registro técnico para revisar con calma.",
+        fiscal: "Son datos legales que salen en cada factura.",
+        verifactu: "Es un ajuste legal de la facturación.",
+        explore: "Cruzar datos necesita la tabla entera delante.",
+        import: "El Excel está en el ordenador y hay que ver la tabla para relacionar las columnas.",
+        roles: "Lo que puede hacer cada papel se decide con la tabla entera delante.",
+        portfolio: "Son reglas que reparten las fichas del equipo y se cambian pocas veces.",
+        commissions: "Tramos, personas y cálculos con dinero de por medio: mejor con calma.",
+        security: "Es un ajuste de la empresa que se cambia una vez.",
+        brand: "El logo, los colores y las palabras se eligen una vez, con la vista previa delante.",
+        texts: "Revisar textos largos pide la pantalla grande.",
+        email: "Remitente, plantillas y prueba de envío se ajustan una vez.",
+        backups: "La copia es un archivo de datos que no se abre en el teléfono.",
+        internal: "Es una herramienta interna.",
+        company: "Es un ajuste de la empresa que se cambia pocas veces.",
+        pdf: "Hay que ver el PDF a tamaño real mientras se cambia.",
+        cardPayment: "Son las claves del banco y se ponen una vez.",
+        companyRules: "Son reglas de la empresa que se ponen una vez.",
+        classifiers: "Cambia lo que ve todo el equipo: se piensa con calma.",
+        stores: "Es configuración que se toca pocas veces.",
+        portal: "El material, los máximos y los textos del portal se ajustan una vez.",
+        distributors: "Los distribuidores se dan de alta pocas veces.",
+        productEditor: "Tiene muchos campos que deciden precios y facturas.",
+        userEditor: "El papel, las zonas y la cartera deciden lo que ve una persona: mejor con calma.",
+        rectify: "Una factura emitida no se puede cambiar: un error obliga a otra rectificativa."
+      }
+    }
+  };
+
   // src/app/i18n/es.ts
   var es = {
+    salesChannels,
+    listSelection,
+    ordersBulk,
+    invoicesBulk,
+    customersBulk,
+    accountsBulk,
     settingsRules,
     equipment,
     tenders,
@@ -5552,6 +5905,7 @@
     cycle,
     privacy,
     limits,
+    mobile,
     home: {
       showIndicators: "Ver tus indicadores",
       hideIndicators: "Ocultar tus indicadores",
@@ -5853,293 +6207,23 @@
     withCase: () => withCase,
     wordFor: () => wordFor
   });
-  var DEFAULT_TERMS = {
-    medico: { s: t("core.terms.professional"), p: t("core.terms.professionals"), g: "m" },
-    paciente: { s: t("core.terms.customer"), p: t("core.terms.customers"), g: "m" },
-    visita: { s: t("core.terms.visit"), p: t("core.terms.visits"), g: "f" },
-    pauta: { s: t("core.terms.request"), p: t("core.terms.requests"), g: "f" },
-    consulta: { s: t("core.terms.location"), p: t("core.terms.locations"), g: "f" },
-    especialidad: { s: t("core.terms.segment"), p: t("core.terms.segments"), g: "m" }
-  };
-  var EXTRA_TERMS = {
-    intervencion: { s: t("core.terms.surgery"), p: t("core.terms.surgeries"), g: "f" },
-    deposito: { s: t("core.terms.deposit"), p: t("core.terms.deposits"), g: "m" }
-  };
-  var DETERMINERS = {
-    el: ["el", "los", "la", "las"],
-    un: ["un", "unos", "una", "unas"],
-    del: ["del", "de los", "de la", "de las"],
-    al: ["al", "a los", "a la", "a las"],
-    este: ["este", "estos", "esta", "estas"],
-    ningun: ["ningún", "ningunos", "ninguna", "ningunas"],
-    otro: ["otro", "otros", "otra", "otras"],
-    nuevo: ["nuevo", "nuevos", "nueva", "nuevas"],
-    primer: ["primer", "primeros", "primera", "primeras"],
-    ultimo: ["último", "últimos", "última", "últimas"],
-    proximo: ["próximo", "próximos", "próxima", "próximas"]
-  };
-  var TERMS_KEY = "dlc-terminos";
-  var TITLE = /^(dr|dra|d|dña|dª|sr|sra|srta|prof|profa|lic|ldo|lda)\.?$/i;
-  function ownTerms() {
-    try {
-      return coreLegacy.terms();
-    } catch {
-      return {};
-    }
-  }
-  function termOf(key) {
-    const fallback = DEFAULT_TERMS[key] ?? EXTRA_TERMS[key] ?? { s: key, p: `${key}s`, g: "m" }, own = ownTerms()[key] ?? {};
-    return { s: String(own.s ?? "").trim() || fallback.s, p: String(own.p ?? "").trim() || fallback.p, g: own.g === "f" || own.g === "m" ? own.g : fallback.g };
-  }
-  var withCase = (text2, mode) => mode === "U" ? text2.toUpperCase() : mode === "C" ? text2.charAt(0).toUpperCase() + text2.slice(1) : text2;
-  function wordFor(key, number2, form = {}) {
-    const { determiner, determinerCase, nounCase, adjective } = form;
-    const term2 = termOf(key), plural2 = number2 === "p", noun = withCase(plural2 ? term2.p : term2.s, nounCase);
-    const agreed = adjective ? ` ${term2.g === "f" ? adjective.replace(/o$/, "a") : adjective}${plural2 ? "s" : ""}` : "";
-    const forms = determiner ? DETERMINERS[determiner] : void 0;
-    if (!forms) return noun + agreed;
-    return `${withCase(forms[(term2.g === "f" ? 2 : 0) + (plural2 ? 1 : 0)] ?? "", determinerCase)} ${noun}${agreed}`;
-  }
-  var allOf = (key) => `${t(termOf(key).g === "f" ? "core.terms.allFeminine" : "core.terms.allMasculine")} ${wordFor(key, "p", { determiner: "el" })}`;
-  var contactsLabel = () => (coreLegacy.brandLabel() ?? "") || wordFor("medico", "p", { nounCase: "C" });
-  var channelLabel = (order, total) => {
-    if (coreLegacy.isFree(order, total)) return t("core.terms.freeDelivery");
-    return order.canal === "centro" ? t("core.terms.saleToCentre") : t("core.terms.saleTo", { customer: wordFor("paciente", "s", { determiner: "al" }) });
-  };
-  var nameParts = (name) => {
-    const parts = String(name ?? "").trim().split(/\s+/);
-    while (parts.length > 1 && TITLE.test(parts[0] ?? "")) parts.shift();
-    return parts;
-  };
-  var firstName = (name) => nameParts(name)[0] ?? "";
-  var initials = (name) => nameParts(name).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
-  var ending = (key, plural2) => `${termOf(key).g === "f" ? "a" : "o"}${plural2 ? "s" : ""}`;
-  var SURGERY_WORDS = /* @__PURE__ */ new Map([
-    ["surgery", () => wordFor("intervencion", "s")],
-    ["surgeries", () => wordFor("intervencion", "p")],
-    ["Surgery", () => wordFor("intervencion", "s", { nounCase: "C" })],
-    ["Surgeries", () => wordFor("intervencion", "p", { nounCase: "C" })],
-    ["surgeryThe", () => termOf("intervencion").g === "f" ? "la" : "el"],
-    ["SurgeryThe", () => termOf("intervencion").g === "f" ? "La" : "El"],
-    ["surgeryOfThe", () => termOf("intervencion").g === "f" ? "de la" : "del"],
-    ["surgeriesThe", () => termOf("intervencion").g === "f" ? "las" : "los"],
-    ["surgeryOne", () => termOf("intervencion").g === "f" ? "una" : "un"],
-    ["SurgeryOne", () => termOf("intervencion").g === "f" ? "Una" : "Un"],
-    ["surgeryThis", () => termOf("intervencion").g === "f" ? "esta" : "este"],
-    ["surgeryEnd", () => ending("intervencion", false)],
-    ["surgeryEnds", () => ending("intervencion", true)]
-  ]);
-  var DEPOSIT_WORDS = /* @__PURE__ */ new Map([
-    ["deposit", () => wordFor("deposito", "s")],
-    ["Deposit", () => wordFor("deposito", "s", { nounCase: "C" })],
-    ["depositThe", () => termOf("deposito").g === "f" ? "la" : "el"],
-    ["DepositThe", () => termOf("deposito").g === "f" ? "La" : "El"],
-    ["depositOne", () => termOf("deposito").g === "f" ? "una" : "un"],
-    ["depositEnd", () => ending("deposito", false)]
-  ]);
-  setVocabularyResolver((name) => (SURGERY_WORDS.get(name) ?? DEPOSIT_WORDS.get(name))?.());
 
-  // src/app/api/client.ts
-  function rpc(name, ...params) {
-    const [values2] = params;
-    return legacyDb().rpc(name, values2);
-  }
-
-  // src/app/core/session.ts
-  var ACCESS_CHECK_MS = 3e3;
-  var SESSION_ERRORS = [];
-  var impersonating = () => {
-    try {
-      return JSON.parse(localStorage.getItem(coreLegacy.impersonationKey()) ?? "null");
-    } catch {
-      return null;
-    }
-  };
-  var isGuest = (user) => Boolean(user) && (coreLegacy.roleCan(user?.rol ?? "", "portal_prescriptor") || coreLegacy.roleCan(user?.rol ?? "", "portal_centro"));
-  var guestSees = (user) => coreLegacy.roleCan(user.rol, "portal_centro") ? t("core.session.centreGuestSees") : t("core.session.professionalGuestSees", { requests: wordFor("pauta", "p"), customers: wordFor("paciente", "p") });
-  var ERROR_KEYS = {
-    administrador: "core.session.errors.administrator",
-    permiso: "core.session.errors.permission",
-    inactivo: "core.session.errors.inactive",
-    propio: "core.session.errors.own",
-    otra: "core.session.errors.otherCompany",
-    no_encontrado: "core.session.errors.notFound",
-    plan: "core.session.errors.plan",
-    sesion: "core.session.errors.session"
-  };
-  var IMPERSONATION_ERRORS = Object.fromEntries(Object.entries(ERROR_KEYS).map(([code, key]) => [code, t(key)]));
-  var outOfPlan = (button3) => Boolean(button3) && Boolean(button3?.classList.contains("bloq"));
-  function clearLocalData() {
-    try {
-      Object.keys(localStorage).filter((key) => /^dlc-(rc-|perfil|jornada-)/.test(key)).forEach((key) => {
-        localStorage.removeItem(key);
-      });
-    } catch {
-    }
-  }
-  var emptyModules = (except) => {
-    ["v-pacientes", "v-productos", "v-ventas"].forEach((id) => {
-      const section = document.getElementById(id);
-      if (id !== except && section) section.innerHTML = "";
-    });
-  };
-  function prepareOrganizationChange(target) {
-    try {
-      sessionStorage.setItem("dlc-cambio-org", target ?? "");
-      sessionStorage.removeItem("dlc-f5");
-      localStorage.removeItem("app-marca");
-    } catch {
-    }
-  }
-  function paintImpersonationBar() {
-    const saved3 = impersonating();
-    let bar = document.getElementById("barrasup");
-    if (!saved3) {
-      bar?.remove();
-      return;
-    }
-    if (!bar) {
-      document.body.insertAdjacentHTML("afterbegin", '<div id="barrasup"></div>');
-      bar = document.getElementById("barrasup");
-    }
-    if (!bar) return;
-    const profile6 = coreLegacy.profile();
-    bar.innerHTML = `<span>👤 <b>${t("core.session.impersonating", { name: escapeHtml(profile6 ? profile6.nombre : saved3.como) })}</b>${profile6 ? ` · ${escapeHtml(profile6.rol)}` : ""} · ${t("core.session.underTheirName")}</span>
-    <button class="btn chico" id="supvolver">${t("core.session.stop", { name: escapeHtml(firstName(saved3.nombre)) })}</button>`;
-    const back = document.getElementById("supvolver");
-    if (back) back.onclick = () => {
-      void coreLegacy.backToMySession();
-    };
-  }
-  function canCheck(force) {
-    const id = coreLegacy.profile()?.id;
-    if (coreLegacy.accessLost() || !id || document.body.classList.contains("sin-sesion") || !navigator.onLine) return null;
-    return force || Date.now() - coreLegacy.accessCheckedAt() >= ACCESS_CHECK_MS ? id : null;
-  }
-  async function sendOut() {
-    coreLegacy.setAccessLost();
-    try {
-      sessionStorage.setItem("delcos-fuera", "1");
-    } catch {
-    }
-    try {
-      localStorage.removeItem(coreLegacy.profileKey());
-      localStorage.removeItem("dlc-os-sesion");
-    } catch {
-    }
-    clearLocalData();
-    try {
-      await coreLegacy.db().auth.signOut();
-    } catch {
-    }
-    location.reload();
-  }
-  async function checkAccess(force) {
-    const id = canCheck(force);
-    if (!id) return;
-    coreLegacy.setAccessCheckedAt(Date.now());
-    const { data, error } = await coreLegacy.db().from("perfiles").select("id, activo").eq("id", id).maybeSingle();
-    if (error || data?.activo) return;
-    await sendOut();
-  }
-  async function askServer(id) {
-    const answer = await coreLegacy.db().functions.invoke("impersonar", { body: { usuario_id: id } });
-    const { error } = answer, data = answer.data;
-    if (error && !data && typeof error.context?.json === "function") {
-      try {
-        return { data: await error.context.json(), error };
-      } catch {
-      }
-    }
-    return { data, error };
-  }
-  var logFailure = (reason, error, detail) => {
-    coreLegacy.registerError("api", `Impersonalizar: ${reason || "sin respuesta"}`, { estado: error?.context?.status, detalle: detail });
-  };
-  function failed(answer, error) {
-    const code = answer?.error ?? "", known = IMPERSONATION_ERRORS[code], message = error?.message ?? "", detail = answer?.detalle;
-    const reason = [detail, message, code].find(Boolean) ?? t("core.session.noAnswer");
-    coreLegacy.toast(known ?? t("core.session.couldNotEnter", { reason }), true);
-    if (!known || code === "sesion") logFailure(code || message, error, detail);
-    coreLegacy.hideLoading();
-  }
-  async function markImpersonatedSession() {
-    try {
-      await rpc("suplantar_marcar_sesion");
-    } catch {
-    }
-  }
-  async function impersonate(id) {
-    const user = coreLegacy.users().find((item) => item.id === id) ?? { id, nombre: t("core.session.thisPerson"), rol: "" };
-    const text2 = t(isGuest(user) ? "core.session.confirmGuest" : "core.session.confirmUser", { name: user.nombre });
-    if (!await coreLegacy.confirm(text2, { titulo: t("core.session.confirmTitle", { name: user.nombre }), ok: t("core.session.confirmOk") })) return;
-    coreLegacy.showLoading(t("core.session.loading", { name: user.nombre }));
-    const { data: { session: session2 } } = await coreLegacy.db().auth.getSession();
-    if (!session2) {
-      coreLegacy.hideLoading();
-      coreLegacy.toast(IMPERSONATION_ERRORS.sesion ?? "", true);
-      return;
-    }
-    const { data, error } = await askServer(id);
-    if (!data?.ok) {
-      failed(data, error);
-      return;
-    }
-    const profile6 = coreLegacy.profile();
-    localStorage.setItem(coreLegacy.impersonationKey(), JSON.stringify({
-      access_token: session2.access_token,
-      refresh_token: session2.refresh_token,
-      nombre: profile6?.nombre,
-      id: profile6?.id,
-      como: data.nombre,
-      rol: data.rol,
-      desde: Date.now()
-    }));
-    const { error: opening } = await coreLegacy.db().auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
-    if (opening) {
-      localStorage.removeItem(coreLegacy.impersonationKey());
-      await coreLegacy.db().auth.setSession({ access_token: session2.access_token, refresh_token: session2.refresh_token });
-      coreLegacy.registerError("api", "Impersonalizar: no se abre la sesión", { mensaje: opening.message });
-      coreLegacy.toast(t("core.session.couldNotOpen", { error: opening.message ?? "" }), true);
-      coreLegacy.hideLoading();
-      return;
-    }
-    await markImpersonatedSession();
-    clearLocalData();
-    location.reload();
-  }
-
-  // src/app/core/errors.ts
-  var MAX_MESSAGE = 500;
-  var KEPT_ERRORS = 20;
-  var NETWORK = /failed to fetch|load failed|networkerror|network request failed|aborterror|fetch is aborted|internet connection|err_internet|err_network/i;
-  var TIMEOUT = /ha tardado demasiado|tiempo agotado|timeout|timed out/i;
-  var READ_ONLY_REFUSAL = /row-level security|violates row-level/i;
-  var sent = /* @__PURE__ */ new Set();
-  var textOf = (error) => {
-    if (error && typeof error === "object" && "message" in error) return String(error.message ?? "") || String(error);
-    return String(error ?? "");
-  };
-  var isNetworkError = (error) => NETWORK.test(textOf(error)) || TIMEOUT.test(textOf(error));
-  function registerError(type, message, detail) {
-    if (coreLegacy.paymentState()?.solo_lectura && READ_ONLY_REFUSAL.test(String(message))) return;
-    if (type === "api" && isNetworkError(message)) return;
-    try {
-      const text2 = String(message ?? "").slice(0, MAX_MESSAGE), screen3 = coreLegacy.currentScreen();
-      SESSION_ERRORS.push({ t: (/* @__PURE__ */ new Date()).toISOString(), tipo: type, m: text2, pantalla: screen3 });
-      if (SESSION_ERRORS.length > KEPT_ERRORS) SESSION_ERRORS.shift();
-      const key = `${type}|${text2}`;
-      if (sent.has(key) || !coreLegacy.profile()) return;
-      sent.add(key);
-      Promise.resolve(coreLegacy.rpc("registrar_error", { p: { tipo: type, mensaje: text2, detalle: detail ?? null, pantalla: screen3, version: coreLegacy.appVersion(), navegador: navigator.userAgent } })).then(() => void 0, () => void 0);
-    } catch {
-    }
-  }
-
-  // src/app/components/charts/month-bars.ts
-  var month_bars_exports = {};
-  __export(month_bars_exports, {
-    monthBars: () => monthBars
+  // src/app/core/sales-channels.ts
+  var sales_channels_exports = {};
+  __export(sales_channels_exports, {
+    ORIGINS: () => ORIGINS2,
+    SETTING_CHANNELS: () => SETTING_CHANNELS,
+    activeChannels: () => activeChannels,
+    buysAsAccount: () => buysAsAccount,
+    channelDiscount: () => channelDiscount,
+    channelFilterOptions: () => channelFilterOptions,
+    channelName: () => channelName,
+    channelOf: () => channelOf,
+    choosesChannel: () => choosesChannel,
+    defaultChannel: () => defaultChannel,
+    knowsChannels: () => knowsChannels,
+    lowerFirst: () => lowerFirst,
+    salesChannels: () => salesChannels2
   });
 
   // src/app/core/legacy-c/index.ts
@@ -6582,8 +6666,8 @@
   });
 
   // src/app/screens/routes/model.ts
-  var model_exports9 = {};
-  __export(model_exports9, {
+  var model_exports10 = {};
+  __export(model_exports10, {
     WEEKDAYS: () => WEEKDAYS2,
     autoName: () => autoName,
     datesOf: () => datesOf,
@@ -6655,6 +6739,7 @@
     loadContractPrices: () => loadContractPrices,
     loadSalesTeam: () => loadSalesTeam,
     menuCycle: () => menuCycle,
+    menuDeposits: () => menuDeposits,
     menuEquipment: () => menuEquipment,
     menuEvents: () => menuEvents,
     menuIcons: () => menuIcons,
@@ -6823,7 +6908,7 @@
   var SHORT = 24;
   var LONG = 30;
   var PLAIN = 120;
-  var more = (count) => count > SHOWN ? "…" : "";
+  var more = (count4) => count4 > SHOWN ? "…" : "";
   function valueText(value10) {
     if (value10 === null || value10 === void 0 || value10 === "") return "—";
     if (typeof value10 === "boolean") return t(value10 ? "settingsMore.audit.yes" : "settingsMore.audit.no");
@@ -7475,11 +7560,11 @@
     return Object.keys(change).length ? change : null;
   }
   function stateChanges(value10) {
-    const change = {}, active = document.getElementById("veactive");
-    if (active && active.checked !== Boolean(value10.activo)) change.activo = active.checked;
+    const change = {}, active2 = document.getElementById("veactive");
+    if (active2 && active2.checked !== Boolean(value10.activo)) change.activo = active2.checked;
     if (document.getElementById("vedest") && valueOf2("vedest") !== (value10.destino ?? "")) change.destino = valueOf2("vedest");
-    const states = chosenStatesChange(value10);
-    if (states) change.en_estados = states;
+    const states2 = chosenStatesChange(value10);
+    if (states2) change.en_estados = states2;
     return change;
   }
   async function saveValue(value10) {
@@ -7583,8 +7668,8 @@
       paintAccountsFilter();
       return;
     }
-    const field10 = data.find((row3) => row3.papel_campo === NO_REPORTS_ROLE && row3.tipo_campo === YES_NO && !row3.papel);
-    state = { known: data.some((row3) => "papel_campo" in row3), field: field10 ? { clave: field10.clave, nombre: field10.nombre } : null };
+    const field11 = data.find((row3) => row3.papel_campo === NO_REPORTS_ROLE && row3.tipo_campo === YES_NO && !row3.papel);
+    state = { known: data.some((row3) => "papel_campo" in row3), field: field11 ? { clave: field11.clave, nombre: field11.nombre } : null };
     try {
       localStorage.setItem(STORED_KEY, JSON.stringify(state));
     } catch {
@@ -7771,10 +7856,10 @@
           <span class="sm">${escapeHtml(roleHint(value10))}</span></div>
         <div class="ajctl"><select data-estpapel="${value10.id}" aria-label="${t("settingsMore.states.roleOf", { name: escapeHtml(value10.valor) })}" ${title2}>${value10.papel ? "" : `<option value="" selected>${t("settingsMore.states.noRole")}</option>`}${options3}</select></div></div>`;
   }
-  function pageHtml2(states) {
+  function pageHtml2(states2) {
     return `<div class="card estw">
       <p class="sm">${t("settingsMore.states.intro", { aVisit: escapeHtml(term("visita", { article: "una" })) })}</p>
-      ${states.length ? states.map(rowHtml).join("") : `<p class="vacio">${t("settingsMore.states.none")}</p>`}</div>`;
+      ${states2.length ? states2.map(rowHtml).join("") : `<p class="vacio">${t("settingsMore.states.none")}</p>`}</div>`;
   }
   async function readStates() {
     const { data: classifier } = await legacyDb().from("clasificadores").select("id").eq("papel", "estado_comercial").limit(1);
@@ -7783,18 +7868,18 @@
     const { data, error } = await legacyDb().from("valores_clasificador").select("id,valor,orden,activo,papel").eq("clasificador_id", first.id).order("orden");
     return { states: data ?? [], error };
   }
-  async function confirmInitial(states, value10) {
-    const previous = states.find((state2) => state2.papel === INITIAL && state2.id !== value10.id);
+  async function confirmInitial(states2, value10) {
+    const previous = states2.find((state2) => state2.papel === INITIAL && state2.id !== value10.id);
     if (!previous) return true;
     return notices.confirm(t("settingsMore.states.confirmInitial", { name: value10.valor, previous: previous.valor }), { titulo: t("settingsMore.states.confirmInitialTitle"), ok: t("settingsMore.states.change") });
   }
-  async function canChange(states, value10, select) {
+  async function canChange(states2, value10, select) {
     if (value10.papel === INITIAL) {
       select.value = value10.papel;
       notices.toast(t("settingsMore.states.markOtherInitial"), true);
       return false;
     }
-    if (select.value === INITIAL && !await confirmInitial(states, value10)) {
+    if (select.value === INITIAL && !await confirmInitial(states2, value10)) {
       select.value = value10.papel ?? "";
       return false;
     }
@@ -7805,9 +7890,9 @@
     if (known) return t(known);
     return t("settingsMore.states.couldNotChange") + (error ? `: ${error.message ?? ""}` : "");
   }
-  async function changeRole(states, select) {
-    const value10 = states.find((state2) => state2.id === select.dataset.estpapel), chosen4 = select.value;
-    if (!value10 || !chosen4 || chosen4 === value10.papel || !await canChange(states, value10, select)) return;
+  async function changeRole(states2, select) {
+    const value10 = states2.find((state2) => state2.id === select.dataset.estpapel), chosen4 = select.value;
+    if (!value10 || !chosen4 || chosen4 === value10.papel || !await canChange(states2, value10, select)) return;
     select.disabled = true;
     const { data: result, error } = await legacyDb().rpc("guardar_papel_estado", { p_id: value10.id, p_papel: chosen4 });
     if (error || !result?.ok) {
@@ -7828,17 +7913,17 @@
     const box3 = document.getElementById("cfgcuerpo");
     if (!box3) return;
     settingsMoreLegacy.loading(box3, t("settingsMore.states.loading"));
-    const { states, error } = await readStates();
+    const { states: states2, error } = await readStates();
     if (!document.getElementById("cfgcuerpo") || settingsMoreLegacy.settingsKey() !== "estados") return;
     if (error) {
       box3.innerHTML = `<div class="card"><p class="sm">${t("settingsMore.states.couldNotRead", { error: escapeHtml(error.message ?? "") })}</p></div>`;
       return;
     }
-    const active = states.filter((state2) => state2.activo !== false);
-    box3.innerHTML = pageHtml2(active);
+    const active2 = states2.filter((state2) => state2.activo !== false);
+    box3.innerHTML = pageHtml2(active2);
     box3.querySelectorAll("[data-estpapel]").forEach((select) => {
       select.onchange = () => {
-        void changeRole(active, select);
+        void changeRole(active2, select);
       };
     });
   }
@@ -8061,7 +8146,7 @@
   async function undoChange(id, then) {
     const fields = await undoableFields(id);
     if (!fields) return;
-    const fieldNames2 = fields.map((field10) => cardSectionsLegacy.fieldName(field10)).join(", ");
+    const fieldNames2 = fields.map((field11) => cardSectionsLegacy.fieldName(field11)).join(", ");
     if (!await notices.confirm(t("settingsMore.undo.confirmOne", { fields: fieldNames2 }), { titulo: t("settingsMore.undo.titleOne"), ok: t("settingsMore.undo.undo") })) return;
     const { data: result, error } = await legacyDb().rpc("deshacer_cambio", { p_id: id, p_simular: false });
     if (error || !result?.ok) {
@@ -8083,7 +8168,7 @@
     return key ? t(key) : entity;
   };
   function summaryHtml(check2) {
-    const parts = Object.entries(check2.por_entidad ?? {}).map(([entity, count]) => t("settingsMore.undo.inEntity", { count: formatNumber(count), entity: entityName2(entity) })).join(", ");
+    const parts = Object.entries(check2.por_entidad ?? {}).map(([entity, count4]) => t("settingsMore.undo.inEntity", { count: formatNumber(count4), entity: entityName2(entity) })).join(", ");
     return `${t("settingsMore.undo.wouldUndo", { changes: formatNumber(check2.cambios), fields: formatNumber(check2.campos), parts })}
       ${check2.sin_deshacer ? ` ${t("settingsMore.undo.notUndoable", { count: formatNumber(check2.sin_deshacer) })}` : ""}
       <div class="acts u-m-8-0-0"><button type="button" class="btn" id="audok">${t("settingsMore.undo.undoCount", { count: formatNumber(check2.cambios) })}</button></div>`;
@@ -8156,8 +8241,8 @@
       <span class="mterr sm" hidden></span></div>`;
   }
   function validMax(text2) {
-    const count = Number(text2);
-    return text2 && Number.isInteger(count) && count >= 1 && count <= MAX_LIMIT ? count : null;
+    const count4 = Number(text2);
+    return text2 && Number.isInteger(count4) && count4 >= 1 && count4 <= MAX_LIMIT ? count4 : null;
   }
   function readLimits(rows2) {
     let wrong2 = false;
@@ -8170,8 +8255,8 @@
       }
       const allowed = row3.querySelector("[data-mpp]"), max = row3.querySelector("[data-mpx]");
       if (!allowed?.checked || !max) continue;
-      const count = validMax(max.value);
-      if (count === null) {
+      const count4 = validMax(max.value);
+      if (count4 === null) {
         if (error) {
           error.hidden = false;
           error.textContent = t("settingsMore.material.maxError");
@@ -8179,7 +8264,7 @@
         wrong2 = true;
         continue;
       }
-      material.push({ valor: row3.dataset.mvv ?? "", max: count });
+      material.push({ valor: row3.dataset.mvv ?? "", max: count4 });
     }
     return wrong2 ? null : material;
   }
@@ -8313,7 +8398,7 @@
     repaintSmoothly: () => repaintSmoothly,
     requestTraffic: () => requestTraffic,
     rescheduleAppointments: () => rescheduleAppointments,
-    runAction: () => runAction,
+    runAction: () => runAction2,
     saveOrder: () => saveOrder,
     setRealTimes: () => setRealTimes,
     shareWeek: () => shareWeek,
@@ -8801,8 +8886,8 @@
       if (!row3.querySelector(".mlpcand")) row3.querySelector(".mlpn")?.insertAdjacentHTML("afterend", `<span class="mlpcand" role="img" aria-label="${t("navigationCore.menu.notInPlanShort")}"></span>`);
     });
     box3.querySelectorAll(".mlpg").forEach((group) => {
-      const rows2 = [...group.querySelectorAll(".mlpi[data-k]")], count = group.querySelector(".mlpcnt");
-      if (count) count.textContent = t("navigationCore.menu.count", { shown: rows2.filter((row3) => !row3.classList.contains("off")).length, total: rows2.filter((row3) => !row3.classList.contains("fueraplan")).length });
+      const rows2 = [...group.querySelectorAll(".mlpi[data-k]")], count4 = group.querySelector(".mlpcnt");
+      if (count4) count4.textContent = t("navigationCore.menu.count", { shown: rows2.filter((row3) => !row3.classList.contains("off")).length, total: rows2.filter((row3) => !row3.classList.contains("fueraplan")).length });
     });
   }
   var moveBlock = (draft, id, target, before) => {
@@ -8871,8 +8956,8 @@
     draft.ocultos = toggle2.checked ? draft.ocultos.filter((other) => other !== key) : [.../* @__PURE__ */ new Set([...draft.ocultos, key])];
     const row3 = toggle2.closest(".mlpi");
     row3?.classList.toggle("off", !toggle2.checked);
-    const group = row3?.closest(".mlpg"), items = (draft.items[group?.dataset.g ?? ""] ?? []).filter(available), count = group?.querySelector(".mlpcnt");
-    if (count) count.textContent = t("navigationCore.menu.count", { shown: items.filter((other) => !draft.ocultos.includes(other)).length, total: items.length });
+    const group = row3?.closest(".mlpg"), items = (draft.items[group?.dataset.g ?? ""] ?? []).filter(available), count4 = group?.querySelector(".mlpcnt");
+    if (count4) count4.textContent = t("navigationCore.menu.count", { shown: items.filter((other) => !draft.ocultos.includes(other)).length, total: items.length });
     lockOutOfPlan(session2.box);
     preview(session2);
   }
@@ -9103,13 +9188,6 @@
     usualLeadDays: () => usualLeadDays,
     vatRates: () => vatRates
   });
-
-  // src/app/legacy/organisation-bridge.ts
-  var organisationLegacy = {
-    setting: (key) => settingsStore.settings[key],
-    name: () => appName(),
-    hasPortal: () => hasExtra("portal")
-  };
 
   // src/app/services/money.ts
   var money_exports = {};
@@ -9625,7 +9703,7 @@
   function completeFields() {
     const own = setting(SETTING_COMPLETE)?.campos;
     if (!Array.isArray(own)) return [...DEFAULT_COMPLETE];
-    return COMPLETE_FIELDS.filter((field10) => own.includes(field10));
+    return COMPLETE_FIELDS.filter((field11) => own.includes(field11));
   }
   var SETTING_EVENTS = "eventos";
   var DEFAULT_EVENT_TYPES = ["Taller", "Curso", "Congreso", "Webinar", "Reunión científica", "Comida de trabajo", "Otro"];
@@ -9674,7 +9752,7 @@
   }
 
   // src/app/screens/home/tiles.ts
-  var plural = (count, one, other) => count === 1 ? one : other;
+  var plural = (count4, one, other) => count4 === 1 ? one : other;
   function attentionTile(items) {
     const total = items.reduce((sum2, item) => sum2 + item.count, 0);
     const rows2 = items.slice(0, 7).map((item, index) => `<button type="button" class="mti ${item.priority}" data-mat="${index}"><span class="mic">${icon(item.icon)}</span>
@@ -9785,30 +9863,30 @@
   }
   var color = (role) => STATE_COLORS[role] ?? "#C9D7E6";
   function interestedChart(charts) {
-    const counts = stateCounts(charts), steps = counts.filter((count) => count.state.papel !== "inicial");
+    const counts = stateCounts(charts), steps = counts.filter((count4) => count4.state.papel !== "inicial");
     if (!steps.length) return EMPTY_CHART;
-    const max = Math.max(1, ...steps.map((count) => count.accounts)), width = 196, barWidth = width / steps.length;
-    const columns = steps.map((count, i) => {
-      const on3 = count.state.papel === "interes", height = Math.max(4, count.accounts / max * 28);
-      const name = count.state.valor.length > 11 ? `${count.state.valor.slice(0, 10)}.` : count.state.valor;
-      return `<rect x="${i * barWidth + 4}" y="${34 - height}" width="${barWidth - 8}" height="${height}" rx="4" fill="${on3 ? "var(--navy)" : "#DCE6F1"}"/><text x="${i * barWidth + barWidth / 2}" y="${30 - height}" text-anchor="middle" class="n ${on3 ? "on" : ""}">${count.accounts}</text><text x="${i * barWidth + barWidth / 2}" y="48" text-anchor="middle" class="${on3 ? "on" : ""}">${escapeHtml(name)}</text>`;
+    const max = Math.max(1, ...steps.map((count4) => count4.accounts)), width = 196, barWidth = width / steps.length;
+    const columns = steps.map((count4, i) => {
+      const on3 = count4.state.papel === "interes", height = Math.max(4, count4.accounts / max * 28);
+      const name = count4.state.valor.length > 11 ? `${count4.state.valor.slice(0, 10)}.` : count4.state.valor;
+      return `<rect x="${i * barWidth + 4}" y="${34 - height}" width="${barWidth - 8}" height="${height}" rx="4" fill="${on3 ? "var(--navy)" : "#DCE6F1"}"/><text x="${i * barWidth + barWidth / 2}" y="${30 - height}" text-anchor="middle" class="n ${on3 ? "on" : ""}">${count4.accounts}</text><text x="${i * barWidth + barWidth / 2}" y="48" text-anchor="middle" class="${on3 ? "on" : ""}">${escapeHtml(name)}</text>`;
     }).join("");
-    const positive = counts.find((count) => count.state.papel === "positivo");
+    const positive = counts.find((count4) => count4.state.papel === "positivo");
     const state2 = positive ? escapeHtml(positive.state.valor) : "";
     const summary4 = positive ? positive.accounts ? t("home.indicators.alreadyIn", { count: positive.accounts, state: state2 }) : t("home.indicators.nextStep", { state: state2 }) : "";
     return { summary: summary4, visual: `<svg class="kvbar" viewBox="0 0 ${width} 52" preserveAspectRatio="xMidYMax meet" aria-hidden="true">${columns}</svg>` };
   }
   function portfolioChart(charts) {
-    const total = portfolioTotal(charts), present = stateCounts(charts).filter((count) => count.accounts);
+    const total = portfolioTotal(charts), present = stateCounts(charts).filter((count4) => count4.accounts);
     const circumference = 2 * Math.PI * 22;
     let offset = 0;
-    const segments2 = present.map((count) => {
-      const length = count.accounts / total * circumference;
-      const segment = `<circle class="s" cx="29" cy="29" r="22" fill="none" stroke="${color(count.state.papel)}" stroke-width="9" stroke-dasharray="${Math.max(0, length - 1.5)} ${circumference}" stroke-dashoffset="${-offset}"/>`;
+    const segments2 = present.map((count4) => {
+      const length = count4.accounts / total * circumference;
+      const segment = `<circle class="s" cx="29" cy="29" r="22" fill="none" stroke="${color(count4.state.papel)}" stroke-width="9" stroke-dasharray="${Math.max(0, length - 1.5)} ${circumference}" stroke-dashoffset="${-offset}"/>`;
       offset += length;
       return segment;
     }).join("");
-    const legend = present.slice(0, 4).map((count) => `<span><i style="background:${color(count.state.papel)}"></i>${count.accounts} ${escapeHtml(count.state.valor)}</span>`).join("");
+    const legend = present.slice(0, 4).map((count4) => `<span><i style="background:${color(count4.state.papel)}"></i>${count4.accounts} ${escapeHtml(count4.state.valor)}</span>`).join("");
     return { summary: "", visual: `<div class="kvdona"><svg viewBox="0 0 58 58" aria-hidden="true">${segments2}</svg><div class="kvley">${legend}</div></div>` };
   }
   function notContactedChart(charts, kpis) {
@@ -9878,6 +9956,7 @@
     storedList: () => storedList,
     storedObject: () => storedObject,
     switchScreen: () => switchScreen,
+    switchToNotice: () => switchToNotice,
     toggleUrgent: () => toggleUrgent2,
     unitsLegend: () => unitsLegend,
     watchConnection: () => watchConnection,
@@ -9985,8 +10064,8 @@
   function placeHelpAndTools() {
     const tools = document.getElementById("dirtools"), title2 = document.querySelector("#dircab h1");
     if (tools?.parentElement && title2 && !title2.querySelector(".ai")) {
-      const help4 = tools.parentElement.querySelector(":scope > .ai");
-      if (help4) title2.appendChild(help4);
+      const help5 = tools.parentElement.querySelector(":scope > .ai");
+      if (help5) title2.appendChild(help5);
     }
     tools?.classList.add("aderecha");
   }
@@ -10134,7 +10213,7 @@
       { k: "estado_comercial", t: t("accounts.columns.state"), w: 150 },
       { k: SALES_REPS, t: t("accounts.columns.salesReps"), w: 190 },
       { k: "acceso", t: t("accounts.columns.access"), w: 170 },
-      ...accountColumnsLegacy.customFields().map((field10) => ({ k: CUSTOM_PREFIX + field10.clave, t: field10.nombre, w: CUSTOM_WIDTH }))
+      ...accountColumnsLegacy.customFields().map((field11) => ({ k: CUSTOM_PREFIX + field11.clave, t: field11.nombre, w: CUSTOM_WIDTH }))
     ];
   }
   var columnTitle = (key) => columnDefinitions().find((column) => column.k === key)?.t ?? key;
@@ -10164,7 +10243,7 @@
       if (!settings2.some((setting2) => setting2.k === column.k)) settings2.push({ k: column.k, on: column.k === SALES_REPS && everything, w: column.w });
     });
     const fields = accountColumnsLegacy.customFields();
-    return settings2.filter((setting2) => setting2.k !== SALES_REPS || everything).map((setting2) => setting2.k.startsWith(CUSTOM_PREFIX) && !(chosen4 ?? []).some((item) => item.k === setting2.k) ? { ...setting2, on: Boolean(fields.find((field10) => CUSTOM_PREFIX + field10.clave === setting2.k)?.en_tabla) } : setting2);
+    return settings2.filter((setting2) => setting2.k !== SALES_REPS || everything).map((setting2) => setting2.k.startsWith(CUSTOM_PREFIX) && !(chosen4 ?? []).some((item) => item.k === setting2.k) ? { ...setting2, on: Boolean(fields.find((field11) => CUSTOM_PREFIX + field11.clave === setting2.k)?.en_tabla) } : setting2);
   }
   var visibleColumns = () => columnSettings().filter((setting2) => setting2.on);
 
@@ -10285,13 +10364,13 @@
     });
   }
   function quickHtml(found, query) {
-    const professionals = term("medico", { number: "p" }), towns = found.municipios ?? [], centres = found.centros ?? [], accounts2 = found.medicos ?? [];
+    const professionals = term("medico", { number: "p" }), towns = found.municipios ?? [], centres = found.centros ?? [], accounts3 = found.medicos ?? [];
     return (towns.length ? `<div class="gsh">${t("accountsEditor.picker.towns")}</div>` + towns.map((item, index) => `<button type="button" data-pmu="${index}"><span class="gic">📍</span>
             <span><b>${highlightSearch(item.valor, query)}</b><span class="sm">${t("accountsEditor.picker.seeList", { count: formatNumber(item.n), professionals })}</span></span></button>`).join("") : "") + (centres.length ? `<div class="gsh">${t("accountsEditor.picker.centres")}</div>` + centres.map((item, index) => `<button type="button" data-pce="${index}"><span class="gic">🏥</span>
-            <span><b>${highlightSearch(item.valor, query)}</b><span class="sm">${escapeHtml(item.municipio ?? "")} · ${t("accountsEditor.picker.seeList", { count: formatNumber(item.n), professionals })}</span></span></button>`).join("") : "") + (accounts2.length ? `<div class="gsh">${term("medico", { number: "p", capital: "C" })}</div>` + accounts2.map((item, index) => accountButton(item, "pme", index, query)).join("") : "");
+            <span><b>${highlightSearch(item.valor, query)}</b><span class="sm">${escapeHtml(item.municipio ?? "")} · ${t("accountsEditor.picker.seeList", { count: formatNumber(item.n), professionals })}</span></span></button>`).join("") : "") + (accounts3.length ? `<div class="gsh">${term("medico", { number: "p", capital: "C" })}</div>` + accounts3.map((item, index) => accountButton(item, "pme", index, query)).join("") : "");
   }
   function bindQuick(context, found) {
-    const { results } = context, towns = found.municipios ?? [], centres = found.centros ?? [], accounts2 = found.medicos ?? [];
+    const { results } = context, towns = found.municipios ?? [], centres = found.centros ?? [], accounts3 = found.medicos ?? [];
     const each = (key, action) => {
       results.querySelectorAll(`[data-${key}]`).forEach((button3) => {
         button3.onclick = () => {
@@ -10308,7 +10387,7 @@
       if (centre) void listAccounts(context, centre.valor, { q: centre.valor });
     });
     each("pme", (index) => {
-      const account = accounts2[index];
+      const account = accounts3[index];
       if (account) context.choose(account);
     });
   }
@@ -10543,15 +10622,15 @@
     })
   ]);
   function leavePanel() {
-    const active = shellLegacy.activePanel();
-    if (!active) return;
-    if (active.tipo === "dbody") {
+    const active2 = shellLegacy.activePanel();
+    if (!active2) return;
+    if (active2.tipo === "dbody") {
       const panel = document.querySelector("#cfgcuerpo [data-panel]#dbody");
       if (panel) panel.id = "";
       const real2 = byId3("dbody-modal");
       if (real2) real2.id = "dbody";
     }
-    if (active.tipo === "admin") {
+    if (active2.tipo === "admin") {
       const panel = document.querySelector("#cfgcuerpo [data-panel]#v-admin");
       if (panel) panel.id = "";
       const real2 = byId3("v-admin-real");
@@ -10596,10 +10675,10 @@
       open2();
     };
     dialog7.close = (value10) => {
-      const active = shellLegacy.activePanel();
-      if (active?.tipo === "dbody" && !dialog7.open) {
+      const active2 = shellLegacy.activePanel();
+      if (active2?.tipo === "dbody" && !dialog7.open) {
         setTimeout(() => {
-          if (shellLegacy.activePanel() === active) void active.refrescar?.();
+          if (shellLegacy.activePanel() === active2) void active2.refrescar?.();
         }, REPAINT_DELAY_MS);
         return;
       }
@@ -10742,8 +10821,8 @@
       if (!plansOf.includes(from) || plansOf.includes(to) || extras.includes(extra)) return;
       if (extra === "oportunidades") list.push(t("settingsRest.losses.opportunities"));
       if (extra === "portal") {
-        const count = Number(data?.medicos ?? 0);
-        list.push(t("settingsRest.losses.portal", { ofTheProfessional: term("medico", { article: "del" }) }) + (count ? t("settingsRest.losses.portalLose", { count: formatNumber(data?.medicos) }) : ""));
+        const count4 = Number(data?.medicos ?? 0);
+        list.push(t("settingsRest.losses.portal", { ofTheProfessional: term("medico", { article: "del" }) }) + (count4 ? t("settingsRest.losses.portalLose", { count: formatNumber(data?.medicos) }) : ""));
       }
     });
     return list;
@@ -10874,9 +10953,12 @@
   __export(list_exports, {
     alreadyCounted: () => alreadyCounted,
     closePopovers: () => closePopovers,
+    dataCells: () => dataCells,
     itemHtml: () => itemHtml2,
+    openButtonHtml: () => openButtonHtml,
     openPopover: () => openPopover,
-    pageHtml: () => pageHtml4,
+    openableRowHtml: () => openableRowHtml,
+    pageHtml: () => pageHtml6,
     paginateLists: () => paginateLists,
     sortRemembered: () => sortRemembered,
     tableSkeleton: () => tableSkeleton
@@ -10896,14 +10978,17 @@
     configs: () => configs,
     convertBlocks: () => convertBlocks,
     filterBlocks: () => filterBlocks,
+    filterKey: () => filterKey,
     icon: () => icon2,
     indicatorsHtml: () => indicatorsHtml2,
     loadIndicators: () => loadIndicators,
     markReloading: () => markReloading,
     observe: () => observe2,
     overridePageSize: () => overridePageSize,
+    publishPage: () => publishPage,
     savePageSize: () => savePageSize,
     sections: () => sections,
+    selectionShown: () => selectionShown,
     startBlocks: () => startBlocks,
     startScreens: () => startScreens,
     startSections: () => startSections,
@@ -11219,7 +11304,7 @@
     const key = input6.dataset.cu ?? "", units = Math.min(Number(input6.max), Math.max(0, Math.floor(Number(input6.value) || 0)));
     const place3 = box3.querySelector(`[data-cs="${key}"]`);
     if (!place3) return;
-    const written = [...place3.querySelectorAll("input")].map((field10) => field10.value);
+    const written = [...place3.querySelectorAll("input")].map((field11) => field11.value);
     place3.innerHTML = range(Math.min(units, MAX_SERIALS)).map((index) => `<input data-cser="${key}" maxlength="120" value="${escapeHtml(written[index] ?? "")}" placeholder="${t("surgeries.use.serialOf", { index: index + 1 })}" aria-label="${t("surgeries.use.serialLabel", { index: index + 1 })}">`).join("");
   }
   function savedText(withOrder) {
@@ -11233,7 +11318,7 @@
       lote_id: line2.lote_id,
       max: line2.unidades,
       unidades: Math.max(0, Math.floor(Number(box3.querySelector(`[data-cu="${index}"]`)?.value) || 0)),
-      series: [...box3.querySelectorAll(`[data-cser="${index}"]`)].map((field10) => field10.value.trim()).filter(Boolean)
+      series: [...box3.querySelectorAll(`[data-cser="${index}"]`)].map((field11) => field11.value.trim()).filter(Boolean)
     })).filter((item) => item.unidades > 0);
     if (!items.length) {
       notices.toast(t("surgeries.use.writeUsed"), true);
@@ -11440,8 +11525,8 @@
   }
   function withoutFocusOnClose(dialog7) {
     dialog7.classList.remove("desplazada");
-    const active = document.activeElement;
-    if (active?.classList.contains("x") && dialog7.contains(active)) {
+    const active2 = document.activeElement;
+    if (active2?.classList.contains("x") && dialog7.contains(active2)) {
       if (!dialog7.hasAttribute("tabindex")) dialog7.setAttribute("tabindex", "-1");
       dialog7.focus({ preventScroll: true });
     }
@@ -11542,9 +11627,9 @@
     };
     toTop2();
     requestAnimationFrame(toTop2);
-    const field10 = dialog7.querySelector("input:not([type=hidden]), select, textarea");
-    if (field10) setTimeout(() => {
-      field10.focus({ preventScroll: true });
+    const field11 = dialog7.querySelector("input:not([type=hidden]), select, textarea");
+    if (field11) setTimeout(() => {
+      field11.focus({ preventScroll: true });
       toTop2();
     }, FOCUS_DELAY_MS);
   }
@@ -11666,6 +11751,7 @@
     previewOrderInvoice: () => previewOrderInvoice,
     readOnlyBilling: () => readOnlyBilling,
     refreshInvoices: () => refreshInvoices,
+    reloadInvoiceRows: () => reloadInvoiceRows,
     sendInvoiceByEmail: () => sendInvoiceByEmail,
     showInvoice: () => showInvoice
   });
@@ -11847,14 +11933,14 @@
     if (!bar || bar.querySelector(".ai")) return;
     const texts3 = [body3.querySelector(".panel > .cuenta"), section === "series" ? body3.querySelector(".panel > p.sm") : null].filter((item) => item !== null);
     if (!texts3.length) return;
-    const help4 = document.createElement("button");
-    help4.type = "button";
-    help4.className = "ai";
-    help4.textContent = "i";
-    help4.setAttribute("aria-label", t("billingMore.layout.help"));
-    help4.dataset.ayudaTit = t(section === "series" ? "billingMore.layout.seriesTitle" : "billingMore.layout.logTitle");
-    help4.dataset.ayudaTxt = texts3.map(flatText).join(" ");
-    bar.insertBefore(help4, bar.firstChild);
+    const help5 = document.createElement("button");
+    help5.type = "button";
+    help5.className = "ai";
+    help5.textContent = "i";
+    help5.setAttribute("aria-label", t("billingMore.layout.help"));
+    help5.dataset.ayudaTit = t(section === "series" ? "billingMore.layout.seriesTitle" : "billingMore.layout.logTitle");
+    help5.dataset.ayudaTxt = texts3.map(flatText).join(" ");
+    bar.insertBefore(help5, bar.firstChild);
     texts3.forEach((item) => {
       item.remove();
     });
@@ -12137,7 +12223,9 @@
   __export(files_exports, {
     RECEIPT_MAX: () => RECEIPT_MAX,
     VISIT_PHOTOS_MAX: () => VISIT_PHOTOS_MAX,
+    canExport: () => canExport,
     download: () => download2,
+    exportSheet: () => exportSheet,
     filePicker: () => filePicker,
     imageData: () => imageData,
     keepPendingPhotos: () => keepPendingPhotos,
@@ -12161,6 +12249,32 @@
   var XLSX_HASH = "sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT";
   function download2() {
     coreLegacy.toast(t("core.files.downloadOff"), true);
+  }
+  var exportReady = null;
+  function canExport() {
+    if (!canManageOrganization()) return Promise.resolve(false);
+    exportReady ?? (exportReady = Promise.resolve(coreLegacy.rpc("exportacion_permitida", {})).then((answer) => answer.data === true, () => false));
+    return exportReady;
+  }
+  async function exportSheet(sheet, fileName) {
+    if (!await canExport()) {
+      coreLegacy.toast(t("core.files.downloadOff"), true);
+      return false;
+    }
+    const answer = await Promise.resolve(coreLegacy.rpc("registrar_exportacion", { p_lista: sheet.list, p_filas: sheet.body.length })).catch(() => null);
+    if (!answer || answer.error || answer.data?.ok !== true) {
+      coreLegacy.toast(t("core.files.exportNotRecorded"), true);
+      return false;
+    }
+    try {
+      const library = await loadExcelReader(), book = library.utils.book_new();
+      library.utils.book_append_sheet(book, library.utils.aoa_to_sheet([[...sheet.head], ...sheet.body.map((row3) => [...row3])], { cellDates: true }), sheet.list.slice(0, 31));
+      library.writeFile(book, fileName);
+      return true;
+    } catch {
+      coreLegacy.toast(t("core.files.exportFailed"), true);
+      return false;
+    }
   }
   async function imageData(url) {
     try {
@@ -12572,8 +12686,8 @@
     doc.text(invoice2.forma_pago + iban, LEFT2 + doc.getTextWidth(label) + 1, y);
   }
   function drawModules(doc, code, at, cell2) {
-    const count = code.getModuleCount(), [x, y] = at;
-    for (let row3 = 0; row3 < count; row3++) for (let column = 0; column < count; column++) if (code.isDark(row3, column)) doc.rect(x + column * cell2, y + row3 * cell2, cell2, cell2, "F");
+    const count4 = code.getModuleCount(), [x, y] = at;
+    for (let row3 = 0; row3 < count4; row3++) for (let column = 0; column < count4; column++) if (code.isDark(row3, column)) doc.rect(x + column * cell2, y + row3 * cell2, cell2, cell2, "F");
   }
   async function drawQr(drawing, invoice2) {
     if (!invoice2.verifactu?.activo || !invoice2.qr_url) return;
@@ -12581,7 +12695,7 @@
       const { doc, font, logoLeft } = drawing, makeQr = await loadQr(), code = makeQr(0, "M");
       code.addData(invoice2.qr_url);
       code.make();
-      const count = code.getModuleCount(), cell2 = 26 / count, top = drawing.design.qrPos === "arriba";
+      const count4 = code.getModuleCount(), cell2 = 26 / count4, top = drawing.design.qrPos === "arriba";
       const x = top && logoLeft ? 166 : LEFT2, y = top ? 50 : 238;
       doc.setFillColor(0, 0, 0);
       drawModules(doc, code, [x, y], cell2);
@@ -12597,9 +12711,9 @@
     }
   }
   function drawFooter(drawing) {
-    const { doc, design, font, accent, company } = drawing, pages4 = doc.getNumberOfPages();
+    const { doc, design, font, accent, company } = drawing, pages5 = doc.getNumberOfPages();
     const address = [company.direccion, [company.cp, company.municipio].filter(Boolean).join(" "), orFallback(company.pais, t("billingMore.pdf.country"))].filter(Boolean).join(", ");
-    for (let page = 1; page <= pages4; page++) {
+    for (let page = 1; page <= pages5; page++) {
       doc.setPage(page);
       doc.setDrawColor(...accent);
       doc.line(LEFT2, 276, RIGHT2, 276);
@@ -12610,7 +12724,7 @@
       if (design.pieTel && company.telefono) doc.text(t("billingMore.pdf.customerService", { phone: company.telefono }), 105, 285, { align: "center" });
       if (design.pieWeb && company.web) doc.text(company.web, 105, 289, { align: "center" });
       if (design.pieTexto && company.pie) doc.text(doc.splitTextToSize(company.pie, 170), 105, 293, { align: "center" });
-      if (design.paginas) doc.text(`${page}/${pages4}`, RIGHT2, 289, { align: "right" });
+      if (design.paginas) doc.text(`${page}/${pages5}`, RIGHT2, 289, { align: "right" });
     }
   }
   function designFor(given) {
@@ -13152,6 +13266,7 @@
   var fromChunk4 = lazyChunk("billing");
   var paintInvoices = fromChunk4("paintInvoices");
   var refreshInvoices = fromChunk4("refreshInvoices");
+  var reloadInvoiceRows = fromChunk4("reloadInvoiceRows");
   var loadBilling = cachedModuleLoader("facturacion", fromChunk4("loadBilling"));
   var editSeries = fromChunk4("editSeries");
   var paintSeries = fromChunk4("paintSeries");
@@ -13246,18 +13361,18 @@
   var value2 = (id) => document.getElementById(id)?.value ?? "";
   var needsFollowUp = (result) => Boolean(result) && !isOrderDone(result);
   function callRecordHtml(state2) {
-    const call2 = state2 ?? {}, outgoing = call2.direccion === OUTGOING;
-    return `<details class="blk kollam" id="kollam" ${call2.motivo !== void 0 ? "open" : ""}><summary>${t("opportunities.callRecord.title")}</summary>
+    const call3 = state2 ?? {}, outgoing = call3.direccion === OUTGOING;
+    return `<details class="blk kollam" id="kollam" ${call3.motivo !== void 0 ? "open" : ""}><summary>${t("opportunities.callRecord.title")}</summary>
     <div class="sm">${t("opportunities.callRecord.hint")}</div>
     <label>${t("opportunities.callRecord.reason")}</label><div class="chipsw" id="kolmot"></div>
     <label>${t("opportunities.callRecord.result")}</label><div class="chipsw" id="kolres"></div>
-    <div id="kolseg" class="${needsFollowUp(call2.resultado) ? "" : "hide"}">
+    <div id="kolseg" class="${needsFollowUp(call3.resultado) ? "" : "hide"}">
       <div class="sm" style="margin:8px 0 4px">${t("opportunities.callAgainWhen")}</div>
       <div class="chipsw">${followUpButtons("kold")}</div>
-      <div class="g2 u-mt-6"><div><input id="kolpf" type="date" value="${escapeHtml(orFallback(call2.proxima_fecha, ""))}" aria-label="${t("opportunities.callAgainOn")}"></div>
-        <div><input id="kolpa" value="${escapeHtml(orFallback(call2.proxima_accion, ""))}" placeholder="${t("opportunities.whatToDoPlaceholder")}" aria-label="${t("opportunities.whatToDo")}"></div></div></div>
+      <div class="g2 u-mt-6"><div><input id="kolpf" type="date" value="${escapeHtml(orFallback(call3.proxima_fecha, ""))}" aria-label="${t("opportunities.callAgainOn")}"></div>
+        <div><input id="kolpa" value="${escapeHtml(orFallback(call3.proxima_accion, ""))}" placeholder="${t("opportunities.whatToDoPlaceholder")}" aria-label="${t("opportunities.whatToDo")}"></div></div></div>
     <div class="g2"><div><label for="kold">${t("opportunities.callRecord.type")}</label><select id="kold"><option value="${INCOMING}" ${outgoing ? "" : "selected"}>${t("opportunities.callRecord.incoming")}</option><option value="${OUTGOING}" ${outgoing ? "selected" : ""}>${t("opportunities.callRecord.outgoing")}</option></select></div>
-      <div><label for="kolno">${t("opportunities.callRecord.note")}</label><input id="kolno" value="${escapeHtml(orFallback(call2.nota, ""))}"></div></div>
+      <div><label for="kolno">${t("opportunities.callRecord.note")}</label><input id="kolno" value="${escapeHtml(orFallback(call3.nota, ""))}"></div></div>
     <div class="acts u-mt-8"><button type="button" class="btn sec" id="kosolo">${t("opportunities.callRecord.callOnly")}</button></div>
   </details>`;
   }
@@ -13287,8 +13402,8 @@
       reasons.innerHTML = chipsHtml(catalog("motivo_llamada"), chosen.motivo, "data-kom");
       results.innerHTML = chipsHtml(catalog("resultado_llamada"), chosen.resultado, "data-kor");
     });
-    const block3 = document.getElementById("kollam");
-    if (block3) block3.onclick = onClick2;
+    const block4 = document.getElementById("kollam");
+    if (block4) block4.onclick = onClick2;
   }
   function readCallRecord() {
     if (!document.getElementById("kollam")) return null;
@@ -13360,24 +13475,24 @@
       { key: "email", label: t("components.customerData.email"), value: clean(customer.email) }
     ];
   }
-  function breakable(field10) {
-    const text2 = escapeHtml(field10.value);
-    if (field10.key === "telefono") return text2.split(" / ").map((phone) => phone.replace(/ /g, "&nbsp;")).join(" / ");
-    if (field10.key === "email") return text2.replace(/@/g, "@<wbr>").replace(/\./g, "<wbr>.");
+  function breakable(field11) {
+    const text2 = escapeHtml(field11.value);
+    if (field11.key === "telefono") return text2.split(" / ").map((phone) => phone.replace(/ /g, "&nbsp;")).join(" / ");
+    if (field11.key === "email") return text2.replace(/@/g, "@<wbr>").replace(/\./g, "<wbr>.");
     return text2;
   }
-  var valueHtml2 = (field10) => `<span data-cd="${field10.key}">${breakable(field10)}</span>`;
-  var customerDataCell = (field10) => field10.value ? valueHtml2(field10) : "";
-  var joined = (fields, render2) => fields.filter((field10) => field10.value).map(render2).join(" · ");
+  var valueHtml2 = (field11) => `<span data-cd="${field11.key}">${breakable(field11)}</span>`;
+  var customerDataCell = (field11) => field11.value ? valueHtml2(field11) : "";
+  var joined = (fields, render2) => fields.filter((field11) => field11.value).map(render2).join(" · ");
   function customerDataLines(customer) {
-    const fields = customerDataFields(customer), text2 = (field10) => field10.value;
+    const fields = customerDataFields(customer), text2 = (field11) => field11.value;
     return [joined(fields.slice(0, 2), text2), joined(fields.slice(2), text2)];
   }
   function customerDataHtml(customer, form = "compacto") {
     const fields = customerDataFields(customer);
-    if (!fields.some((field10) => field10.value)) return "";
+    if (!fields.some((field11) => field11.value)) return "";
     if (form === "bloque") {
-      return `<span class="cdatos bloque" data-cdatos>${fields.filter((field10) => field10.value).map((field10) => `<span class="sm">${field10.label}</span>${valueHtml2(field10)}`).join("")}</span>`;
+      return `<span class="cdatos bloque" data-cdatos>${fields.filter((field11) => field11.value).map((field11) => `<span class="sm">${field11.label}</span>${valueHtml2(field11)}`).join("")}</span>`;
     }
     const lines2 = [joined(fields.slice(0, 2), valueHtml2), joined(fields.slice(2), valueHtml2)].filter(Boolean);
     return `<span class="cdatos" data-cdatos>${lines2.map((line2) => `<span>${line2}</span>`).join("")}</span>`;
@@ -13386,8 +13501,8 @@
   // src/app/screens/opportunities/editor/draft.ts
   var typedQuery = () => document.getElementById("nvq")?.value.trim() ?? "";
   var fieldValue2 = (id) => {
-    const field10 = document.getElementById(id);
-    return field10 ? field10.value : null;
+    const field11 = document.getElementById(id);
+    return field11 ? field11.value : null;
   };
 
   // src/app/screens/opportunities/editor/interest.ts
@@ -13482,8 +13597,8 @@
   }
   function contextHtml(draft, orders2, promised) {
     if (!orders2.length && !promised) return `<span class="sm">${t("opportunities.editor.noOrdersYet")}</span>`;
-    const count = { count: formatNumber(orders2.length), amount: portalLegacy.euros(sum(orders2.map(orderTotal))) };
-    const total = orders2.length ? `<span class="sm">${t(orders2.length === ORDERS_SHOWN ? "opportunities.editor.ordersMore" : "opportunities.editor.orders", count)}</span>` : "";
+    const count4 = { count: formatNumber(orders2.length), amount: portalLegacy.euros(sum(orders2.map(orderTotal))) };
+    const total = orders2.length ? `<span class="sm">${t(orders2.length === ORDERS_SHOWN ? "opportunities.editor.ordersMore" : "opportunities.editor.orders", count4)}</span>` : "";
     const callBack = promised ? `<div class="banda-aviso">${t("opportunities.editor.promised", {
       date: formatShortDate(promised.proxima_fecha ?? ""),
       action: promised.proxima_accion ? `: ${escapeHtml(promised.proxima_accion)}` : "",
@@ -13500,7 +13615,7 @@
     const [orders2, calls] = await Promise.all([pastOrders(id), pastCalls(draft, id)]);
     const box3 = document.getElementById("nvctx");
     if (draft.client?.id !== id || !box3) return;
-    const promised = calls.find((call2) => call2.proxima_fecha && !call2.seguimiento_hecho_en && !call2.pedido_id && call2.id !== draft.source.id);
+    const promised = calls.find((call3) => call3.proxima_fecha && !call3.seguimiento_hecho_en && !call3.pedido_id && call3.id !== draft.source.id);
     box3.innerHTML = contextHtml(draft, orders2, promised);
     const repeat = document.getElementById("nvrep"), last = orders2[0];
     if (repeat && last) repeat.onclick = () => {
@@ -13857,21 +13972,21 @@
     bindChoices2(draft);
     bindOutcome(draft);
   }
-  async function registerFollowUp(call2) {
+  async function registerFollowUp(call3) {
     if (permissions.hasOpportunities()) await loadOpportunityCatalogs();
-    const { data: previous } = await legacyDb().from("llamadas").select("interes").eq("id", call2.id).maybeSingle();
+    const { data: previous } = await legacyDb().from("llamadas").select("interes").eq("id", call3.id).maybeSingle();
     await editOpportunity({
-      contacto_id: call2.contacto_id ?? null,
-      cliente: call2.cliente ?? null,
-      nombre: call2.nombre ?? null,
-      telefono: call2.telefono ?? null,
-      tel_cliente: call2.tel_cliente ?? null,
-      cuenta_id: call2.cuenta_id ?? null,
-      medico: call2.medico ?? null,
+      contacto_id: call3.contacto_id ?? null,
+      cliente: call3.cliente ?? null,
+      nombre: call3.nombre ?? null,
+      telefono: call3.telefono ?? null,
+      tel_cliente: call3.tel_cliente ?? null,
+      cuenta_id: call3.cuenta_id ?? null,
+      medico: call3.medico ?? null,
       motivo: followUpReason(),
       origen: ourCallOrigin(),
       interes: previous?.interes ?? []
-    }, call2);
+    }, call3);
   }
 
   // src/app/screens/opportunities/charts.ts
@@ -13912,23 +14027,23 @@
 
   // src/app/screens/opportunities/follow-ups.ts
   var SHOWN2 = 20;
-  function whenHtml(call2, today2) {
-    if (call2.proxima_fecha < today2) return `<b class="u-danger">${t("opportunities.list.late")}</b>`;
-    return call2.proxima_fecha === today2 ? `<b class="u-warn">${t("opportunities.list.today")}</b>` : `${formatShortDate(call2.proxima_fecha)} · `;
+  function whenHtml(call3, today2) {
+    if (call3.proxima_fecha < today2) return `<b class="u-danger">${t("opportunities.list.late")}</b>`;
+    return call3.proxima_fecha === today2 ? `<b class="u-warn">${t("opportunities.list.today")}</b>` : `${formatShortDate(call3.proxima_fecha)} · `;
   }
-  function iconStyle(call2, today2) {
-    if (call2.proxima_fecha < today2) return "background:#FDECEC;color:var(--dang)";
-    return call2.proxima_fecha === today2 ? "background:#FFF4E5;color:var(--warn)" : "";
+  function iconStyle(call3, today2) {
+    if (call3.proxima_fecha < today2) return "background:#FDECEC;color:var(--dang)";
+    return call3.proxima_fecha === today2 ? "background:#FFF4E5;color:var(--warn)" : "";
   }
-  function rowHtml3(call2, today2) {
-    const phone = orFallback(call2.tel_cliente, orFallback(call2.telefono, ""));
-    const details2 = `${whenHtml(call2, today2)}${escapeHtml(orFallback(call2.resultado, ""))}${call2.proxima_accion ? ` · ${escapeHtml(call2.proxima_accion)}` : ""}${call2.medico ? t("opportunities.list.fromReference", { name: escapeHtml(call2.medico) }) : ""}`;
+  function rowHtml3(call3, today2) {
+    const phone = orFallback(call3.tel_cliente, orFallback(call3.telefono, ""));
+    const details2 = `${whenHtml(call3, today2)}${escapeHtml(orFallback(call3.resultado, ""))}${call3.proxima_accion ? ` · ${escapeHtml(call3.proxima_accion)}` : ""}${call3.medico ? t("opportunities.list.fromReference", { name: escapeHtml(call3.medico) }) : ""}`;
     return `<div class="item u-cursor-default">
-        <span class="ic" style="${iconStyle(call2, today2)}">📞</span>
-        <span class="tx"><b>${escapeHtml(orFallback(call2.cliente, orFallback(call2.nombre, t("opportunities.list.noName"))))}</b>
+        <span class="ic" style="${iconStyle(call3, today2)}">📞</span>
+        <span class="tx"><b>${escapeHtml(orFallback(call3.cliente, orFallback(call3.nombre, t("opportunities.list.noName"))))}</b>
           <span class="sm">${details2}</span></span>
         <span class="acts" style="margin:0;flex-wrap:nowrap">${phone ? `<a class="btn sec chico" href="tel:${escapeHtml(phone)}">${t("opportunities.list.call")}</a>` : ""}
-          <button class="btn chico" data-llseg="${call2.id}">${t("opportunities.list.record")}</button><button class="btn sec chico" data-llok="${call2.id}" title="${t("opportunities.list.notNeeded")}">✓</button></span></div>`;
+          <button class="btn chico" data-llseg="${call3.id}">${t("opportunities.list.record")}</button><button class="btn sec chico" data-llok="${call3.id}" title="${t("opportunities.list.notNeeded")}">✓</button></span></div>`;
   }
   async function paintFollowUps() {
     const { data } = await callRpc("llamadas_seguimiento", {});
@@ -13936,11 +14051,11 @@
     if (!box3) return;
     box3.innerHTML = !list.length ? "" : `<div class="card" id="llsegs"><h2>${t("opportunities.list.callAgainTitle")}<span class="n">${list.length}</span></h2>
       <p class="sm u-p-0-16">${t("opportunities.list.callAgainHint")}</p>
-      <div class="lista">${list.slice(0, SHOWN2).map((call2) => rowHtml3(call2, today2)).join("")}</div></div>`;
+      <div class="lista">${list.slice(0, SHOWN2).map((call3) => rowHtml3(call3, today2)).join("")}</div></div>`;
     box3.querySelectorAll("[data-llseg]").forEach((button3) => {
       button3.onclick = () => {
-        const call2 = list.find((item) => item.id === button3.dataset.llseg);
-        if (call2) void registerFollowUp(call2);
+        const call3 = list.find((item) => item.id === button3.dataset.llseg);
+        if (call3) void registerFollowUp(call3);
       };
     });
     box3.querySelectorAll("[data-llok]").forEach((button3) => {
@@ -14110,7 +14225,7 @@
     askText: (message, value10, options3) => askText(message, value10, options3)
   };
   var orderMailLegacy = {
-    template: (kind, field10, values2) => fillTemplate(kind, field10, emailVariables(values2)),
+    template: (kind, field11, values2) => fillTemplate(kind, field11, emailVariables(values2)),
     chooseTemplate: (kind) => chooseTemplate2(kind),
     forgetChosenTemplate: (kind) => {
       billingStore.chosenTemplates[kind] = null;
@@ -14382,9 +14497,9 @@
     const weekday = (/* @__PURE__ */ new Date(`${isoDate}T12:00:00`)).getDay();
     return weekday === SUNDAY || weekday === SATURDAY || isHoliday(isoDate);
   }
-  function dayHtml(isoDate, count, isToday) {
+  function dayHtml(isoDate, count4, isToday) {
     const date = /* @__PURE__ */ new Date(`${isoDate}T12:00:00`);
-    const title2 = `${date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}${isHoliday(isoDate) ? t("ordersMore.cards.holiday") : ""} · ${formatNumber(count)}`;
+    const title2 = `${date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}${isHoliday(isoDate) ? t("ordersMore.cards.holiday") : ""} · ${formatNumber(count4)}`;
     return `<span class="${isDayOff(isoDate) ? "fin" : ""} ${isToday ? "u" : ""}" title="${escapeHtml(title2)}"><b>${date.getDate()}</b>${DAY_LETTERS[date.getDay()] ?? ""}</span>`;
   }
   var prefersMotion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -14780,8 +14895,8 @@
     },
     visibleFieldColumns: () => visibleFields("cliente"),
     fieldHeaders: (fields) => columnHeaders(fields),
-    widenGrid: (grid, count) => {
-      widenGrid(grid, count);
+    widenGrid: (grid, count4) => {
+      widenGrid(grid, count4);
     },
     fieldFilters: (state2) => camposFiltros("cliente", state2, "pfcp"),
     bindFieldFilters: (zone, state2, onChange) => {
@@ -14850,7 +14965,7 @@
     const key = `privacy.tables.${table}`, text2 = t(key);
     return text2 === key ? table : text2;
   };
-  var countLines = (counts) => Object.entries(counts ?? {}).filter(([, count]) => count > 0).map(([table, count]) => `· ${tableName(table)}: ${formatNumber(count)}`);
+  var countLines = (counts) => Object.entries(counts ?? {}).filter(([, count4]) => count4 > 0).map(([table, count4]) => `· ${tableName(table)}: ${formatNumber(count4)}`);
   function confirmText(simulation) {
     const changes3 = countLines(simulation.cambios), kept = countLines(simulation.se_conservan);
     if (simulation.historial) changes3.push(`· ${t("privacy.confirmHistory", { count: formatNumber(simulation.historial) })}`);
@@ -15049,36 +15164,80 @@
     });
   }
 
+  // src/app/components/list/row.ts
+  var row_exports = {};
+  __export(row_exports, {
+    dataCells: () => dataCells,
+    openButtonHtml: () => openButtonHtml,
+    openableRowHtml: () => openableRowHtml
+  });
+  var NOT_DATA = ".plselc, .dropen, .plcard";
+  var dataCells = (row3) => row3 ? [...row3.children].filter((cell2) => !cell2.matches(NOT_DATA)) : [];
+  var openButtonHtml = (label) => `<button type="button" class="dropen" aria-label="${escapeHtml(label)}"></button>`;
+  function openableRowHtml(kind, attributes, cells, label) {
+    return `<div class="${kind}" ${attributes}>${cells}${openButtonHtml(label)}</div>`;
+  }
+
+  // src/app/screens/customers/list-selection.ts
+  var sheetDate = (value10) => value10 ? /* @__PURE__ */ new Date(`${String(value10).slice(0, 10)}T00:00:00`) : null;
+  function exportValues(row3, fields) {
+    const values2 = row3.clasificadores ?? {};
+    return [
+      row3.nombre,
+      row3.tipo === TYPES.company ? t("customers.company") : words5().Patient ?? null,
+      row3.nif ?? null,
+      ...customerDataFields(row3).map((field11) => field11.value || null),
+      row3.medico ?? null,
+      row3.comercial ?? null,
+      Number(row3.pedidos) || 0,
+      Number(row3.unidades) || 0,
+      sheetDate(row3.ultimo_pedido),
+      ...fields.map((field11) => accountColumnsLegacy.fieldText(field11, values2[field11.clave]) || null)
+    ];
+  }
+  var toSelectable = (row3) => ({ id: row3.id, label: row3.nombre, data: row3 });
+  function publishCustomers(page) {
+    publishPage("pacientes", {
+      filter: filterKey(listParams()),
+      rows: page.rows.map(toSelectable),
+      total: page.total,
+      all: async (limit) => (await page.loadAll(limit)).map(toSelectable),
+      values: (row3) => exportValues(row3.data, page.fields)
+    });
+  }
+
   // src/app/screens/customers/list.ts
   var SEARCH_WAIT_MS4 = 300;
   var empty = '<span class="vac">—</span>';
   var shown = (value10) => value10 ? escapeHtml(value10) : empty;
   function headerHtml(fields) {
-    const titles = [t("customers.list.customer"), t("customers.list.type"), t("customers.list.taxId"), ...customerDataFields({}).map((field10) => field10.label)];
+    const titles = [t("customers.list.customer"), t("customers.list.type"), t("customers.list.taxId"), ...customerDataFields({}).map((field11) => field11.label)];
     return `<div class="dh">${titles.map((title2) => `<span>${title2}</span>`).join("")}
       <span>${words5().Professional}</span><span>${t("customers.list.salesRep")}</span><span class="num">${t("customers.list.orders")}</span><span class="num">${t("customers.list.units")}</span><span>${t("customers.list.lastOrder")}</span>${customersLegacy.fieldHeaders(fields)}</div>`;
   }
-  function rowHtml5(row3, fields) {
+  function rowCells(row3, fields) {
     const company = row3.tipo === TYPES.company, values2 = row3.clasificadores ?? {};
-    return `<button class="dr" data-pac="${row3.id}">
+    return `
       <span><b>${escapeHtml(row3.nombre)}</b></span>
       <span><span class="pill ${company ? "p-emp" : "p-per"}">${company ? t("customers.company") : words5().Patient}</span></span>
-      <span>${shown(row3.nif)}</span>${customerDataFields(row3).map((field10) => `<span class="corta">${customerDataCell(field10)}</span>`).join("")}
+      <span>${shown(row3.nif)}</span>${customerDataFields(row3).map((field11) => `<span class="corta">${customerDataCell(field11)}</span>`).join("")}
       <span class="corta">${row3.medico ? escapeHtml(row3.medico) : `<span class="vac">${t("customers.list.unassigned")}</span>`}</span><span>${shown(row3.comercial)}</span>
       <span class="num">${formatNumber(row3.pedidos)}</span><span class="num"><b>${formatNumber(row3.unidades)}</b></span>
-      <span>${row3.ultimo_pedido ? formatShortDate(row3.ultimo_pedido) : empty}</span>${fields.map((field10) => `<span>${shown(accountColumnsLegacy.fieldText(field10, values2[field10.clave]))}</span>`).join("")}
-    </button>`;
+      <span>${row3.ultimo_pedido ? formatShortDate(row3.ultimo_pedido) : empty}</span>${fields.map((field11) => `<span>${shown(accountColumnsLegacy.fieldText(field11, values2[field11.clave]))}</span>`).join("")}
+    `;
   }
+  var rowHtml5 = (row3, fields) => openableRowHtml("dr", `data-pac="${row3.id}"`, rowCells(row3, fields), t("listSelection.open", { name: row3.nombre }));
   function emptyHtml() {
     const text2 = customersLegacy.filters().q.trim();
     const message = text2 ? t("customers.list.noMatches", { none: term("paciente", { article: "ningun", articleCapital: "C" }), text: escapeHtml(text2) }) : t("customers.list.none");
     return `<div class="vacio">${message}</div>`;
   }
   function paintRows(page) {
-    const count = document.getElementById("paccuenta"), list = document.getElementById("paclista");
-    if (!count || !list) return;
-    count.innerHTML = `<b>${formatNumber(page.total)}</b> ${page.total === 1 ? t("customers.list.oneCustomer") : t("customers.list.customers")}`;
+    const count4 = document.getElementById("paccuenta"), list = document.getElementById("paclista");
+    if (!count4 || !list) return;
+    count4.innerHTML = `<b>${formatNumber(page.total)}</b> ${page.total === 1 ? t("customers.list.oneCustomer") : t("customers.list.customers")}`;
     const rows2 = page.filas ?? [], fields = customersLegacy.visibleFieldColumns();
+    publishCustomers({ rows: rows2, total: page.total, fields, loadAll: rowsOfFilter });
     list.innerHTML = rows2.length ? `<div class="dgrid-wrap"><div class="dgrid pacs2">
     ${headerHtml(fields)}
     ${rows2.map((row3) => rowHtml5(row3, fields)).join("")}</div></div>` : emptyHtml();
@@ -15110,10 +15269,14 @@
     const byId22 = new Map((data ?? []).map((item) => [item.id, item]));
     return { ...page, filas: rows2.map((row3) => ({ ...row3, ...byId22.get(row3.id) })) };
   }
+  async function rowsOfFilter(limit) {
+    const { data } = await legacyDb().rpc("clientes_lista", { ...listParams(), lim: limit, desplaz: 0 });
+    return data ? (await withAddresses(data).catch(() => data)).filas ?? [] : [];
+  }
   function paintFailure(error) {
-    const count = document.getElementById("paccuenta"), list = document.getElementById("paclista"), pages4 = document.getElementById("pacpag");
-    if (count) count.textContent = "";
-    if (pages4) pages4.innerHTML = "";
+    const count4 = document.getElementById("paccuenta"), list = document.getElementById("paclista"), pages5 = document.getElementById("pacpag");
+    if (count4) count4.textContent = "";
+    if (pages5) pages5.innerHTML = "";
     if (!list) return;
     const detail = error?.message ?? "";
     list.innerHTML = `<div class="vacio" data-fallo>${escapeHtml(t("customers.list.couldNotLoad", { error: detail }))}<br><button class="btn sec u-mt-10" type="button" id="pacreint">${t("customers.list.retry")}</button></div>`;
@@ -15400,13 +15563,14 @@
     eventos: eventsSection,
     cirugias: () => LIST3,
     concursos: () => LIST3,
-    parque: () => LIST3
+    parque: () => LIST3,
+    deposito: () => LIST3
   };
 
   // src/app/components/list-bar/text.ts
   var icon2 = (...names) => listBarLegacy.icon(names);
-  var textOf2 = (element) => (element?.textContent ?? "").trim().replace(/\s+/g, " ");
-  var smallText = (element) => textOf2(element?.querySelector(".tx .sm, .sm"));
+  var textOf = (element) => (element?.textContent ?? "").trim().replace(/\s+/g, " ");
+  var smallText = (element) => textOf(element?.querySelector(".tx .sm, .sm"));
   var selectOf = (id) => {
     if (!id) return null;
     return /^[#.]/.test(id) ? document.querySelector(id) : document.getElementById(id);
@@ -15509,25 +15673,25 @@
   });
   var chosen2 = /* @__PURE__ */ new Map();
   var FILTER_FIELDS = ".filtros select[id], .filtros input[id], .htpropios select[id], .htpropios input[id]";
-  var isChoice = (field10) => field10.type === "checkbox" || field10.type === "radio";
+  var isChoice = (field11) => field11.type === "checkbox" || field11.type === "radio";
   function compact(element, small) {
-    [element, ...element.querySelectorAll("input, select")].forEach((field10) => {
-      if (field10.matches("input, select")) field10.classList.toggle("chico", small);
+    [element, ...element.querySelectorAll("input, select")].forEach((field11) => {
+      if (field11.matches("input, select")) field11.classList.toggle("chico", small);
     });
     return element;
   }
   function rememberFilter(event) {
-    const field10 = event.target;
-    if (!field10?.id || !/^(SELECT|INPUT)$/.test(field10.tagName) || !field10.closest("main .filtros, main .htpropios")) return;
-    if (isChoice(field10)) return;
-    chosen2.set(field10.id, field10.value);
+    const field11 = event.target;
+    if (!field11?.id || !/^(SELECT|INPUT)$/.test(field11.tagName) || !field11.closest("main .filtros, main .htpropios")) return;
+    if (isChoice(field11)) return;
+    chosen2.set(field11.id, field11.value);
   }
   function restoreFilters(root) {
-    (root ?? document).querySelectorAll(FILTER_FIELDS).forEach((field10) => {
-      const value10 = chosen2.get(field10.id);
-      if (value10 === void 0 || field10.value === value10 || isChoice(field10)) return;
-      if (field10 instanceof HTMLSelectElement && ![...field10.options].some((option3) => option3.value === value10)) return;
-      field10.value = value10;
+    (root ?? document).querySelectorAll(FILTER_FIELDS).forEach((field11) => {
+      const value10 = chosen2.get(field11.id);
+      if (value10 === void 0 || field11.value === value10 || isChoice(field11)) return;
+      if (field11 instanceof HTMLSelectElement && ![...field11.options].some((option3) => option3.value === value10)) return;
+      field11.value = value10;
     });
   }
 
@@ -15548,7 +15712,7 @@
     const kind = tableKind(grid), order = listsLegacy.sortState()[kind], header2 = headerOf(grid);
     if (!header2) return;
     const server = listsLegacy.serverSort()[kind];
-    [...header2.children].forEach((column, index) => {
+    dataCells(header2).forEach((column, index) => {
       const name = column.textContent?.trim() ?? "", sortable = server ? Boolean(server(index, name)) : !notSortable(name);
       column.classList.toggle("htord", sortable);
       column.classList.toggle("ord-asc", Boolean(order) && order?.i === index && order.dir === 1);
@@ -15569,7 +15733,7 @@
       var _a;
       (_a = row3.dataset).htpos ?? (_a.htpos = String(position));
     });
-    const cellText2 = (row3) => row3.children[order.i]?.textContent;
+    const cellText2 = (row3) => dataCells(row3)[order.i]?.textContent;
     const sorted = [...rows2].sort((first, second) => order.dir * compareCells(cellText2(first), cellText2(second)) || Number(first.dataset.htpos) - Number(second.dataset.htpos));
     if (sorted.some((row3, position) => row3 !== rows2[position])) {
       let previous = header2;
@@ -15601,7 +15765,7 @@
     const text2 = normalise(filters3.texto ?? ""), facets = Object.entries(filters3.facetas ?? {}).filter(([, value10]) => value10);
     const ranges = Object.entries(filters3.rangos ?? {}).filter(([, range2]) => Boolean(range2.d) || Boolean(range2.h));
     rowsOf(grid).forEach((row3) => {
-      const cells = [...row3.children];
+      const cells = dataCells(row3);
       const matches = (!text2 || normalise(row3.textContent).includes(text2)) && facets.every(([index, value10]) => {
         const cell2 = cells[Number(index)];
         return Boolean(cell2) && normalise(cell2?.textContent).includes(normalise(value10));
@@ -15634,8 +15798,8 @@
   function baseTemplate(grid) {
     if (!grid.dataset.colsBase) {
       const base = getComputedStyle(grid).getPropertyValue("--cols").trim();
-      const count = grid.querySelector(":scope > .dh")?.children.length ?? 0, tracks = tracksOf(base);
-      grid.dataset.colsBase = tracks.length && tracks.length < count ? base + " minmax(90px,1fr)".repeat(count - tracks.length) : base;
+      const count4 = dataCells(grid.querySelector(":scope > .dh")).length, tracks = tracksOf(base);
+      grid.dataset.colsBase = tracks.length && tracks.length < count4 ? base + " minmax(90px,1fr)".repeat(count4 - tracks.length) : base;
     }
     return grid.dataset.colsBase;
   }
@@ -15659,7 +15823,7 @@
     grid.style.setProperty("--cols", tracks.map((track, index) => hidden.includes(index) ? "" : track).filter(Boolean).join(" "));
     if (hidden.length) grid.style.minWidth = "auto";
     grid.querySelectorAll(":scope > .dh, :scope > .dr").forEach((row3) => {
-      [...row3.children].forEach((cell2, index) => {
+      dataCells(row3).forEach((cell2, index) => {
         cell2.classList.toggle("htno", hidden.includes(index));
       });
     });
@@ -15676,8 +15840,9 @@
     const head = grid.querySelector(":scope > .dh");
     if (!head) return;
     applyWidths(grid, hiddenOf(kind), savedWidths(kind));
-    [...head.children].forEach((cell2, index) => {
-      if (cell2.querySelector(".colres") || cell2.classList.contains("htno") || index === head.children.length - 1) return;
+    const cells = dataCells(head);
+    cells.forEach((cell2, index) => {
+      if (cell2.querySelector(".colres") || cell2.classList.contains("htno") || index === cells.length - 1) return;
       cell2.classList.add("conres");
       cell2.insertAdjacentHTML("beforeend", `<i class="colres" data-colres="${index}" title="${t("panels.filters.dragWidth")}"></i>`);
     });
@@ -15747,13 +15912,2851 @@
     billingSection: () => typeof billingStore.section === "undefined" ? null : billingStore.section
   };
 
+  // src/app/screens/products/index.ts
+  var products_exports = {};
+  __export(products_exports, {
+    editProduct: () => editProduct,
+    editService: () => editService,
+    editStores: () => editStores,
+    loadProductsModule: () => loadProductsModule,
+    paintDeposits: () => paintDeposits,
+    paintProducts: () => paintProducts,
+    paintServices: () => paintServices,
+    paintStock: () => paintStock,
+    paintStores: () => paintStores,
+    paintVisitMaterial: () => paintVisitMaterial,
+    promotedProducts: () => promotedProducts,
+    showDeposit: () => showDeposit,
+    showStock: () => showStock,
+    stockMovement: () => stockMovement,
+    traceability: () => traceability
+  });
+
+  // src/app/screens/visit/index.ts
+  var visit_exports = {};
+  __export(visit_exports, {
+    editSamples: () => editSamples,
+    editVisit: () => editVisit,
+    loadMaterials: () => loadMaterials,
+    openVisit: () => openVisit,
+    presentOnly: () => presentOnly,
+    saveRevisitNotice: () => saveRevisitNotice,
+    showVisitPhotos: () => showVisitPhotos,
+    uploadVisitPhotos: () => uploadVisitPhotos,
+    visitBlock: () => visitBlock,
+    visitConsultation: () => visitConsultation
+  });
+
+  // src/app/screens/visit/card-block.ts
+  var card_block_exports = {};
+  __export(card_block_exports, {
+    visitBlock: () => visitBlock,
+    visitConsultation: () => visitConsultation
+  });
+
+  // src/app/legacy/visit-bridge.ts
+  var visitLegacy = {
+    setCurrent: (draft) => {
+      accountsStore.currentVisit = draft;
+    },
+    /** The day chosen in the Agenda for the visit (used once). */
+    takeDate: () => {
+      const date = VISITA_FECHA;
+      VISITA_FECHA = "";
+      return date;
+    },
+    withLoading: (work) => withDialogLoading(work),
+    saveCopy: (key, data) => {
+      read_cache_exports.saveCopy(key, data);
+    },
+    readCopy: (key) => read_cache_exports.readCopy(key)?.d ?? null,
+    resultValues: () => CAT.resultado_visita ?? [],
+    dataField: (value10, key) => valueDataField(value10, key, void 0),
+    signaturePad: (canvas) => signaturePad(canvas),
+    promotedProducts: () => promotedProducts(),
+    reloadProducts: async () => {
+      await cargarProductos();
+      return productsStore.products;
+    },
+    readPhoto: (file) => files_exports.readReceipt(file),
+    photosMax: () => FOTOS_VISITA_MAX,
+    normalise: (text2) => normalise2(text2),
+    weekdayLetter: () => calendar_exports.todayLetter(),
+    /** The write queue: without connection the call is kept and `data.encolada` is true. */
+    writeRpc: (name, payload10) => read_cache_exports.writeQueued(name, payload10),
+    reloadHome: () => {
+      void loadWithCache();
+    },
+    loading: (element, text2) => {
+      showLoading(element, text2);
+    },
+    materials: () => productsStore.presentationMaterials,
+    materialsTime: () => productsStore.presentationTime,
+    setMaterials: (list, time) => {
+      productsStore.presentationMaterials = list;
+      productsStore.presentationTime = time;
+    },
+    /** Downloaded material files by id (Productos forgets one when it is removed). */
+    materialFiles: () => PRES_DATOS,
+    preferences: () => sessionStore.profile.preferencias ?? {},
+    setPreferences: (value10) => {
+      sessionStore.profile.preferencias = value10;
+    }
+  };
+
+  // src/app/screens/visit/card-block.ts
+  var WEEK2 = "LMXJVSD";
+  var WORKDAYS = ["L", "M", "X", "J", "V"];
+  var DAY_NAMES = /* @__PURE__ */ new Map([
+    ["L", "visit.days.monday"],
+    ["M", "visit.days.tuesday"],
+    ["X", "visit.days.wednesday"],
+    ["J", "visit.days.thursday"],
+    ["V", "visit.days.friday"],
+    ["S", "visit.days.saturday"],
+    ["D", "visit.days.sunday"]
+  ]);
+  function visitConsultation(consultations) {
+    const centre = editorLegacy.centreFromCard(), preferred = centre ? visitLegacy.normalise(centre) : "";
+    const fromAppointment = preferred ? consultations.find((item) => visitLegacy.normalise(item.centro_nombre ?? "") === preferred) : void 0;
+    if (fromAppointment) return fromAppointment;
+    const today2 = visitLegacy.weekdayLetter();
+    return consultations.find((item) => item.dias?.[today2]) ?? consultations[0];
+  }
+  var row = (iconName, html, extraClass = "") => `<div class="fvfila ${extraClass}"><span class="fvico">${icon(iconName)}</span><div>${html}</div></div>`;
+  function placeRow(consultation) {
+    const where = [consultation.planta, consultation.sala].map((part) => String(part ?? "").trim()).filter((part) => part && !/^[-–·.]+$/.test(part)).map(escapeHtml).join(" · ");
+    const address = escapeHtml([consultation.direccion, [consultation.cp, consultation.municipio].filter(Boolean).join(" ")].filter(Boolean).join(", ")) || t("visit.block.noAddress");
+    const directions = consultation.lat ? `<button class="btn sec fvbtn" type="button" data-nav="${cardBaseLegacy.directionsAttribute([consultation.lat, consultation.lon ?? 0])}">${icon("map-pin")} ${t("visit.block.directions")}</button>` : "";
+    return row("building-2", `<b>${escapeHtml(orFallback(consultation.centro_nombre, privateConsultation()))}</b>${where ? `<span class="fvdonde">${where}</span>` : ""}
+      <div class="sm">${address}</div>
+      ${directions}`);
+  }
+  function whenRow(consultation) {
+    const days = consultation.dias ?? {}, today2 = visitLegacy.weekdayLetter(), hours2 = days[today2];
+    const position = WEEK2.indexOf(today2), next = hours2 ? void 0 : [...WEEK2.slice(position + 1), ...WEEK2.slice(0, position + 1)].find((day) => days[day]);
+    const centre = consultation.horario_centro?.[today2];
+    const head = hours2 ? `<b>${t("visit.block.attendsToday", { hours: escapeHtml(hours2) })}</b>` : next ? t("visit.block.notToday", { day: t(DAY_NAMES.get(next) ?? "visit.days.monday"), hours: escapeHtml(days[next]) }) : t("visit.block.noTimetable");
+    return row("clock", `${head}
+      ${centre ? `<div class="sm">${t("visit.block.centreOpen", { hours: escapeHtml(centre) })}</div>` : ""}
+      <div class="dias fvdias">${WORKDAYS.map((day) => `<span class="${days[day] ? "on" : ""} ${day === today2 ? "hoy" : ""}" title="${escapeHtml(days[day] ?? "")}">${day}</span>`).join("")}</div>`);
+  }
+  function consultationRows(consultation) {
+    if (!consultation) return [row("building-2", `<span class="sm">${t("visit.block.noConsultation", { consultation: term("consulta") })}</span>`)];
+    const rows2 = [placeRow(consultation), whenRow(consultation)];
+    if (consultation.indicaciones) rows2.push(row("info", `<b>${t("visit.block.inside")}</b> ${escapeHtml(consultation.indicaciones)}`, "fvind"));
+    return rows2;
+  }
+  function lastVisitRow(last) {
+    if (!last) return [];
+    const material = cardSectionsLegacy.visitDetails(last);
+    return [row("notebook-pen", `<b>${t("visit.block.lastVisit", { visit: term("visita"), date: formatShortDate(last.fecha) })}</b> · ${escapeHtml(orFallback((last.resultados ?? []).join(" + "), t("visit.block.noResult")))}
+      ${last.nota ? `<div class="sm">${escapeHtml(last.nota)}</div>` : ""}${material ? `<div class="sm">${t("visit.block.material", { material: escapeHtml(material) })}</div>` : ""}`)];
+  }
+  function pendingRow(visits2) {
+    const pending = visits2.find((visit2) => Boolean(visit2.proxima_accion) || Boolean(visit2.proxima_fecha));
+    if (!pending) return [];
+    const date = pending.proxima_fecha, today2 = todayIso();
+    const pill = !date ? "" : date < today2 ? `<span class="pill p-bor">${t("visit.block.late")}</span>` : date === today2 ? `<span class="pill p-est">${t("visit.block.today")}</span>` : "";
+    return [row("clipboard-list", `<b>${t("visit.block.pending")}</b> ${escapeHtml(orFallback(pending.proxima_accion, t("visit.block.visitAgain", { visit: term("visita") })))}${date ? ` · ${formatShortDate(date)}` : ""} ${pill}`)];
+  }
+  function contactRows(account, consultation) {
+    const rows2 = account.nota ? [row("message-circle", `<b>${t("visit.block.notes")}</b> ${escapeHtml(account.nota)}`)] : [];
+    const phones = [account.telefono, consultation?.telefono].filter((phone) => Boolean(phone)).filter((phone, index, all) => all.indexOf(phone) === index);
+    if (phones.length || account.contacto) {
+      rows2.push(row("phone", `${phones.map((phone) => `<a href="tel:${escapeHtml(phone.replace(/\s+/g, ""))}"><b>${escapeHtml(phone)}</b></a>`).join(" · ")}
+    ${account.contacto ? `<div class="sm">${escapeHtml(account.contacto)}</div>` : ""}`));
+    }
+    return rows2;
+  }
+  function visitBlock(account, consultations, visits2) {
+    const person = account, consultation = visitConsultation(consultations);
+    const urgent = person.urgente ? [row("circle-alert", `<b>${t("visit.block.urgent")}</b>${person.urgente_motivo ? `: ${escapeHtml(person.urgente_motivo)}` : ""}`, "fvurg")] : [];
+    const rows2 = [...urgent, ...consultationRows(consultation), ...lastVisitRow(visits2[0]), ...pendingRow(visits2), ...contactRows(person, consultation)];
+    const title2 = t("visit.block.title", { visit: term("visita") });
+    return `<section class="fvis" aria-label="${title2}"><h3>${title2}</h3>${rows2.join("")}</section>`;
+  }
+
+  // src/app/screens/visit/edit.ts
+  var edit_exports = {};
+  __export(edit_exports, {
+    editVisit: () => editVisit
+  });
+
+  // src/app/screens/visit/model.ts
+  var NEGATIVE = "neg";
+  var MODES = [["presencial", "visit.modes.inPerson"], ["telefono", "visit.modes.phone"], ["video", "visit.modes.video"]];
+  var modeButtons = (attribute, chosen4) => MODES.map(([mode, label]) => `<button type="button" data-${attribute}="${mode}" class="${mode === chosen4 ? "on" : ""}" aria-pressed="${String(mode === chosen4)}">${t(label)}</button>`).join("");
+  var pressed = (button3) => button3.getAttribute("aria-pressed") === "true";
+  function togglePressed(button3) {
+    const on3 = !pressed(button3);
+    button3.setAttribute("aria-pressed", String(on3));
+    return on3;
+  }
+
+  // src/app/screens/visit/edit.ts
+  var value3 = (id) => document.getElementById(id)?.value ?? "";
+  function resultButtons(values2, marked, negative) {
+    return values2.map((result) => `<button type="button" class="opt${negative ? " neg" : ""}" data-res="${escapeHtml(result.valor)}"${negative ? ' data-neg="1"' : ""}
+      aria-pressed="${String(marked.includes(result.valor))}"><span class="mk"></span>${escapeHtml(result.valor)}</button>`).join("");
+  }
+  function extraHtml(extra) {
+    const products3 = extra.productList.length ? `<label>${t("visit.record.products")}</label><div class="opciones" id="evprods">${extra.productList.map((product) => `<button type="button" class="opt" data-evprod="${product.id}" aria-pressed="${String(extra.products.includes(product.id))}"><span class="mk"></span>${escapeHtml(product.nombre)}</button>`).join("")}</div>` : "";
+    return `<label>${t("visit.record.howItWas")}</label>
+      <div class="segs" id="evmodo" role="group" aria-label="${t("visit.record.howItWas")}">${modeButtons("evmodo", extra.mode)}</div>
+      ${products3}`;
+  }
+  function editorHtml5(visit2, extra) {
+    const results = visitLegacy.resultValues(), marked = visit2.resultados ?? [];
+    return `
+    <div class="fh"><div><h2>${t("visit.edit.title", { visit: term("visita") })}</h2><div class="sm">${t("visit.edit.recordedOn", { date: formatShortDate(visit2.fecha) })}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    <div class="g2">
+      <div><label for="evf">${t("visit.edit.date")}</label><input id="evf" type="date" value="${escapeHtml(visit2.fecha)}"></div>
+      <div><label for="evm">${t("visit.edit.samples")}</label><input id="evm" type="number" min="0" value="${visit2.muestras ?? 0}"></div>
+    </div>
+    ${extraHtml(extra)}
+    <label>${t("visit.edit.result")}</label>
+    <div class="opciones">${resultButtons(results.filter((result) => result.extra !== NEGATIVE), marked, false)}</div>
+    <div class="opciones u-mt-8">${resultButtons(results.filter((result) => result.extra === NEGATIVE), marked, true)}</div>
+    <div class="g2 u-mt-6">
+      <div><label for="evpa">${t("visit.edit.nextAction")}</label><input id="evpa" value="${escapeHtml(visit2.proxima_accion ?? "")}"></div>
+      <div><label for="evpf">${t("visit.edit.date")}</label><input id="evpf" type="date" value="${escapeHtml(visit2.proxima_fecha ?? "")}"></div>
+    </div>
+    <label for="evn">${t("visit.edit.note")}</label><textarea id="evn" rows="3">${escapeHtml(visit2.nota ?? "")}</textarea>
+    <div class="acts u-between">
+      <button class="btn sec dang" id="evborrar">${t("visit.edit.delete", { visit: term("visita") })}</button>
+      <span class="acts u-m-0"><button class="btn sec" data-cerrar>${t("common.cancel")}</button>
+        <button class="btn" id="evok">${t("common.save")}</button></span></div>`;
+  }
+  async function loadExtra(visitId, planHasCoverage) {
+    const { data: activity } = await legacyDb().from("actividades").select("modo,productos").eq("id", visitId).maybeSingle();
+    const chosen4 = activity?.productos ?? [];
+    let productList = [];
+    if (planHasCoverage) {
+      productList = [...await visitLegacy.promotedProducts()];
+      const missing2 = chosen4.filter((id) => !productList.some((product) => product.id === id));
+      if (missing2.length) {
+        const { data } = await legacyDb().from("productos").select("id,nombre").in("id", missing2);
+        productList = productList.concat(data ?? []);
+      }
+    }
+    return { mode: activity?.modo ?? "presencial", products: [...chosen4], productList };
+  }
+  function afterChange(accountId, message) {
+    document.getElementById("dlg")?.close();
+    notices.toast(message);
+    agendaActions.openAccount(accountId);
+    visitLegacy.reloadHome();
+  }
+  async function save8(visit2, extra, accountId, button3) {
+    const body3 = document.getElementById("dbody");
+    const results = [...body3?.querySelectorAll("[data-res][aria-pressed=true]") ?? []].map((item) => item.dataset.res ?? "");
+    button3.disabled = true;
+    button3.textContent = t("visit.edit.saving");
+    const { data: result, error } = await legacyDb().rpc("actualizar_actividad", { p: {
+      id: visit2.id,
+      fecha: value3("evf"),
+      resultados: results,
+      muestras: Number(value3("evm")) || 0,
+      nota: value3("evn").trim(),
+      proxima_accion: value3("evpa").trim(),
+      proxima_fecha: value3("evpf"),
+      modo: extra.mode,
+      ...document.getElementById("evprods") ? { productos: extra.products } : {}
+    } });
+    button3.disabled = false;
+    button3.textContent = t("common.save");
+    if (error || result?.ok === false) {
+      notices.toast(t("visit.edit.couldNotSave"), true);
+      return;
+    }
+    afterChange(accountId, t("visit.edit.saved", { visit: term("visita", { capital: "C", adjective: "actualizado" }) }));
+  }
+  async function remove(visit2, accountId) {
+    const text2 = t("visit.edit.deleteText", { visit: term("visita", { article: "el", articleCapital: "C" }), professional: term("medico", { article: "del" }) });
+    if (!await notices.confirm(text2, { titulo: t("visit.edit.deleteTitle", { visit: term("visita", { article: "el" }) }), ok: t("visit.edit.deleteOk"), peligro: true })) return;
+    const { data: result, error } = await legacyDb().rpc("borrar_actividad", { p_id: visit2.id });
+    if (error || result?.ok === false) {
+      notices.toast(t("visit.edit.couldNotDelete"), true);
+      return;
+    }
+    afterChange(accountId, t("visit.edit.deleted", { visit: term("visita", { capital: "C", adjective: "borrado" }) }));
+  }
+  function bind7(body3, visit2, extra, accountId) {
+    body3.querySelectorAll("[data-res]").forEach((button3) => {
+      button3.onclick = () => {
+        const negative = button3.dataset.neg === "1", on3 = pressed(button3);
+        body3.querySelectorAll("[data-res]").forEach((other) => {
+          if (negative || other.dataset.neg === "1") other.setAttribute("aria-pressed", "false");
+        });
+        button3.setAttribute("aria-pressed", String(!on3));
+      };
+    });
+    const modes = body3.querySelectorAll("[data-evmodo]");
+    modes.forEach((button3) => {
+      button3.onclick = () => {
+        extra.mode = button3.dataset.evmodo ?? "presencial";
+        modes.forEach((other) => {
+          other.classList.toggle("on", other === button3);
+          other.setAttribute("aria-pressed", String(other === button3));
+        });
+      };
+    });
+    body3.querySelectorAll("[data-evprod]").forEach((button3) => {
+      button3.onclick = () => {
+        togglePressed(button3);
+        extra.products = [...body3.querySelectorAll("[data-evprod][aria-pressed=true]")].map((item) => item.dataset.evprod ?? "");
+      };
+    });
+    const ok = document.getElementById("evok");
+    if (ok) ok.onclick = () => {
+      void save8(visit2, extra, accountId, ok);
+    };
+    const del = document.getElementById("evborrar");
+    if (del) del.onclick = () => {
+      void remove(visit2, accountId);
+    };
+  }
+  async function editVisit(visit2, accountId) {
+    const extra = await loadExtra(visit2.id, accountCardLegacy.planIncludes("cobertura")).catch(() => ({ mode: "presencial", products: [], productList: [] }));
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = editorHtml5(visit2, extra);
+    bind7(body3, visit2, extra, accountId);
+    box3.showModal();
+  }
+
+  // src/app/screens/visit/photos.ts
+  async function readVisitPhoto(file) {
+    if (!file.type.startsWith("image/")) {
+      notices.toast(t("visit.photos.chooseImage"), true);
+      return null;
+    }
+    return visitLegacy.readPhoto(file);
+  }
+  function paintPhotos(box3, photos, remove6) {
+    if (!box3) return;
+    box3.innerHTML = photos.map((photo, index) => `<span class="vfoto"><img alt="${t("visit.photos.photo", { number: index + 1 })}" src="data:${photo.tipo};base64,${photo.datos}">
+    ${remove6 ? `<button type="button" class="vfquitar" data-vfq="${index}" aria-label="${t("visit.photos.remove")}">✕</button>` : ""}</span>`).join("");
+    if (remove6) box3.querySelectorAll("[data-vfq]").forEach((button3) => {
+      button3.onclick = () => {
+        remove6(Number(button3.dataset.vfq));
+      };
+    });
+  }
+  async function uploadVisitPhotos(activityId, photos) {
+    for (const photo of photos) {
+      const { error } = await legacyDb().from("actividad_fotos").insert({ actividad_id: activityId, nombre: photo.nombre, tipo: photo.tipo, tamano: photo.tamano, datos: photo.datos });
+      if (error) {
+        notices.toast(t("visit.photos.uploadFailed", { visit: term("visita", { capital: "C", adjective: "guardado" }) }), true);
+        return false;
+      }
+    }
+    return true;
+  }
+  var photoCount = (count4) => count4 ? count4 === 1 ? t("visit.photos.one") : t("visit.photos.many", { count: count4 }) : t("visit.photos.none");
+  function galleryHtml(photos) {
+    const canDelete = (photo) => photo.creado_por === salesTeam.currentUserId() || cardSectionsLegacy.can("administrar");
+    return `<div class="fh"><div><h2>${t("visit.photos.title", { visit: term("visita", { article: "el" }) })}</h2><div class="sm">${photoCount(photos.length)}</div></div>
+      <button class="x" data-cerrar2 aria-label="${t("common.close")}">✕</button></div>
+    <div class="vfotos grande">${photos.map((photo) => `<span class="vfoto"><img alt="${escapeHtml(orFallback(photo.nombre, t("visit.photos.photoAlt")))}" src="data:${escapeHtml(photo.tipo)};base64,${photo.datos}">
+      ${canDelete(photo) ? `<button type="button" class="vfquitar" data-vfdel="${photo.id}" aria-label="${t("visit.photos.delete")}">✕</button>` : ""}</span>`).join("")}</div>
+    <div class="acts u-end"><label class="btn sec u-inline-flex">${icon("camera")} ${t("visit.photos.add")}<input type="file" id="vfmas" accept="image/*" data-fp="1" hidden multiple></label>
+      <button type="button" class="btn" data-cerrar2>${t("visit.photos.done")}</button></div>`;
+  }
+  function refresh(activityId, accountId) {
+    void showVisitPhotos(activityId, accountId);
+    if (accountCardLegacy.shownId() === accountId) agendaActions.openAccount(accountId);
+  }
+  async function deletePhoto(id, activityId, accountId) {
+    if (!await notices.confirm(t("visit.photos.deleteText", { visit: term("visita", { article: "este" }) }), { titulo: t("visit.photos.deleteTitle"), ok: t("visit.photos.deleteOk"), peligro: true })) return;
+    const { error } = await legacyDb().from("actividad_fotos").delete().eq("id", id);
+    if (error) {
+      notices.toast(t("visit.photos.couldNotDelete"), true);
+      return;
+    }
+    notices.toast(t("visit.photos.deleted"));
+    refresh(activityId, accountId);
+  }
+  async function addPhotos(input6, shown3, activityId, accountId) {
+    const files = [...input6.files ?? []], room = Math.max(0, visitLegacy.photosMax() - shown3), added = [];
+    for (const file of files.slice(0, room)) {
+      const photo = await readVisitPhoto(file);
+      if (photo) added.push(photo);
+    }
+    if (files.length > visitLegacy.photosMax() - shown3) notices.toast(t("visit.photos.atMost", { max: visitLegacy.photosMax(), visit: term("visita") }), true);
+    if (!added.length) return;
+    if (await uploadVisitPhotos(activityId, added)) {
+      notices.toast(t(added.length === 1 ? "visit.photos.added" : "visit.photos.addedMany"));
+      refresh(activityId, accountId);
+    }
+  }
+  async function showVisitPhotos(activityId, accountId) {
+    const { data, error } = await legacyDb().from("actividad_fotos").select("id,nombre,tipo,datos,creado_por").eq("actividad_id", activityId).order("creado_en");
+    if (error) {
+      notices.toast(t("visit.photos.couldNotOpen"), true);
+      return;
+    }
+    const photos = data ?? [], body3 = document.getElementById("dlg2body"), box3 = document.getElementById("dlg2");
+    if (!body3 || !box3) return;
+    body3.innerHTML = galleryHtml(photos);
+    body3.querySelectorAll("[data-vfdel]").forEach((button3) => {
+      button3.onclick = () => {
+        void deletePhoto(button3.dataset.vfdel ?? "", activityId, accountId);
+      };
+    });
+    const input6 = document.getElementById("vfmas");
+    if (input6) input6.onchange = () => {
+      void addPhotos(input6, photos.length, activityId, accountId);
+    };
+    if (!box3.open) box3.showModal();
+  }
+
+  // src/app/screens/visit/presentation.ts
+  var MATERIALS_FRESH_MS = 3e5;
+  var showing = null;
+  async function loadMaterials(force = false) {
+    const cached4 = visitLegacy.materials();
+    if (cached4 && !force && Date.now() - visitLegacy.materialsTime() < MATERIALS_FRESH_MS) return cached4;
+    if (!navigator.onLine) return cached4 ?? [];
+    try {
+      const { data, error } = await legacyDb().from("producto_materiales").select("id,producto_id,nombre,tipo,orden,para_portal").order("orden").order("creado_en");
+      if (!error) visitLegacy.setMaterials(data ?? [], Date.now());
+    } catch {
+    }
+    return visitLegacy.materials() ?? [];
+  }
+  var materialsOf = (productId) => (visitLegacy.materials() ?? []).filter((material) => material.producto_id === productId);
+  function blobUrl(material, data) {
+    const binary = atob(String(data).replace(/^data:[^,]*,/, "")), bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: material.tipo }));
+  }
+  function close2() {
+    showing?.urls.forEach((url) => {
+      URL.revokeObjectURL(url);
+    });
+    showing = null;
+    const box3 = document.getElementById("presenta");
+    if (box3?.open) box3.close();
+  }
+  async function fileOf(material, box3, current) {
+    const known = visitLegacy.materialFiles().get(material.id);
+    if (known) return known;
+    visitLegacy.loading(box3, t("common.loading"));
+    if (!navigator.onLine) {
+      box3.innerHTML = `<p class="vacio">${t("visit.presentation.offline")}</p>`;
+      return null;
+    }
+    const { data, error } = await legacyDb().from("producto_materiales").select("datos").eq("id", material.id).maybeSingle();
+    if (showing !== current || current.list[current.index] !== material) return null;
+    if (error || !data) {
+      box3.innerHTML = `<p class="vacio">${t("visit.presentation.couldNotLoad", { reason: escapeHtml(error?.message ?? t("visit.presentation.missing")) })}</p>`;
+      return null;
+    }
+    visitLegacy.materialFiles().set(material.id, data.datos);
+    return data.datos;
+  }
+  async function paint3() {
+    const current = showing;
+    if (!current) return;
+    const material = current.list[current.index], box3 = document.getElementById("prescuerpo");
+    if (!material || !box3) return;
+    const count4 = document.getElementById("presn");
+    if (count4) count4.textContent = current.list.length > 1 ? t("visit.presentation.position", { number: current.index + 1, total: current.list.length, name: material.nombre }) : material.nombre;
+    const previous = document.getElementById("presant"), next = document.getElementById("pressig");
+    if (previous) previous.disabled = current.index === 0;
+    if (next) next.disabled = current.index === current.list.length - 1;
+    const data = await fileOf(material, box3, current);
+    if (!data || showing !== current || current.list[current.index] !== material) return;
+    const url = blobUrl(material, data);
+    current.urls.push(url);
+    box3.innerHTML = material.tipo === "application/pdf" ? `<iframe class="prespdf" src="${url}" title="${escapeHtml(material.nombre)}"></iframe>` : `<img class="presimg" src="${url}" alt="${escapeHtml(material.nombre)}">`;
+  }
+  function move(step) {
+    if (!showing) return;
+    const index = showing.index + step;
+    if (index < 0 || index >= showing.list.length) return;
+    showing.index = index;
+    void paint3();
+  }
+  function dialog4() {
+    if (!document.getElementById("presenta")) document.body.insertAdjacentHTML("beforeend", `<dialog id="presenta" class="presdlg" aria-label="${t("visit.presentation.label")}"></dialog>`);
+    return document.getElementById("presenta");
+  }
+  function open(title2, list, index) {
+    const box3 = dialog4();
+    if (!box3) return;
+    box3.innerHTML = `<div class="prescab"><b>${escapeHtml(title2)}</b><span class="sm" id="presn"></span><button type="button" class="x" id="prescerrar" aria-label="${t("common.close")}">✕</button></div>
+    <div class="prescuerpo" id="prescuerpo"></div>
+    <button type="button" class="presnav ant" id="presant" aria-label="${t("visit.presentation.previous")}">‹</button><button type="button" class="presnav sig" id="pressig" aria-label="${t("visit.presentation.next")}">›</button>`;
+    showing = { list, index, urls: [] };
+    const on3 = (id, action) => {
+      const button3 = document.getElementById(id);
+      if (button3) button3.onclick = action;
+    };
+    on3("prescerrar", close2);
+    on3("presant", () => {
+      move(-1);
+    });
+    on3("pressig", () => {
+      move(1);
+    });
+    box3.oncancel = (event) => {
+      event.preventDefault();
+      close2();
+    };
+    box3.onkeydown = (event) => {
+      if (event.key === "ArrowRight") move(1);
+      if (event.key === "ArrowLeft") move(-1);
+    };
+    box3.showModal();
+    void paint3();
+  }
+  function presentProduct(productId) {
+    const list = materialsOf(productId);
+    if (!list.length) return;
+    const chip = document.querySelector(`#vprods [data-vprod="${productId}"]`);
+    if (chip && chip.getAttribute("aria-pressed") !== "true") chip.click();
+    open(chip?.textContent?.trim() ?? t("visit.presentation.label"), list, 0);
+  }
+  function presentOnly(product, materialId) {
+    const list = materialsOf(product.id);
+    if (!list.length) return;
+    open(orFallback(product.nombre, t("visit.presentation.material")), list, Math.max(0, list.findIndex((material) => material.id === materialId)));
+  }
+
+  // src/app/screens/visit/record/data.ts
+  var CENTRE2 = "Centro";
+  async function cardAndResults(id) {
+    const [card3, results] = await Promise.all([
+      cachedRpc("ficha_cuenta", { p_id: id }, `ficha-${id}`),
+      cachedRpc("clasificadores_actividad", { p_cuenta: id }, `clasact-${id}`)
+    ]);
+    let groups2 = results.data;
+    if (groups2 && !results.cache) visitLegacy.saveCopy("clasact", groups2);
+    groups2 ?? (groups2 = visitLegacy.readCopy("clasact"));
+    return { card: card3.data, groups: groups2 ?? [] };
+  }
+  async function accountFlags(id) {
+    try {
+      return (await legacyDb().from("cuentas").select("tipo,sin_reporting,clasificadores").eq("id", id).maybeSingle()).data;
+    } catch {
+      return null;
+    }
+  }
+  async function samplesLeft(id, type) {
+    if (!navigator.onLine || type === CENTRE2) return [];
+    const { data } = await legacyDb().rpc("muestras_de_cuenta", { p_cuenta: id });
+    return Array.isArray(data) ? data : [];
+  }
+  function withoutReports(groups2) {
+    const kept = groups2.map((group) => ({ ...group, valores: group.valores.filter((value10) => !isReportResult(value10)) }));
+    return { groups: kept, hidden: kept.some((group, index) => group.valores.length !== groups2[index]?.valores.length) };
+  }
+  async function loadVisitData(id) {
+    const coverage = accountCardLegacy.planIncludes("cobertura");
+    const [{ card: card3, groups: groups2 }, flags, products3, missingTimetable2] = await Promise.all([
+      cardAndResults(id),
+      accountFlags(id),
+      coverage ? visitLegacy.promotedProducts().catch(() => []) : Promise.resolve([]),
+      missingTimetable(id).catch(() => false)
+    ]);
+    if (!card3?.medico) return navigator.onLine ? "online" : "offline";
+    const samples = await samplesLeft(id, flags?.tipo).catch(() => []);
+    const noReporting = hasNoReports(flags ?? card3.medico), shown3 = noReporting ? withoutReports(groups2) : { groups: groups2, hidden: false };
+    return { account: card3.medico, consultations: card3.consultas ?? [], groups: shown3.groups, samples, products: products3, noReporting, reportsHidden: shown3.hidden, missingTimetable: missingTimetable2 };
+  }
+
+  // src/app/screens/visit/record/form.ts
+  var RESULT_ROLE = "resultado_visita";
+  function splitGroups(groups2) {
+    const filled = groups2.filter((group) => group.valores.length);
+    const results = filled.find((group) => group.papel === RESULT_ROLE) ?? { clave: "", papel: RESULT_ROLE, nombre: t("visit.record.result"), valores: [...visitLegacy.resultValues()] };
+    return { results, others: filled.filter((group) => group !== results) };
+  }
+  function button2(index, group, value10, isResult) {
+    const key = `${group.clave}::${value10.valor}`, negative = isResult && value10.extra === NEGATIVE;
+    index.set(key, { group: group.clave, value: value10 });
+    return `<span class="optw"${value10.oculto ? ' data-oculto="1"' : ""}><button type="button" class="opt ${negative ? "neg" : ""}" data-vk="${escapeHtml(key)}" ${isResult ? `data-res="${escapeHtml(value10.valor)}"` : ""} ${negative ? 'data-neg="1"' : ""} aria-pressed="false">
+      <span class="mk"></span>${escapeHtml(value10.valor)}${value10.dato_tipo ? ` <span class="datom">${t("visit.record.withData")}</span>` : ""}</button>
+      ${value10.dato_tipo ? `<span class="datobox hide" data-box="${escapeHtml(key)}">${visitLegacy.dataField(value10, key)}</span>` : ""}</span>`;
+  }
+  function hiddenButton(groups2) {
+    const hidden = groups2.flatMap((group) => group.valores).filter((value10) => value10.oculto).length;
+    if (!hidden) return "";
+    return `<button type="button" class="lnk" id="vtodos">${hidden === 1 ? t("visit.record.showOneHidden") : t("visit.record.showHidden", { count: hidden })}</button>`;
+  }
+  var noReportsNote = () => `<p class="sm srnota">${t("visit.record.noReports", { professional: term("medico", { article: "este", articleCapital: "C" }) })}</p>`;
+  function resultsHtml(index, groups2, reportsHidden) {
+    const { results, others } = groups2;
+    const positive = results.valores.filter((value10) => value10.extra !== NEGATIVE), negative = results.valores.filter((value10) => value10.extra === NEGATIVE);
+    const more2 = hiddenButton([results, ...others]);
+    return `<label>${t("visit.record.resultLabel")} <span class="sm">${t("visit.record.severalResults", { done: term("visita", { adjective: "realizado" }) })}</span></label>
+    <div class="opciones">${positive.map((value10) => button2(index, results, value10, true)).join("")}</div>${reportsHidden ? noReportsNote() : ""}${negative.length ? "" : more2}
+    <div class="opciones u-mt-8">${negative.map((value10) => button2(index, results, value10, true)).join("")}</div>${negative.length ? more2 : ""}
+    ${others.map((group) => `<label>${escapeHtml(group.nombre)}${group.descripcion ? ` <span class="sm">· ${escapeHtml(group.descripcion)}</span>` : ""}</label>
+      <div class="opciones">${group.valores.map((value10) => button2(index, group, value10, false)).join("")}</div>`).join("")}`;
+  }
+  var LEFT_TEXTS = { anio: "visit.samples.left", trimestre: "visit.samples.leftQuarter", mes: "visit.samples.leftMonth" };
+  function sampleRow(sample) {
+    const available2 = sample.en_plazo && sample.quedan;
+    const text2 = !sample.en_plazo ? t("visit.samples.expired", { date: formatShortDate(sample.hasta ?? "") }) : t(LEFT_TEXTS[deliveryRule().period], { left: sample.quedan, max: sample.max }) + (sample.hasta ? t("visit.samples.until", { date: formatShortDate(sample.hasta) }) : "");
+    return `<div class="vmrow ${available2 ? "" : "agotada"}"><span><b>${escapeHtml(sample.nombre)}</b><span class="sm">${text2}</span></span>
+      <input type="number" min="0" max="${sample.en_plazo ? sample.quedan : 0}" step="1" value="0" data-vmprod="${sample.producto_id}" aria-label="${t("visit.samples.of", { name: escapeHtml(sample.nombre) })}" ${available2 ? "" : "disabled"}></div>`;
+  }
+  function samplesHtml(samples, name) {
+    const rule = deliveryRule();
+    if (!samples.length || !rule.active) return "";
+    return `<div class="vmuestras" id="vmuestras"><label>${escapeHtml(rule.name ?? t("visit.samples.title"))}</label>
+    ${samples.map(sampleRow).join("")}
+    ${rule.signature ? `<div class="vmfirma hide" id="vmfirma"><label>${t("visit.samples.signature")} <span class="sm">${t("visit.samples.signatureHint")}</span></label>
+      <canvas id="vmcanvas" aria-label="${t("visit.samples.signatureArea")}"></canvas>
+      <div class="vmfpie"><input id="vmfirmante" value="${escapeHtml(name)}" aria-label="${t("visit.samples.signer")}" placeholder="${t("visit.samples.signer")}"><button type="button" class="lnk" id="vmborrar">${t("visit.samples.clear")}</button></div></div>` : ""}</div>`;
+  }
+  function productsHtml(products3) {
+    if (!products3.length) return "";
+    const materials = visitLegacy.materials() ?? [], withMaterial = products3.filter((product) => materials.some((material) => material.producto_id === product.id));
+    return `<label>${t("visit.record.products")}</label>
+      <div class="opciones" id="vprods">${products3.map((product) => `<button type="button" class="opt" data-vprod="${product.id}" aria-pressed="false"><span class="mk"></span>${escapeHtml(product.nombre)}</button>`).join("")}</div>
+      ${withMaterial.length ? `<div class="vpres" id="vpres"><span class="sm">${t("visit.record.present")}</span>${withMaterial.map((product) => `<button type="button" class="chip" data-vpres="${product.id}">▶ ${escapeHtml(product.nombre)}</button>`).join("")}</div>` : ""}`;
+  }
+  function noticesHtml(data) {
+    const timetable = data.missingTimetable ? `<div class="avisoh" id="vhorario"><span>${t("visit.record.missingTimetable", { visit: term("visita", { article: "el" }) })}</span></div>` : "";
+    const offline = navigator.onLine ? "" : `<div class="banda-aviso vsinred"><b>${t("visit.record.offlineTitle")}</b> ${t("visit.record.offline", { visit: escapeHtml(term("visita", { article: "la", capital: "C" })) })}</div>`;
+    return timetable + offline;
+  }
+  function centreOptions(consultations) {
+    return consultations.map((item) => `<option value="${item.id ?? ""}">${escapeHtml(orFallback(item.centro_nombre, privateConsultation()))}${item.municipio ? ` · ${escapeHtml(item.municipio)}` : ""}</option>`).join("");
+  }
+  function visitHtml(data, index) {
+    const groups2 = splitGroups(data.groups), visit2 = term("visita");
+    return `
+    <div class="fh"><div><h2>${t("visit.record.title", { visit: visit2 })}</h2><div class="sm">${escapeHtml(data.account.nombre)}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>${noticesHtml(data)}
+    <div class="g2">
+      <div><label for="vf">${t("visit.edit.date")}</label><input id="vf" type="date" value="${todayIso()}"></div>
+      <div><label for="vc">${t("visit.record.centre", { visit: term("visita", { article: "del" }) })}</label><select id="vc">
+        ${centreOptions(data.consultations)}
+      </select></div>
+    </div><label>${t("visit.record.howItWas")}</label>
+    <div class="segs" id="vmodo" role="group" aria-label="${t("visit.record.howItWas")}">${modeButtons("vmodo", "presencial")}</div>${productsHtml(data.products)}
+    ${resultsHtml(index, groups2, data.reportsHidden)}
+    <div class="g2 u-mt-6">
+      <div><label for="vpa">${t("visit.edit.nextAction")}</label><input id="vpa" placeholder="${t("visit.record.nextActionPlaceholder")}"></div>
+      <div><label for="vpf">${t("visit.record.nextActionDate")}</label><input id="vpf" type="date"></div>
+    </div>
+    ${samplesHtml(data.samples, data.account.nombre)}<label for="vn">${t("visit.edit.note")}</label><textarea id="vn" rows="3"></textarea><div class="vfotosw"><label class="btn sec u-inline-flex" id="vfotobtn">${icon("camera")} ${t("visit.photos.add")}<input type="file" id="vfotof" accept="image/*" data-fp="1" hidden multiple></label>
+    <span class="sm">${t("visit.photos.hint", { max: visitLegacy.photosMax() })}</span><div class="vfotos" id="vfotos"></div></div>
+    <div class="acts u-end">
+      <button class="btn sec" data-cerrar>${t("common.cancel")}</button>
+      <button class="btn" id="vguardar">${t("visit.record.save", { visit: visit2 })}</button>
+    </div>`;
+  }
+
+  // src/app/screens/visit/record/save.ts
+  var operationId = null;
+  var forgetOperation = () => {
+    operationId = null;
+  };
+  var value4 = (id) => document.getElementById(id)?.value ?? "";
+  function details(body3, marked, index) {
+    return marked.map((key) => {
+      const field11 = body3.querySelector(`[data-dato="${CSS.escape(key)}"]`), extra = field11 ? field11.value.trim() : "";
+      const info = index.get(key);
+      return { clasificador: info?.group ?? "", valor: info?.value.valor ?? "", ...extra ? { dato: extra } : {} };
+    });
+  }
+  async function askUrgent(account, id) {
+    const message = t("visit.record.urgentText", { name: `${account.nombre}${account.urgente_motivo ? ` · ${account.urgente_motivo}` : ""}` });
+    const choice = await notices.choose(t("visit.record.urgentTitle"), message, [{ k: "dejar", t: t("visit.record.keepUrgent"), cls: "sec" }, { k: "quitar", t: t("visit.record.removeUrgent") }]);
+    if (choice !== "quitar") return;
+    const { error } = await legacyDb().from("cuentas").update({ urgente: false, urgente_motivo: null }).eq("id", id);
+    notices.toast(t(error ? "visit.record.couldNotUnmark" : "visit.record.unmarked"), Boolean(error));
+  }
+  function payload4(id, results, detailList) {
+    operationId ?? (operationId = `v-${id}-${Date.now()}`);
+    return {
+      cuenta_id: id,
+      ubicacion_id: value4("vc") || null,
+      fecha: value4("vf"),
+      resultados: results,
+      detalles: detailList,
+      nota: value4("vn").trim(),
+      proxima_accion: value4("vpa").trim(),
+      proxima_fecha: value4("vpf") || null,
+      op_id: operationId
+    };
+  }
+  function savedNotice(saved3) {
+    if (saved3?.encolada) return;
+    notices.toast(t("visit.record.saved", { visit: term("visita", { capital: "C", adjective: "registrado" }) }) + (saved3?.estado ? t("visit.record.newState", { state: saved3.estado }) : ""));
+  }
+  async function saveVisit(visit2, button3) {
+    const { id, account, index, resultsKey } = visit2;
+    const body3 = document.getElementById("dbody");
+    if (!body3) return;
+    const marked = [...body3.querySelectorAll("[data-vk][aria-pressed=true]")].map((item) => item.dataset.vk ?? "");
+    const isResult = (key) => index.get(key)?.group === resultsKey;
+    const results = marked.filter(isResult).map((key) => index.get(key)?.value.valor ?? "");
+    if (!results.length) {
+      notices.toast(t("visit.record.chooseResult"), true);
+      return;
+    }
+    button3.disabled = true;
+    button3.textContent = t("visit.edit.saving");
+    const { data, error } = await visitLegacy.writeRpc("registrar_actividad", { p: payload4(id, results, details(body3, marked, index)) });
+    button3.disabled = false;
+    button3.textContent = t("visit.record.save", { visit: term("visita") });
+    if (error) {
+      notices.toast(t("visit.record.couldNotSave", { error: error.message ?? "" }), true);
+      return;
+    }
+    document.getElementById("dlg")?.close();
+    savedNotice(data);
+    const done = marked.some((key) => isResult(key) && index.get(key)?.value.extra !== NEGATIVE);
+    if (account.urgente && done) await askUrgent(account, id);
+    visitLegacy.reloadHome();
+    if (accountCardLegacy.shownId() === id) agendaActions.openAccount(id);
+  }
+
+  // src/app/screens/visit/record/index.ts
+  function bindResults(body3, visit2) {
+    body3.querySelectorAll("[data-vk]").forEach((button3) => {
+      button3.onclick = () => {
+        const key = button3.dataset.vk ?? "", on3 = pressed(button3);
+        if (visit2.index.get(key)?.group === visit2.resultsKey) {
+          const negative = button3.dataset.neg === "1";
+          body3.querySelectorAll("[data-res]").forEach((other) => {
+            if ((negative || other.dataset.neg === "1") && other !== button3) {
+              other.setAttribute("aria-pressed", "false");
+              body3.querySelector(`[data-box="${CSS.escape(other.dataset.vk ?? "")}"]`)?.classList.add("hide");
+            }
+          });
+        }
+        button3.setAttribute("aria-pressed", String(!on3));
+        const box3 = body3.querySelector(`[data-box="${CSS.escape(key)}"]`);
+        if (box3) {
+          box3.classList.toggle("hide", on3);
+          if (!on3) {
+            const field11 = box3.querySelector("input, select");
+            if (field11) setTimeout(() => {
+              field11.focus();
+            }, 30);
+          }
+        }
+      };
+    });
+    const more2 = document.getElementById("vtodos");
+    if (more2) more2.onclick = () => {
+      body3.classList.add("vertodos");
+      more2.remove();
+    };
+  }
+  function bindModeAndProducts(body3, draft) {
+    const modes = body3.querySelectorAll("[data-vmodo]");
+    modes.forEach((button3) => {
+      button3.onclick = () => {
+        draft.modo = button3.dataset.vmodo ?? "presencial";
+        modes.forEach((other) => {
+          other.classList.toggle("on", other === button3);
+          other.setAttribute("aria-pressed", String(other === button3));
+        });
+      };
+    });
+    body3.querySelectorAll("[data-vprod]").forEach((button3) => {
+      button3.onclick = () => {
+        togglePressed(button3);
+        draft.productos = [...body3.querySelectorAll("[data-vprod][aria-pressed=true]")].map((item) => item.dataset.vprod ?? "");
+      };
+    });
+    body3.querySelectorAll("[data-vpres]").forEach((button3) => {
+      button3.onclick = () => {
+        presentProduct(button3.dataset.vpres ?? "");
+      };
+    });
+  }
+  function bindPhotos(draft) {
+    const paint10 = () => {
+      paintPhotos(document.getElementById("vfotos"), draft.fotos, (index) => {
+        draft.fotos.splice(index, 1);
+        paint10();
+      });
+    };
+    const input6 = document.getElementById("vfotof");
+    if (input6) input6.onchange = async () => {
+      for (const file of [...input6.files ?? []]) {
+        if (draft.fotos.length >= visitLegacy.photosMax()) {
+          notices.toast(t("visit.photos.atMost", { max: visitLegacy.photosMax(), visit: term("visita") }), true);
+          break;
+        }
+        const photo = await readVisitPhoto(file);
+        if (photo) draft.fotos.push(photo);
+      }
+      input6.value = "";
+      paint10();
+    };
+  }
+  function bindSamples(body3, samples, draft) {
+    if (!samples.length || !deliveryRule().active) return;
+    const signature = deliveryRule().signature;
+    let pad3 = null;
+    const items = () => [...body3.querySelectorAll("[data-vmprod]")].map((input6) => ({ producto_id: input6.dataset.vmprod ?? "", unidades: Math.max(0, Math.floor(Number(input6.value) || 0)), max: Number(input6.max) })).filter((item) => item.unidades > 0);
+    const show2 = () => {
+      const any = items().length > 0, canvas = document.getElementById("vmcanvas");
+      document.getElementById("vmfirma")?.classList.toggle("hide", !any);
+      if (any && !pad3 && canvas) pad3 = visitLegacy.signaturePad(canvas);
+    };
+    body3.querySelectorAll("[data-vmprod]").forEach((input6) => {
+      input6.addEventListener("input", show2);
+    });
+    const clear = document.getElementById("vmborrar");
+    if (clear) clear.onclick = () => {
+      pad3?.borrar();
+    };
+    draft.muestras = {
+      items,
+      firmante: () => document.getElementById("vmfirmante")?.value.trim() ?? "",
+      firma: () => pad3?.imagen() ?? null,
+      validar: () => {
+        const chosen4 = items();
+        if (!chosen4.length) return null;
+        if (chosen4.some((item) => item.unidades > item.max)) return t("visit.samples.overLimit");
+        return signature && (!pad3 || pad3.vacia()) ? t("visit.samples.missingSignature") : null;
+      }
+    };
+  }
+  function applyDateRules(date) {
+    const field11 = document.getElementById("vf");
+    if (!field11) return;
+    const today2 = todayIso();
+    field11.max = today2;
+    if (!cardSectionsLegacy.can("visita_fecha_pasada")) {
+      field11.value = today2;
+      field11.min = today2;
+      field11.disabled = true;
+      field11.title = t("visit.record.sameDay");
+    } else if (date && date <= today2) field11.value = date;
+  }
+  function paint4(id, data, date) {
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    const index = /* @__PURE__ */ new Map(), resultsKey = splitGroups(data.groups).results.clave;
+    body3.classList.remove("vertodos");
+    body3.innerHTML = visitHtml(data, index);
+    const draft = { id, modo: "presencial", fotos: [], ...data.products.length ? { productos: [] } : {} };
+    visitLegacy.setCurrent(draft);
+    const visit2 = { id, account: data.account, index, resultsKey };
+    bindResults(body3, visit2);
+    bindModeAndProducts(body3, draft);
+    bindPhotos(draft);
+    bindSamples(body3, data.samples, draft);
+    applyDateRules(date);
+    const save26 = document.getElementById("vguardar");
+    if (save26) save26.onclick = () => {
+      void saveVisit(visit2, save26);
+    };
+    box3.showModal();
+  }
+  async function openVisit(id) {
+    const date = visitLegacy.takeDate();
+    forgetOperation();
+    await visitLegacy.withLoading(async () => {
+      const data = await loadVisitData(id);
+      if (typeof data === "string") {
+        notices.toast(t("visit.record.couldNotOpen", { reason: t(data === "online" ? "visit.record.cardUnreadable" : "visit.record.noCopy") }), true);
+        return;
+      }
+      paint4(id, data, date);
+    });
+  }
+
+  // src/app/screens/visit/settings.ts
+  function samplesHtml2(setting2, products3) {
+    return `
+    <div class="fh"><div><h2>${t("visit.settings.samplesTitle")}</h2><div class="sm">${t("visit.settings.samplesSubtitle", { visit: term("visita", { article: "un" }) })}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    <label class="opt u-mt-10"><input type="checkbox" id="murest" ${setting2.restar_stock ? "checked" : ""}>
+      <span><b>${t("visit.settings.fromStock")}</b><br><span class="sm">${t("visit.settings.fromStockHint", { visit: term("visita", { article: "el" }) })}</span></span></label>
+    <label for="muprod">${t("visit.settings.product")}</label><select id="muprod"><option value="">—</option>${products3.map((product) => `<option value="${product.id}" ${product.id === setting2.producto_id ? "selected" : ""}>${escapeHtml(product.nombre)}</option>`).join("")}</select>
+    <div class="acts u-end"><button class="btn sec" data-cerrar>${t("common.cancel")}</button><button class="btn" id="muok">${t("common.save")}</button></div>`;
+  }
+  async function saveSamples(box3) {
+    const fromStock = document.getElementById("murest")?.checked ?? false, product = document.getElementById("muprod")?.value ?? "";
+    if (fromStock && !product) {
+      notices.toast(t("visit.settings.chooseProduct"), true);
+      return;
+    }
+    const { error } = await legacyDb().rpc("guardar_ajuste", { p_clave: "muestras", p_valor: { producto_id: product || null, restar_stock: fromStock } });
+    if (error) {
+      notices.toast(t("visit.settings.couldNotSave"), true);
+      return;
+    }
+    box3.close();
+    notices.toast(t("visit.settings.saved"));
+  }
+  async function editSamples() {
+    const [, products3] = await Promise.all([cycleLegacy.loadSettings(), visitLegacy.reloadProducts()]);
+    const setting2 = { producto_id: null, restar_stock: false, ...cycleLegacy.setting("muestras") };
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = samplesHtml2(setting2, products3);
+    box3.showModal();
+    const ok = document.getElementById("muok");
+    if (ok) ok.onclick = () => {
+      void saveSamples(box3);
+    };
+  }
+  async function saveRevisitNotice(notice2) {
+    const preferences = { ...visitLegacy.preferences() };
+    preferences.avisos = { ...preferences.avisos, revisita: notice2 };
+    const { data, error } = await legacyDb().rpc("guardar_preferencias", { p: preferences });
+    if (error) {
+      notices.toast(t("visit.settings.couldNotSave"), true);
+      return false;
+    }
+    visitLegacy.setPreferences(data ?? preferences);
+    return true;
+  }
+
+  // src/app/legacy/products-bridge.ts
+  var productsLegacy = {
+    section: () => productsStore.section,
+    setSection: (section) => {
+      productsStore.section = section;
+    },
+    /** Through the global names (the adapters of pantallas/productos.js), which call the screen with its cache and «‹ Volver». */
+    reload: () => {
+      void loadProductsModule();
+    },
+    openStock: (line2) => {
+      void showStock(line2);
+    },
+    openDeposit: (accountId, name, notice2) => showDeposit(accountId, name, notice2 ?? ""),
+    editProduct: (product) => {
+      void editProduct(product ?? null);
+    },
+    editSamples: () => {
+      void editSamples();
+    },
+    clearModules: (except) => {
+      session_exports.emptyModules(except);
+    },
+    showLoading: (element, text2) => {
+      showLoading(element, text2);
+    },
+    matchesFieldFilters: (values2) => Boolean(matchesFilters(values2, productsStore.filters)),
+    hasFieldFilters: () => Object.keys(productsStore.filters).length > 0,
+    visibleFieldColumns: () => visibleFields("producto"),
+    fieldHeaders: (fields) => columnHeaders(fields),
+    fieldCells: (fields, values2) => columnCells(fields, values2),
+    widenGrid: (grid, count4) => {
+      widenGrid(grid, count4);
+    }
+  };
+
+  // src/app/screens/products/model.ts
+  var ORDER_MARGIN_DAYS = 14;
+  var EXPIRY_SOON_DAYS = 90;
+  var euros3 = (value10) => formatCurrency(round2(value10));
+  function stockState(line2) {
+    if (line2.stock <= 0) return [t("products.stock.outOfStock"), "p-anu"];
+    if (line2.stock_minimo !== null && line2.stock_minimo !== void 0 && line2.stock < line2.stock_minimo) return [t("products.stock.belowMinimum"), "p-bor"];
+    if (line2.dias_cobertura !== null && line2.dias_cobertura !== void 0 && line2.dias_cobertura <= line2.plazo_dias + ORDER_MARGIN_DAYS && !line2.en_camino) return [t("products.stock.orderNow"), "p-bor"];
+    return [t("products.stock.fine"), "p-est"];
+  }
+  function expiryClass(isoDate) {
+    if (!isoDate) return "";
+    const today2 = todayIso();
+    if (isoDate < today2) return "cad-pasada";
+    return isoDate <= addDays(today2, EXPIRY_SOON_DAYS) ? "cad-pronto" : "";
+  }
+  var storeIcon = (store4) => store4.tipo === "central" || store4.tipo === "deposito" ? "🏢" : "💼";
+  function storeKind(store4) {
+    if (store4.tipo === "central") return t("products.stores.central");
+    return store4.tipo === "deposito" ? t("products.stores.deposit") : t("products.stores.caseOf", { name: escapeHtml(orFallback(store4.usuario, "—")) });
+  }
+  var errorMessage = (error) => error?.message ?? "";
+
+  // src/app/screens/products/catalog.ts
+  var money = (value10) => isPresent(value10) ? euros3(value10) : "—";
+  var activePill = (active2) => `<span class="pill ${active2 ? "p-est" : "p-anu"}">${t(active2 ? "products.catalog.activeState" : "products.catalog.inactiveState")}</span>`;
+  function countHtml(rows2) {
+    const active2 = rows2.filter((row3) => row3.activo).length, inactive = rows2.length - active2;
+    return `<b>${formatNumber(active2)}</b> ${t(active2 === 1 ? "products.catalog.oneActive" : "products.catalog.active")}${inactive ? t("products.catalog.inactive", { count: formatNumber(inactive) }) : ""}`;
+  }
+  function rowHtml6(row3, fields) {
+    const photo = row3.foto_url ? `background-image:url('${escapeHtml(row3.foto_url)}')` : "";
+    return `<button class="dr" data-prod="${row3.id}" style="${row3.activo ? "" : "opacity:.55"}">
+        <span><span class="pfoto" style="${photo}">${row3.foto_url ? "" : "◧"}</span></span>
+        <span><b>${escapeHtml(row3.nombre)}</b><span class="sm">${escapeHtml(orFallback(row3.presentacion, t("products.catalog.noPresentation")))}</span></span>
+        <span class="sm">${escapeHtml(orFallback(row3.referencia, "—"))}</span><span class="num">${money(row3.precio)}</span>
+        <span class="num">${formatNumber(row3.iva ?? 0)}%</span><span class="num"><b>${money(row3.pvp)}</b></span>
+        <span>${activePill(row3.activo)}</span>${productsLegacy.fieldCells(fields, row3.clasificadores)}</button>`;
+  }
+  function tableHtml2(rows2, fields) {
+    const head = [["", ""], ["", "product"], ["", "reference"], ["num", "withoutVat"], ["num", "vat"], ["num", "withVat"], ["", "state"]];
+    const empty2 = `<div class="vacio">${t(productsLegacy.hasFieldFilters() ? "products.catalog.noneFiltered" : "products.catalog.none")}</div>`;
+    return `<div class="dgrid-wrap"><div class="dgrid prods">
+      <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${key ? t(`products.catalog.${key}`) : ""}</span>`).join("")}${productsLegacy.fieldHeaders(fields)}</div>
+      ${rows2.map((row3) => rowHtml6(row3, fields)).join("") || empty2}
+    </div></div>`;
+  }
+  async function paintProducts() {
+    const admin = cardSectionsLegacy.can("administrar");
+    productsLegacy.showLoading(document.getElementById("vcuerpo"), t("products.catalog.loading"));
+    const { data } = await callRpc("productos_lista", { p_todos: admin });
+    const body3 = document.getElementById("vcuerpo");
+    if (!body3) return;
+    const rows2 = (data ?? []).filter((row3) => orFallback(row3.tipo, "producto") === "producto" && productsLegacy.matchesFieldFilters(row3.clasificadores));
+    const fields = productsLegacy.visibleFieldColumns();
+    body3.innerHTML = `<div class="panel">
+    <div class="cuenta">${countHtml(rows2)}</div>
+    ${tableHtml2(rows2, fields)}</div>`;
+    productsLegacy.widenGrid(body3.querySelector(".dgrid.prods"), fields.length);
+    body3.querySelectorAll("[data-prod]").forEach((button3) => {
+      button3.onclick = () => {
+        productsLegacy.editProduct(rows2.find((row3) => row3.id === button3.dataset.prod) ?? null);
+      };
+    });
+  }
+
+  // src/app/screens/products/services.ts
+  var PRICE_DECIMALS = 4;
+  var money2 = (value10) => isPresent(value10) ? euros3(value10) : "—";
+  var field2 = (id) => document.getElementById(id);
+  function rowHtml7(service) {
+    const byDefault = service.por_defecto ? `<span class="pill p-est">${t("products.services.byDefault")}</span>` : '<span class="vac">—</span>';
+    return `<button class="dr" data-serv="${service.id ?? ""}" style="${service.activo ? "" : "opacity:.55"}">
+        <span><b>${escapeHtml(service.nombre ?? "")}</b></span><span class="num">${money2(service.precio)}</span>
+        <span class="num">${formatNumber(service.iva ?? 0)}%</span><span class="num"><b>${money2(service.pvp)}</b></span>
+        <span>${byDefault}</span>
+        <span><span class="pill ${service.activo ? "p-est" : "p-anu"}">${t(service.activo ? "products.catalog.activeState" : "products.catalog.inactiveState")}</span></span></button>`;
+  }
+  async function paintServices() {
+    const admin = cardSectionsLegacy.can("administrar");
+    productsLegacy.showLoading(document.getElementById("vcuerpo"), t("products.services.loading"));
+    const { data } = await callRpc("productos_lista", { p_todos: admin });
+    const body3 = document.getElementById("vcuerpo");
+    if (!body3) return;
+    const list = (data ?? []).filter((item) => item.tipo === "servicio");
+    const head = [["", "products.services.service"], ["num", "products.catalog.withoutVat"], ["num", "products.catalog.vat"], ["num", "products.catalog.withVat"], ["", "products.services.inNewOrders"], ["", "products.catalog.state"]];
+    body3.innerHTML = `<div class="panel">
+    <div class="cuenta"><b>${formatNumber(list.filter((item) => item.activo).length)}</b>${t("products.services.activeCount")}</div>
+    <div class="dgrid-wrap"><div class="dgrid servs">
+      <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${t(key)}</span>`).join("")}</div>
+      ${list.map(rowHtml7).join("") || `<div class="vacio">${t("products.services.none")}</div>`}
+    </div></div></div>`;
+    body3.querySelectorAll("[data-serv]").forEach((button3) => {
+      button3.onclick = () => {
+        editService(list.find((item) => item.id === button3.dataset.serv) ?? null);
+      };
+    });
+  }
+  function prices(service) {
+    if (!isPresent(service.precio)) return ["", ""];
+    return [String(Number(Number(service.precio).toFixed(PRICE_DECIMALS))), String(round2(service.precio * (1 + (service.iva ?? 0) / 100)))];
+  }
+  var checkbox = (id, on3, locked) => `<input type="checkbox" id="${id}" ${on3 ? "checked" : ""} ${locked}>`;
+  function editorHtml6(service, admin) {
+    const locked = admin ? "" : "disabled", vat = service.iva ?? defaultVat("servicios"), [price, withVat2] = prices(service);
+    return `
+    <div class="fh"><div><h2>${service.id ? escapeHtml(service.nombre ?? "") : t("products.services.newTitle")}</h2>
+      <div class="sm">${t("products.services.hint")}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    <label for="svn">${t("products.services.name")}</label><input id="svn" value="${escapeHtml(service.nombre ?? "")}" placeholder="${t("products.services.namePlaceholder")}" ${locked}>
+    <div class="pvp">
+      <div><label for="svs">${t("products.services.withoutVat")}</label><input id="svs" type="number" step="0.01" min="0" value="${price}" ${locked}></div>
+      <div><label for="svi">${t("products.services.vat")}</label><input id="svi" type="number" step="1" min="0" max="21" value="${vat}" ${locked}></div>
+      <div><label for="svc">${t("products.services.withVat")}</label><input id="svc" type="number" step="0.01" min="0" value="${withVat2}" ${locked}></div></div>
+    <label class="opt u-mt-12">${checkbox("svdef", service.por_defecto, locked)} ${t("products.services.proposeByDefault")}</label>
+    ${service.id ? `<label class="opt u-mt-8">${checkbox("svact", service.activo, locked)} ${t("products.services.active")}</label>` : ""}
+    <div class="acts u-end"><button class="btn sec" data-cerrar>${t(admin ? "common.cancel" : "common.close")}</button>
+      ${admin ? `<button class="btn" id="svok" data-desktop-only>${t(service.id ? "common.save" : "products.services.create")}</button>` : ""}</div>`;
+  }
+  function bindPrices() {
+    const without = field2("svs"), vat = field2("svi"), withVat2 = field2("svc");
+    if (!without || !vat || !withVat2) return;
+    const rate = () => (Number(vat.value) || 0) / 100;
+    without.oninput = () => {
+      withVat2.value = without.value === "" ? "" : String(round2(Number(without.value) * (1 + rate())));
+    };
+    withVat2.oninput = () => {
+      without.value = withVat2.value === "" ? "" : String(Number((Number(withVat2.value) / (1 + rate())).toFixed(PRICE_DECIMALS)));
+    };
+    vat.oninput = () => {
+      if (without.value !== "") withVat2.value = String(round2(Number(without.value) * (1 + rate())));
+    };
+  }
+  function payload5(service, name) {
+    const active2 = field2("svact");
+    return {
+      id: service.id ?? null,
+      tipo: "servicio",
+      nombre: name,
+      precio: field2("svs")?.value,
+      iva: field2("svi")?.value,
+      por_defecto: Boolean(field2("svdef")?.checked),
+      ...active2 ? { activo: active2.checked } : {}
+    };
+  }
+  async function save9(service) {
+    const name = field2("svn")?.value.trim() ?? "";
+    if (!name) {
+      notices.toast(t("products.services.writeName"), true);
+      return;
+    }
+    const { data: result, error } = await legacyDb().rpc("guardar_producto", { p: payload5(service, name) });
+    if (error || result?.ok === false) {
+      notices.toast(t("products.services.couldNotSave"), true);
+      return;
+    }
+    document.getElementById("dlg")?.close();
+    notices.toast(t(service.id ? "products.services.saved" : "products.services.created"));
+    await purchasesLegacy.loadProducts();
+    if (currentScreen() === "productos") void paintServices();
+  }
+  function editService(existing) {
+    const admin = cardSectionsLegacy.can("administrar"), service = existing ?? { iva: defaultVat("servicios"), activo: true };
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = editorHtml6(service, admin);
+    box3.showModal();
+    if (!admin) return;
+    bindPrices();
+    const ok = document.getElementById("svok");
+    if (ok) ok.onclick = () => {
+      void save9(service);
+    };
+  }
+
+  // src/app/screens/products/stock.ts
+  function rowHtml8(line2) {
+    const [label, kind] = stockState(line2);
+    const unbatched = line2.sin_lote ? ` · <span class="u-warn">${t("products.stock.soldWithoutBatch", { units: formatNumber(-line2.sin_lote) })}</span>` : "";
+    const byStore = (line2.por_almacen ?? []).map((store4) => `${escapeHtml(store4.almacen)}: ${formatNumber(store4.unidades)}`).join(" · ") || "—";
+    const coverage = isPresent(line2.dias_cobertura) ? t("products.stock.coverageDays", { days: formatNumber(line2.dias_cobertura), supplier: formatNumber(line2.plazo_dias) }) : t("products.stock.noSales");
+    const onTheWay = line2.en_camino ? formatNumber(line2.en_camino) + (line2.llegada ? `<span class="sm">${formatShortDate(line2.llegada)}</span>` : "") : "—";
+    return `<button class="dr" data-stk="${line2.id}">
+        <span><b>${escapeHtml(line2.nombre)}</b><span class="sm">${escapeHtml(line2.presentacion ?? "")}${unbatched}</span></span>
+        <span class="num"><b>${formatNumber(line2.stock)}</b></span>
+        <span class="sm">${byStore}</span>
+        <span class="${expiryClass(line2.proxima_caducidad)}">${line2.proxima_caducidad ? formatShortDate(line2.proxima_caducidad) : "—"}</span>
+        <span class="sm">${coverage}</span>
+        <span class="num">${onTheWay}</span>
+        <span><span class="pill ${kind}">${label}</span></span></button>`;
+  }
+  async function paintStock() {
+    productsLegacy.showLoading(document.getElementById("vcuerpo"), t("products.stock.loading"));
+    await purchasesLegacy.loadStores();
+    const { data, error } = await callRpc("stock_resumen", {});
+    const body3 = document.getElementById("vcuerpo");
+    if (!body3) return;
+    if (error) {
+      body3.innerHTML = `<div class="vacio">${escapeHtml(errorMessage(error))}</div>`;
+      return;
+    }
+    const list = (data ?? []).filter((line2) => Boolean(line2.activo) || Boolean(line2.stock));
+    const head = [["", "product"], ["num", "stock"], ["", "byStore"], ["", "nextExpiry"], ["", "coverage"], ["num", "onTheWay"], ["", "state"]];
+    body3.innerHTML = `<div class="panel">
+    <div class="cuenta">${t("products.stock.intro")}</div>
+    <div class="dgrid-wrap"><div class="dgrid stock">
+      <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${t(`products.stock.${key}`)}</span>`).join("")}</div>
+      ${list.map(rowHtml8).join("") || `<div class="vacio">${t("products.stock.none")}</div>`}
+    </div></div></div>`;
+    body3.querySelectorAll("[data-stk]").forEach((button3) => {
+      button3.onclick = () => {
+        const line2 = list.find((item) => item.id === button3.dataset.stk);
+        if (line2) productsLegacy.openStock(line2);
+      };
+    });
+  }
+
+  // src/app/screens/products/movement.ts
+  var TEXTS = {
+    inicial: ["products.movement.entryTitle", "products.movement.entryHint"],
+    ajuste: ["products.movement.adjustTitle", "products.movement.adjustHint"],
+    traspaso: ["products.movement.transferTitle", "products.movement.transferHint"]
+  };
+  var value5 = (id) => document.getElementById(id)?.value ?? "";
+  var options = (list, selected2) => list.map((item) => `<option value="${item.id ?? ""}" ${selected2 && item.id === selected2 ? "selected" : ""}>${escapeHtml(item.nombre ?? "")}</option>`).join("");
+  function entryHtml2(line2) {
+    const stores2 = purchasesLegacy.stores().filter((store4) => store4.activo);
+    return `<div class="g2">
+      <div><label for="mvp">${t("products.movement.product")}</label><select id="mvp">${options(purchasesLegacy.products(), line2?.id)}</select></div>
+      <div><label for="mva">${t("products.movement.store")}</label><select id="mva">${options(stores2)}</select></div></div>
+      <div class="g2"><div><label for="mvl">${t("products.movement.batch")}</label><input id="mvl" placeholder="${t("products.movement.batchPlaceholder")}"></div>
+        <div><label for="mvpr">${t("products.movement.supplier")}</label><select id="mvpr"><option value="">—</option>${options(purchasesLegacy.suppliers())}</select></div></div>
+      <div class="g2"><div><label for="mvc">${t("products.movement.expiry")}</label><input id="mvc" type="date"></div><div><label for="mvf">${t("products.movement.made")}</label><input id="mvf" type="date"></div></div>`;
+  }
+  function formHtml2(line2, kind, place3) {
+    const [title2, hint] = TEXTS[kind], adjust = kind === "ajuste";
+    const destinations = purchasesLegacy.stores().filter((store4) => store4.activo && store4.id !== place3?.storeId);
+    return `
+    <div class="fh"><div><h2>${t(title2)}</h2><div class="sm">${t(hint)}</div></div>
+      <button class="x" data-cerrar2 aria-label="${t("common.close")}">✕</button></div>
+    ${kind === "inicial" ? entryHtml2(line2) : ""}
+    ${kind === "traspaso" ? `<label for="mvd">${t("products.movement.destination")}</label><select id="mvd">${options(destinations)}</select>` : ""}
+    <div class="g2"><div><label for="mvu">${t(adjust ? "products.movement.unitsSigned" : "products.movement.units")}</label><input id="mvu" type="number" ${adjust ? "" : 'min="1"'}></div>
+      <div><label for="mvn">${t("products.movement.note")}</label><input id="mvn" placeholder="${t(adjust ? "products.movement.adjustPlaceholder" : "products.movement.optional")}"></div></div>
+    <div class="acts u-end"><button class="btn sec" data-cerrar2>${t("common.cancel")}</button><button class="btn" id="mvok">${t("products.movement.register")}</button></div>`;
+  }
+  function payload6(line2, kind, place3, units) {
+    const note = value5("mvn").trim();
+    if (kind === "inicial") {
+      return {
+        tipo: kind,
+        producto_id: value5("mvp"),
+        almacen_id: value5("mva"),
+        numero_lote: value5("mvl").trim(),
+        caducidad: value5("mvc"),
+        fecha_fabricacion: value5("mvf"),
+        proveedor_id: value5("mvpr"),
+        unidades: units,
+        nota: note
+      };
+    }
+    return { tipo: kind, producto_id: line2?.id, lote_id: place3?.batchId, almacen_id: place3?.storeId, destino_id: document.getElementById("mvd") ? value5("mvd") : null, unidades: units, nota: note };
+  }
+  function missing(kind, units) {
+    if (!units) return t("products.movement.writeUnits");
+    return kind === "inicial" && !value5("mvl").trim() ? t("products.movement.writeBatch") : "";
+  }
+  async function register(line2, kind, place3) {
+    const units = Number(value5("mvu")), problem = missing(kind, units);
+    if (problem) {
+      notices.toast(problem, true);
+      return;
+    }
+    const { data: result, error } = await legacyDb().rpc("movimiento_manual", { p: payload6(line2, kind, place3, units) });
+    if (error || result?.ok === false) {
+      notices.toast(t("products.movement.failed", { error: orFallback(errorMessage(error), result?.error ?? "") }), true);
+      return;
+    }
+    for (const id of ["dlg2", "dlg"]) document.getElementById(id)?.close();
+    notices.toast(t("products.movement.registered"));
+    if (currentScreen() === "productos") void paintStock();
+  }
+  async function stockMovement(line2, kind, place3) {
+    await Promise.all([purchasesLegacy.loadProducts(), purchasesLegacy.loadStores(), purchasesLegacy.loadSuppliers()]);
+    const body3 = document.getElementById("dlg2body"), box3 = document.getElementById("dlg2");
+    if (!body3 || !box3) return;
+    body3.innerHTML = formHtml2(line2, kind, place3);
+    box3.showModal();
+    const ok = document.getElementById("mvok");
+    if (ok) ok.onclick = () => {
+      void register(line2, kind, place3);
+    };
+  }
+
+  // src/app/screens/products/stock-sheet.ts
+  var MOVEMENTS = /* @__PURE__ */ new Map([
+    ["inicial", "products.trace.initial"],
+    ["entrada_compra", "products.trace.purchaseEntry"],
+    ["salida_venta", "products.trace.sale"],
+    ["anulacion_venta", "products.trace.saleCancelled"],
+    ["salida_muestra", "products.trace.sample"],
+    ["ajuste", "products.trace.adjustment"],
+    ["traspaso_salida", "products.trace.transferOut"],
+    ["traspaso_entrada", "products.trace.transferIn"],
+    ["devolucion", "products.trace.returned"],
+    ["consumo_deposito", "products.trace.depositUse"],
+    ["consumo_cirugia", "products.trace.surgeryUse"]
+  ]);
+  var movementName = (type) => {
+    const key = MOVEMENTS.get(type);
+    return key ? t(key, { visit: term("visita") }) : type;
+  };
+  function traceRow(item) {
+    return `<div class="dr u-cursor-default"><span>${formatShortDate(String(item.fecha).slice(0, 10))}</span><span>${escapeHtml(movementName(item.tipo))}${item.pedido ? `<span class="sm">${t("products.trace.order", { number: escapeHtml(item.pedido) })}</span>` : ""}</span>
+        <span class="num" style="color:${item.unidades < 0 ? "var(--danger)" : "var(--ok)"}"><b>${item.unidades > 0 ? "+" : ""}${formatNumber(item.unidades)}</b></span>
+        <span>${escapeHtml(orFallback(item.cliente, "—"))}${item.telefono ? `<span class="sm">${escapeHtml(item.telefono)}</span>` : ""}</span><span class="sm">${escapeHtml(orFallback(item.medico, "—"))}</span><span class="sm">${escapeHtml(item.almacen)}</span></div>`;
+  }
+  function batchDetails(batch) {
+    return `${escapeHtml(batch.producto ?? "")}${batch.caducidad ? t("products.trace.expires", { date: formatShortDate(batch.caducidad) }) : ""}${batch.proveedor ? ` · ${escapeHtml(batch.proveedor)}` : ""}${batch.compra ? t("products.trace.purchase", { number: escapeHtml(batch.compra) }) : ""}`;
+  }
+  async function traceability(batchId) {
+    const { data } = await callRpc("trazabilidad_lote", { p_lote: batchId });
+    const batch = data?.lote ?? {}, movements = data?.movimientos ?? [];
+    const body3 = document.getElementById("dlg2body"), box3 = document.getElementById("dlg2");
+    if (!body3 || !box3) return;
+    const details2 = batchDetails(batch);
+    const head = [t("products.trace.date"), t("products.trace.movement"), t("products.trace.units"), t("products.trace.client"), term("medico", { capital: "C" }), t("products.trace.store")];
+    body3.innerHTML = `
+    <div class="fh"><div><h2>${t("products.trace.title", { number: escapeHtml(batch.numero_lote ?? "") })}</h2>
+      <div class="sm">${details2}</div></div>
+      <button class="x" data-cerrar2 aria-label="${t("common.close")}">✕</button></div>
+    <p class="sm">${t("products.trace.intro")}</p>
+    <div class="dgrid-wrap"><div class="dgrid traz">
+      <div class="dh">${head.map((title2, index) => `<span${index === 2 ? ' class="num"' : ""}>${title2}</span>`).join("")}</div>
+      ${movements.map(traceRow).join("") || `<div class="vacio">${t("products.trace.none")}</div>`}</div></div>
+    <div class="acts u-end"><button class="btn sec" data-cerrar2>${t("common.close")}</button></div>`;
+    box3.showModal();
+  }
+  function summaryText(line2) {
+    const use = Number(line2.consumo_diario) ? t("products.sheet.dailyUse", { value: String(line2.consumo_diario).replace(".", ",") }) : t("products.sheet.noUse");
+    return `${t("products.sheet.units", { units: formatNumber(line2.stock) })} · ${use}${isPresent(line2.dias_cobertura) ? t("products.sheet.covers", { days: formatNumber(line2.dias_cobertura) }) : ""}`;
+  }
+  function settingsHtml(line2) {
+    const suppliers = purchasesLegacy.suppliers().map((supplier) => `<option value="${supplier.id ?? ""}" ${supplier.nombre === line2.proveedor ? "selected" : ""}>${t("products.sheet.supplierOption", { name: escapeHtml(supplier.nombre ?? ""), days: formatNumber(supplier.plazo_dias) })}</option>`).join("");
+    return `<div class="g2">
+      <div><label for="stmin">${t("products.sheet.minimum")}</label><input id="stmin" type="number" min="0" value="${line2.stock_minimo ?? ""}" placeholder="${t("products.sheet.noMinimum")}"></div>
+      <div><label for="stprov">${t("products.sheet.supplier")}</label><select id="stprov"><option value="">—</option>${suppliers}</select></div></div>`;
+  }
+  function batchHtml(batch, canBuy2) {
+    const expiry = expiryClass(batch.caducidad), manyStores = purchasesLegacy.stores().filter((store4) => store4.activo).length > 1;
+    const tools = canBuy2 ? `<button class="btn sec" data-desktop-only data-aju="${batch.id}|${batch.almacen_id}">${t("products.sheet.adjust")}</button>${manyStores ? `<button class="btn sec" data-tras="${batch.id}|${batch.almacen_id}">${t("products.sheet.transfer")}</button>` : ""}` : "";
+    return `<div class="item u-cursor-default">
+        <span class="ic ${expiry === "cad-pasada" ? "w" : ""}">📦</span>
+        <span class="tx"><b>${t("products.sheet.batch", { number: escapeHtml(batch.numero_lote), units: formatNumber(batch.unidades) })}</b>
+          <span class="sm"><span class="${expiry}">${batch.caducidad ? t("products.sheet.expiresOn", { date: formatShortDate(batch.caducidad) }) : t("products.sheet.noExpiry")}</span>${batch.fecha_fabricacion ? t("products.sheet.madeOn", { date: formatShortDate(batch.fecha_fabricacion) }) : ""} · ${escapeHtml(batch.almacen)}${batch.proveedor ? ` · ${escapeHtml(batch.proveedor)}` : ""}</span></span>
+        <span class="acts u-m-0"><button class="btn sec" data-traz="${batch.id}">${t("products.sheet.traceability")}</button>
+          ${tools}</span></div>`;
+  }
+  function sheetHtml3(line2, canBuy2) {
+    const [label, kind] = stockState(line2), batches = line2.lotes ?? [];
+    return `
+    <div class="fh"><div><h2>${escapeHtml(line2.nombre)} <span class="pill ${kind}">${label}</span></h2>
+      <div class="sm">${summaryText(line2)}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    ${canBuy2 ? settingsHtml(line2) : ""}
+    <div class="blk"><h3>${t("products.sheet.batches")}</h3>
+      ${batches.length ? `<div class="lista">${batches.map((batch) => batchHtml(batch, canBuy2)).join("")}</div>` : `<div class="sm">${t("products.sheet.noBatches")}</div>`}</div>
+    <div class="acts u-end">
+      <button class="btn sec" data-cerrar>${t("common.close")}</button>
+      ${canBuy2 ? `<button class="btn sec" id="stent">${t("products.sheet.entry")}</button><button class="btn" id="stgu">${t("products.sheet.saveMinimum")}</button>` : ""}</div>`;
+  }
+  async function saveSettings(line2) {
+    const minimum = document.getElementById("stmin")?.value ?? "", supplier = document.getElementById("stprov")?.value ?? "";
+    const { error } = await legacyDb().from("productos").update({ stock_minimo: minimum === "" ? null : Number(minimum), proveedor_id: supplier || null }).eq("id", line2.id);
+    if (error) {
+      notices.toast(t("products.sheet.couldNotSave"), true);
+      return;
+    }
+    document.getElementById("dlg")?.close();
+    notices.toast(t("products.sheet.saved"));
+    void paintStock();
+  }
+  function bind8(body3, line2) {
+    body3.querySelectorAll("[data-traz]").forEach((button3) => {
+      button3.onclick = () => {
+        void traceability(button3.dataset.traz ?? "");
+      };
+    });
+    for (const [attribute, kind] of [["aju", "ajuste"], ["tras", "traspaso"]]) {
+      body3.querySelectorAll(`[data-${attribute}]`).forEach((button3) => {
+        const [batchId = "", storeId = ""] = (button3.dataset[attribute] ?? "").split("|");
+        button3.onclick = () => {
+          void stockMovement(line2, kind, { batchId, storeId });
+        };
+      });
+    }
+    const entry2 = document.getElementById("stent");
+    if (entry2) entry2.onclick = () => {
+      void stockMovement(line2, "inicial");
+    };
+    const save26 = document.getElementById("stgu");
+    if (save26) save26.onclick = () => {
+      void saveSettings(line2);
+    };
+  }
+  async function showStock2(line2) {
+    await purchasesLegacy.loadSuppliers();
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = sheetHtml3(line2, purchasesLegacy.canBuy());
+    if (!box3.open) box3.showModal();
+    bind8(body3, line2);
+  }
+
+  // src/app/screens/products/stores.ts
+  var stores = () => purchasesLegacy.stores();
+  var members = () => salesTeam.members();
+  async function load() {
+    await purchasesLegacy.loadStores();
+    if (!salesTeam.members().length) await salesTeam.load();
+  }
+  async function createCase(member) {
+    const { error } = await legacyDb().rpc("guardar_almacen", { p: { nombre: t("products.stores.caseName", { name: String(member.nombre).split(" ")[0] ?? "" }), tipo: "maletin", usuario_id: member.id } });
+    if (error) {
+      notices.toast(t("products.stores.couldNotCreate"), true);
+      return false;
+    }
+    notices.toast(t("products.stores.created"));
+    return true;
+  }
+  var chosenMember = () => members().find((member) => member.id === document.getElementById("almu")?.value);
+  function windowHtml() {
+    const list = stores().map((store4) => `<div class="item u-cursor-default"><span class="ic">${storeIcon(store4)}</span>
+        <span class="tx"><b>${escapeHtml(store4.nombre)}</b><span class="sm">${storeKind(store4)}${t("products.stores.unitsTail", { units: formatNumber(store4.unidades) })}${store4.activo ? "" : t("products.stores.inactive")}</span></span></div>`).join("");
+    return `
+      <div class="fh"><div><h2>${t("products.stores.title")}</h2><div class="sm">${t("products.stores.subtitle")}</div></div>
+        <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+      <div class="lista">${list}</div>
+      <h3 class="u-mt-14">${t("products.stores.newCase")}</h3>
+      <div class="g2"><div><label for="almu">${t("products.stores.salesperson")}</label><select id="almu">${members().map((member) => `<option value="${member.id}">${escapeHtml(member.nombre)}</option>`).join("")}</select></div>
+        <div><label>&nbsp;</label><button class="btn" id="almok">${t("products.stores.createCase")}</button></div></div>
+      <p class="sm">${t("products.stores.caseHint", { theVisit: term("visita", { article: "el" }) })}</p>`;
+  }
+  function paintWindow() {
+    const body3 = document.getElementById("dbody");
+    if (!body3) return;
+    body3.innerHTML = windowHtml();
+    const ok = document.getElementById("almok");
+    if (ok) ok.onclick = async () => {
+      const member = chosenMember();
+      if (!member || !await createCase(member)) return;
+      await purchasesLegacy.loadStores();
+      paintWindow();
+    };
+  }
+  async function editStores() {
+    await load();
+    paintWindow();
+    document.getElementById("dlg")?.showModal();
+  }
+  function storeCard(store4) {
+    return `<div class="almc"><span class="ic">${storeIcon(store4)}</span>
+        <b>${escapeHtml(store4.nombre)}</b><span class="sm">${storeKind(store4)}${store4.activo ? "" : t("products.stores.inactive")}</span>
+        <span class="almu"><b>${formatNumber(store4.unidades ?? 0)}</b> ${t("products.stores.units")}</span></div>`;
+  }
+  function withoutCaseHtml(withoutCase) {
+    if (!withoutCase.length) return "";
+    const who2 = withoutCase.length === 1 ? t("products.stores.oneWithout", { name: escapeHtml(withoutCase[0]?.nombre ?? "") }) : t("products.stores.manyWithout", { count: withoutCase.length });
+    return `<div class="avisoh u-mt-12"><span>${who2}${t("products.stores.withoutCase")}</span></div>`;
+  }
+  async function paintStores() {
+    await load();
+    const body3 = document.getElementById("cfgcuerpo");
+    if (!body3) return;
+    const canHaveCase = members().filter((member) => cardSectionsLegacy.roleCan(member.rol ?? "", "almacen_propio"));
+    const withoutCase = canHaveCase.filter((member) => !stores().some((store4) => store4.usuario_id === member.id));
+    body3.innerHTML = `
+    <div class="card cfgpanel"><h2>${t("products.stores.title")}</h2>
+      <p class="sm">${t("products.stores.pageIntro")}</p>
+      <div class="mattipos"><div><b>${t("products.stores.centralTitle")}</b><span>${t("products.stores.centralText")}</span></div>
+        <div><b>${t("products.stores.caseTitle")}</b><span>${t("products.stores.caseText", { visits: term("visita", { number: "p" }) })}</span></div></div></div>
+    <div class="card cfgpanel"><h2>${t("products.stores.yours")}</h2>
+      <div class="almgrid">${stores().map(storeCard).join("")}</div>
+      ${withoutCaseHtml(withoutCase)}
+      <div class="matadd u-mt-12"><select id="almu">${canHaveCase.map((member) => `<option value="${member.id}">${escapeHtml(member.nombre)}</option>`).join("")}</select>
+        <button class="btn sec" id="almok">${t("products.stores.createCase")}</button></div>
+      <p class="sm">${t("products.stores.transferHint")}</p></div>`;
+    const ok = document.getElementById("almok");
+    if (ok) ok.onclick = async () => {
+      const member = chosenMember();
+      if (member && await createCase(member)) void paintStores();
+    };
+  }
+
+  // src/app/screens/products/deposits.ts
+  var SCREEN = "deposito";
+  function pendingUnits(movements) {
+    const lastIn = movements.findIndex((item) => item.tipo === "traspaso_entrada");
+    const sinceThen = lastIn < 0 ? movements : movements.slice(0, lastIn);
+    return sum(sinceThen.filter((item) => item.tipo === "consumo_deposito").map((item) => -item.unidades));
+  }
+  function summaryOf(store4, detail) {
+    const lines2 = (detail.lineas ?? []).filter((line2) => line2.unidades > 0);
+    const prices2 = new Map(purchasesLegacy.products().map((item) => [item.id, Number(item.precio) || 0]));
+    return {
+      accountId: store4.cuenta_id ?? "",
+      name: orFallback(store4.cuentas?.nombre, store4.nombre),
+      units: sum(lines2.map((line2) => line2.unidades)),
+      products: new Set(lines2.map((line2) => line2.producto_id)).size,
+      value: sum(lines2.map((line2) => line2.unidades * (prices2.get(line2.producto_id) ?? 0))),
+      pending: pendingUnits(detail.movimientos ?? []),
+      expiring: lines2.filter((line2) => relatedLegacy.expiresSoon(line2.caducidad)).length
+    };
+  }
+  async function loadDeposits() {
+    const { data, error } = await legacyDb().from("almacenes").select("id,nombre,cuenta_id,activo,cuentas(nombre)").eq("tipo", "deposito");
+    if (error) return null;
+    if (!purchasesLegacy.products().length) await purchasesLegacy.loadProducts();
+    const stores2 = (data ?? []).filter((store4) => store4.cuenta_id && store4.activo !== false);
+    const details2 = await Promise.all(stores2.map((store4) => legacyDb().rpc("deposito_estado", { p_cuenta: store4.cuenta_id })));
+    return stores2.flatMap((store4, index) => {
+      const detail = details2[index]?.data;
+      return detail && detail.ok !== false ? [summaryOf(store4, detail)] : [];
+    }).sort((first, second) => first.name.localeCompare(second.name, "es"));
+  }
+  function materialText(item) {
+    if (!item.units) return t("products.deposits.empty");
+    return t("products.deposits.material", { units: formatNumber(item.units), products: item.products === 1 ? t("products.deposit.oneProduct") : t("products.deposit.products", { count: item.products }) });
+  }
+  function statePill3(item) {
+    if (item.pending) return `<span class="pill p-bor">${t("products.deposits.toReplenish")}</span>`;
+    if (item.expiring) return `<span class="pill p-bor">${t("products.deposits.expiring")}</span>`;
+    return item.units ? `<span class="pill p-est">${t("products.deposits.upToDate")}</span>` : `<span class="pill p-anu">${t("products.deposits.emptyState")}</span>`;
+  }
+  function rowHtml9(item) {
+    const value10 = permissions.canSeeAmounts() ? euros3(item.value) : "—", pending = item.pending ? formatNumber(item.pending) : "—";
+    return `<button type="button" class="item conrow" data-dcen="${escapeHtml(item.accountId)}" data-dcen-material="${escapeHtml(materialText(item))}" data-dcen-value="${escapeHtml(value10)}" data-dcen-pending="${escapeHtml(pending)}">
+      <span class="tx"><b>${escapeHtml(item.name)}</b><span class="sm">${escapeHtml(materialText(item))} · ${escapeHtml(value10)}</span></span>
+      <span class="cirest">${statePill3(item)}</span></button>`;
+  }
+  var block2 = (title2, list) => `<section class="card cirbloque"><h2>${title2}</h2><div class="lista">${list.map(rowHtml9).join("")}</div></section>`;
+  function pageHtml4(list) {
+    const create = isMobile() ? "" : `<div class="evcab"><button type="button" class="btn" id="depnuevo">${t("products.deposits.create")}</button></div>`;
+    const pending = list.filter((item) => item.pending > 0);
+    if (!list.length) return `<div class="cirpag">${create}<section class="card cirbloque"><div class="vacio vlinea">${t("products.deposits.none")}</div></section></div>`;
+    return `<div class="cirpag">${create}
+    ${pending.length ? block2(t("products.deposits.pendingBlock"), pending) : ""}
+    ${block2(t("products.deposits.all", { count: formatNumber(list.length) }), list)}</div>`;
+  }
+  async function paintDeposits(openDeposit, create) {
+    if (!document.getElementById("cfgcuerpo")) return;
+    const list = await loadDeposits();
+    const box3 = document.getElementById("cfgcuerpo");
+    if (!box3 || currentScreen() !== SCREEN) return;
+    if (!list) {
+      box3.innerHTML = `<div class="vacio">${t("products.deposits.couldNotLoad")}</div>`;
+      return;
+    }
+    box3.innerHTML = pageHtml4(list);
+    const add = document.getElementById("depnuevo");
+    if (add) add.onclick = () => {
+      void create();
+    };
+    box3.querySelectorAll("[data-dcen]").forEach((button3) => {
+      button3.onclick = () => {
+        const item = list.find((entry2) => entry2.accountId === button3.dataset.dcen);
+        if (item) void openDeposit(item.accountId, item.name);
+      };
+    });
+  }
+
+  // src/app/core/plans.ts
+  var plans_exports = {};
+  __export(plans_exports, {
+    PLAN_EXTRAS: () => PLAN_EXTRAS2,
+    PLAN_SECTIONS: () => PLAN_SECTIONS,
+    currentPlanName: () => currentPlanName,
+    isDowngrade: () => isDowngrade,
+    minimumPlan: () => minimumPlan,
+    notificationTypesOfRole: () => notificationTypesOfRole,
+    planIncludes: () => planIncludes,
+    planIncludesSection: () => planIncludesSection,
+    planNotice: () => planNotice,
+    planOf: () => planOf,
+    planRank: () => planRank,
+    planRows: () => planRows
+  });
+  var PLAN_ORDER = ["campo", "comercial", "empresa", "medida"];
+  var DEFAULT_PLAN_INDEX = 3;
+  var PLAN_EXTRAS2 = { oportunidades: ["comercial", "empresa", "medida"], portal: ["empresa", "medida"] };
+  var PLAN_SECTIONS = { compras: ["empresa", "medida"], proveedores: ["empresa", "medida"] };
+  var planOf = (id) => {
+    const plans2 = coreLegacy.plans();
+    const plan2 = plans2.find((item) => item.id === id) ?? plans2[DEFAULT_PLAN_INDEX];
+    if (!plan2) throw new Error("The plans are not loaded");
+    return plan2;
+  };
+  var planIncludes = (module) => !(module in MODULE_AREA) || planOf(coreLegacy.currentPlan().plan).modulos.includes(module) || module === "facturacion" && coreLegacy.billingReadOnly();
+  var minimumPlan = (module) => coreLegacy.plans().find((plan2) => plan2.modulos.includes(module));
+  var planIncludesSection = (section) => !(section in PLAN_SECTIONS) || Boolean(PLAN_SECTIONS[section]?.includes(coreLegacy.currentPlan().plan));
+  var currentPlanName = () => {
+    try {
+      return planOf(coreLegacy.currentPlan().plan).nombre;
+    } catch {
+      return "";
+    }
+  };
+  var planRank = (id) => PLAN_ORDER.indexOf(id);
+  var isDowngrade = (from, to) => planRank(to.plan) < planRank(from.plan) || planRank(to.plan) === planRank(from.plan) && (Number(to.usuarios) < Number(from.usuarios) || from.pago === "anual" && to.pago === "mensual");
+  var notificationTypesOfRole = () => coreLegacy.notificationTypes().filter((type) => can(`aviso_${String(type[0])}`));
+  function planRows() {
+    const all = PLAN_ORDER, fromSales = PLAN_ORDER.slice(1), fromCompany = PLAN_ORDER.slice(2), custom = PLAN_ORDER.slice(3);
+    const words16 = { professionals: wordFor("medico", "p"), visits: wordFor("visita", "p"), customers: wordFor("paciente", "p"), visit: wordFor("visita", "s") };
+    const row3 = (key, plans2, detail = true) => plans2 ? [t(`core.planRows.${key}`, words16), detail ? t(`core.planRows.${key}Detail`, words16) : null, plans2] : [t(`core.planRows.${key}`, words16), null];
+    return [
+      row3("field", null),
+      row3("portfolio", all),
+      row3("agenda", all),
+      row3("routes", all),
+      row3("cycle", all),
+      row3("samples", all),
+      row3("quality", all),
+      row3("notifications", all),
+      row3("users", all),
+      row3("import", all),
+      row3("sale", null),
+      row3("orders", fromSales),
+      row3("webOrders", fromSales),
+      row3("opportunities", fromSales),
+      row3("coverage", fromSales),
+      row3("events", fromSales),
+      row3("products", fromSales),
+      row3("analytics", fromSales),
+      row3("commissions", fromSales),
+      row3("office", null),
+      row3("invoicing", fromCompany),
+      row3("purchases", fromCompany),
+      row3("deposit", fromCompany),
+      row3("surgeries", fromCompany),
+      row3("tenders", fromCompany),
+      row3("equipment", fromCompany),
+      row3("audit", fromCompany),
+      row3("service", null),
+      row3("migration", custom),
+      row3("support", custom, false)
+    ];
+  }
+  function noticeHtml(title2, plan2, canChange2) {
+    const current = planOf(coreLegacy.currentPlan().plan).nombre;
+    return `<div class="fh"><div><h2>${escapeHtml(title2)}</h2><div class="sm">${escapeHtml(t("core.plans.notInPlan", { plan: current }))}</div></div>
+    <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    <p>${t("core.plans.availableFrom", { plan: escapeHtml(plan2 ? plan2.nombre : t("core.plans.custom")) })}${plan2 ? ` (${coreLegacy.planPrice(plan2)})` : ""}.</p>
+    ${plan2 ? `<ul class="manlist">${plan2.ventajas.map((advantage) => `<li><span>✓</span><span>${escapeHtml(advantage)}</span></li>`).join("")}</ul>` : ""}
+    <div class="acts u-end"><button class="btn sec" data-cerrar>${t("core.plans.notNow")}</button>${canChange2 ? `<button class="btn" id="vplan">${t("core.plans.seePlans")}</button>` : ""}</div>`;
+  }
+  function showNotice(html) {
+    const body3 = document.getElementById("dbody"), dialog7 = document.getElementById("dlg");
+    if (!body3 || !dialog7) return;
+    body3.innerHTML = html;
+    dialog7.showModal();
+    const button3 = document.getElementById("vplan");
+    if (button3) button3.onclick = () => {
+      dialog7.close();
+      coreLegacy.openPlanSettings();
+    };
+  }
+  function planNotice(module) {
+    const sectionPlans = PLAN_SECTIONS[module];
+    if (sectionPlans) {
+      showNotice(noticeHtml(coreLegacy.sectionTitle(module) ?? module, planOf(sectionPlans[0] ?? ""), canManageOrganization()));
+      return;
+    }
+    const name = (document.querySelector(`nav.main [data-t="${module}"]`)?.textContent ?? module).replace("🔒", "").trim();
+    showNotice(noticeHtml(`🔒 ${name}`, minimumPlan(module), can("administrar")));
+  }
+
+  // src/app/legacy/settings1-bridge.ts
+  var settings1_bridge_exports = {};
+  __export(settings1_bridge_exports, {
+    settingsLegacy: () => settingsLegacy
+  });
+  var settingsLegacy = {
+    user: () => sessionStore.profile,
+    setPreferences: (preferences) => {
+      sessionStore.profile.preferencias = preferences;
+    },
+    place: (key) => sessionStore.profile.preferencias?.[key] ?? null,
+    changeNavigator: (name) => {
+      void maps_exports.changeNavigator(name);
+    },
+    revisitNotice: () => avisoRevisita(),
+    /** The legacy name answers whether it was saved (its declaration says void). */
+    saveRevisitNotice: (value10) => saveRevisitNotice(value10),
+    moduleIcon: (module) => ICO_MOD[module],
+    classifiers: () => settingsStore.catalogs,
+    setClassifiers: (list) => {
+      settingsStore.catalogs = list;
+    },
+    openClassifier: (id) => {
+      openClassifier(id);
+    },
+    reloadCatalogs: () => {
+      void loadCatalogs();
+    },
+    undoable: (entry2) => isUndoable(entry2),
+    undoPersonBox: (box3, options3) => {
+      cajaDeshacerPersona(box3, options3.userId, options3.from, options3.name, options3.then);
+    },
+    billingEventDetail: (detail) => eventDetail(detail),
+    fields: () => CAMPOS,
+    fieldTable: (area) => CAMPO_TABLA[area],
+    areaOfTable: (table) => Object.keys(CAMPO_TABLA).find((area) => CAMPO_TABLA[area] === table),
+    fieldInput: (field11, value10) => customFieldInput(field11, value10),
+    fieldText: (field11, value10) => fieldText(field11, value10),
+    testEnvironment: () => RPC_ORIG_FROM("entorno_pruebas"),
+    refreshReason: (reason) => MOTIVO_REFRESCO[reason],
+    edgeFunctions: () => db.functions,
+    resetTestData: () => {
+      void backToTestData();
+    },
+    clearLocalData: () => {
+      session_exports.clearLocalData();
+    },
+    showLoading: (element, text2) => {
+      showLoading(element, text2);
+    },
+    skeletonCard: (text2) => cardSkeleton(text2),
+    /** The range chosen in a period box mounted with mountPeriod (the legacy box keeps it in a property of the element). */
+    periodRange: (element) => {
+      const read3 = element ? Reflect.get(element, "__rango") : void 0;
+      return read3 ? read3() : { desde: null, hasta: null };
+    },
+    mountPeriod: (element, options3) => {
+      mountPeriod(element, [options3]);
+    },
+    modules: () => Object.keys(MODULO_AREA).filter((module) => permissions_exports.canUseModule(module))
+  };
+
+  // src/app/screens/settings/custom-fields/card.ts
+  var keyName = (key) => key.replace(/_/g, " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
+  var blockHtml2 = (cells) => `<div class="campospers"><h3>${t("settings.customFields.title")}</h3><div class="cpgrid">${cells}</div></div>`;
+  function knownHtml(definitions2, values2, keys) {
+    const ordered = [
+      ...definitions2.filter((field11) => keys.includes(field11.clave)),
+      ...keys.filter((key) => !definitions2.some((field11) => field11.clave === key)).map((key) => ({ clave: key, nombre: keyName(key) }))
+    ];
+    return blockHtml2(ordered.map((field11) => `<div><span class="sm">${escapeHtml(field11.nombre)}</span><b>${escapeHtml(settingsLegacy.fieldText(field11, values2[field11.clave]))}</b></div>`).join(""));
+  }
+  var rawText = (value10) => typeof value10 === "object" ? JSON.stringify(value10) : String(value10);
+  async function paintCustomFieldsBlock(table, id, container) {
+    if (!container || !id || container.querySelector(".campospers")) return;
+    const { data } = await legacyDb().from(table).select("clasificadores").eq("id", id).maybeSingle();
+    const values2 = data?.clasificadores ?? {}, keys = Object.keys(values2).filter((key) => values2[key] !== "" && values2[key] !== null && values2[key] !== void 0);
+    const area = settingsLegacy.areaOfTable(table), definitions2 = area ? settingsLegacy.fields()[area] ?? [] : [];
+    if (!keys.length || container.querySelector(".campospers")) return;
+    container.insertAdjacentHTML("beforeend", definitions2.length ? knownHtml(definitions2, values2, keys) : blockHtml2(keys.map((key) => `<div><span class="sm">${escapeHtml(keyName(key))}</span><b>${escapeHtml(rawText(values2[key]))}</b></div>`).join("")));
+  }
+  function bindCustomFieldFilters(zone, state2, onChange) {
+    zone.querySelectorAll("[data-fcp]").forEach((select) => {
+      select.onchange = () => {
+        const key = select.dataset.fcp ?? "";
+        if (!select.value) Reflect.deleteProperty(state2, key);
+        else state2[key] = select.dataset.fcpt === "si_no" ? select.value === "true" : select.value;
+        onChange();
+      };
+    });
+  }
+
+  // src/app/screens/settings/custom-fields/form.ts
+  var definitions = (area) => settingsLegacy.fields()[area] ?? [];
+  async function loadCustomFields() {
+    const fields = settingsLegacy.fields(), areas2 = Object.keys(fields);
+    const results = await Promise.all(areas2.map((area) => legacyDb().rpc("campos_de", { p_ambito: area })));
+    areas2.forEach((area, index) => {
+      const result = results[index];
+      if (result && !result.error) fields[area] = result.data ?? [];
+    });
+  }
+  function customFieldsHtml(area, values2) {
+    const list = definitions(area).filter((field11) => field11.en_ficha);
+    if (!list.length) return "";
+    return `<div class="cpersform" data-cpamb="${area}"><h3>${t("settings.customFields.title")}</h3><div class="g2">${list.map((field11) => `<div><label>${escapeHtml(field11.nombre)}${field11.obligatorio ? ' <span class="cpob">*</span>' : ""}</label>${settingsLegacy.fieldInput(field11, values2?.[field11.clave])}</div>`).join("")}</div></div>`;
+  }
+  function readCustomFields(root) {
+    const block4 = root?.querySelector(".cpersform");
+    if (!block4) return null;
+    const area = block4.dataset.cpamb ?? "", values2 = {}, missing2 = [];
+    block4.querySelectorAll("[data-cpk]:not([disabled])").forEach((input6) => {
+      const key = input6.dataset.cpk ?? "", field11 = definitions(area).find((item) => item.clave === key);
+      values2[key] = input6.value.trim();
+      if (field11?.obligatorio && !input6.value.trim()) missing2.push(field11.nombre);
+    });
+    return { amb: area, valores: values2, falta: missing2 };
+  }
+  var PROBLEMS = /* @__PURE__ */ new Map([
+    ["obligatorio", "settings.customFields.problems.obligatorio"],
+    ["numero", "settings.customFields.problems.numero"],
+    ["fecha", "settings.customFields.problems.fecha"],
+    ["lista", "settings.customFields.problems.lista"],
+    ["si_no", "settings.customFields.problems.siNo"],
+    ["solo_lectura", "settings.customFields.problems.soloLectura"],
+    ["desconocido", "settings.customFields.problems.desconocido"]
+  ]);
+  function failureText4(area, failure4) {
+    if (!failure4) return t("settings.customFields.couldNotSave");
+    const field11 = definitions(area).find((item) => item.clave === failure4.campo), problem = PROBLEMS.get(failure4.error);
+    return t("settings.customFields.check", { field: field11 ? field11.nombre : failure4.campo, problem: problem ? t(problem) : failure4.error });
+  }
+  async function saveCustomFields(read3, id) {
+    if (!read3 || !id || !Object.keys(read3.valores).length) return true;
+    const { data, error } = await legacyDb().rpc("guardar_campos", { p_ambito: read3.amb, p_id: id, p_valores: read3.valores });
+    if (!error && data?.ok) return true;
+    notices.toast(failureText4(read3.amb, (data?.errores ?? [])[0]), true);
+    return false;
+  }
+  async function insertCustomFields(root, area, id, before) {
+    if (!root || !definitions(area).some((field11) => field11.en_ficha) || root.querySelector(".cpersform")) return;
+    let values2 = {};
+    const table = settingsLegacy.fieldTable(area);
+    if (id && table) {
+      const { data } = await legacyDb().from(table).select("clasificadores").eq("id", id).maybeSingle();
+      values2 = data?.clasificadores ?? {};
+    }
+    if (root.querySelector(".cpersform") || !root.isConnected) return;
+    if (before?.isConnected) before.insertAdjacentHTML("beforebegin", customFieldsHtml(area, values2));
+    else root.insertAdjacentHTML("beforeend", customFieldsHtml(area, values2));
+  }
+
+  // src/app/core/mobile/gate.ts
+  var gate_exports = {};
+  __export(gate_exports, {
+    PHONE_QUERY: () => PHONE_QUERY,
+    backFromNotice: () => backFromNotice,
+    blockedOnPhone: () => blockedOnPhone,
+    isPhone: () => isPhone2,
+    levelNow: () => levelNow,
+    paintScreenNotice: () => paintScreenNotice,
+    readOnlyOnPhone: () => readOnlyOnPhone,
+    reopenOnWidthChange: () => reopenOnWidthChange,
+    settingsBlockedOnPhone: () => settingsBlockedOnPhone,
+    windowBlockedOnPhone: () => windowBlockedOnPhone
+  });
+
+  // src/app/core/mobile/levels.ts
+  var SCREEN_MOBILE = {
+    inicio: "full",
+    agenda: "full",
+    rutas: "full",
+    manual: "full",
+    informe: "full",
+    config: "full",
+    ciclo: "read",
+    cirugias: "essential",
+    directorio: "essential",
+    pacientes: "essential",
+    seguimiento: "essential",
+    eventos: "essential",
+    duplicados: "desktop",
+    // M7 B: Pedidos complete on the phone (bulk selection stays on the computer, M11 A)
+    ventas: "full",
+    oportunidades: "essential",
+    compras: "essential",
+    proveedores: "read",
+    concursos: "read",
+    parque: "essential",
+    productos: "read",
+    deposito: "essential",
+    facturacion: "essential",
+    // M10 A: only «Resumen», read only
+    analitica: "read",
+    // M4 A: the whole Panel delcos is «Solo ordenador»
+    delcos: "desktop"
+  };
+  var TAB_MOBILE = {
+    ciclo: { ciclo: "read", cobertura: "read", clasificar: "desktop", equipo: "read" },
+    eventos: { lista: "essential", transparencia: "desktop" },
+    concursos: { marcha: "read", contratos: "read", cerrados: "read" },
+    productos: { productos: "read", servicios: "read", stock: "essential" },
+    facturacion: { facturas: "essential", series: "desktop", empresa: "desktop", verifactu: "desktop", registro: "desktop" },
+    analitica: { resumen: "read", explorar: "desktop" }
+  };
+  var SETTINGS_MOBILE = {
+    datos: "full",
+    notif: "full",
+    rutas: "full",
+    "rutas.salida": "full",
+    "rutas.horario": "full",
+    "inicio.kpis": "essential",
+    // M9 A: see the team, a temporary password, resend the activation; new user, role, areas and impersonating on the computer
+    usuarios: "essential",
+    "o.plan": "read"
+  };
+  var WINDOW_MOBILE = {
+    productEditor: "desktop",
+    userEditor: "desktop",
+    rectifyInvoice: "desktop",
+    roleEditor: "desktop"
+  };
+  var DESKTOP_REASON = {
+    duplicados: "duplicates",
+    delcos: "platform",
+    "ciclo/clasificar": "classify",
+    "eventos/transparencia": "expenseReport",
+    "facturacion/registro": "invoiceLog",
+    "facturacion/series": "fiscal",
+    "facturacion/empresa": "fiscal",
+    "facturacion/verifactu": "verifactu",
+    "analitica/explorar": "explore",
+    importar: "import",
+    roles: "roles",
+    cartera: "portfolio",
+    comis: "commissions",
+    seguridad: "security",
+    "o.marca": "brand",
+    "o.textos": "texts",
+    "o.correo": "email",
+    "o.copias": "backups",
+    "o.pruebas": "internal",
+    "o.zona": "company",
+    "o.orgs": "platform",
+    "o.fiscal": "fiscal",
+    "o.series": "fiscal",
+    "o.vf": "verifactu",
+    "o.pdf": "pdf",
+    tpv: "cardPayment",
+    impuestos: "companyRules",
+    cat: "classifiers",
+    estados: "classifiers",
+    stock: "stores",
+    portal: "portal",
+    distribuidores: "distributors",
+    servicios: "companyRules",
+    contratos: "companyRules",
+    productEditor: "productEditor",
+    userEditor: "userEditor",
+    rectifyInvoice: "rectify",
+    roleEditor: "roles"
+  };
+  function mobileLevel(screen3, tab) {
+    const own = tab ? TAB_MOBILE[screen3]?.[tab] : void 0;
+    return own ?? SCREEN_MOBILE[screen3] ?? "full";
+  }
+  function settingsLevel(key) {
+    return SETTINGS_MOBILE[key] ?? SETTINGS_MOBILE[key.split(".")[0] ?? ""] ?? "desktop";
+  }
+  function desktopReason(place3) {
+    return DESKTOP_REASON[place3] ?? DESKTOP_REASON[place3.split("/")[0] ?? ""] ?? DESKTOP_REASON[place3.split(".")[0] ?? ""] ?? "generic";
+  }
+
+  // src/app/components/desktop-notice.ts
+  var MONITOR = '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>';
+  var desktopReasonText = (place3) => t(`mobile.desktopOnly.reasons.${desktopReason(place3)}`);
+  function desktopNoticeHtml(place3, goToLabel) {
+    const goTo2 = goToLabel ? `<button type="button" class="lnk" data-desktop-go>${escapeHtml(t("mobile.desktopOnly.goTo", { place: goToLabel }))}</button>` : "";
+    return `<div class="aviso-ordenador" role="status" data-desktop-notice="${escapeHtml(place3)}">
+    <span class="avoico">${MONITOR}</span>
+    <h2 class="avotit">${t("mobile.desktopOnly.title")}</h2>
+    <p class="avomot">${escapeHtml(desktopReasonText(place3))}</p>
+    <div class="avoacts"><button type="button" class="btn sec" data-desktop-back><b aria-hidden="true">‹</b> ${t("mobile.desktopOnly.back")}</button>${goTo2}</div></div>`;
+  }
+  function paintDesktopNotice(box3, options3) {
+    box3.innerHTML = desktopNoticeHtml(options3.place, options3.goTo?.label);
+    const back = box3.querySelector("[data-desktop-back]");
+    if (back) back.onclick = () => {
+      options3.back();
+    };
+    const go = box3.querySelector("[data-desktop-go]");
+    if (go && options3.goTo) go.onclick = options3.goTo.open;
+  }
+
+  // src/app/core/mobile/gate.ts
+  var PHONE_QUERY = "(max-width: 760px)";
+  var isPhone2 = () => matchMedia(PHONE_QUERY).matches;
+  var levelNow = (screen3, tab) => isPhone2() ? mobileLevel(screen3, tab) : "full";
+  var blockedOnPhone = (screen3, tab) => levelNow(screen3, tab) === "desktop";
+  var settingsBlockedOnPhone = (key) => isPhone2() && settingsLevel(key) === "desktop";
+  function backFromNotice(from) {
+    const previous = navigationStore.previousScreen;
+    const target = !navigationStore.platformMode && previous && previous !== from && !blockedOnPhone(previous) ? previous : navigationStore.platformMode ? "perfil" : "inicio";
+    navigate(target);
+    const toIndex = () => {
+      if (navigationStore.screen === "config" && document.querySelector("#cfgcuerpo > .aviso-ordenador")) document.getElementById("cfuvolver")?.click();
+    };
+    toIndex();
+    setTimeout(toIndex, INDEX_CHECK_MS);
+  }
+  var INDEX_CHECK_MS = 400;
+  function paintScreenNotice(box3, place3, goTo2) {
+    const screen3 = place3.split("/")[0] ?? place3;
+    paintDesktopNotice(box3, { place: place3, back: () => {
+      backFromNotice(screen3);
+    }, ...goTo2 ? { goTo: goTo2 } : {} });
+  }
+  function windowBlockedOnPhone(key) {
+    if (!isPhone2() || WINDOW_MOBILE[key] !== "desktop") return false;
+    const sheet = document.getElementById("mini");
+    if (!sheet) return true;
+    sheet.innerHTML = '<div class="fbox"></div>';
+    const box3 = sheet.querySelector(".fbox");
+    if (box3) paintDesktopNotice(box3, { place: key, back: () => {
+      sheet.close();
+    } });
+    sheet.onclick = (event) => {
+      if (event.target === sheet) sheet.close();
+    };
+    sheet.oncancel = null;
+    if (!sheet.open) sheet.showModal();
+    return true;
+  }
+  function reopenOnWidthChange() {
+    matchMedia(PHONE_QUERY).addEventListener("change", () => {
+      const section = document.getElementById(`v-${navigationStore.screen}`);
+      const notice2 = section?.querySelector(".aviso-ordenador");
+      if (notice2 || blockedOnPhone(navigationStore.screen)) navigate(navigationStore.screen);
+    });
+  }
+  function readOnlyOnPhone(container, screen3) {
+    if (levelNow(screen3) !== "read") return;
+    container.querySelectorAll("input, select, textarea").forEach((field11) => {
+      field11.disabled = true;
+    });
+  }
+
+  // src/app/screens/products/editor/blocks.ts
+  var PRODUCT_STATES = ["Activo", "En pausa", "Descatalogado"];
+  var stateHtml2 = (state2) => `<div class="blk" id="prestado"><h3>${t("productsMore.state.title")}</h3><div class="segs">${PRODUCT_STATES.map((item) => `<button type="button" data-pest="${item}" class="${item === state2 ? "on" : ""}">${item}</button>`).join("")}</div>
+      <div class="sm u-mt-6">${t("productsMore.state.hint")}</div></div>`;
+  var PERIOD_WORDS = { anio: "productsMore.samples.periodYear", trimestre: "productsMore.samples.periodQuarter", mes: "productsMore.samples.periodMonth" };
+  var periodWord = (period) => t(PERIOD_WORDS[period]);
+  var samplesTitle = () => deliveryRule().name ?? t("productsMore.samples.title");
+  var samplesForNewHtml = () => deliveryRule().active ? `<div class="blk" id="prmuestra"><h3>${escapeHtml(samplesTitle())}</h3><p class="sm">${t("productsMore.samples.saveFirst")}</p></div>` : "";
+  function samplesTexts() {
+    const rule = deliveryRule(), professional = term("medico");
+    if (rule.name === null) return { regulated: t("productsMore.samples.regulated"), max: t("productsMore.samples.maxPerYear"), legal: t("productsMore.samples.law") };
+    return { regulated: t("productsMore.samples.regulatedOwn", { name: rule.name, professional }), max: t("productsMore.samples.maxPer", { professional, period: periodWord(rule.period) }), legal: rule.legal ?? "" };
+  }
+  function samplesHtml3(extras) {
+    const rule = deliveryRule(), texts3 = samplesTexts(), cap = rule.cap;
+    if (!rule.active) return "";
+    return `<div class="blk" id="prmuestra"><h3>${escapeHtml(samplesTitle())}</h3>
+      <label class="opt"><input type="checkbox" id="prmreg" ${extras.muestra_regulada ? "checked" : ""}> ${escapeHtml(texts3.regulated)}</label>
+      <div class="g2 ${extras.muestra_regulada ? "" : "hide"}" id="prmdat">
+        <div><label for="prmdesde">${t("productsMore.samples.authorised")}</label><input id="prmdesde" type="date" value="${escapeHtml(extras.muestra_desde ?? "")}"></div>
+        <div><label for="prmmax">${escapeHtml(texts3.max)}</label><input id="prmmax" type="number" min="1" max="${cap}" step="1" value="${Math.min(Number(extras.muestra_max) || cap, cap)}"></div></div>
+      ${texts3.legal ? `<p class="sm">${escapeHtml(texts3.legal)}</p>` : ""}</div>`;
+  }
+  var promotionHtml = (extras) => `<div class="blk" id="prpromo"><h3>${t("productsMore.promotion.title")}</h3>
+      <label class="opt"><input type="checkbox" id="prpromoc" ${extras.promocionado ? "checked" : ""}> ${t("productsMore.promotion.promoted", { visits: term("visita", { number: "p" }) })}</label>
+      <p class="sm">${t("productsMore.promotion.hint", { visit: term("visita") })}</p></div>`;
+  var equipmentHtml = (extras) => `<div class="blk" id="prequipo"><h3>${t("productsMore.equipment.title")}</h3>
+      <label class="opt"><input type="checkbox" id="preqc" ${extras.es_equipo ? "checked" : ""}> ${t("productsMore.equipment.isEquipment")}</label>
+      <div class="${extras.es_equipo ? "" : "hide"}" id="preqd"><label for="preqr">${t("productsMore.equipment.review")}</label><input id="preqr" type="number" min="0" max="120" step="1" value="${Number(extras.revision_meses) || 0}" style="max-width:140px"></div>
+      <p class="sm">${t("productsMore.equipment.hint")}</p></div>`;
+  var packsHtml = (extras) => `<div class="blk" id="prpacks"><h3>${t("productsMore.packs.title")}</h3>
+      <p class="sm">${t("productsMore.packs.hint")}</p>
+      <div id="prpkl"></div><button type="button" class="btn sec chico" id="prpkmas">${t("productsMore.packs.add")}</button>
+      <div class="g2 u-mt-10"><div><label for="prpkpvp">${t("productsMore.packs.retailPrice")}</label><input id="prpkpvp" type="number" step="0.01" value="${extras.pvp_recomendado !== null && extras.pvp_recomendado !== void 0 ? Number(extras.pvp_recomendado) : ""}" placeholder="${t("productsMore.packs.notSet")}"></div></div>
+      <span class="pcerr" id="prpkerr" hidden></span>
+      <div class="prpkacts"><button type="button" class="btn sec" id="prpkok">${t("productsMore.packs.save")}</button></div></div>`;
+  var materialHtml = () => `<div class="blk" id="prmat"><h3>${t("productsMore.material.title")}</h3>
+      <p class="sm">${escapeHtml(t("productsMore.material.hint", { aVisit: term("visita", { article: "una" }) }))}</p>
+      <div class="prmatl" id="prmatl"></div>
+      <label class="btn sec prmatadd">${t("productsMore.material.add")}<input type="file" id="prmatf" accept="image/*,application/pdf" data-fp="1" multiple hidden></label></div>`;
+
+  // src/app/screens/products/editor/blocks-bind.ts
+  var MAX_REVIEW_MONTHS = 120;
+  var byId7 = (id) => document.getElementById(id);
+  var input3 = (id) => byId7(id);
+  var orNull = (value10) => value10 === void 0 || value10 === "" ? null : value10;
+  var update = (id, values2) => legacyDb().from("productos").update(values2).eq("id", id);
+  function bindState(body3, product) {
+    body3.querySelectorAll("[data-pest]").forEach((button3) => {
+      button3.onclick = async () => {
+        const state2 = button3.dataset.pest ?? "";
+        const { data, error } = await billing2Legacy.rawRpc("estado_producto", { p_id: product.id, p_estado: state2 });
+        if (error || !data?.ok) {
+          notices.toast(t("productsMore.state.couldNotChange"), true);
+          return;
+        }
+        billing2Legacy.productStates()[product.id] = state2;
+        const listed = billing2Legacy.products().find((item) => item.id === product.id);
+        if (listed) listed.estado = state2;
+        body3.querySelectorAll("[data-pest]").forEach((other) => {
+          other.classList.toggle("on", other === button3);
+        });
+        notices.toast(t("productsMore.state.changed", { state: state2 }));
+      };
+    });
+  }
+  function bindSamples2(productId) {
+    const save26 = async () => {
+      const regulated = Boolean(input3("prmreg")?.checked), cap = deliveryRule().cap, max = Math.min(cap, Math.max(1, Number(input3("prmmax")?.value) || cap));
+      byId7("prmdat")?.classList.toggle("hide", !regulated);
+      const { error } = await update(productId, { muestra_regulada: regulated, muestra_desde: orNull(input3("prmdesde")?.value), muestra_max: max });
+      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : t("productsMore.samples.saved"), Boolean(error));
+    };
+    ["prmreg", "prmdesde", "prmmax"].forEach((id) => {
+      byId7(id)?.addEventListener("change", () => {
+        void save26();
+      });
+    });
+  }
+  function bindPromotion(productId) {
+    const box3 = input3("prpromoc");
+    if (!box3) return;
+    box3.onchange = async () => {
+      const { error } = await update(productId, { promocionado: box3.checked });
+      const done = box3.checked ? t("productsMore.promotion.on", { visits: term("visita", { number: "p" }) }) : t("productsMore.promotion.off");
+      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : done, Boolean(error));
+      if (!error) billing2Legacy.setPromoted(null);
+    };
+  }
+  function bindEquipment(productId) {
+    const save26 = async () => {
+      const equipment2 = Boolean(input3("preqc")?.checked);
+      byId7("preqd")?.classList.toggle("hide", !equipment2);
+      const months2 = Math.min(MAX_REVIEW_MONTHS, Math.max(0, Math.floor(Number(input3("preqr")?.value) || 0)));
+      const { error } = await update(productId, { es_equipo: equipment2, revision_meses: months2 });
+      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : t("productsMore.equipment.saved"), Boolean(error));
+    };
+    const box3 = input3("preqc"), months = input3("preqr");
+    if (box3) box3.onchange = () => {
+      void save26();
+    };
+    if (months) months.onchange = () => {
+      void save26();
+    };
+  }
+
+  // src/app/screens/products/editor/materials.ts
+  var PDF = "application/pdf";
+  var listOf = async (productId) => (await loadMaterials(true)).filter((item) => item.producto_id === productId);
+  var rowHtml10 = (item) => `<div class="prmati"><span>${item.tipo === PDF ? t("productsMore.material.pdf") : t("productsMore.material.image")} · ${escapeHtml(item.nombre)}</span><label class="prmatpp"><input type="checkbox" data-prmatpp="${item.id}" ${item.para_portal ? "checked" : ""}> ${t("productsMore.material.forCentres")}</label>
+          <button type="button" class="lnk" data-prmatver="${item.id}">${t("productsMore.material.see")}</button><button type="button" class="lnk" data-prmatdel="${item.id}" aria-label="${t("productsMore.material.removeLabel", { name: escapeHtml(item.nombre) })}">${t("productsMore.material.remove")}</button></div>`;
+  async function remove2(product, item) {
+    if (!await notices.confirm(t("productsMore.material.removeText", { name: item.nombre }), { titulo: t("productsMore.material.removeTitle"), ok: t("productsMore.material.remove"), peligro: true })) return;
+    const { error } = await legacyDb().from("producto_materiales").delete().eq("id", item.id);
+    if (error) {
+      notices.toast(t("productsMore.material.couldNotRemove", { error: errorMessage(error) }), true);
+      return;
+    }
+    billing2Legacy.presentationFiles().delete(item.id);
+    paintMaterials(product, await listOf(product.id));
+    notices.toast(t("productsMore.material.removed"));
+  }
+  function paintMaterials(product, list) {
+    const box3 = document.getElementById("prmatl");
+    if (!box3) return;
+    box3.innerHTML = list.length ? list.map(rowHtml10).join("") : `<p class="sm">${t("productsMore.material.none")}</p>`;
+    box3.querySelectorAll("[data-prmatver]").forEach((button3) => {
+      button3.onclick = async () => {
+        await loadMaterials();
+        presentOnly({ id: product.id, nombre: product.nombre ?? null }, button3.dataset.prmatver ?? "");
+      };
+    });
+    box3.querySelectorAll("[data-prmatdel]").forEach((button3) => {
+      button3.onclick = () => {
+        const item = list.find((other) => other.id === button3.dataset.prmatdel);
+        if (item) void remove2(product, item);
+      };
+    });
+  }
+  async function uploadOf(file) {
+    if (file.type === PDF) {
+      if (file.size > billing2Legacy.presentationMax()) {
+        notices.toast(t("productsMore.material.tooBig", { name: file.name }), true);
+        return null;
+      }
+      return { nombre: file.name, tipo: file.type, tamano: file.size, datos: await toBase64(file) };
+    }
+    if (file.type.startsWith("image/")) return readReceipt(file);
+    notices.toast(t("productsMore.material.notAllowed", { name: file.name }), true);
+    return null;
+  }
+  async function addFiles(product, files, start3) {
+    let added = 0, order = start3;
+    for (const file of files) {
+      const upload = await uploadOf(file);
+      if (!upload) continue;
+      const { error } = await legacyDb().from("producto_materiales").insert({ producto_id: product.id, nombre: upload.nombre, tipo: upload.tipo, tamano: upload.tamano, datos: upload.datos, orden: order++ });
+      if (error) {
+        notices.toast(t("productsMore.material.couldNotUpload", { name: file.name, error: errorMessage(error) }), true);
+        continue;
+      }
+      added++;
+    }
+    if (added) notices.toast(added === 1 ? t("productsMore.material.oneAdded") : t("productsMore.material.added", { count: added }));
+    if (document.getElementById("prmatl")) paintMaterials(product, await listOf(product.id));
+  }
+  function bindMaterials(product, list) {
+    paintMaterials(product, list);
+    const picker = document.getElementById("prmatf");
+    if (!picker) return;
+    picker.onchange = () => {
+      const files = [...picker.files ?? []];
+      picker.value = "";
+      void addFiles(product, files, list.length);
+    };
+  }
+
+  // src/app/screens/products/editor/packs.ts
+  var byId8 = (id) => document.getElementById(id);
+  function read() {
+    return [...byId8("prpkl")?.querySelectorAll(".prpkf") ?? []].map((row3) => ({
+      compra: row3.querySelector("[data-pkc]")?.value ?? "",
+      regalo: row3.querySelector("[data-pkg]")?.value ?? ""
+    }));
+  }
+  function problemOf(packs, price) {
+    const bad = packs.some((pack) => !Number.isInteger(pack.compra) || pack.compra < 1 || !Number.isInteger(pack.regalo) || pack.regalo < 0);
+    if (bad) return t("productsMore.packs.badPack");
+    if (packs.some((pack, index) => packs.findIndex((other) => other.compra === pack.compra && other.regalo === pack.regalo) !== index)) return t("productsMore.packs.repeated");
+    return price !== null && !(price >= 0) ? t("productsMore.packs.badPrice") : "";
+  }
+  function bindPacks(productId, extras) {
+    let packs = (Array.isArray(extras.packs) ? extras.packs : []).map((pack) => ({ compra: Number(pack.compra) || 0, regalo: Number(pack.regalo) || 0 }));
+    const paint10 = () => {
+      const list = byId8("prpkl");
+      if (!list) return;
+      list.innerHTML = packs.length ? packs.map((pack, index) => `<div class="prpkf"><label>${t("productsMore.packs.buy")} <input type="number" step="1" data-pkc value="${pack.compra || ""}"></label>
+          <label>${t("productsMore.packs.free")} <input type="number" step="1" data-pkg value="${pack.regalo || 0}"></label><button type="button" class="pmhx" data-pkx="${index}" aria-label="${t("productsMore.packs.removePack")}">✕</button></div>`).join("") : `<p class="sm">${t("productsMore.packs.none")}</p>`;
+      list.querySelectorAll("[data-pkx]").forEach((button3) => {
+        button3.onclick = () => {
+          packs = read();
+          packs.splice(Number(button3.dataset.pkx), 1);
+          paint10();
+        };
+      });
+    };
+    paint10();
+    const add = byId8("prpkmas");
+    if (add) add.onclick = () => {
+      packs = read();
+      packs.push({ compra: "", regalo: 0 });
+      paint10();
+    };
+    const ok = byId8("prpkok");
+    if (ok) ok.onclick = async () => {
+      const list = read().map((pack) => ({ compra: Number(pack.compra), regalo: Number(pack.regalo || 0) })), error = byId8("prpkerr");
+      const priceText = byId8("prpkpvp")?.value ?? "", price = priceText === "" ? null : Number(priceText);
+      const problem = problemOf(list, price);
+      if (error) {
+        error.hidden = !problem;
+        error.textContent = problem;
+      }
+      if (problem) return;
+      ok.disabled = true;
+      const { error: failed5 } = await legacyDb().from("productos").update({ packs: list.length ? list.sort((first, second) => first.compra - second.compra) : null, pvp_recomendado: price }).eq("id", productId);
+      ok.disabled = false;
+      if (failed5) {
+        notices.toast(t("productsMore.packs.couldNotSave", { error: errorMessage(failed5) }), true);
+        return;
+      }
+      packs = list;
+      paint10();
+      notices.toast(list.length ? t("productsMore.packs.saved", { count: formatNumber(list.length) }) : t("productsMore.packs.noPacks"));
+    };
+  }
+
+  // src/app/screens/products/editor/remove.ts
+  function failureText5(error, result) {
+    if (result?.error === "stock") return t("productsMore.remove.stock", { units: formatNumber(result.unidades) });
+    if (result?.error === "permiso") return t("productsMore.remove.noPermission");
+    return t("productsMore.remove.couldNotRemove", { error: error?.message ?? result?.error ?? "" });
+  }
+  function doneText(result) {
+    const detail = result.detalle ?? {};
+    if (result.modo === "borrado") return Number(detail.unidades) ? t("productsMore.remove.removedWithStock", { units: formatNumber(detail.unidades) }) : t("productsMore.remove.removed");
+    const uses = billing2Legacy.productUses();
+    return t("productsMore.remove.kept", { uses: Object.entries(detail).map(([key, count4]) => `${formatNumber(count4)} ${uses[key] ?? key}`).join(", ") });
+  }
+  async function remove3(product) {
+    if (!await notices.confirm(t("productsMore.remove.text"), { titulo: t("productsMore.remove.title", { name: product.nombre ?? "" }), ok: t("productsMore.remove.ok"), peligro: true })) return;
+    const { data: result, error } = await legacyDb().rpc("eliminar_producto", { p_id: product.id });
+    if (error || !result?.ok) {
+      notices.toast(failureText5(error, result), true);
+      return;
+    }
+    const box3 = document.getElementById("dlg");
+    if (box3?.open) box3.close();
+    notices.toast(doneText(result));
+    billing2Legacy.refreshProducts();
+  }
+  function addRemoveButton(product) {
+    const save26 = document.getElementById("prok"), row3 = save26?.closest(".acts");
+    if (!row3 || document.getElementById("prelim")) return;
+    row3.insertAdjacentHTML("afterbegin", `<button type="button" class="btn sec dang prelimb" id="prelim">${t("productsMore.remove.button")}</button>`);
+    const button3 = document.getElementById("prelim");
+    if (button3) button3.onclick = () => {
+      void remove3(product);
+    };
+  }
+
+  // src/app/screens/products/editor/form.ts
+  var field3 = (id) => document.getElementById(id);
+  var valueOf6 = (id) => field3(id)?.value ?? "";
+  function bindPrices2() {
+    const vat = () => (Number(valueOf6("priva")) || 0) / 100, net = field3("prpr"), gross = field3("prpvp"), rate = field3("priva");
+    if (net && gross) net.oninput = () => {
+      gross.value = net.value === "" ? "" : String(round2(Number(net.value) * (1 + vat())));
+    };
+    if (net && gross) gross.oninput = () => {
+      net.value = gross.value === "" ? "" : String(Number((Number(gross.value) / (1 + vat())).toFixed(4)));
+    };
+    if (net && gross && rate) rate.oninput = () => {
+      if (net.value !== "") gross.value = String(round2(Number(net.value) * (1 + vat())));
+    };
+  }
+  function bindPhoto() {
+    const input6 = field3("prfoto"), preview3 = document.getElementById("prfprev");
+    if (!input6 || !preview3) return;
+    input6.onchange = () => {
+      const file = input6.files?.[0];
+      if (!file) return;
+      preview3.style.backgroundImage = `url('${URL.createObjectURL(file)}')`;
+      preview3.textContent = "";
+    };
+  }
+  async function uploadPhoto() {
+    const file = field3("prfoto")?.files?.[0];
+    if (!file) return void 0;
+    const storage = legacyDb().storage, path = `p-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "")}`;
+    const { error } = await storage.from("productos").upload(path, file, { upsert: true });
+    if (error) {
+      notices.toast(t("productsMore.editor.photoFailed", { error: error.message ?? "" }), true);
+      return void 0;
+    }
+    return storage.from("productos").getPublicUrl(path).data.publicUrl;
+  }
+  function payload7(product, photo) {
+    const active2 = field3("pract");
+    return {
+      id: product.id ?? null,
+      nombre: valueOf6("prn").trim(),
+      presentacion: valueOf6("prp").trim(),
+      precio: valueOf6("prpr"),
+      iva: valueOf6("priva"),
+      referencia: valueOf6("prref").trim(),
+      codigo_barras: valueOf6("prcb").trim(),
+      unidades_envase: valueOf6("prue"),
+      coste: valueOf6("prco"),
+      ...photo ? { foto_url: photo } : {},
+      ...active2 ? { activo: active2.checked } : {}
+    };
+  }
+  function checked(body3) {
+    if (!valueOf6("prn").trim()) {
+      notices.toast(t("productsMore.editor.writeName"), true);
+      return false;
+    }
+    const fields = readCustomFields(body3);
+    if (fields?.falta.length) {
+      notices.toast(t("productsMore.editor.fillField", { field: fields.falta[0] ?? "" }), true);
+      return false;
+    }
+    return fields;
+  }
+  async function store(product, button3) {
+    button3.disabled = true;
+    button3.textContent = t("productsMore.editor.saving");
+    const photo = await uploadPhoto();
+    const { data: result, error } = await legacyDb().rpc("guardar_producto", { p: payload7(product, photo) });
+    button3.disabled = false;
+    button3.textContent = t(product.id ? "productsMore.editor.save" : "productsMore.editor.create");
+    if (!error && result?.ok !== false) return result ?? {};
+    notices.toast(t("productsMore.editor.couldNotSave", { error: errorMessage(error) || (result?.error ?? "") }), true);
+    return null;
+  }
+  async function save10(body3, product, button3, after) {
+    const fields = checked(body3);
+    if (fields === false) return;
+    const result = await store(product, button3);
+    if (!result) return;
+    if (fields && !await saveCustomFields(fields, result.id ?? product.id)) return;
+    document.getElementById("dlg")?.close();
+    notices.toast(t(product.id ? "productsMore.editor.saved" : "productsMore.editor.created"));
+    await billing2Legacy.loadProducts();
+    after();
+  }
+  function bindForm(body3, product, after) {
+    bindPrices2();
+    bindPhoto();
+    const ok = document.getElementById("prok");
+    if (ok) ok.onclick = () => {
+      void save10(body3, product, ok, after);
+    };
+  }
+
+  // src/app/screens/products/editor/editor.ts
+  var EXTRAS = "muestra_regulada,muestra_desde,muestra_max,promocionado,es_equipo,revision_meses,packs,pvp_recomendado";
+  var disabled = (admin) => admin ? "" : "disabled";
+  function headerHtml2(product, admin) {
+    const photo = product.foto_url ?? "";
+    return `<div class="fh"><div><h2>${product.id ? escapeHtml(product.nombre) : t("productsMore.editor.newTitle")}</h2>
+      <div class="sm">${t(admin ? "productsMore.editor.hintAdmin" : "productsMore.editor.hintOthers")}</div></div>
+      <button class="x" data-cerrar aria-label="${t("productsMore.editor.close")}">✕</button></div>
+    <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+      <span class="pfoto" id="prfprev" style="width:72px;height:72px;${photo ? `background-image:url('${escapeHtml(photo)}')` : ""}">${photo ? "" : "◧"}</span>
+      ${admin ? `<div class="u-flex-1"><label for="prfoto" class="u-mt-0">${t("productsMore.editor.photo")}</label><input id="prfoto" type="file" accept="image/*"></div>` : ""}</div>`;
+  }
+  function pricesHtml(product, off) {
+    const price = product.precio ?? null, vat = product.iva ?? defaultVat("productos");
+    const net = price === null ? "" : String(Number(Number(price).toFixed(4))), gross = price === null ? "" : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
+    return `<div class="pvp">
+      <div><label for="prpr">${t("productsMore.editor.priceWithoutVat")}</label><input id="prpr" type="number" step="0.01" min="0" value="${net}" ${off}></div>
+      <div><label for="priva">${t("productsMore.editor.vat")}</label><input id="priva" type="number" step="1" min="0" max="${highestVat()}" value="${vat}" ${off}></div>
+      <div><label for="prpvp">${t("productsMore.editor.priceWithVat")}</label><input id="prpvp" type="number" step="0.01" min="0" value="${gross}" ${off}></div></div>`;
+  }
+  function formHtml3(product, admin) {
+    const off = disabled(admin);
+    return `${headerHtml2(product, admin)}
+    <div class="g2">
+      <div><label for="prn">${t("productsMore.editor.name")}</label><input id="prn" value="${escapeHtml(product.nombre ?? "")}" ${off}></div>
+      <div><label for="prp">${t("productsMore.editor.presentation")}</label><input id="prp" value="${escapeHtml(product.presentacion ?? "")}" placeholder="${t("productsMore.editor.presentationPlaceholder")}" ${off}></div></div>
+    ${pricesHtml(product, off)}
+    <div class="g2">
+      <div><label for="prref">${t("productsMore.editor.reference")}</label><input id="prref" value="${escapeHtml(product.referencia ?? "")}" ${off}></div>
+      <div><label for="prcb">${t("productsMore.editor.barcode")}</label><input id="prcb" value="${escapeHtml(product.codigo_barras ?? "")}" ${off}></div></div>
+    <div class="g2">
+      <div><label for="prue">${t("productsMore.editor.unitsPerPack")}</label><input id="prue" type="number" min="1" value="${Number(product.unidades_envase) || 1}" ${off}></div>
+      <div><label for="prco">${t("productsMore.editor.cost")}</label><input id="prco" type="number" step="0.01" min="0" value="${product.coste ?? ""}" ${off}></div></div>
+    ${admin && product.id ? `<label class="opt u-mt-12"><input type="checkbox" id="pract" ${product.activo ? "checked" : ""}> ${t("productsMore.editor.active")}</label>` : ""}`;
+  }
+  var actionsHtml2 = (product, admin) => `<div class="acts u-end">
+      <button class="btn sec" data-cerrar>${t(admin ? "productsMore.editor.cancel" : "productsMore.editor.close")}</button>
+      ${admin ? `<button class="btn" id="prok">${t(product.id ? "productsMore.editor.save" : "productsMore.editor.create")}</button>` : ""}</div>`;
+  function blocksHtml(product, loaded) {
+    if (!product.id) return loaded.admin ? samplesForNewHtml() : "";
+    const state2 = billing2Legacy.productStates()[product.id] ?? product.estado ?? "Activo";
+    if (!loaded.admin) return stateHtml2(state2);
+    return [
+      stateHtml2(state2),
+      samplesHtml3(loaded.extras),
+      loaded.promotion ? promotionHtml(loaded.extras) : "",
+      loaded.equipment ? equipmentHtml(loaded.extras) : "",
+      packsHtml(loaded.extras),
+      materialHtml()
+    ].join("");
+  }
+  async function load2(product) {
+    const admin = can("administrar"), promotion = planIncludesSection("cobertura"), equipment2 = planIncludesSection("parque");
+    if (!admin || !product.id) return { admin, extras: {}, materials: [], promotion, equipment: equipment2 };
+    const [{ data }, all] = await Promise.all([legacyDb().from("productos").select(EXTRAS).eq("id", product.id).maybeSingle(), loadMaterials(true)]);
+    return { admin, extras: data ?? {}, materials: all.filter((item) => item.producto_id === product.id), promotion, equipment: equipment2 };
+  }
+  function bindBlocks(body3, product, loaded) {
+    bindState(body3, product);
+    if (!loaded.admin) return;
+    bindSamples2(product.id);
+    if (loaded.promotion) bindPromotion(product.id);
+    if (loaded.equipment) bindEquipment(product.id);
+    bindPacks(product.id, loaded.extras);
+    bindMaterials(product, loaded.materials);
+    if (canDeleteProduct()) addRemoveButton(product);
+  }
+  async function editProduct(given) {
+    if (windowBlockedOnPhone("productEditor")) return;
+    const product = given ?? { iva: defaultVat("productos"), activo: true, unidades_envase: 1 };
+    const loaded = await load2(product), body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = formHtml3(product, loaded.admin) + blocksHtml(product, loaded) + actionsHtml2(product, loaded.admin);
+    if (loaded.admin) await insertCustomFields(body3, "producto", product.id ?? null, body3.querySelector(".blk") ?? body3.querySelector(".acts:last-of-type"));
+    if (product.id) await paintCustomFieldsBlock("productos", product.id, body3).catch(() => void 0);
+    if (!box3.open) box3.showModal();
+    if (loaded.admin) bindForm(body3, product, () => {
+      if (currentScreen() === "productos") void paintProducts();
+    });
+    if (product.id) bindBlocks(body3, { ...product, id: product.id }, loaded);
+  }
+
+  // src/app/screens/products/editor/visit-material.ts
+  var MATERIAL_ROLE = "material_visita";
+  var NUMBER_KIND = "numero";
+  var UNITS_LABEL = "Unidades";
+  var DISCONTINUED = "Descatalogado";
+  var byId9 = (id) => document.getElementById(id);
+  var words6 = () => ({
+    visit: term("visita"),
+    aVisit: term("visita", { article: "un" }),
+    theVisit: term("visita", { article: "el" }),
+    theVisits: term("visita", { number: "p", article: "el" }),
+    ofProfessional: term("medico", { article: "del" }),
+    professional: term("medico")
+  });
+  function samplesHtml4(samples) {
+    const products3 = billing2Legacy.products().filter((item) => item.tipo !== "servicio");
+    return `<div class="card cfgpanel"><h2>${t("productsMore.visitMaterial.samplesKind")}</h2>
+      <div class="g2"><div><label for="muprod">${t("productsMore.visitMaterial.sampleProduct")}</label><select id="muprod"><option value="">${t("productsMore.visitMaterial.none")}</option>${products3.map((item) => `<option value="${item.id}" ${item.id === samples.producto_id ? "selected" : ""}>${escapeHtml(item.nombre)}</option>`).join("")}</select></div><div></div></div>
+      <label class="vfswitch u-mt-10"><input type="checkbox" id="murest" ${samples.restar_stock ? "checked" : ""}><span class="sw"></span>
+        <span><b>${t("productsMore.visitMaterial.discount")}</b><br><span class="sm">${t("productsMore.visitMaterial.discountText", words6())}</span></span></label>
+      <div class="acts u-end"><button class="btn" id="muok">${t("productsMore.visitMaterial.save")}</button></div></div>`;
+  }
+  var valueRow = (value10) => `<div class="matfila ${value10.activo ? "" : "off"}"><b>${escapeHtml(value10.valor)}</b><span class="sm">${t(value10.dato_tipo === NUMBER_KIND ? "productsMore.visitMaterial.asksQuantity" : "productsMore.visitMaterial.onlyMarked")}</span>
+        <label class="vfswitch mini"><input type="checkbox" data-mact="${value10.id}" ${value10.activo ? "checked" : ""}><span class="sw"></span><span class="sm">${t(value10.activo ? "productsMore.visitMaterial.active" : "productsMore.visitMaterial.hidden")}</span></label></div>`;
+  function pageHtml5(samples, values2, canAdd) {
+    return `
+    <div class="card cfgpanel"><h2>${t("productsMore.visitMaterial.title", words6())}</h2>
+      <p class="sm">${t("productsMore.visitMaterial.intro", words6())}</p>
+      <div class="mattipos"><div><b>${t("productsMore.visitMaterial.samplesKind")}</b><span>${t("productsMore.visitMaterial.samplesKindText")}</span></div>
+        <div><b>${t("productsMore.visitMaterial.promoKind")}</b><span>${t("productsMore.visitMaterial.promoKindText")}</span></div></div></div>
+    ${samplesHtml4(samples)}
+    <div class="card cfgpanel"><h2>${t("productsMore.visitMaterial.promoKind")}</h2>
+      <p class="sm">${t("productsMore.visitMaterial.promoText", words6())}</p>
+      <div class="matlista">${values2.map(valueRow).join("") || `<div class="sm">${t("productsMore.visitMaterial.noMaterial")}</div>`}</div>
+      <div class="matadd"><input id="matn" placeholder="${t("productsMore.visitMaterial.newPlaceholder")}"><label class="opt u-m-0"><input type="checkbox" id="matq" checked> ${t("productsMore.visitMaterial.countUnits")}</label>
+        <button class="btn sec" id="matok" ${canAdd ? "" : "disabled"}>${t("productsMore.visitMaterial.add")}</button></div></div>`;
+  }
+  async function saveSamples2() {
+    const product = byId9("muprod")?.value ?? "", discount = Boolean(byId9("murest")?.checked);
+    if (discount && !product) {
+      notices.toast(t("productsMore.visitMaterial.chooseProduct"), true);
+      return;
+    }
+    const value10 = { producto_id: product || null, restar_stock: discount };
+    const { error } = await legacyDb().rpc("guardar_ajuste", { p_clave: "muestras", p_valor: value10 });
+    if (error) {
+      notices.toast(t("productsMore.visitMaterial.couldNotSave"), true);
+      return;
+    }
+    billing2Legacy.settings().muestras = value10;
+    notices.toast(t("productsMore.visitMaterial.saved"));
+  }
+  async function addMaterial(classifierId) {
+    const name = (byId9("matn")?.value ?? "").trim();
+    if (!name) return;
+    const counted2 = Boolean(byId9("matq")?.checked);
+    const { error } = await legacyDb().rpc("guardar_valor", { p: { clasificador_id: classifierId, valor: name, ...counted2 ? { dato_tipo: NUMBER_KIND, dato_etiqueta: UNITS_LABEL } : {} } });
+    if (error) {
+      notices.toast(t("productsMore.visitMaterial.couldNotAdd", { error: error.message ?? "" }), true);
+      return;
+    }
+    notices.toast(t("productsMore.visitMaterial.added"));
+    billing2Legacy.loadCatalogs();
+    void paintVisitMaterial();
+  }
+  function bind9(box3, classifierId) {
+    const ok = byId9("muok");
+    if (ok) ok.onclick = () => {
+      void saveSamples2();
+    };
+    box3.querySelectorAll("[data-mact]").forEach((input6) => {
+      input6.onchange = async () => {
+        await legacyDb().rpc("guardar_valor", { p: { id: input6.dataset.mact, activo: input6.checked } });
+        notices.toast(t(input6.checked ? "productsMore.visitMaterial.visible" : "productsMore.visitMaterial.hiddenIn", words6()));
+        billing2Legacy.loadCatalogs();
+        void paintVisitMaterial();
+      };
+    });
+    const add = byId9("matok");
+    if (add && classifierId) add.onclick = () => {
+      void addMaterial(classifierId);
+    };
+  }
+  async function paintVisitMaterial() {
+    await Promise.all([billing2Legacy.loadSettings(), billing2Legacy.loadProducts()]);
+    const samples = { producto_id: null, restar_stock: false, ...billing2Legacy.settings().muestras };
+    await legacyDb().rpc("clasificadores_actividad");
+    const { data: classifier } = await legacyDb().from("clasificadores").select("id").eq("papel", MATERIAL_ROLE).maybeSingle();
+    const { data: values2 } = classifier ? await legacyDb().from("valores_clasificador").select("id,valor,activo,dato_tipo").eq("clasificador_id", classifier.id).order("orden") : { data: [] };
+    const box3 = byId9("cfgcuerpo");
+    if (!box3) return;
+    box3.innerHTML = pageHtml5(samples, values2 ?? [], Boolean(classifier));
+    bind9(box3, classifier?.id ?? null);
+    try {
+      await improveMaterial();
+    } catch (error) {
+      registerError("error", t("productsMore.visitMaterial.errorLog", { error: error.message }));
+    }
+  }
+  async function promotedProducts() {
+    const read3 = async () => {
+      if (!navigator.onLine) return billing2Legacy.promoted() ?? [];
+      try {
+        const { data, error } = await legacyDb().from("productos").select("id,nombre,estado").eq("promocionado", true).order("nombre");
+        if (!error) billing2Legacy.setPromoted((data ?? []).filter((item) => (item.estado ?? "Activo") !== DISCONTINUED).map((item) => ({ id: item.id, nombre: item.nombre })));
+      } catch {
+      }
+      return billing2Legacy.promoted() ?? [];
+    };
+    const [list] = await Promise.all([read3(), loadMaterials()]);
+    return list;
+  }
+
+  // src/app/screens/products/deposit-form.ts
+  var whole2 = (input6) => Math.max(0, Math.floor(Number(input6.value) || 0));
+  var batchOf = (line2) => escapeHtml(orFallback(line2.numero_lote, t("products.deposit.noBatchLower")));
+  var actsHtml = (ok) => `<div class="acts u-end"><button type="button" class="btn sec" id="depcanc">${t("common.cancel")}</button><button type="button" class="btn" id="depok">${ok}</button></div>`;
+  function replenishHtml() {
+    const products3 = purchasesLegacy.products().filter((item) => item.activo !== false && orFallback(item.estado, "Activo") !== "Descatalogado");
+    return `<div class="depbox"><b>${t("products.deposit.replenishTitle")}</b>
+      <div class="segs" id="depori" role="group" aria-label="${t("products.deposit.from")}"><button type="button" data-o="maletin" class="on" aria-pressed="true">${t("products.deposit.fromCase")}</button><button type="button" data-o="central" aria-pressed="false">${t("products.deposit.fromCentral")}</button></div>
+      <div class="depitems">${products3.map((item) => `<label><span>${escapeHtml(item.nombre)}</span><input type="number" min="0" step="1" data-dprod="${item.id}" placeholder="0" aria-label="${t("products.deposit.unitsOfProduct", { name: escapeHtml(item.nombre) })}"></label>`).join("")}</div>
+      ${actsHtml(t("products.deposit.replenish"))}</div>`;
+  }
+  function useHtml(lines2) {
+    return `<div class="depbox"><b>${t("products.deposit.useTitle")}</b>
+      <label for="depleer">${t("products.deposit.readBatch")}</label><input id="depleer" autocomplete="off" placeholder="${t("products.deposit.readBatchPlaceholder")}">
+      <div class="depitems">${lines2.map((line2, index) => `<label><span>${escapeHtml(line2.nombre)} <span class="sm">· ${batchOf(line2)} · ${t("products.deposit.left", { units: formatNumber(line2.unidades) })}</span></span>
+        <input type="number" min="0" max="${line2.unidades}" step="1" data-dlin="${index}" placeholder="0" aria-label="${t("products.deposit.usedOf", { name: escapeHtml(line2.nombre) })}"></label>`).join("")}</div>
+      <label for="depref">${t("products.deposit.reference")}</label><input id="depref" maxlength="120" placeholder="${t("products.deposit.referencePlaceholder", { ofTheCustomer: term("paciente", { article: "del" }) })}">
+      ${actsHtml(t("products.deposit.record"))}</div>`;
+  }
+  function countHtml2(lines2) {
+    return `<div class="depbox"><b>${t("products.deposit.countTitle")}</b><span class="sm">${t("products.deposit.countHint")}</span>
+      <div class="depitems">${lines2.map((line2, index) => `<label><span>${escapeHtml(line2.nombre)} <span class="sm">· ${batchOf(line2)} · ${t("products.deposit.had", { units: formatNumber(line2.unidades) })}</span></span>
+        <input type="number" min="0" step="1" data-dcnt="${index}" value="${line2.unidades}" aria-label="${t("products.deposit.countedOf", { name: escapeHtml(line2.nombre) })}"></label>`).join("")}</div>
+      ${actsHtml(t("products.deposit.saveCount"))}</div>`;
+  }
+  function request(form, deposit, action) {
+    const base = { cuenta_id: deposit.accountId, accion: action, op_id: `d${Date.now()}` };
+    if (action === "reponer") {
+      const items = [...form.querySelectorAll("[data-dprod]")].map((input6) => ({ producto_id: input6.dataset.dprod, unidades: whole2(input6) })).filter((item) => item.unidades > 0);
+      return items.length ? { ...base, origen: form.querySelector("#depori .on")?.dataset.o, items } : t("products.deposit.writeReplenish");
+    }
+    const lineAt = (input6, key) => deposit.lines[Number(input6.dataset[key])];
+    if (action === "consumo") {
+      const items = [...form.querySelectorAll("[data-dlin]")].map((input6) => {
+        const line2 = lineAt(input6, "dlin");
+        return { producto_id: line2?.producto_id, lote_id: line2?.lote_id, unidades: whole2(input6), max: line2?.unidades ?? 0 };
+      }).filter((item) => item.unidades > 0);
+      if (!items.length) return t("products.deposit.writeUsed");
+      if (items.some((item) => item.unidades > item.max)) return t("products.deposit.tooMany");
+      return { ...base, items, referencia: document.getElementById("depref")?.value.trim() ?? "" };
+    }
+    return { ...base, items: [...form.querySelectorAll("[data-dcnt]")].map((input6) => {
+      const line2 = lineAt(input6, "dcnt");
+      return { producto_id: line2?.producto_id, lote_id: line2?.lote_id, contadas: whole2(input6) };
+    }) };
+  }
+  function failureText6(result) {
+    if (result?.error === "sin_origen") return t("products.deposit.noSource");
+    return t(result?.error === "permiso" ? "products.deposit.noMovePermission" : "products.deposit.couldNotSave");
+  }
+  async function replenishUsed(deposit, used, button3) {
+    button3.disabled = true;
+    const { data: result } = await legacyDb().rpc("deposito_mover", { p: { cuenta_id: deposit.accountId, accion: "reponer", items: used.map((item) => ({ producto_id: item.producto_id, unidades: item.unidades })), op_id: `r${Date.now()}` } });
+    if (!result || result.ok === false) {
+      button3.disabled = false;
+      notices.toast(result?.error === "sin_origen" ? t("products.deposit.noSource") : t("products.deposit.couldNotReplenish"), true);
+      return;
+    }
+    notices.toast(t("products.deposit.usedReplenished"));
+    void productsLegacy.openDeposit(deposit.accountId, deposit.name);
+  }
+  async function afterSave(deposit, action, result) {
+    const used = result.usado ?? [];
+    let notice2 = "";
+    if (action === "reponer") notices.toast(t("products.deposit.replenished"));
+    else if (!used.length) notices.toast(t("products.deposit.nothingMissing"));
+    else {
+      notices.toast(t("products.deposit.usedRecorded"));
+      notice2 = `<div class="banda-ok depaviso">${t("products.deposit.usedNotice", { list: used.map((item) => `${escapeHtml(item.nombre)} ${formatNumber(item.unidades)}`).join(" · ") })}
+        <span class="depav"><button type="button" class="btn sec" id="depverped">${t("products.deposit.seeOrder")}</button><button type="button" class="btn" id="depreponer">${t("products.deposit.replenishUsed")}</button></span></div>`;
+    }
+    await productsLegacy.openDeposit(deposit.accountId, deposit.name, notice2);
+    const order = document.getElementById("depverped"), again = document.getElementById("depreponer");
+    if (order && result.pedido_id) order.onclick = () => {
+      appLegacy.openOrder(result.pedido_id ?? "");
+    };
+    if (again) again.onclick = () => {
+      void replenishUsed(deposit, used, again);
+    };
+  }
+  async function save11(form, deposit, action, button3) {
+    const payload10 = request(form, deposit, action);
+    if (typeof payload10 === "string") {
+      notices.toast(payload10, true);
+      return;
+    }
+    button3.disabled = true;
+    const { data: result, error } = await legacyDb().rpc("deposito_mover", { p: payload10 });
+    button3.disabled = false;
+    if (error || !result || result.ok === false) {
+      notices.toast(failureText6(result), true);
+      return;
+    }
+    await afterSave(deposit, action, result);
+  }
+  function countReadBatch(field11, lines2) {
+    const batch = field11.value.trim();
+    field11.value = "";
+    if (!batch) return;
+    const index = lines2.findIndex((line2) => String(line2.numero_lote ?? "").trim().toLowerCase() === batch.toLowerCase());
+    const input6 = index < 0 ? null : document.querySelector(`[data-dlin="${index}"]`);
+    if (!input6) {
+      notices.toast(t("products.deposit.batchNotHere", { batch: escapeHtml(batch) }), true);
+      return;
+    }
+    const used = whole2(input6), left = lines2[index]?.unidades ?? 0;
+    if (used >= left) {
+      notices.toast(t("products.deposit.batchAllUsed", { batch: escapeHtml(batch) }), true);
+      return;
+    }
+    input6.value = String(used + 1);
+    notices.toast(t("products.deposit.batchCounted", { batch: escapeHtml(batch), units: formatNumber(used + 1) }));
+  }
+  function openDepositForm(deposit, action) {
+    const form = document.getElementById("depform");
+    if (!form) return;
+    form.innerHTML = action === "reponer" ? replenishHtml() : action === "consumo" ? useHtml(deposit.lines) : countHtml2(deposit.lines);
+    const origins = form.querySelectorAll("[data-o]");
+    origins.forEach((button3) => {
+      button3.onclick = () => {
+        origins.forEach((other) => {
+          other.classList.toggle("on", other === button3);
+          other.setAttribute("aria-pressed", String(other === button3));
+        });
+      };
+    });
+    const reader = document.getElementById("depleer");
+    if (reader) reader.onchange = () => {
+      countReadBatch(reader, deposit.lines);
+    };
+    const cancel3 = document.getElementById("depcanc");
+    if (cancel3) cancel3.onclick = () => {
+      form.innerHTML = "";
+    };
+    const ok = document.getElementById("depok");
+    if (ok) ok.onclick = () => {
+      void save11(form, deposit, action, ok);
+    };
+  }
+
+  // src/app/screens/products/deposit.ts
+  var MOVEMENTS2 = /* @__PURE__ */ new Map([
+    ["traspaso_entrada", "products.deposit.moveIn"],
+    ["traspaso_salida", "products.deposit.moveOut"],
+    ["consumo_deposito", "products.deposit.moveUsed"],
+    ["ajuste", "products.deposit.moveAdjust"]
+  ]);
+  function summary2(lines2) {
+    const total = sum(lines2.map((line2) => line2.unidades));
+    if (!total) return t("products.deposit.empty");
+    const count4 = new Set(lines2.map((line2) => line2.producto_id)).size;
+    return t("products.deposit.unitsOf", { units: formatNumber(total), products: count4 === 1 ? t("products.deposit.oneProduct") : t("products.deposit.products", { count: count4 }) });
+  }
+  function tableHtml3(lines2) {
+    if (!lines2.length) return `<div class="vacio vlinea">${t("products.deposit.emptyDeposit")}</div>`;
+    const rows2 = lines2.map((line2) => `<div class="depf"><span>${escapeHtml(line2.nombre)}</span>
+      <span>${escapeHtml(orFallback(line2.numero_lote, t("products.deposit.noBatch")))}</span><span class="${relatedLegacy.expiresSoon(line2.caducidad) ? "depcad" : ""}">${line2.caducidad ? formatShortDate(line2.caducidad) : "—"}</span><b>${formatNumber(line2.unidades)}</b></div>`).join("");
+    return `<div class="deptab"><div class="deph"><span>${t("products.deposit.product")}</span><span>${t("products.deposit.batch")}</span><span>${t("products.deposit.expires")}</span><span>${t("products.deposit.units")}</span></div>${rows2}</div>`;
+  }
+  function movementRow(item) {
+    const key = MOVEMENTS2.get(item.tipo);
+    return `<div class="depmf"><span>${formatShortDate(String(item.fecha).slice(0, 10))}</span>
+      <span>${key ? t(key) : escapeHtml(item.tipo)}</span><span>${escapeHtml(item.nombre)}${item.numero_lote ? ` · ${escapeHtml(item.numero_lote)}` : ""}</span><b>${item.unidades > 0 ? "+" : ""}${formatNumber(item.unidades)}</b>
+      <span class="sm">${escapeHtml(String(item.nota ?? "").replace(/\s*\[[^\]]*\]$/, ""))}</span></div>`;
+  }
+  function historyHtml(detail) {
+    const used = detail.usado_90 ?? [], movements = detail.movimientos ?? [];
+    const usedText = used.length ? `<p class="sm">${t("products.deposit.used90", { list: used.map((item) => `${escapeHtml(item.nombre)} ${formatNumber(item.unidades)}`).join(" · ") })}</p>` : "";
+    return usedText + (movements.length ? `<details class="depmov"><summary>${t("products.deposit.lastMovements")}</summary>${movements.map(movementRow).join("")}</details>` : "");
+  }
+  function sheetHtml4(detail, name, notice2, lines2) {
+    const none = lines2.length ? "" : "disabled";
+    return `<div class="fh"><div><h2>${t("products.deposit.title", { name: escapeHtml(name) })}</h2><div class="sm">${summary2(lines2)}${t("products.deposit.stillYours")}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    ${notice2}
+    <div class="depacts"><button type="button" class="btn" data-dep="reponer">${t("products.deposit.replenish")}</button><button type="button" class="btn sec" data-dep="consumo" ${none}>${t("products.deposit.recordUse")}</button>
+      <button type="button" class="btn sec" data-dep="recuento" ${none}>${t("products.deposit.count")}</button></div>
+    <div id="depform"></div>
+    ${tableHtml3(lines2)}
+    ${historyHtml(detail)}
+    <div class="acts u-end"><button type="button" class="btn sec" data-cerrar>${t("common.close")}</button></div>`;
+  }
+  async function showDeposit2(accountId, name, notice2 = "") {
+    const { data: detail, error } = await legacyDb().rpc("deposito_estado", { p_cuenta: accountId });
+    if (error || !detail || detail.ok === false) {
+      notices.toast(t(detail?.error === "permiso" ? "products.deposit.noPermission" : "products.deposit.couldNotOpen"), true);
+      return;
+    }
+    if (!purchasesLegacy.products().length) await purchasesLegacy.loadProducts();
+    const lines2 = (detail.lineas ?? []).filter((line2) => line2.unidades > 0);
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = sheetHtml4(detail, name, notice2, lines2);
+    if (!box3.open) box3.showModal();
+    const deposit = { accountId, name, lines: lines2 };
+    body3.querySelectorAll("[data-dep]").forEach((button3) => {
+      button3.onclick = () => {
+        openDepositForm(deposit, button3.dataset.dep ?? "reponer");
+      };
+    });
+  }
+
+  // src/app/screens/products/page.ts
+  var TABS = [["productos", "products.page.products"], ["servicios", "products.page.services"], ["stock", "products.page.stock"]];
+  function actionsHtml3(section) {
+    if (section === "stock") {
+      if (!purchasesLegacy.canBuy()) return "";
+      return `<button class="btn sec" id="stalm" data-desktop-only>${t("products.page.stores")}</button><button class="btn sec" id="stmue" data-desktop-only>${t("products.page.samples")}</button><button class="btn" id="stini">${t("products.page.stockEntry")}</button>`;
+    }
+    if (!cardSectionsLegacy.can("administrar")) return "";
+    return `<button class="btn" id="prodnuevo" data-desktop-only>${t(section === "servicios" ? "products.page.newService" : "products.page.newProduct")}</button>`;
+  }
+  var on2 = (id, action) => {
+    const button3 = document.getElementById(id);
+    if (button3) button3.onclick = action;
+  };
+  function bind10(screen3, section) {
+    screen3.querySelectorAll("[data-ps]").forEach((button3) => {
+      button3.onclick = () => {
+        productsLegacy.setSection(button3.dataset.ps ?? "productos");
+        productsLegacy.reload();
+      };
+    });
+    on2("prodnuevo", () => {
+      if (section === "servicios") editService(null);
+      else productsLegacy.editProduct(null);
+    });
+    on2("stalm", () => {
+      void editStores();
+    });
+    on2("stmue", () => {
+      productsLegacy.editSamples();
+    });
+    on2("stini", () => {
+      void stockMovement(null, "inicial");
+    });
+  }
+  function loadProductsModule2() {
+    productsLegacy.clearModules("v-productos");
+    const screen3 = document.getElementById("v-productos");
+    if (!screen3) return Promise.resolve();
+    const section = productsLegacy.section();
+    screen3.innerHTML = `
+    <div class="saludo"><div><h1>${t("products.page.title")}</h1><div class="fecha">${t("products.page.subtitle")}</div></div>
+      <div class="acts u-m-0">${actionsHtml3(section)}</div></div>
+    <div class="subnav">${TABS.map(([key, label]) => `<button data-ps="${key}" aria-pressed="${String(section === key)}">${t(label)}</button>`).join("\n      ")}</div>
+    <div id="vcuerpo"></div>`;
+    bind10(screen3, section);
+    if (section === "stock") void paintStock();
+    else if (section === "servicios") void paintServices();
+    else void paintProducts();
+    return Promise.resolve();
+  }
+
+  // src/app/screens/products/index.ts
+  var loadProductsModule = cachedModuleLoader("productos", loadProductsModule2);
+  var showStock = backOpener("fichaStock", sheetOpener(showStock2));
+  var showDeposit = backOpener("verDeposito", sheetOpener(showDeposit2));
+
+  // src/app/legacy/components-bridge.ts
+  var componentsLegacy = {
+    popup: () => navigationStore.pickerPopup,
+    setPopup: (popup) => {
+      navigationStore.pickerPopup = popup;
+    },
+    showValue: (input6) => {
+      visibleValue(input6);
+    },
+    placePopup: (popup, anchor) => {
+      placePicker(anchor);
+    },
+    emitChange: (input6) => {
+      emitir(input6);
+    },
+    pending: () => navigationStore.pendingEnhancements,
+    flushScheduled: () => Boolean(navigationStore.enhanceFrame),
+    setFlushScheduled: (scheduled) => {
+      navigationStore.enhanceFrame = scheduled ? 1 : 0;
+    },
+    isVatField: (input6) => Boolean(money_exports.isVatField(input6)),
+    vatSelector: (input6) => {
+      vatSelector(input6);
+    },
+    touchScreen: () => PANTALLA_TACTIL,
+    weekdayLetter: (isoDate) => calendar_exports.dayLetter(isoDate),
+    readOnlyCompany: () => Boolean(ordersStore.paymentState?.solo_lectura),
+    hasStartPoint: () => Boolean(activePreferences().salida),
+    helpAnchors: () => ANCLAS_AYUDA,
+    manualAnchors: () => MANUAL_ANCLA,
+    euros: (value10) => money_exports.eurosRounded(value10),
+    customFields: (scope) => CAMPOS[scope] ?? [],
+    sortedFields: (scope) => sortedFields(scope),
+    canEditCatalogs: () => Boolean(permissions_exports.canManageLists()),
+    sidePanelOpen: () => sideOpen(),
+    customerFilters: () => PAC.campos = PAC.campos ?? {},
+    reloadCustomers: () => {
+      PAC.pagina = 0;
+      void listCustomers();
+    },
+    orderFilters: () => ordersStore.filters,
+    reloadOrders: () => {
+      ordersStore.page = 0;
+      void paintOrderList();
+    },
+    productFilters: () => productsStore.filters,
+    reloadProducts: () => {
+      void paintProducts();
+    },
+    productsSection: () => productsStore.section
+  };
+
   // src/app/components/classifiers/model.ts
   var normalise2 = (text2) => String(text2 ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  function fieldText(field10, value10) {
+  function fieldText(field11, value10) {
     if (value10 === null || value10 === void 0 || value10 === "") return "";
-    if (field10?.tipo === "si_no") return t(value10 === true || value10 === "true" ? "components.classifiers.yes" : "components.classifiers.no");
-    if (field10?.tipo === "fecha") return formatShortDate(String(value10));
-    if (field10?.tipo === "numero") return String(value10).replace(".", ",");
+    if (field11?.tipo === "si_no") return t(value10 === true || value10 === "true" ? "components.classifiers.yes" : "components.classifiers.no");
+    if (field11?.tipo === "fecha") return formatShortDate(String(value10));
+    if (field11?.tipo === "numero") return String(value10).replace(".", ",");
     return String(value10);
   }
   function passesLimit(value10, operator, limit) {
@@ -15774,22 +18777,22 @@
     const own = values2 ?? {};
     return Object.entries(filters3 ?? {}).every(([key, filter]) => !filter || typeof filter !== "object" ? own[key] === filter : passesRange(own[key], filter));
   }
-  function filterText2(field10, filter) {
+  function filterText2(field11, filter) {
     if (filter && typeof filter === "object") {
-      const text2 = (value10) => fieldText(field10, value10), name = field10.nombre;
+      const text2 = (value10) => fieldText(field11, value10), name = field11.nombre;
       if ("contiene" in filter) return t("components.classifiers.contains", { name, text: filter.contiene ?? "" });
       if ("desde" in filter && "hasta" in filter) return t("components.classifiers.fromTo", { name, from: text2(filter.desde), to: text2(filter.hasta) });
       return "desde" in filter ? t("components.classifiers.from", { name, from: text2(filter.desde) }) : t("components.classifiers.to", { name, to: text2(filter.hasta) });
     }
-    return `${field10.nombre}: ${fieldText(field10, filter)}`;
+    return `${field11.nombre}: ${fieldText(field11, filter)}`;
   }
   var filterChips = (scope, state2) => Object.keys(state2 ?? {}).map((key) => {
-    const field10 = componentsLegacy.customFields(scope).find((item) => item.clave === key) ?? { clave: key, nombre: key };
-    return { k: key, t: filterText2(field10, state2?.[key]) };
+    const field11 = componentsLegacy.customFields(scope).find((item) => item.clave === key) ?? { clave: key, nombre: key };
+    return { k: key, t: filterText2(field11, state2?.[key]) };
   });
-  var columnHeaders = (fields) => fields.map((field10) => `<span class="cpcol">${escapeHtml(field10.nombre)}</span>`).join("");
-  var columnCells = (fields, values2) => fields.map((field10) => {
-    const text2 = fieldText(field10, values2?.[field10.clave]);
+  var columnHeaders = (fields) => fields.map((field11) => `<span class="cpcol">${escapeHtml(field11.nombre)}</span>`).join("");
+  var columnCells = (fields, values2) => fields.map((field11) => {
+    const text2 = fieldText(field11, values2?.[field11.clave]);
     return `<span class="sm">${text2 ? escapeHtml(text2) : '<span class="vac">—</span>'}</span>`;
   }).join("");
 
@@ -15862,11 +18865,11 @@
   }
   function visibleFields(scope) {
     const chosen4 = savedChoice(scope);
-    return componentsLegacy.customFields(scope).filter((field10) => field10.clave in chosen4 ? chosen4[field10.clave] : field10.en_tabla);
+    return componentsLegacy.customFields(scope).filter((field11) => field11.clave in chosen4 ? chosen4[field11.clave] : field11.en_tabla);
   }
   function showsColumn(scope, key) {
     if (scope === ACCOUNTS) return Boolean(columnSettings().find((column) => column.k === CUSTOM_PREFIX2 + key)?.on);
-    return visibleFields(scope).some((field10) => field10.clave === key);
+    return visibleFields(scope).some((field11) => field11.clave === key);
   }
   function setColumn(scope, key, on3) {
     if (scope === ACCOUNTS) {
@@ -15883,11 +18886,11 @@
     } catch {
     }
   }
-  function widenGrid(grid, count) {
-    if (!(grid instanceof HTMLElement) || !count) return;
+  function widenGrid(grid, count4) {
+    if (!(grid instanceof HTMLElement) || !count4) return;
     const style = getComputedStyle(grid);
-    grid.style.setProperty("--cols", style.getPropertyValue("--cols").trim() + ` ${GRID_COLUMN}px`.repeat(count));
-    grid.style.minWidth = `${(parseInt(style.minWidth) || GRID_MIN_WIDTH) + GRID_EXTRA_WIDTH * count}px`;
+    grid.style.setProperty("--cols", style.getPropertyValue("--cols").trim() + ` ${GRID_COLUMN}px`.repeat(count4));
+    grid.style.minWidth = `${(parseInt(style.minWidth) || GRID_MIN_WIDTH) + GRID_EXTRA_WIDTH * count4}px`;
   }
 
   // src/app/components/classifiers/filters.ts
@@ -15914,80 +18917,80 @@
     if (data) knownValues[scope] = data;
     return knownValues[scope] ?? {};
   }
-  function rangeControl(field10, active, id) {
-    const range2 = active && typeof active === "object" ? active : {}, type = field10.tipo === "fecha" ? 'type="date"' : 'type="text" inputmode="decimal"';
-    const shown3 = (value10) => value10 === null || value10 === void 0 ? "" : escapeHtml(field10.tipo === "numero" ? String(value10).replace(".", ",") : String(value10));
-    return `<div class="clasrango"><input id="${id}" ${type} data-clr="desde" value="${shown3(range2.desde)}" placeholder="${t("components.classifiers.fromPlaceholder")}" aria-label="${t("components.classifiers.fromLabel", { name: escapeHtml(field10.nombre) })}">
-      <input ${type} data-clr="hasta" value="${shown3(range2.hasta)}" placeholder="${t("components.classifiers.toPlaceholder")}" aria-label="${t("components.classifiers.toLabel", { name: escapeHtml(field10.nombre) })}"></div>`;
+  function rangeControl(field11, active2, id) {
+    const range2 = active2 && typeof active2 === "object" ? active2 : {}, type = field11.tipo === "fecha" ? 'type="date"' : 'type="text" inputmode="decimal"';
+    const shown3 = (value10) => value10 === null || value10 === void 0 ? "" : escapeHtml(field11.tipo === "numero" ? String(value10).replace(".", ",") : String(value10));
+    return `<div class="clasrango"><input id="${id}" ${type} data-clr="desde" value="${shown3(range2.desde)}" placeholder="${t("components.classifiers.fromPlaceholder")}" aria-label="${t("components.classifiers.fromLabel", { name: escapeHtml(field11.nombre) })}">
+      <input ${type} data-clr="hasta" value="${shown3(range2.hasta)}" placeholder="${t("components.classifiers.toPlaceholder")}" aria-label="${t("components.classifiers.toLabel", { name: escapeHtml(field11.nombre) })}"></div>`;
   }
-  function listControl(list, active, id) {
+  function listControl(list, active2, id) {
     if (list.length <= MAX_DROPDOWN) {
-      const options3 = typeof active === "string" && active && !list.includes(active) ? [...list, active] : list;
-      return `<select id="${id}" data-clv><option value="">${t("components.classifiers.all")}</option>${options3.map((value10) => `<option ${active === value10 ? "selected" : ""}>${escapeHtml(value10)}</option>`).join("")}</select>`;
+      const options3 = typeof active2 === "string" && active2 && !list.includes(active2) ? [...list, active2] : list;
+      return `<select id="${id}" data-clv><option value="">${t("components.classifiers.all")}</option>${options3.map((value10) => `<option ${active2 === value10 ? "selected" : ""}>${escapeHtml(value10)}</option>`).join("")}</select>`;
     }
-    const text2 = active && typeof active === "object" ? active.contiene ?? "" : typeof active === "string" ? active : "";
+    const text2 = active2 && typeof active2 === "object" ? active2.contiene ?? "" : typeof active2 === "string" ? active2 : "";
     return `<input id="${id}" type="search" data-clbus list="${id}_l" value="${escapeHtml(text2)}" placeholder="${t("components.classifiers.typeToSearch")}" autocomplete="off">
     <datalist id="${id}_l">${list.map((value10) => `<option value="${escapeHtml(value10)}">`).join("")}</datalist>`;
   }
-  function control(field10, active, values2, id) {
-    if (field10.tipo === "si_no") return `<select id="${id}" data-clv><option value="">${t("components.classifiers.all")}</option>${[["true", t("components.classifiers.yes")], ["false", t("components.classifiers.no")]].map(([value10 = "", label = ""]) => `<option value="${value10}" ${active === (value10 === "true") ? "selected" : ""}>${label}</option>`).join("")}</select>`;
-    if (field10.tipo === "numero" || field10.tipo === "fecha") return rangeControl(field10, active, id);
-    return listControl(field10.tipo === "lista" ? field10.valores ?? [] : values2[field10.clave] ?? [], active, id);
+  function control(field11, active2, values2, id) {
+    if (field11.tipo === "si_no") return `<select id="${id}" data-clv><option value="">${t("components.classifiers.all")}</option>${[["true", t("components.classifiers.yes")], ["false", t("components.classifiers.no")]].map(([value10 = "", label = ""]) => `<option value="${value10}" ${active2 === (value10 === "true") ? "selected" : ""}>${label}</option>`).join("")}</select>`;
+    if (field11.tipo === "numero" || field11.tipo === "fecha") return rangeControl(field11, active2, id);
+    return listControl(field11.tipo === "lista" ? field11.valores ?? [] : values2[field11.clave] ?? [], active2, id);
   }
-  function readRange(field10, inputs) {
+  function readRange(field11, inputs) {
     const range2 = {};
     for (const input6 of inputs) {
       const value10 = input6.value.trim();
       if (!value10) continue;
-      const parsed = field10.tipo === "numero" ? Number(value10.replace(",", ".")) : value10;
+      const parsed = field11.tipo === "numero" ? Number(value10.replace(",", ".")) : value10;
       if (typeof parsed === "number" && isNaN(parsed)) {
-        toast(t("components.classifiers.mustBeNumber", { name: field10.nombre }), true);
+        toast(t("components.classifiers.mustBeNumber", { name: field11.nombre }), true);
         return false;
       }
       range2[input6.dataset.clr ?? ""] = parsed;
     }
     return Object.keys(range2).length ? range2 : null;
   }
-  function bindSelect(block3, { field: field10, state: state2, onChange }) {
-    const select = block3.querySelector("select[data-clv]");
+  function bindSelect(block4, { field: field11, state: state2, onChange }) {
+    const select = block4.querySelector("select[data-clv]");
     if (select) select.onchange = () => {
-      if (!select.value) Reflect.deleteProperty(state2, field10.clave);
-      else state2[field10.clave] = field10.tipo === "si_no" ? select.value === "true" : select.value;
+      if (!select.value) Reflect.deleteProperty(state2, field11.clave);
+      else state2[field11.clave] = field11.tipo === "si_no" ? select.value === "true" : select.value;
       onChange();
     };
   }
-  function bindSearch2(block3, { field: field10, state: state2, onChange }) {
-    const search5 = block3.querySelector("input[data-clbus]");
+  function bindSearch2(block4, { field: field11, state: state2, onChange }) {
+    const search5 = block4.querySelector("input[data-clbus]");
     if (!search5) return;
     let timer3;
     search5.oninput = () => {
       clearTimeout(timer3);
       timer3 = setTimeout(() => {
         const text2 = search5.value.trim();
-        if (text2) state2[field10.clave] = { contiene: text2 };
-        else Reflect.deleteProperty(state2, field10.clave);
+        if (text2) state2[field11.clave] = { contiene: text2 };
+        else Reflect.deleteProperty(state2, field11.clave);
         onChange();
       }, SEARCH_WAIT_MS5);
     };
   }
-  function bindRange(block3, { field: field10, state: state2, onChange }) {
-    const inputs = [...block3.querySelectorAll("input[data-clr]")];
+  function bindRange(block4, { field: field11, state: state2, onChange }) {
+    const inputs = [...block4.querySelectorAll("input[data-clr]")];
     inputs.forEach((input6) => {
       input6.onchange = () => {
-        const range2 = readRange(field10, inputs);
+        const range2 = readRange(field11, inputs);
         if (range2 === false) return;
-        if (range2) state2[field10.clave] = range2;
-        else Reflect.deleteProperty(state2, field10.clave);
+        if (range2) state2[field11.clave] = range2;
+        else Reflect.deleteProperty(state2, field11.clave);
         onChange();
       };
     });
   }
-  function blockHtml2(scope, fields, state2, values2) {
+  function blockHtml3(scope, fields, state2, values2) {
     const prefix = `clas_${scope}_`;
-    return fields.map((field10, index) => `<div class="clascampo" data-clk="${escapeHtml(field10.clave)}">
-      <div class="clascab"><label for="${prefix}${index}">${escapeHtml(field10.nombre)}</label>
-        <label class="clascol" title="${t("components.classifiers.asColumn", { name: escapeHtml(field10.nombre) })}"><input type="checkbox" data-clcol ${showsColumn(scope, field10.clave) ? "checked" : ""}> ${t("components.classifiers.column")}</label></div>
-      ${control(field10, state2[field10.clave], values2, prefix + String(index))}</div>`).join("");
+    return fields.map((field11, index) => `<div class="clascampo" data-clk="${escapeHtml(field11.clave)}">
+      <div class="clascab"><label for="${prefix}${index}">${escapeHtml(field11.nombre)}</label>
+        <label class="clascol" title="${t("components.classifiers.asColumn", { name: escapeHtml(field11.nombre) })}"><input type="checkbox" data-clcol ${showsColumn(scope, field11.clave) ? "checked" : ""}> ${t("components.classifiers.column")}</label></div>
+      ${control(field11, state2[field11.clave], values2, prefix + String(index))}</div>`).join("");
   }
   async function paintClassifiers2(container, scope, options3) {
     const { state: state2, onChange, onColumn, heading } = options3;
@@ -15998,20 +19001,20 @@
       container.innerHTML = componentsLegacy.canEditCatalogs() ? `<div class="htbloque clasif">${title2}<p class="sm">${t("components.classifiers.none")}</p></div>` : "";
       return;
     }
-    const needsValues = fields.some((field10) => field10.tipo === "texto" || field10.tipo === "lista" && (field10.valores ?? []).length > MAX_DROPDOWN);
+    const needsValues = fields.some((field11) => field11.tipo === "texto" || field11.tipo === "lista" && (field11.valores ?? []).length > MAX_DROPDOWN);
     const values2 = needsValues ? await loadValues(scope) : {};
     if (!container.isConnected) return;
-    container.innerHTML = `<div class="htbloque clasif">${title2}${blockHtml2(scope, fields, state2, values2)}</div>`;
-    container.querySelectorAll("[data-clk]").forEach((block3) => {
-      const field10 = fields.find((item) => item.clave === block3.dataset.clk);
-      if (!field10) return;
-      const binding = { field: field10, state: state2, onChange };
-      bindSelect(block3, binding);
-      bindSearch2(block3, binding);
-      bindRange(block3, binding);
-      const column = block3.querySelector("[data-clcol]");
+    container.innerHTML = `<div class="htbloque clasif">${title2}${blockHtml3(scope, fields, state2, values2)}</div>`;
+    container.querySelectorAll("[data-clk]").forEach((block4) => {
+      const field11 = fields.find((item) => item.clave === block4.dataset.clk);
+      if (!field11) return;
+      const binding = { field: field11, state: state2, onChange };
+      bindSelect(block4, binding);
+      bindSearch2(block4, binding);
+      bindRange(block4, binding);
+      const column = block4.querySelector("[data-clcol]");
       if (column) column.onchange = () => {
-        setColumn(scope, field10.clave, column.checked);
+        setColumn(scope, field11.clave, column.checked);
         onColumn();
       };
     });
@@ -16051,19 +19054,19 @@
   var chosen3 = (selects) => [...selects].filter((select) => select.selectedIndex > 0).length;
   function activeCount(section) {
     const grid = gridOf(section), state2 = grid ? panelsLegacy.tableFilters()[tableKind(grid)] ?? {} : {};
-    let count = Object.values(state2.facetas ?? {}).filter(Boolean).length + (state2.texto ? 1 : 0);
-    count += chosen3(section.querySelectorAll(".htpanel .htpropios select"));
-    if (sideOpenFor(section)) count += chosen3(toolsBox()?.querySelectorAll(".htpropios.lat select") ?? []);
+    let count4 = Object.values(state2.facetas ?? {}).filter(Boolean).length + (state2.texto ? 1 : 0);
+    count4 += chosen3(section.querySelectorAll(".htpanel .htpropios select"));
+    if (sideOpenFor(section)) count4 += chosen3(toolsBox()?.querySelectorAll(".htpropios.lat select") ?? []);
     const classifiers = screenOf(section);
-    if (classifiers) count += Object.keys(classifiers.estado()).length;
-    return count + Object.values(state2.rangos ?? {}).filter((range2) => [range2.d, range2.h].some(Boolean)).length;
+    if (classifiers) count4 += Object.keys(classifiers.estado()).length;
+    return count4 + Object.values(state2.rangos ?? {}).filter((range2) => [range2.d, range2.h].some(Boolean)).length;
   }
   function paintNumber(section) {
     const button3 = section.querySelector(".htbtn");
     if (!button3) return;
-    const count = activeCount(section), text2 = count ? String(count) : "", number2 = button3.querySelector(".htn");
+    const count4 = activeCount(section), text2 = count4 ? String(count4) : "", number2 = button3.querySelector(".htn");
     if (number2 && number2.textContent !== text2) number2.textContent = text2;
-    if (button3.classList.contains("conf") !== count > 0) button3.classList.toggle("conf", count > 0);
+    if (button3.classList.contains("conf") !== count4 > 0) button3.classList.toggle("conf", count4 > 0);
   }
   function selectChips(section) {
     const selects = [...section.querySelectorAll(".htpanel .htpropios select"), ...sideOpen() ? [...toolsBox()?.querySelectorAll(".htpropios.lat select") ?? []] : []];
@@ -16078,7 +19081,7 @@
   function tableChips(section) {
     const grid = gridOf(section), state2 = grid ? panelsLegacy.tableFilters()[tableKind(grid)] : null;
     if (!grid || !state2) return [];
-    const heads = [...grid.querySelector(":scope > .dh")?.children ?? []].map((head) => head.textContent?.trim() ?? "");
+    const heads = dataCells(grid.querySelector(":scope > .dh")).map((head) => head.textContent?.trim() ?? "");
     const chips2 = Object.entries(state2.facetas ?? {}).filter(([, value10]) => value10).map(([index, value10]) => ({
       t: `${heads[Number(index)] ?? t("panels.filters.column")}: ${value10}`,
       remove: () => {
@@ -16272,9 +19275,9 @@
   }
 
   // src/app/components/filters-panel/panel.ts
-  var headsOf = (grid) => [...grid.querySelector(":scope > .dh")?.children ?? []].map((cell2) => cell2.textContent?.trim() ?? "");
+  var headsOf = (grid) => dataCells(grid.querySelector(":scope > .dh")).map((cell2) => cell2.textContent?.trim() ?? "");
   var rowsOf2 = (grid) => [...grid.querySelectorAll(":scope > .dr")];
-  var cellText = (row3, index) => row3.children[index]?.textContent ?? "";
+  var cellText = (row3, index) => dataCells(row3)[index]?.textContent ?? "";
   function facetsOf(grid) {
     const rows2 = rowsOf2(grid);
     return headsOf(grid).map((nombre, i) => {
@@ -16347,15 +19350,15 @@
   function columnsButton(section) {
     const auto = toolsBox()?.querySelector(".htauto");
     if (!auto || !sideOpen()) return;
-    const block3 = [...auto.querySelectorAll(".htbloque")].find((item) => item.querySelector("[data-htc]"));
-    if (!block3) return;
+    const block4 = [...auto.querySelectorAll(".htbloque")].find((item) => item.querySelector("[data-htc]"));
+    if (!block4) return;
     const grid = gridOf(section);
     if (!grid) return;
     const kind = tableKind(grid);
-    const columns = [...block3.querySelectorAll("[data-htc]")].map((box3) => ({ i: Number(box3.dataset.htc), n: box3.parentElement?.textContent?.trim() ?? "", on: box3.checked, fija: box3.disabled }));
+    const columns = [...block4.querySelectorAll("[data-htc]")].map((box3) => ({ i: Number(box3.dataset.htc), n: box3.parentElement?.textContent?.trim() ?? "", on: box3.checked, fija: box3.disabled }));
     const label = () => t("panels.filters.chooseColumns", { visible: columns.filter((column) => column.on).length, total: columns.length });
-    block3.innerHTML = `<h4>${t("panels.filters.columns")}</h4><button class="btn sec t2abrir" type="button">${label()}<span>›</span></button>`;
-    const open2 = block3.querySelector(".t2abrir");
+    block4.innerHTML = `<h4>${t("panels.filters.columns")}</h4><button class="btn sec t2abrir" type="button">${label()}<span>›</span></button>`;
+    const open2 = block4.querySelector(".t2abrir");
     if (open2) open2.onclick = () => {
       panelsLegacy.columnsPanel(t("panels.filters.columns"), columns, (index, on3) => {
         setHidden(kind, index, on3);
@@ -16383,9 +19386,9 @@
           <input type="${type}" class="chico" data-hth="${column.i}" data-htk="${column.t}" value="${escapeHtml(range2.h ?? "")}" aria-label="${escapeHtml(t("panels.filters.toLabel", { name: column.nombre }))}" placeholder="${t("panels.filters.to")}"></div></div>`;
   }
   function placeRanges(zone, html) {
-    const block3 = zone.querySelector(".htfacetas")?.closest(".htbloque");
+    const block4 = zone.querySelector(".htfacetas")?.closest(".htbloque");
     const before = [...zone.querySelectorAll(".htbloque")].find((item) => item.querySelector("[data-htc], .t2abrir")) ?? zone.querySelector(".acts");
-    if (block3) block3.outerHTML = html;
+    if (block4) block4.outerHTML = html;
     else if (html) {
       if (before) before.insertAdjacentHTML("beforebegin", html);
       else zone.insertAdjacentHTML("beforeend", html);
@@ -16575,16 +19578,16 @@
 
   // src/app/components/list-bar/configs/grid.ts
   var COLUMNS_DELAY_MS = 80;
-  var byId7 = (id) => id ? document.getElementById(id) : null;
+  var byId10 = (id) => id ? document.getElementById(id) : null;
   var gridOf2 = (tab) => document.querySelector(`#v-${tab} .dgrid`);
   function searchText2(options3) {
-    const input6 = byId7(options3.buscador);
+    const input6 = byId10(options3.buscador);
     if (input6) return input6.value || "";
     const grid = gridOf2(options3.tab);
     return grid ? listBarLegacy.tableFilters()[tableKind(grid)]?.texto ?? "" : "";
   }
   function search2(options3, value10) {
-    const input6 = byId7(options3.buscador);
+    const input6 = byId10(options3.buscador);
     if (input6) {
       input6.value = value10;
       input6.dispatchEvent(new Event("input", { bubbles: true }));
@@ -16616,17 +19619,17 @@
     }).concat(extra.filter(([id]) => document.getElementById(id)));
   }
   function gridCard(row3) {
-    const cells = [...row3.children].filter((cell2) => !cell2.classList.contains("plcard"));
+    const cells = dataCells(row3);
     const state2 = cells.find((cell2) => cell2.querySelector('.pill, .est, .cirest, [class*="estado"]'));
-    const rest = cells.slice(1).filter((cell2) => cell2 !== state2).map(textOf2).filter((text2) => text2 && text2 !== "—").slice(0, 2);
-    return { a: textOf2(cells[0]), b: rest.join(" · "), c: state2 ? state2.innerHTML : "" };
+    const rest = cells.slice(1).filter((cell2) => cell2 !== state2).map(textOf).filter((text2) => text2 && text2 !== "—").slice(0, 2);
+    return { a: textOf(cells[0]), b: rest.join(" · "), c: state2 ? state2.innerHTML : "" };
   }
   var gridConfig = (options3) => Object.assign({
     rejilla: true,
     nuevo: () => document.querySelector(`#v-${options3.tab} > .saludo .acts > .btn:not(.sec):not(.htbtn):not(.fab)`) ?? document.querySelector(`#v-${options3.tab} .fab`),
-    cuerpo: () => byId7(options3.lista),
-    tabla: () => byId7(options3.lista) ?? document.querySelector(`#v-${options3.tab} .dgrid-wrap`),
-    pie: () => byId7(options3.pag),
+    cuerpo: () => byId10(options3.lista),
+    tabla: () => byId10(options3.lista) ?? document.querySelector(`#v-${options3.tab} .dgrid-wrap`),
+    pie: () => byId10(options3.pag),
     cuenta: () => null,
     conDatos: (element) => Boolean(element.querySelector(".dgrid, .vacio")),
     rapidos: [],
@@ -16652,8 +19655,8 @@
   // src/app/components/list-bar/configs/blocks.ts
   var TIME = /^\d{1,2}:\d{2}$/;
   var NUMBER2 = "num";
-  var bold = (row3) => `<b>${escapeHtml(textOf2(row3.querySelector(".tx b")))}</b>`;
-  var statePill3 = (row3) => row3.querySelector(".cirest")?.innerHTML ?? "";
+  var bold = (row3) => `<b>${escapeHtml(textOf(row3.querySelector(".tx b")))}</b>`;
+  var statePill4 = (row3) => row3.querySelector(".cirest")?.innerHTML ?? "";
   function eventCells(row3) {
     const parts = smallText(row3).split(" · "), time = parts.find((part) => TIME.test(part));
     const type = parts.find((part) => eventTypes().includes(part));
@@ -16665,14 +19668,15 @@
       escapeHtml(type ?? "—"),
       escapeHtml(place3 || "—"),
       escapeHtml((/\d+/.exec(attendees) ?? ["0"])[0]),
-      escapeHtml(textOf2(row3.querySelector(".evtot")) || "—")
+      escapeHtml(textOf(row3.querySelector(".evtot")) || "—")
     ];
   }
   function surgeryCells(row3) {
-    const time = textOf2(row3.querySelector(".cirf .sm"));
-    return [escapeHtml(textOf2(row3.querySelector(".cirf b")) + (time ? ` · ${time}` : "")), bold(row3), escapeHtml(smallText(row3.querySelector(".tx"))), statePill3(row3)];
+    const time = textOf(row3.querySelector(".cirf .sm"));
+    return [escapeHtml(textOf(row3.querySelector(".cirf b")) + (time ? ` · ${time}` : "")), bold(row3), escapeHtml(smallText(row3.querySelector(".tx"))), statePill4(row3)];
   }
-  var plainCells = (row3) => [bold(row3), escapeHtml(smallText(row3.querySelector(".tx"))), statePill3(row3)];
+  var plainCells = (row3) => [bold(row3), escapeHtml(smallText(row3.querySelector(".tx"))), statePill4(row3)];
+  var depositCells = (row3) => [bold(row3), escapeHtml(row3.dataset.dcenMaterial ?? ""), escapeHtml(row3.dataset.dcenValue ?? ""), escapeHtml(row3.dataset.dcenPending ?? ""), statePill4(row3)];
   var blocks2 = () => ({
     eventos: {
       attr: "ev",
@@ -16705,27 +19709,564 @@
       def: t("listBar.blocks.allEquipment"),
       cols: [[t("listBar.blocks.equipmentName"), ""], [t("listBar.blocks.serialCentreContract"), ""], [t("listBar.blocks.reviewAndExpiry"), ""]],
       celdas: plainCells
+    },
+    deposito: {
+      attr: "dcen",
+      que: t("listBar.blocks.deposits"),
+      grupo: t("listBar.blocks.block"),
+      def: t("listBar.blocks.allDeposits"),
+      cols: [[t("listBar.blocks.centre"), ""], [t("listBar.blocks.material"), ""], [t("listBar.blocks.value"), NUMBER2], [t("listBar.blocks.pending"), NUMBER2], [t("listBar.blocks.state"), ""]],
+      celdas: depositCells
     }
   });
-  function blockConfig(tab, block3) {
+  function blockConfig(tab, block4) {
     return { lista: gridConfig({
       tab,
-      que: () => block3.que,
-      bloques: block3,
-      rapidos: [[`#plg-${tab}`, block3.grupo]],
+      que: () => block4.que,
+      bloques: block4,
+      rapidos: [[`#plg-${tab}`, block4.grupo]],
       banda: `plgb-${tab}`,
       activos: () => (chosenGroups[tab] ? 1 : 0) + (document.getElementById(`v-${tab}`)?.querySelectorAll(".htchips .htchip").length ?? 0)
     }) };
   }
+
+  // src/app/components/date-picker/shared.ts
+  var twoDigits = (value10) => String(value10).padStart(2, "0");
+  var kindOf2 = (input6) => {
+    if (input6.type === "month") return "mes";
+    if (input6.type === "datetime-local") return "fechahora";
+    return input6.type === "time" ? "hora" : "fecha";
+  };
+  var longMonths = () => t("dates.monthsLong").split(",");
+  var shortMonths = () => t("dates.monthsShort").split(",");
+  function longDate(isoDate) {
+    const date = /* @__PURE__ */ new Date(`${isoDate}T12:00:00`), weekdays = t("components.datePicker.weekdays").split(",");
+    return t("components.datePicker.longDate", { weekday: weekdays[date.getDay()] ?? "", day: date.getDate(), month: longMonths()[date.getMonth()] ?? "", year: date.getFullYear() });
+  }
+  function mediumDate(isoDate) {
+    const date = /* @__PURE__ */ new Date(`${isoDate}T12:00:00`);
+    return isNaN(date.getTime()) ? isoDate : date.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  function closePicker() {
+    componentsLegacy.popup()?.remove();
+    componentsLegacy.setPopup(null);
+    const dialog7 = document.getElementById("seldlg");
+    if (dialog7?.open) dialog7.close();
+  }
+  function closePickers(except) {
+    document.querySelectorAll(".picker .gsug").forEach((list) => {
+      if (!except?.contains(list)) list.classList.add("hide");
+    });
+  }
+  var layerOf = (input6) => input6.closest("dialog[open]") ?? [...document.querySelectorAll("dialog[open]")].pop() ?? document.body;
+  function newPopup(className, label, same) {
+    if (same && componentsLegacy.popup()) {
+      componentsLegacy.popup()?.remove();
+      componentsLegacy.setPopup(null);
+    } else closePicker();
+    const popup = document.createElement("div");
+    popup.className = className;
+    popup.__t = Date.now();
+    popup.setAttribute("role", "dialog");
+    popup.setAttribute("aria-label", label);
+    componentsLegacy.setPopup(popup);
+    popup.addEventListener("pointerdown", () => {
+      popup.__t = Date.now();
+    });
+    return popup;
+  }
+  function attachPopup(popup, input6) {
+    (document.getElementById("seldlg") ?? layerOf(input6)).appendChild(popup);
+  }
+  var placePopup = (popup, input6) => {
+    componentsLegacy.placePopup(popup, input6.closest(".selw") ?? input6);
+  };
+  function setValue(input6, value10, focus = false) {
+    input6.value = value10;
+    componentsLegacy.emitChange(input6);
+    closePicker();
+    if (focus) input6.focus({ preventScroll: true });
+  }
+
+  // src/app/components/date-picker/pickers.ts
+  var YEARS_SHOWN = 12;
+  var YEARS_BEFORE = 5;
+  var KEY_STEPS = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+  var optional = (calendar) => calendar.input.required ? "" : `<button type="button" data-cq="borrar">${t("components.datePicker.clear")}</button>`;
+  var outside = (value10, min, max) => min !== null && value10 < min || max !== null && value10 > max;
+  function dayButton(calendar, isoDate, day) {
+    const today2 = todayIso(), focused = isoDate === calendar.focused;
+    return `<button type="button" data-cd="${isoDate}" class="${isoDate === calendar.chosen ? "sel" : ""} ${isoDate === today2 ? "hoy" : ""}" tabindex="${focused ? 0 : -1}" ${focused ? "autofocus" : ""}
+          aria-label="${longDate(isoDate)}" aria-pressed="${String(isoDate === calendar.chosen)}" ${outside(isoDate, calendar.min, calendar.max) ? "disabled" : ""}>${day}</button>`;
+  }
+  function daysView(calendar) {
+    const year = calendar.shown.getFullYear(), month = calendar.shown.getMonth();
+    const gap = (new Date(year, month, 1).getDay() + 6) % 7, days = new Date(year, month + 1, 0).getDate();
+    const cells = "<span></span>".repeat(gap) + range(days).map((index) => dayButton(calendar, `${year}-${twoDigits(month + 1)}-${twoDigits(index + 1)}`, index + 1)).join("");
+    return {
+      head: `<button type="button" data-cm="-1" aria-label="${t("components.datePicker.previousMonth")}">‹</button><button type="button" class="caltit" data-cv="meses" aria-label="${t("components.datePicker.chooseMonthYear")}">${longMonths()[month] ?? ""} ${year}</button><button type="button" data-cm="1" aria-label="${t("components.datePicker.nextMonth")}">›</button>`,
+      body: `<div class="calg">${t("dates.weekdayLetters").split(",").map((letter) => `<i>${letter}</i>`).join("")}${cells}</div>`,
+      foot: `<button type="button" data-cq="hoy">${t("components.datePicker.today")}</button><button type="button" data-cq="manana">${t("components.datePicker.tomorrow")}</button>${optional(calendar)}`
+    };
+  }
+  function monthsView(calendar) {
+    const year = calendar.shown.getFullYear(), short = shortMonths(), min = calendar.min?.slice(0, 7) ?? null, max = calendar.max?.slice(0, 7) ?? null;
+    const months = longMonths().map((name, index) => {
+      const key = `${year}-${twoDigits(index + 1)}`;
+      return `<button type="button" data-cmes="${index}" class="${key === calendar.chosen.slice(0, 7) ? "sel" : ""} ${key === calendar.thisMonth ? "hoy" : ""}" aria-label="${t("components.datePicker.monthOf", { month: name, year })}" ${outside(key, min, max) ? "disabled" : ""}>${short[index] ?? ""}</button>`;
+    }).join("");
+    return {
+      head: `<button type="button" data-cy="-1" aria-label="${t("components.datePicker.previousYear")}">‹</button><button type="button" class="caltit" data-cv="anios" aria-label="${t("components.datePicker.chooseYear")}">${year}</button><button type="button" data-cy="1" aria-label="${t("components.datePicker.nextYear")}">›</button>`,
+      body: `<div class="calm">${months}</div>`,
+      foot: calendar.kind === "mes" ? `<button type="button" data-cq="estemes">${t("components.datePicker.thisMonth")}</button>${optional(calendar)}` : ""
+    };
+  }
+  function yearsView(calendar) {
+    const first = calendar.shown.getFullYear() - YEARS_BEFORE;
+    const years = range(YEARS_SHOWN).map((index) => first + index).map((year) => `<button type="button" data-canio="${year}" class="${String(year) === calendar.chosen.slice(0, 4) ? "sel" : ""} ${String(year) === calendar.thisMonth.slice(0, 4) ? "hoy" : ""}">${year}</button>`).join("");
+    return {
+      head: `<button type="button" data-cy="-12" aria-label="${t("components.datePicker.previousYears")}">‹</button><b>${first} – ${first + YEARS_SHOWN - 1}</b><button type="button" data-cy="12" aria-label="${t("components.datePicker.nextYears")}">›</button>`,
+      body: `<div class="calm">${years}</div>`,
+      foot: ""
+    };
+  }
+  function paint5(calendar) {
+    const parts = calendar.view === "dias" ? daysView(calendar) : calendar.view === "meses" ? monthsView(calendar) : yearsView(calendar);
+    calendar.popup.innerHTML = `<div class="calh">${parts.head}</div>${parts.body}${parts.foot ? `<div class="calp">${parts.foot}</div>` : ""}`;
+    placePopup(calendar.popup, calendar.input);
+    if (isMobile() || calendar.view !== "dias") return;
+    const button3 = calendar.popup.querySelector(`[data-cd="${calendar.focused}"]`);
+    if (button3 && calendar.popup.contains(document.activeElement) || calendar.options.teclado) button3?.focus({ preventScroll: true });
+  }
+  function pick(calendar, isoDate) {
+    if (calendar.kind === "fechahora") {
+      openClock(calendar.input, { fecha: isoDate, desdeCal: true, mismo: true });
+      return;
+    }
+    setValue(calendar.input, isoDate, true);
+  }
+  function quick(calendar, action) {
+    if (action === "hoy") pick(calendar, todayIso());
+    else if (action === "manana") pick(calendar, addDays(todayIso(), 1));
+    else if (action === "estemes") setValue(calendar.input, calendar.thisMonth);
+    else if (action === "borrar") setValue(calendar.input, "");
+  }
+  function move2(calendar, data) {
+    const { shown: shown3 } = calendar;
+    if (data.cm) calendar.shown = new Date(shown3.getFullYear(), shown3.getMonth() + Number(data.cm), 1);
+    else if (data.cy) calendar.shown = new Date(shown3.getFullYear() + Number(data.cy), shown3.getMonth(), 1);
+    else if (data.cv) calendar.view = data.cv;
+    else if (data.canio) {
+      calendar.shown = new Date(Number(data.canio), shown3.getMonth(), 1);
+      calendar.view = "meses";
+    } else return false;
+    paint5(calendar);
+    return true;
+  }
+  function onClick3(calendar, event) {
+    event.stopPropagation();
+    const button3 = event.target.closest("button");
+    if (!button3 || button3.disabled) return;
+    const data = button3.dataset;
+    if (data.cd) {
+      pick(calendar, data.cd);
+      return;
+    }
+    if (move2(calendar, data)) return;
+    if (data.cmes !== void 0) {
+      const shown3 = calendar.shown;
+      if (calendar.kind === "mes") {
+        setValue(calendar.input, `${shown3.getFullYear()}-${twoDigits(Number(data.cmes) + 1)}`);
+        return;
+      }
+      calendar.shown = new Date(shown3.getFullYear(), Number(data.cmes), 1);
+      calendar.view = "dias";
+      paint5(calendar);
+      return;
+    }
+    quick(calendar, data.cq);
+  }
+  function onKey2(calendar, event) {
+    if (calendar.view !== "dias") return;
+    const step = KEY_STEPS[event.key], date = /* @__PURE__ */ new Date(`${calendar.focused}T12:00:00`);
+    if (step) date.setDate(date.getDate() + step);
+    else if (event.key === "PageUp" || event.key === "PageDown") date.setMonth(date.getMonth() + (event.key === "PageUp" ? -1 : 1));
+    else if (event.key === "Home") date.setDate(date.getDate() - (date.getDay() + 6) % 7);
+    else if (event.key === "End") date.setDate(date.getDate() + (6 - (date.getDay() + 6) % 7));
+    else return;
+    event.preventDefault();
+    calendar.focused = toIsoDate(date);
+    calendar.shown = new Date(date.getFullYear(), date.getMonth(), 1);
+    calendar.options.teclado = true;
+    paint5(calendar);
+  }
+  function startOf(input6, kind, options3) {
+    const value10 = input6.value || "";
+    if (options3.fecha) return options3.fecha;
+    if (kind === "mes") return value10 ? `${value10}-01` : "";
+    return value10.slice(0, 10);
+  }
+  function openCalendar(input6, options3 = {}) {
+    const kind = kindOf2(input6), value10 = input6.value || "", start3 = startOf(input6, kind, options3), size = kind === "mes" ? 7 : 10;
+    const popup = newPopup("selpop cal", t(kind === "mes" ? "components.datePicker.chooseMonth" : "components.datePicker.chooseDate"), options3.mismo);
+    const calendar = {
+      input: input6,
+      options: options3,
+      popup,
+      kind,
+      shown: /* @__PURE__ */ new Date(`${start3 || todayIso()}T12:00:00`),
+      focused: start3 || todayIso(),
+      view: kind === "mes" ? "meses" : "dias",
+      min: input6.min.slice(0, size) || null,
+      max: input6.max.slice(0, size) || null,
+      chosen: kind === "mes" ? value10.slice(0, 7) : value10.slice(0, 10),
+      thisMonth: todayIso().slice(0, 7)
+    };
+    popup.addEventListener("click", (event) => {
+      onClick3(calendar, event);
+    });
+    popup.addEventListener("keydown", (event) => {
+      onKey2(calendar, event);
+    });
+    attachPopup(popup, input6);
+    paint5(calendar);
+  }
+  var DEFAULT_STEP = 5;
+  var MAX_STEP = 30;
+  var HOURS = 24;
+  var MINUTES_PER_HOUR = 60;
+  var SECONDS_PER_MINUTE = 60;
+  var DEFAULT_HOUR = 9;
+  function stepOf(input6) {
+    const seconds = Number(input6.step), minutes2 = seconds >= SECONDS_PER_MINUTE ? Math.round(seconds / SECONDS_PER_MINUTE) : DEFAULT_STEP;
+    return [1, 2, 3, 4].includes(minutes2) || minutes2 > MAX_STEP ? DEFAULT_STEP : minutes2;
+  }
+  function paintClock(clock) {
+    const { hour, minute, input: input6, options: options3 } = clock, minutes2 = range(Math.ceil(MINUTES_PER_HOUR / clock.step)).map((index) => index * clock.step);
+    clock.popup.innerHTML = `${options3.fecha ? `<div class="rjfecha"><span>${mediumDate(options3.fecha)}</span><button type="button" data-rq="dia">${t("components.datePicker.changeDay")}</button></div>` : ""}
+      <div class="rjh"><b>${twoDigits(hour)}:${twoDigits(minute)}</b></div>
+      <div class="rjt">${t("components.datePicker.hour")}</div><div class="rjg">${range(HOURS).map((index) => `<button type="button" data-rh="${index}" class="${index === hour ? "sel" : ""}" aria-pressed="${String(index === hour)}">${twoDigits(index)}</button>`).join("")}</div>
+      <div class="rjt">${t("components.datePicker.minutes")}</div><div class="rjg m">${minutes2.map((index) => `<button type="button" data-rm="${index}" class="${index === minute ? "sel" : ""}" aria-pressed="${String(index === minute)}">${twoDigits(index)}</button>`).join("")}</div>
+      <div class="calp"><button type="button" data-rq="ahora">${t("components.datePicker.now")}</button>${input6.required ? "" : `<button type="button" data-rq="borrar">${t("components.datePicker.clear")}</button>`}<button type="button" data-rq="ok" class="okb">${t("components.datePicker.accept")}</button></div>`;
+    placePopup(clock.popup, input6);
+  }
+  function finishClock(clock, action) {
+    const { input: input6, options: options3 } = clock;
+    if (action === "dia") {
+      openCalendar(input6, { fecha: options3.fecha, mismo: true });
+      return;
+    }
+    if (action === "ahora") {
+      const now = /* @__PURE__ */ new Date();
+      clock.hour = now.getHours();
+      clock.minute = Math.min(MINUTES_PER_HOUR - clock.step, Math.round(now.getMinutes() / clock.step) * clock.step);
+      paintClock(clock);
+      return;
+    }
+    const time = `${twoDigits(clock.hour)}:${twoDigits(clock.minute)}`;
+    const day = orFallback(options3.fecha, (input6.value || todayIso()).slice(0, 10));
+    setValue(input6, action === "borrar" ? "" : clock.kind === "fechahora" ? `${day}T${time}` : time, true);
+  }
+  function onClockClick(clock, event) {
+    event.stopPropagation();
+    const target = event.target;
+    const hour = target.closest("[data-rh]"), minute = target.closest("[data-rm]"), action = target.closest("[data-rq]");
+    if (hour) {
+      clock.hour = Number(hour.dataset.rh);
+      paintClock(clock);
+    }
+    if (minute) {
+      clock.minute = Number(minute.dataset.rm);
+      paintClock(clock);
+    }
+    if (action) finishClock(clock, action.dataset.rq ?? "");
+  }
+  function initialTime(input6, kind) {
+    const current = kind === "fechahora" ? input6.value.slice(11, 16) : input6.value;
+    const [hour = NaN, minute = NaN] = (current || "09:00").split(":").map(Number);
+    return [isNaN(hour) ? DEFAULT_HOUR : hour, isNaN(minute) ? 0 : minute];
+  }
+  function openClock(input6, options3 = {}) {
+    const kind = kindOf2(input6);
+    if (!options3.desdeCal && (kind === "mes" || kind === "fechahora")) {
+      openCalendar(input6);
+      return;
+    }
+    const [hour, minute] = initialTime(input6, kind);
+    const popup = newPopup("selpop reloj", t("components.datePicker.chooseTime"), options3.mismo);
+    const clock = { input: input6, options: options3, popup, kind, step: stepOf(input6), hour, minute };
+    popup.addEventListener("click", (event) => {
+      onClockClick(clock, event);
+    });
+    attachPopup(popup, input6);
+    paintClock(clock);
+  }
+
+  // src/app/components/dialogs.ts
+  var FOCUS_DELAY_MS2 = 30;
+  var SAVE_BUTTON = /^(guardar|validar|crear|añadir|enviar|aplicar|aceptar|confirmar|registrar|emitir|dar de alta)/i;
+  var SAVING_TEXT = /^(\+\s*)?(guardar|crear|añadir|enviar|validar|aplicar|confirmar|emitir|cobrar|registrar|marcar|asignar|unificar|cambiar|borrar|eliminar|quitar|anular|rectificar|liquidar|pedir|actualizar)\b/i;
+  var mini = () => document.getElementById("mini");
+  var fieldValue4 = () => document.getElementById("mcampo")?.value ?? "";
+  function fieldHtml(field11) {
+    if (!field11) return "";
+    return `<input id="mcampo" type="${field11.tipo ?? "text"}" value="${escapeHtml(field11.valor ?? "")}"
+                   placeholder="${escapeHtml(field11.placeholder ?? "")}" ${field11.min ? `min="${field11.min}"` : ""}>`;
+  }
+  function dialogHtml(options3) {
+    const { titulo, msg, ok, cancel: cancel3, campo, opciones, peligro } = options3;
+    return `<div class="fbox">
+      <div class="fh"><h2>${escapeHtml(titulo ?? t("components.dialogs.confirm"))}</h2></div>
+      ${msg ? `<p style="margin:0 0 10px;white-space:pre-line">${escapeHtml(msg)}</p>` : ""}
+      ${fieldHtml(campo)}
+      ${opciones?.length ? `<div class="chips u-p-10-0-0">${opciones.map((option3) => `<button type="button" class="chip" data-mop="${escapeHtml(option3)}">${escapeHtml(option3)}</button>`).join("")}</div>` : ""}
+      <div class="acts u-end">
+        ${cancel3 === false ? "" : `<button class="btn sec" id="mno">${escapeHtml(cancel3 ?? t("components.dialogs.cancel"))}</button>`}
+        <button class="btn ${peligro ? "dang" : ""}" id="mok">${escapeHtml(ok ?? t("components.dialogs.accept"))}</button></div></div>`;
+  }
+  function bindDialog(dialog7, hasField, finish2) {
+    const ok = document.getElementById("mok"), no = document.getElementById("mno");
+    if (ok) ok.onclick = () => {
+      finish2(hasField ? fieldValue4() : true);
+    };
+    if (no) no.onclick = () => {
+      finish2(hasField ? null : false);
+    };
+    dialog7.querySelectorAll("[data-mop]").forEach((button3) => {
+      button3.onclick = () => {
+        const input6 = document.getElementById("mcampo");
+        if (input6) input6.value = button3.dataset.mop ?? "";
+      };
+    });
+    dialog7.onclick = (event) => {
+      if (event.target === dialog7) finish2(hasField ? null : false);
+    };
+    dialog7.oncancel = (event) => {
+      event.preventDefault();
+      finish2(hasField ? null : false);
+    };
+  }
+  function focusField(finish2) {
+    setTimeout(() => {
+      const input6 = document.getElementById("mcampo");
+      if (!input6) {
+        document.getElementById("mok")?.focus();
+        return;
+      }
+      input6.focus();
+      input6.onkeydown = (event) => {
+        if (event.key === "Enter") finish2(input6.value);
+      };
+    }, FOCUS_DELAY_MS2);
+  }
+  function openDialog(options3) {
+    return new Promise((resolve) => {
+      const dialog7 = mini();
+      dialog7.innerHTML = dialogHtml(options3);
+      const finish2 = (value10) => {
+        dialog7.close();
+        resolve(value10);
+      };
+      bindDialog(dialog7, Boolean(options3.campo), finish2);
+      dialog7.showModal();
+      focusField(finish2);
+    });
+  }
+  function showDialog(options3) {
+    const answer = openDialog(options3);
+    if (options3.campo?.tipo === "area") setTimeout(() => {
+      const input6 = document.getElementById("mcampo");
+      if (!input6) return;
+      const area = document.createElement("textarea");
+      area.id = "mcampo";
+      area.rows = 6;
+      area.value = input6.value;
+      area.placeholder = input6.placeholder;
+      input6.replaceWith(area);
+      mini().classList.add("ancha");
+      area.focus();
+    }, 0);
+    return answer;
+  }
+  var confirmAction = (message, options3 = {}) => showDialog({ msg: message, titulo: options3.titulo, ok: options3.ok, peligro: options3.peligro });
+  var askText = (message, value10, options3 = {}) => showDialog({ msg: message, titulo: options3.titulo, ok: options3.ok ?? t("components.dialogs.save"), campo: { valor: value10, placeholder: options3.placeholder, tipo: options3.tipo }, opciones: options3.opciones });
+  function chooseOption(title2, message, buttons) {
+    return new Promise((resolve) => {
+      const dialog7 = mini();
+      dialog7.innerHTML = `<div class="fbox"><div class="fh"><h2>${escapeHtml(title2)}</h2></div>
+      <p style="margin:0 0 10px;white-space:pre-line">${escapeHtml(message)}</p>
+      <div class="acts u-end u-wrap">${buttons.map((button3) => `<button class="btn ${button3.cls ?? ""}" data-op="${button3.k}">${escapeHtml(button3.t)}</button>`).join("")}</div></div>`;
+      const finish2 = (value10) => {
+        dialog7.close();
+        resolve(value10);
+      };
+      dialog7.querySelectorAll("[data-op]").forEach((button3) => {
+        button3.onclick = () => {
+          finish2(button3.dataset.op === "no" ? null : button3.dataset.op ?? null);
+        };
+      });
+      dialog7.oncancel = (event) => {
+        event.preventDefault();
+        finish2(null);
+      };
+      dialog7.onclick = (event) => {
+        if (event.target === dialog7) finish2(null);
+      };
+      dialog7.showModal();
+    });
+  }
+  function askField(title2, type, value10, label) {
+    return new Promise((resolve) => {
+      const dialog7 = mini();
+      dialog7.innerHTML = `<div class="fbox"><div class="fh"><h2>${escapeHtml(title2)}</h2></div><label for="rnpc">${escapeHtml(label)}</label><input id="rnpc" type="${type}" value="${escapeHtml(value10 ?? "")}" min="${todayIso()}">
+      <div class="acts u-end"><button class="btn sec" data-op="no">${t("components.dialogs.cancel")}</button><button class="btn" data-op="si">${t("components.dialogs.accept")}</button></div></div>`;
+      const finish2 = (answer) => {
+        dialog7.close();
+        resolve(answer);
+      };
+      dialog7.querySelectorAll("[data-op]").forEach((button3) => {
+        button3.onclick = () => {
+          finish2(button3.dataset.op === "si" ? document.getElementById("rnpc").value : null);
+        };
+      });
+      dialog7.oncancel = (event) => {
+        event.preventDefault();
+        finish2(null);
+      };
+      enhanceFields(dialog7);
+      dialog7.showModal();
+    });
+  }
+  var hasSaveButton = (dialog7) => [...dialog7.querySelectorAll("button, .btn")].some((button3) => button3.offsetParent && !button3.disabled && !button3.classList.contains("sec") && SAVE_BUTTON.test((button3.textContent ?? "").trim()));
+  function isSaveButton(button3) {
+    if (!button3 || button3.matches(".sec, .x, .kmv, .plic, [data-cerrar], [data-cerrar2], .vueltabtn, .guardando")) return false;
+    if (!button3.closest("dialog[open], #v-config")) return false;
+    return /ok$|guardar|enviar/i.test(button3.id || "") || SAVING_TEXT.test((button3.textContent ?? "").trim());
+  }
+  async function tryClose(dialog7) {
+    if (dialog7.dataset.sucio && hasSaveButton(dialog7) && !await confirmAction(
+      t("components.dialogs.leaveText"),
+      { titulo: t("components.dialogs.leaveTitle"), ok: t("components.dialogs.leaveOk"), peligro: true }
+    )) return;
+    dialog7.close();
+  }
+  function askWith(title2, message, mount, ok) {
+    return new Promise((resolve) => {
+      const dialog7 = mini();
+      dialog7.innerHTML = `<div class="fbox"><div class="fh"><h2>${escapeHtml(title2)}</h2></div>
+      ${message ? `<p>${escapeHtml(message)}</p>` : ""}<div id="mslot"></div>
+      <div class="acts u-end"><button class="btn sec" data-op="no">${t("components.dialogs.cancel")}</button><button class="btn" data-op="si">${escapeHtml(ok)}</button></div></div>`;
+      const slot = document.getElementById("mslot"), read3 = slot ? mount(slot) : () => null;
+      const finish2 = (answer) => {
+        dialog7.close();
+        resolve(answer);
+      };
+      dialog7.querySelectorAll("[data-op]").forEach((button3) => {
+        button3.onclick = () => {
+          if (button3.dataset.op !== "si") {
+            finish2(null);
+            return;
+          }
+          const answer = read3();
+          if (answer !== null) finish2(answer);
+        };
+      });
+      dialog7.oncancel = (event) => {
+        event.preventDefault();
+        finish2(null);
+      };
+      dialog7.showModal();
+    });
+  }
+
+  // src/app/components/list-bar/selection/outcome.ts
+  var COMMON = () => ({ permiso: t("listSelection.refused.permission"), no_encontrado: t("listSelection.refused.notFound") });
+  function outcomeOf(answer, reasons = {}) {
+    if (answer.error) return t("listSelection.refused.other", { error: answer.error.message ?? "" });
+    const result = answer.data;
+    if (result?.ok !== false) return null;
+    const code = result.error ?? "";
+    return reasons[code] ?? COMMON()[code] ?? t("listSelection.refused.other", { error: code });
+  }
+
+  // src/app/screens/customers/bulk-actions.ts
+  var ASSIGN_LEVEL = 2;
+  var DELETE_LEVEL = 3;
+  var customers2 = () => term("paciente", { number: "p" });
+  var count = (value10) => formatNumber(value10);
+  function askProfessional() {
+    const professional = term("medico");
+    return askWith(t("customersBulk.assign.title", { professional }), t("customersBulk.assign.ask", { professional }), (slot) => {
+      let chosen4 = null;
+      pickAccount(slot, { placeholder: t("customersBulk.assign.pick", { professional }), alElegir: (account) => {
+        chosen4 = account ? { value: account.id, label: account.nombre ?? "" } : null;
+      } });
+      setTimeout(() => {
+        slot.querySelector("input")?.focus();
+      }, 0);
+      return () => chosen4;
+    }, t("customersBulk.assign.next"));
+  }
+  var confirmOf = (key) => (total, skipped) => ({ titulo: t(`customersBulk.${key}.title`), texto: t(`customersBulk.${key}.text`, { count: count(total), customers: customers2() }) + skipped, ok: t(`customersBulk.${key}.ok`, { count: count(total) }) });
+  function assignProfessional() {
+    const professional = term("medico");
+    return {
+      id: "assign",
+      label: t("customersBulk.assign.label", { professional }),
+      allowed: () => levelOf("V") >= ASSIGN_LEVEL,
+      blocker: () => null,
+      ask: askProfessional,
+      confirm: (total, skipped, answer) => ({ titulo: t("customersBulk.assign.title", { professional }), texto: t("customersBulk.assign.text", { count: count(total), customers: customers2(), name: answer?.label ?? "" }) + skipped, ok: t("customersBulk.assign.ok", { count: count(total) }) }),
+      runOne: async (row3, answer) => outcomeOf(await legacyDb().rpc("asignar_cuenta_cliente", { p_contacto: row3.id, p_medico: answer?.value ?? null })),
+      progress: t("customersBulk.assign.progress"),
+      done: t("customersBulk.assign.done")
+    };
+  }
+  function takeOut() {
+    return {
+      id: "off",
+      label: t("customersBulk.off.label"),
+      allowed: canSell,
+      blocker: () => null,
+      confirm: confirmOf("off"),
+      runOne: async (row3) => outcomeOf(await legacyDb().rpc("baja_cliente", { p_id: row3.id, p_baja: true })),
+      progress: t("customersBulk.off.progress"),
+      done: t("customersBulk.off.done")
+    };
+  }
+  function deleteCustomers() {
+    return {
+      id: "delete",
+      label: t("customersBulk.delete.label"),
+      danger: true,
+      allowed: () => levelOf("V") >= DELETE_LEVEL,
+      blocker: () => null,
+      confirm: confirmOf("delete"),
+      runOne: async (row3) => outcomeOf(await legacyDb().rpc("eliminar_cliente", { p_id: row3.id }), { historial: t("customersBulk.delete.history") }),
+      progress: t("customersBulk.delete.progress"),
+      done: t("customersBulk.delete.done")
+    };
+  }
+  var customerSelection = () => ({
+    key: "pacientes",
+    shape: { table: "#paclista .dgrid", head: "#paclista .dgrid > .dh", rows: "#paclista .dgrid > .dr[data-pac]", idKey: "pac" },
+    what: () => customers2(),
+    one: () => term("paciente"),
+    actions: () => [assignProfessional(), takeOut(), deleteCustomers()],
+    reload: () => {
+      coreLegacy.forgetReadCache();
+      void listCustomers();
+    }
+  });
 
   // src/app/components/list-bar/configs/customers.ts
   var COLUMNS_DELAY_MS2 = 80;
   var TOTAL = "tot";
   var COMPANIES = "emp";
   var COMPANY = "Empresa";
-  var byId8 = (id) => document.getElementById(id);
+  var byId11 = (id) => document.getElementById(id);
   async function indicators() {
-    const count = (filters3) => Promise.resolve(listBarLegacy.countRows("clientes_lista", {
+    const count4 = (filters3) => Promise.resolve(listBarLegacy.countRows("clientes_lista", {
       q: null,
       p_medico: null,
       lim: 1,
@@ -16735,7 +20276,7 @@
       p_municipio: null,
       ...filters3
     })).then((result) => result.data?.total ?? 0, () => 0);
-    const [total, withOrders, without, companies] = await Promise.all([count({}), count({ p_pedidos: "con" }), count({ p_pedidos: "sin" }), count({ p_tipo: COMPANY })]);
+    const [total, withOrders, without, companies] = await Promise.all([count4({}), count4({ p_pedidos: "con" }), count4({ p_pedidos: "sin" }), count4({ p_tipo: COMPANY })]);
     return [
       { k: TOTAL, t: t("listBar.customers.customers"), n: total, s: t("listBar.customers.inTotal") },
       { k: "con", t: t("listBar.customers.withOrders"), n: withOrders, s: t("listBar.customers.boughtOnce") },
@@ -16755,18 +20296,18 @@
       filters3.pedidos = "";
     } else if (key === COMPANIES) filters3.tipo = filters3.tipo === COMPANY ? "" : COMPANY;
     else filters3.pedidos = filters3.pedidos === key ? "" : key;
-    const type = byId8("pactipo");
+    const type = byId11("pactipo");
     if (type) type.value = filters3.tipo ?? "";
-    const orders2 = byId8("pacped");
+    const orders2 = byId11("pacped");
     if (orders2) orders2.value = filters3.pedidos ?? "";
     filters3.pagina = 0;
     listBarLegacy.searchCustomers();
   }
   function openColumns2() {
     const open2 = () => {
-      byId8("tools")?.querySelector(".t2abrir")?.click();
+      byId11("tools")?.querySelector(".t2abrir")?.click();
     };
-    const tools = byId8("tools");
+    const tools = byId11("tools");
     if (tools?.classList.contains("abierto") && tools.querySelector(".t2abrir")) {
       open2();
       return;
@@ -16777,7 +20318,7 @@
     setTimeout(open2, COLUMNS_DELAY_MS2);
   }
   function card2(row3) {
-    const cells = row3.children, text2 = (index) => (cells[index]?.textContent ?? "").trim();
+    const cells = dataCells(row3), text2 = (index) => (cells[index]?.textContent ?? "").trim();
     const value10 = (key) => (row3.querySelector(`[data-cd="${key}"]`)?.textContent ?? "").trim();
     const line2 = (keys) => keys.map(value10).filter(Boolean).join(" · ");
     return { a: text2(0), b: line2(["direccion", "poblacion"]), c: cells[1]?.innerHTML ?? "", d: line2(["telefono", "email"]) };
@@ -16786,17 +20327,17 @@
     que: () => t("listBar.customers.what"),
     // v2.467.0: the search says where it looks
     buscaTxt: () => t("customers.list.searchPlaceholder", { professional: term("medico") }),
-    nuevo: () => byId8("pacnuevo"),
-    cuerpo: () => byId8("paclista"),
-    tabla: () => byId8("paclista"),
-    pie: () => byId8("pacpag"),
-    cuenta: () => byId8("paccuenta"),
+    nuevo: () => byId11("pacnuevo"),
+    cuerpo: () => byId11("paclista"),
+    tabla: () => byId11("paclista"),
+    pie: () => byId11("pacpag"),
+    cuenta: () => byId11("paccuenta"),
     conDatos: (element) => Boolean(element.querySelector(".dgrid, .vacio")),
     rapidos: [["pactipo", t("listBar.customers.type")], ["pacped", t("listBar.customers.orders")], ["pacmun", t("listBar.customers.town")]],
     q: () => listBarLegacy.customerFilters().q || "",
     // v2.249.0: the bar's search searches directly (before, it went through the hidden field and waited twice)
     buscarQ: (value10) => {
-      const input6 = byId8("pacq");
+      const input6 = byId11("pacq");
       if (input6) input6.value = value10;
       const filters3 = listBarLegacy.customerFilters();
       filters3.q = value10.trim();
@@ -16816,16 +20357,121 @@
     kpis: indicators,
     kpiOn: isOn,
     kpiPulsar: press,
-    card: card2
+    card: card2,
+    seleccion: customerSelection()
+  });
+
+  // src/app/screens/accounts/bulk-actions.ts
+  var DELETE_LEVEL2 = 3;
+  var CLASSES = ["A", "B", "C"];
+  var NO_CLASS = "-";
+  var accounts2 = () => term("medico", { number: "p" });
+  var count2 = (value10) => formatNumber(value10);
+  var isAdministration = () => can("administrar");
+  async function askUser(title2) {
+    const { data } = await legacyDb().rpc("usuarios_lista");
+    const users = (data ?? []).filter((user) => user.activo && cardSectionsLegacy.roleCan(user.rol, "cartera"));
+    if (!users.length) {
+      coreLegacy.toast(t("accountsBulk.noUsers"), true);
+      return null;
+    }
+    return askWith(title2, t("accountsBulk.chooseUser"), (slot) => {
+      slot.innerHTML = `<select id="msel" aria-label="${escapeHtml(t("accountsBulk.chooseUser"))}">${users.map((user) => `<option value="${user.id}">${escapeHtml(user.nombre)} · ${escapeHtml(user.rol)}</option>`).join("")}</select>`;
+      const select = slot.querySelector("select");
+      return () => select ? { value: select.value, label: select.options[select.selectedIndex]?.text.split(" · ")[0] ?? "" } : null;
+    }, t("accountsBulk.userOk"));
+  }
+  async function askClass() {
+    const buttons = [...CLASSES.map((letter) => ({ k: letter, t: letter })), { k: NO_CLASS, t: t("accountsBulk.classify.none"), cls: "sec" }];
+    const chosen4 = await chooseOption(t("accountsBulk.classify.title"), t("accountsBulk.classify.ask"), buttons);
+    if (!chosen4) return null;
+    return chosen4 === NO_CLASS ? { value: null, label: t("accountsBulk.classify.none") } : { value: chosen4, label: chosen4 };
+  }
+  var confirmWith = (key) => (total, skipped, answer) => ({ titulo: t(`accountsBulk.${key}.title`), texto: t(`accountsBulk.${key}.text`, { count: count2(total), accounts: accounts2(), name: answer?.label ?? "" }) + skipped, ok: t(`accountsBulk.${key}.ok`, { count: count2(total) }) });
+  var confirmOf2 = (key) => (total, skipped) => ({ titulo: t(`accountsBulk.${key}.title`), texto: t(`accountsBulk.${key}.text`, { count: count2(total), accounts: accounts2() }) + skipped, ok: t(`accountsBulk.${key}.ok`, { count: count2(total) }) });
+  function assignOwner() {
+    return {
+      id: "owner",
+      label: t("accountsBulk.owner.label"),
+      allowed: isAdministration,
+      blocker: () => null,
+      ask: () => askUser(t("accountsBulk.owner.title")),
+      confirm: confirmWith("owner"),
+      runOne: async (row3, answer) => outcomeOf(await legacyDb().rpc("asignar_responsable_cuenta", { p_medico: row3.id, p_usuario: answer?.value ?? null })),
+      progress: t("accountsBulk.owner.progress"),
+      done: t("accountsBulk.owner.done")
+    };
+  }
+  function addToPortfolio() {
+    return {
+      id: "portfolio",
+      label: t("accountsBulk.portfolio.label"),
+      allowed: isAdministration,
+      blocker: () => null,
+      ask: () => askUser(t("accountsBulk.portfolio.title")),
+      confirm: confirmWith("portfolio"),
+      runOne: async (row3, answer) => outcomeOf(await legacyDb().rpc("asignar_cartera", { p: { usuario_id: answer?.value, medicos: [row3.id], quitar: false } })),
+      progress: t("accountsBulk.portfolio.progress"),
+      done: t("accountsBulk.portfolio.done")
+    };
+  }
+  function classify() {
+    return {
+      id: "classify",
+      label: t("accountsBulk.classify.label"),
+      allowed: canEdit,
+      blocker: () => null,
+      ask: askClass,
+      confirm: confirmWith("classify"),
+      runOne: async (row3, answer) => outcomeOf(await legacyDb().rpc("clasificar_cuentas", { p_ids: [row3.id], p_clase: answer?.value ?? null })),
+      progress: t("accountsBulk.classify.progress"),
+      done: t("accountsBulk.classify.done")
+    };
+  }
+  function takeOut2() {
+    return {
+      id: "off",
+      label: t("accountsBulk.off.label"),
+      allowed: canEdit,
+      blocker: () => null,
+      confirm: confirmOf2("off"),
+      runOne: async (row3) => outcomeOf(await legacyDb().rpc("baja_cuenta", { p_id: row3.id, p_baja: true })),
+      progress: t("accountsBulk.off.progress"),
+      done: t("accountsBulk.off.done")
+    };
+  }
+  function deleteAccounts() {
+    return {
+      id: "delete",
+      label: t("accountsBulk.delete.label"),
+      danger: true,
+      allowed: () => levelOf("M") >= DELETE_LEVEL2,
+      blocker: () => null,
+      confirm: confirmOf2("delete"),
+      runOne: async (row3) => outcomeOf(await legacyDb().rpc("eliminar_cuenta", { p_id: row3.id }), { historial: t("accountsBulk.delete.history") }),
+      progress: t("accountsBulk.delete.progress"),
+      done: t("accountsBulk.delete.done")
+    };
+  }
+  var accountSelection = () => ({
+    key: "directorio",
+    shape: { table: "#tabla", head: "#thead", rows: "#lista > .trow[data-id]", idKey: "id" },
+    what: () => accounts2(),
+    one: () => term("medico"),
+    actions: () => [assignOwner(), addToPortfolio(), classify(), takeOut2(), deleteAccounts()],
+    reload: () => {
+      coreLegacy.forgetReadCache();
+      void searchAccounts(false);
+    }
   });
 
   // src/app/components/list-bar/configs/directory.ts
   var PERSON = "Persona";
-  var CENTRE2 = "Centro";
+  var CENTRE3 = "Centro";
   var SELECT_FILTERS = ["tipo", "prov", "muni", "esp", "est", "rep", "com"];
   var FLAG_FILTERS = ["urg", "mios", "sin"];
   var FIELD_IDS = ["ftipo", "fest", "fprov", "fmuni", "fesp", "fcom", "frep", "q"];
-  var byId9 = (id) => document.getElementById(id);
+  var byId12 = (id) => document.getElementById(id);
   function activeFilters() {
     const filters3 = listBarLegacy.accountFilters();
     return SELECT_FILTERS.filter((key) => filters3[key]).length + FLAG_FILTERS.filter((key) => filters3[key]).length + Object.values(filters3.campos ?? {}).filter(filterHasValue).length;
@@ -16833,43 +20479,43 @@
   function clearFilters() {
     Object.assign(listBarLegacy.accountFilters(), { q: "", tipo: "", prov: "", muni: "", esp: "", est: "", urg: false, mios: false, sin: false, com: "", rep: "", campos: {} });
     FIELD_IDS.forEach((id) => {
-      const field10 = byId9(id);
-      if (field10) field10.value = "";
+      const field11 = byId12(id);
+      if (field11) field11.value = "";
     });
-    const tools = byId9("tools");
+    const tools = byId12("tools");
     if (tools?.classList.contains("abierto") && listBarLegacy.toolsContext() === "directorio") tools.classList.remove("abierto");
     listBarLegacy.loadAccountFilters();
     listBarLegacy.searchAccounts(true);
   }
   async function indicators2() {
-    const count = (filters3) => Promise.resolve(listBarLegacy.countRows("buscar_cuentas", { q: null, lim: 1, desplaz: 0, ...filters3 })).then((result) => result.data?.total ?? 0, () => 0);
-    const [people, centres, urgent, never, mine] = await Promise.all([count({ f_tipo: PERSON }), count({ f_tipo: CENTRE2 }), count({ f_urgentes: true }), count({ f_sin_visitar: true }), count({ f_mios: true })]);
+    const count4 = (filters3) => Promise.resolve(listBarLegacy.countRows("buscar_cuentas", { q: null, lim: 1, desplaz: 0, ...filters3 })).then((result) => result.data?.total ?? 0, () => 0);
+    const [people, centres, urgent, never, mine] = await Promise.all([count4({ f_tipo: PERSON }), count4({ f_tipo: CENTRE3 }), count4({ f_urgentes: true }), count4({ f_sin_visitar: true }), count4({ f_mios: true })]);
     return [
       { k: PERSON, t: term("medico", { number: "p", capital: "C" }), n: people, s: t("listBar.directory.inTotal") },
-      { k: CENTRE2, t: t("listBar.directory.centres"), n: centres, s: t("listBar.directory.inTotal") },
+      { k: CENTRE3, t: t("listBar.directory.centres"), n: centres, s: t("listBar.directory.inTotal") },
       { k: "urg", t: t("listBar.directory.urgent"), n: urgent, s: t("listBar.directory.markedUrgent") },
       { k: "sin", t: t("listBar.directory.neverVisited"), n: never, s: t("listBar.directory.withoutVisits", { visits: term("visita", { number: "p" }) }) },
       { k: "mios", t: t("listBar.directory.mine"), n: mine, s: t("listBar.directory.assignedToYou") }
     ];
   }
-  var isType = (key) => key === PERSON || key === CENTRE2;
+  var isType = (key) => key === PERSON || key === CENTRE3;
   function pressIndicator(key) {
     const filters3 = listBarLegacy.accountFilters();
     if (isType(key)) {
       filters3.tipo = filters3.tipo === key ? "" : key;
-      const select = byId9("ftipo");
+      const select = byId12("ftipo");
       if (select) select.value = filters3.tipo;
     } else filters3[key] = !filters3[key];
     listBarLegacy.searchAccounts(true);
   }
   var directoryConfig = () => ({
     que: () => term("medico", { number: "p" }),
-    nuevo: () => byId9("nuevoBtn"),
+    nuevo: () => byId12("nuevoBtn"),
     textoNuevo: () => t("listBar.directory.add", { professional: term("medico") }),
-    cuerpo: () => byId9("lista"),
-    tabla: () => byId9("tabla"),
-    pie: () => byId9("dirpag"),
-    cuenta: () => byId9("cuenta"),
+    cuerpo: () => byId12("lista"),
+    tabla: () => byId12("tabla"),
+    pie: () => byId12("dirpag"),
+    cuenta: () => byId12("cuenta"),
     conDatos: (element) => Boolean(element.querySelector(".trow, .vacio")),
     rapidos: [["ftipo", t("listBar.directory.type")], ["fest", t("listBar.directory.state")], ["fcom", ""], ["fprov", t("listBar.directory.province")], ["fmuni", t("listBar.directory.municipality")], ["fesp", t("listBar.directory.speciality")]],
     q: () => listBarLegacy.accountFilters().q || "",
@@ -16884,17 +20530,197 @@
     activos: activeFilters,
     quitar: clearFilters,
     filtros: () => {
-      byId9("dirtools")?.click();
+      byId12("dirtools")?.click();
     },
     columnas: () => {
       listBarLegacy.openAccountColumns();
     },
-    mapa: () => byId9("mapaBtn"),
+    mapa: () => byId12("mapaBtn"),
     mas: () => [["dircalidad", t("listBar.directory.quality")], ["cercaBtn", t("listBar.directory.nearby")]],
     kpis: indicators2,
     kpiOn: (key) => isType(key) ? listBarLegacy.accountFilters().tipo === key : Boolean(listBarLegacy.accountFilters()[key]),
     kpiPulsar: pressIndicator,
-    card: null
+    card: null,
+    seleccion: accountSelection()
+  });
+
+  // src/app/screens/orders/bulk-actions.ts
+  var SALES_LEVEL = 2;
+  var orderOf = (row3) => row3.data;
+  var runsOperations = () => canInvoice();
+  var changesOrders = () => canSell() && levelOf("V") >= SALES_LEVEL;
+  var isAt = (row3) => t("ordersBulk.isAt", { step: orderStep(orderOf(row3))[0] });
+  var atStep = (step) => (row3) => stepCode(orderOf(row3)) === step ? null : isAt(row3);
+  async function call(name, args, reasons = {}) {
+    const answer = await legacyDb().rpc(name, args);
+    return outcomeOf(answer, reasons);
+  }
+  var count3 = (value10) => formatNumber(value10);
+  var confirmOf3 = (key, extra = {}) => (total, skipped) => ({ titulo: t(`ordersBulk.${key}.title`), texto: t(`ordersBulk.${key}.text`, { count: count3(total), ...extra }) + skipped, ok: t(`ordersBulk.${key}.ok`, { count: count3(total) }) });
+  function markPacked() {
+    return {
+      id: "packed",
+      label: t("ordersBulk.packed.label"),
+      allowed: runsOperations,
+      blocker: atStep("por_preparar"),
+      confirm: confirmOf3("packed"),
+      runOne: (row3) => call("marcar_operativa", { p_pedido: row3.id, p_campo: "paquete", p_hecho: true }),
+      progress: t("ordersBulk.packed.progress"),
+      done: t("ordersBulk.packed.done")
+    };
+  }
+  function issueInvoice() {
+    const reasons = { sin_serie: t("ordersBulk.invoice.noSeries"), ya_facturado: t("ordersBulk.invoice.already"), sin_cargo: t("ordersBulk.invoice.free"), distribuidor: t("ordersBulk.invoice.distributor") };
+    return {
+      id: "invoice",
+      label: t("ordersBulk.invoice.label"),
+      allowed: runsOperations,
+      blocker: (row3) => orderOf(row3).factura_distribuidor ? t("ordersBulk.invoice.distributor") : atStep("por_facturar")(row3),
+      confirm: confirmOf3("invoice"),
+      runOne: (row3) => call("emitir_factura", { p_pedido: row3.id }, reasons),
+      progress: t("ordersBulk.invoice.progress"),
+      done: t("ordersBulk.invoice.done")
+    };
+  }
+  function markPaid() {
+    return {
+      id: "paid",
+      label: t("ordersBulk.paid.label"),
+      allowed: runsOperations,
+      blocker: atStep("por_cobrar"),
+      confirm: confirmOf3("paid"),
+      runOne: (row3) => call("marcar_operativa", { p_pedido: row3.id, p_campo: "pago", p_hecho: true }),
+      progress: t("ordersBulk.paid.progress"),
+      done: t("ordersBulk.paid.done")
+    };
+  }
+  function markSent() {
+    const blocker2 = (row3) => {
+      const order = orderOf(row3);
+      if (order.estado !== STATES2.confirmed || !order.factura) return t("ordersBulk.sent.noInvoice");
+      return order.email_factura_en ? t("ordersBulk.sent.already") : null;
+    };
+    return {
+      id: "sent",
+      label: t("ordersBulk.sent.label"),
+      allowed: runsOperations,
+      blocker: blocker2,
+      confirm: confirmOf3("sent"),
+      runOne: (row3) => call("marcar_operativa", { p_pedido: row3.id, p_campo: "email_factura", p_hecho: true }),
+      progress: t("ordersBulk.sent.progress"),
+      done: t("ordersBulk.sent.done")
+    };
+  }
+  function markReported() {
+    const toThe = term("medico", { article: "al" });
+    return {
+      id: "report",
+      label: t("ordersBulk.report.label"),
+      allowed: () => runsOperations() && marksReportedOrders(),
+      blocker: (row3) => orderOf(row3).estado === STATES2.confirmed ? null : isAt(row3),
+      confirm: (total, skipped) => ({ titulo: t("ordersBulk.report.title"), texto: t("ordersBulk.report.text", { count: count3(total), toTheProfessional: toThe }) + skipped, ok: t("ordersBulk.report.ok", { count: count3(total) }) }),
+      runOne: (row3) => call("marcar_reporte", { p_id: row3.id, p_valor: true }),
+      progress: t("ordersBulk.report.progress"),
+      done: t("ordersBulk.report.done")
+    };
+  }
+  async function askVoidReason() {
+    const reason = await askText(t("ordersBulk.void.reason"), "", { titulo: t("ordersBulk.void.title"), ok: t("ordersBulk.void.reasonOk") });
+    return reason === null ? null : { value: reason.trim() || null, label: reason.trim() || t("ordersBulk.void.noReason") };
+  }
+  function voidOrders() {
+    return {
+      id: "void",
+      label: t("ordersBulk.void.label"),
+      danger: true,
+      allowed: changesOrders,
+      blocker: (row3) => {
+        const order = orderOf(row3);
+        return order.estado !== STATES2.confirmed ? isAt(row3) : order.factura ? t("ordersBulk.invoiced") : null;
+      },
+      ask: askVoidReason,
+      confirm: (total, skipped, answer) => ({ titulo: t("ordersBulk.void.title"), texto: t("ordersBulk.void.text", { count: count3(total), reason: answer?.label ?? "" }) + skipped, ok: t("ordersBulk.void.ok", { count: count3(total) }) }),
+      runOne: (row3, answer) => call("anular_pedido", { p_id: row3.id, p_motivo: answer?.value ?? null }, { facturado: t("ordersBulk.invoiced") }),
+      progress: t("ordersBulk.void.progress"),
+      done: t("ordersBulk.void.done")
+    };
+  }
+  function deleteDrafts() {
+    return {
+      id: "delete",
+      label: t("ordersBulk.delete.label"),
+      danger: true,
+      allowed: changesOrders,
+      blocker: (row3) => orderOf(row3).estado === STATES2.draft ? null : isAt(row3),
+      confirm: confirmOf3("delete"),
+      runOne: (row3) => call("borrar_pedido", { p_id: row3.id }, { validado: isAt(row3) }),
+      progress: t("ordersBulk.delete.progress"),
+      done: t("ordersBulk.delete.done")
+    };
+  }
+  var orderSelection = () => ({
+    key: "pedidos",
+    shape: { table: "#pedlista .dgrid", head: "#pedlista .dgrid > .dh", rows: "#pedlista .dgrid > .dr[data-ped]", idKey: "ped" },
+    what: () => t("listBar.sales.orders"),
+    one: () => t("ordersBulk.one"),
+    actions: () => [markPacked(), issueInvoice(), markPaid(), markSent(), markReported(), voidOrders(), deleteDrafts()],
+    // The cached pages and indicators are stale after writing: forget them, then paint again
+    reload: () => {
+      coreLegacy.forgetReadCache();
+      void paintOrderList();
+    }
+  });
+
+  // src/app/screens/billing/model.ts
+  var model_exports6 = {};
+  __export(model_exports6, {
+    PAYMENT: () => PAYMENT,
+    errorMessage: () => errorMessage2,
+    euros: () => euros4,
+    paymentPill: () => paymentPill2
+  });
+  var PAYMENT = { paid: "Cobrada", overdue: "Vencida", pending: "Pendiente" };
+  var euros4 = (value10) => formatCurrency(round2(value10));
+  function paymentPill2(state2) {
+    const kind = state2 === PAYMENT.paid ? "p-est" : state2 === PAYMENT.overdue ? "p-anu" : "p-bor";
+    return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
+  }
+  var errorMessage2 = (error) => error?.message ?? "";
+
+  // src/app/screens/billing/bulk-actions.ts
+  var CENT = 5e-3;
+  var invoiceOf = (row3) => row3.data;
+  var pendingOf = (invoice2) => round2((Number(invoice2.total) || 0) - (Number(invoice2.cobrado) || 0));
+  function blocker(row3) {
+    const invoice2 = invoiceOf(row3);
+    if (invoice2.estado_cobro === PAYMENT.paid) return t("invoicesBulk.paid");
+    return Math.abs(pendingOf(invoice2)) < CENT ? t("invoicesBulk.nothingPending") : null;
+  }
+  function registerPayments() {
+    return {
+      id: "payment",
+      label: t("invoicesBulk.payment.label"),
+      allowed: canInvoice,
+      blocker,
+      confirm: (count4, skipped) => ({ titulo: t("invoicesBulk.payment.title"), texto: t("invoicesBulk.payment.text", { count: formatNumber(count4) }) + skipped, ok: t("invoicesBulk.payment.ok", { count: formatNumber(count4) }) }),
+      runOne: async (row3) => {
+        const invoice2 = invoiceOf(row3);
+        return outcomeOf(await legacyDb().rpc("registrar_cobro", { p_factura: row3.id, p_importe: pendingOf(invoice2), p_fecha: todayIso(), p_forma: invoice2.forma_pago ?? null, p_nota: null }), { excede: t("invoicesBulk.nothingPending") });
+      },
+      progress: t("invoicesBulk.payment.progress"),
+      done: t("invoicesBulk.payment.done")
+    };
+  }
+  var invoiceSelection = () => ({
+    key: "facturas",
+    shape: { table: "#flista .dgrid", head: "#flista .dgrid > .dh", rows: "#flista .dgrid > .dr[data-fac]", idKey: "fac" },
+    what: () => t("listBar.sales.invoices"),
+    one: () => t("invoicesBulk.one"),
+    feminine: true,
+    actions: () => [registerPayments()],
+    reload: () => {
+      void reloadInvoiceRows();
+    }
   });
 
   // src/app/components/list-bar/configs/sales.ts
@@ -16908,6 +20734,7 @@
       buscador: "pq",
       banda: "operativa",
       extra: [["opcfg", t("listBar.sales.chooseAlerts")]],
+      seleccion: orderSelection(),
       rapidos: [["#pper select", PERIOD()], ["#pestado", ""], ["#pcanal", ""], ["#porigf", ""], ["#prepf", ""]]
     }),
     oport: gridConfig({
@@ -16923,7 +20750,15 @@
     prov: gridConfig({ tab: "ventas", que: () => t("listBar.sales.suppliers") })
   });
   var billingConfigs = () => ({
-    facturas: gridConfig({ tab: "facturacion", que: () => t("listBar.sales.invoices"), lista: "flista", pag: "fpag", buscador: "fq", rapidos: [["#fper select", PERIOD()], ["#fcob", ""]] })
+    facturas: gridConfig({
+      tab: "facturacion",
+      que: () => t("listBar.sales.invoices"),
+      lista: "flista",
+      pag: "fpag",
+      buscador: "fq",
+      rapidos: [["#fper select", PERIOD()], ["#fcob", ""]],
+      seleccion: invoiceSelection()
+    })
   });
   var productsConfigs = () => ({
     prods: gridConfig({ tab: "productos", que: () => t("listBar.sales.products") }),
@@ -16939,7 +20774,7 @@
     ventas: salesConfigs(),
     facturacion: billingConfigs(),
     productos: productsConfigs(),
-    ...Object.fromEntries(Object.entries(blocks3).map(([tab, block3]) => [tab, blockConfig(tab, block3)]))
+    ...Object.fromEntries(Object.entries(blocks3).map(([tab, block4]) => [tab, blockConfig(tab, block4)]))
   };
   function configOf(tab) {
     const config = configs[tab];
@@ -16953,6 +20788,8 @@
   var SECTION_SCREENS = ["ventas", "facturacion", "productos"];
 
   // src/app/components/list-bar/blocks-table.ts
+  var TEXT_COLUMN = "minmax(160px,1.5fr)";
+  var FIGURE_COLUMN = "120px";
   function moveActions(section, box3) {
     const greeting2 = section.querySelector(":scope > .saludo");
     let actions = greeting2?.querySelector(":scope > .acts") ?? null;
@@ -16971,15 +20808,15 @@
     });
     own.remove();
   }
-  function collectRows(box3, block3) {
+  function collectRows(box3, block4) {
     const rows2 = /* @__PURE__ */ new Map(), groups2 = [];
     box3.querySelectorAll("section.card, .card").forEach((card3) => {
-      const heading = card3.querySelector("h2"), group = heading ? textOf2(heading).replace(/\s*·\s*[\d.]+$/, "") : block3.def;
-      const items = [...card3.querySelectorAll(`.lista > .item[data-${block3.attr}]`)];
+      const heading = card3.querySelector("h2"), group = heading ? textOf(heading).replace(/\s*·\s*[\d.]+$/, "") : block4.def;
+      const items = [...card3.querySelectorAll(`.lista > .item[data-${block4.attr}]`)];
       if (!items.length) return;
       if (!groups2.includes(group)) groups2.push(group);
       items.forEach((item) => {
-        const key = item.dataset[block3.attr] ?? "", known = rows2.get(key);
+        const key = item.dataset[block4.attr] ?? "", known = rows2.get(key);
         if (known) {
           known.groups.add(group);
           item.remove();
@@ -16988,15 +20825,15 @@
     });
     return { rows: rows2, groups: groups2 };
   }
-  function tableOf(tab, block3, rows2, empty2) {
+  function tableOf(tab, block4, rows2, empty2) {
     const wrap3 = document.createElement("div");
     wrap3.className = "dgrid-wrap";
-    wrap3.innerHTML = `<div class="dgrid blq-${tab}"><div class="dh">${block3.cols.map(([title2, kind]) => `<span class="${kind}">${escapeHtml(title2)}</span>`).join("")}</div></div>`;
+    wrap3.innerHTML = `<div class="dgrid blq-${tab}"><div class="dh">${block4.cols.map(([title2, kind]) => `<span class="${kind}">${escapeHtml(title2)}</span>`).join("")}</div></div>`;
     const grid = wrap3.firstElementChild;
     rows2.forEach(({ row: row3, groups: groups2 }) => {
-      const cells = block3.celdas(row3), click = row3.onclick;
+      const cells = block4.celdas(row3), click = row3.onclick;
       row3.className = "dr";
-      row3.innerHTML = cells.map((cell2, index) => `<span class="${block3.cols[index]?.[1] ?? ""}">${cell2 || '<span class="vac">—</span>'}</span>`).join("");
+      row3.innerHTML = cells.map((cell2, index) => `<span class="${block4.cols[index]?.[1] ?? ""}">${cell2 || '<span class="vac">—</span>'}</span>`).join("");
       row3.dataset.grupos = [...groups2].join("|");
       row3.onclick = click;
       grid.appendChild(row3);
@@ -17004,12 +20841,17 @@
     if (!rows2.size) wrap3.innerHTML = `<div class="vacio">${escapeHtml(empty2)}</div>`;
     return wrap3;
   }
-  function paintChoice(section, tab, block3, data) {
+  function defaultColumns(wrap3, block4) {
+    const grid = wrap3.querySelector(".dgrid");
+    if (!grid || getComputedStyle(grid).getPropertyValue("--cols").trim()) return;
+    grid.style.setProperty("--cols", block4.cols.map(([, kind]) => kind ? FIGURE_COLUMN : TEXT_COLUMN).join(" "));
+  }
+  function paintChoice(section, tab, block4, data) {
     const { rows: rows2, groups: groups2 } = data;
     if (chosenGroups[tab] && !groups2.includes(chosenGroups[tab])) chosenGroups[tab] = "";
     let select = document.getElementById(`plg-${tab}`);
     if (!select) {
-      section.insertAdjacentHTML("beforeend", `<div class="plgsel hide"><label for="plg-${tab}">${escapeHtml(block3.grupo)}</label><select id="plg-${tab}"></select></div>`);
+      section.insertAdjacentHTML("beforeend", `<div class="plgsel hide"><label for="plg-${tab}">${escapeHtml(block4.grupo)}</label><select id="plg-${tab}"></select></div>`);
       select = document.getElementById(`plg-${tab}`);
       const chooser = select;
       chooser.onchange = () => {
@@ -17025,26 +20867,27 @@
       band3.className = "plgband";
       section.appendChild(band3);
     }
-    const count = (group) => [...rows2.values()].filter((row3) => row3.groups.has(group)).length;
-    const what = (group) => escapeHtml(count(group) === 1 ? `1 ${block3.que.replace(/s$/, "")}` : block3.que);
-    band3.innerHTML = groups2.length > 1 ? groups2.map((group) => `<button type="button" class="plk ${chosenGroups[tab] === group ? "on" : ""}" data-plg="${escapeHtml(group)}"><span class="plkt">${escapeHtml(group)}</span><b>${formatNumber(count(group))}</b><small>${what(group)}</small></button>`).join("") : "";
+    const count4 = (group) => [...rows2.values()].filter((row3) => row3.groups.has(group)).length;
+    const what = (group) => escapeHtml(count4(group) === 1 ? `1 ${block4.que.replace(/s$/, "")}` : block4.que);
+    band3.innerHTML = groups2.length > 1 ? groups2.map((group) => `<button type="button" class="plk ${chosenGroups[tab] === group ? "on" : ""}" data-plg="${escapeHtml(group)}"><span class="plkt">${escapeHtml(group)}</span><b>${formatNumber(count4(group))}</b><small>${what(group)}</small></button>`).join("") : "";
     band3.classList.toggle("hide", groups2.length < 2);
   }
   function convertBlocks(tab) {
-    const block3 = blocks3[tab], section = document.getElementById(`v-${tab}`), box3 = section?.querySelector("#cfgcuerpo");
-    if (!block3 || !section || !box3) return;
-    const items = box3.querySelectorAll(`.lista > .item[data-${block3.attr}]`);
+    const block4 = blocks3[tab], section = document.getElementById(`v-${tab}`), box3 = section?.querySelector("#cfgcuerpo");
+    if (!block4 || !section || !box3) return;
+    const items = box3.querySelectorAll(`.lista > .item[data-${block4.attr}]`);
     if (!items.length && (box3.querySelector(`.dgrid.blq-${tab}`) || !box3.querySelector(".cirpag, .evpag"))) return;
     moveActions(section, box3);
-    const data = collectRows(box3, block3), empty2 = box3.querySelector(".vacio");
+    const data = collectRows(box3, block4), empty2 = box3.querySelector(".vacio");
     const notes = [...box3.querySelectorAll(".cirpag > p.sm, .evpag > p.sm")];
-    const wrap3 = tableOf(tab, block3, data.rows, empty2 ? textOf2(empty2) : t("listBar.bar.nothingYet"));
+    const wrap3 = tableOf(tab, block4, data.rows, empty2 ? textOf(empty2) : t("listBar.bar.nothingYet"));
     box3.innerHTML = "";
     notes.forEach((note) => {
       box3.appendChild(note);
     });
     box3.appendChild(wrap3);
-    paintChoice(section, tab, block3, data);
+    defaultColumns(wrap3, block4);
+    paintChoice(section, tab, block4, data);
     filterBlocks(tab);
   }
   function filterBlocks(tab) {
@@ -17058,8 +20901,8 @@
     });
     const select = document.getElementById(`plg-${tab}`);
     if (select && select.value !== chosen4) select.value = chosen4;
-    const count = section.querySelector(".plcnt");
-    if (count) count.dataset.h = "";
+    const count4 = section.querySelector(".plcnt");
+    if (count4) count4.dataset.h = "";
   }
 
   // src/app/components/list-bar/searching.ts
@@ -17112,10 +20955,10 @@
       state2.sawLoading = false;
     } else searching[tab] = { sentAt: 0, sawLoading: false };
     mark(tab, true, configOf(tab));
-    const count = sectionOf(tab)?.querySelector(":scope > .pltool .plcnt");
-    if (count) {
-      count.dataset.h = "";
-      count.textContent = searchingText();
+    const count4 = sectionOf(tab)?.querySelector(":scope > .pltool .plcnt");
+    if (count4) {
+      count4.dataset.h = "";
+      count4.textContent = searchingText();
     }
   }
   function searchSent(tab, sync) {
@@ -17271,16 +21114,16 @@
     <div class="plrap">${quick2}</div>
     <button type="button" class="plbtn chico plfil">${icon2("sliders-horizontal")}<span>${t("listBar.bar.filters")}</span><span class="pln hide"></span></button>
     ${config.quitar ? `<button type="button" class="btn sec chico dang plquitar hide">${listBarLegacy.lineIcon("x")} ${t("listBar.bar.removeFilters")}</button>` : ""}
-    <button type="button" class="plbtn chico plcol">${icon2("columns-3", "table", "list")}<span>${t("listBar.bar.columns")}</span></button>
+    <button type="button" class="plbtn chico plcol" data-desktop-only>${icon2("columns-3", "table", "list")}<span>${t("listBar.bar.columns")}</span></button>
     ${config.mapa() ? `<button type="button" class="plbtn chico plic plmapa" title="${t("listBar.bar.onMap")}" aria-label="${t("listBar.bar.onMap")}">${icon2("map")}</button>` : ""}
     <span class="plcnt"><i class="plsk" style="width:90px"></i></span>`;
   }
-  var counted = (count, config) => `<b>${count}</b> ${escapeHtml(config.que())}`;
+  var counted = (count4, config) => `<b>${count4}</b> ${escapeHtml(config.que())}`;
   function pagesTotal(section) {
-    const pages4 = section.querySelector(".pltab .pag > span, .pag > span");
-    return pages4 ? /de\s+([\d.]+)/.exec(pages4.textContent ?? "") : null;
+    const pages5 = section.querySelector(".pltab .pag > span, .pag > span");
+    return pages5 ? /de\s+([\d.]+)/.exec(pages5.textContent ?? "") : null;
   }
-  var failed2 = (config) => Boolean(config.cuerpo()?.querySelector(":scope > .vacio[data-fallo]"));
+  var failed = (config) => Boolean(config.cuerpo()?.querySelector(":scope > .vacio[data-fallo]"));
   function screenCount(section, config) {
     const own = config.cuenta();
     if (own && /\d/.test(own.textContent ?? "")) return own.innerHTML.replace(/<span class="sm">[\s\S]*?<\/span>/, "").trim();
@@ -17293,8 +21136,8 @@
     if (!grid) return section.querySelector("#cfgcuerpo .vacio") ? counted("0", config) : "";
     return counted(formatNumber(grid.querySelectorAll(":scope > .dr:not(.htfuera):not(.plgfuera)").length), config);
   }
-  function countHtml(section, config) {
-    const html = config.bloques ? blockCount(section, config) : failed2(config) ? counted("—", config) : screenCount(section, config);
+  function countHtml3(section, config) {
+    const html = config.bloques ? blockCount(section, config) : failed(config) ? counted("—", config) : screenCount(section, config);
     return html.replace(/\sid="cercacerrar"/g, " data-cercavolver");
   }
 
@@ -17335,18 +21178,18 @@
     toggleIfDifferent(chip, "on", chosen4 && !isPeriod);
   }
   function syncCounts(section, bar, config, tab) {
-    const active = config.activos(), number2 = bar.querySelector(".pln");
+    const active2 = config.activos(), number2 = bar.querySelector(".pln");
     if (number2) {
-      const value10 = String(active || "");
+      const value10 = String(active2 || "");
       if (number2.textContent !== value10) number2.textContent = value10;
-      toggleIfDifferent(number2, "hide", !active);
+      toggleIfDifferent(number2, "hide", !active2);
     }
     const remove6 = bar.querySelector(".plquitar");
-    if (remove6) toggleIfDifferent(remove6, "hide", !active);
-    const count = bar.querySelector(".plcnt"), html = isSearching(tab) ? searchingText() : countHtml(section, config);
-    if (count && html && count.dataset.h !== html) {
-      count.dataset.h = html;
-      count.innerHTML = html;
+    if (remove6) toggleIfDifferent(remove6, "hide", !active2);
+    const count4 = bar.querySelector(".plcnt"), html = isSearching(tab) ? searchingText() : countHtml3(section, config);
+    if (count4 && html && count4.dataset.h !== html) {
+      count4.dataset.h = html;
+      count4.innerHTML = html;
     }
   }
   function syncBar(section, tab, config, place3) {
@@ -17362,15 +21205,15 @@
   var lastContent = /* @__PURE__ */ new WeakMap();
   var SKELETON_PANEL = (tab) => `<div class="panel plskpanel"><div class="pltab">${tableSkeleton(tab, true)}</div></div>`;
   function cardOf(config) {
-    const table = config.tabla(), pages4 = config.pie();
+    const table = config.tabla(), pages5 = config.pie();
     if (!table) return null;
     if (table.parentElement && !table.parentElement.classList.contains("pltab")) {
       const card3 = document.createElement("div");
       card3.className = "pltab";
       table.before(card3);
       card3.appendChild(table);
-      if (pages4) card3.appendChild(pages4);
-    } else if (pages4 && pages4.parentElement !== table.parentElement) table.parentElement?.appendChild(pages4);
+      if (pages5) card3.appendChild(pages5);
+    } else if (pages5 && pages5.parentElement !== table.parentElement) table.parentElement?.appendChild(pages5);
     return table.closest(".pltab");
   }
   function wrapTable(section, tab, config) {
@@ -17411,8 +21254,8 @@
     }
   }
   function skeletonPanels(section, tab, config, bar) {
-    const customers2 = tab === "pacientes" ? document.getElementById("vcuerpo") : null;
-    if (customers2 && !customers2.children.length) customers2.innerHTML = SKELETON_PANEL(tab);
+    const customers3 = tab === "pacientes" ? document.getElementById("vcuerpo") : null;
+    if (customers3 && !customers3.children.length) customers3.innerHTML = SKELETON_PANEL(tab);
     if (config.rejilla && !section.querySelector(".dgrid, .pltab, .vacio") && !section.querySelector(":scope > .plskpanel")) bar?.insertAdjacentHTML("afterend", SKELETON_PANEL(tab));
     if (section.querySelector(".dgrid, .vacio")) section.querySelectorAll(":scope > .plskpanel").forEach((panel) => {
       panel.remove();
@@ -17434,6 +21277,397 @@
     cards(section, config);
   }
 
+  // src/app/components/list-bar/selection/source.ts
+  var SELECTION_LIMIT = 500;
+  var states = /* @__PURE__ */ new Map();
+  var pages = /* @__PURE__ */ new Map();
+  function selectionOf(key) {
+    let state2 = states.get(key);
+    if (!state2) {
+      state2 = { rows: /* @__PURE__ */ new Map(), filter: "", running: "", anchor: null };
+      states.set(key, state2);
+    }
+    return state2;
+  }
+  var pageOf = (key) => pages.get(key) ?? null;
+  function publishPage(key, page) {
+    pages.set(key, page);
+    const state2 = selectionOf(key);
+    if (state2.filter !== page.filter) {
+      state2.filter = page.filter;
+      state2.rows.clear();
+      state2.anchor = null;
+    }
+  }
+  function setRows(state2, rows2, on3) {
+    let complete = true;
+    rows2.forEach((row3) => {
+      if (!on3) {
+        state2.rows.delete(row3.id);
+        return;
+      }
+      if (state2.rows.has(row3.id)) return;
+      if (state2.rows.size >= SELECTION_LIMIT) {
+        complete = false;
+        return;
+      }
+      state2.rows.set(row3.id, row3);
+    });
+    return complete;
+  }
+  function filterKey(query, without = []) {
+    const skipped = /* @__PURE__ */ new Set(["lim", "desplaz", ...without]);
+    return JSON.stringify(Object.fromEntries(Object.entries(query).filter(([key]) => !skipped.has(key))));
+  }
+  function clearSelection(state2) {
+    state2.rows.clear();
+    state2.anchor = null;
+  }
+
+  // src/app/components/list-bar/selection/run.ts
+  var LISTED_MAX = 6;
+  function groupedReasons(failures) {
+    const counts = /* @__PURE__ */ new Map();
+    failures.forEach((failure4) => {
+      counts.set(failure4.reason, (counts.get(failure4.reason) ?? 0) + 1);
+    });
+    return [...counts].map(([reason, count4]) => `${formatNumber(count4)} ${reason}`).join(", ");
+  }
+  function splitRows(action, rows2) {
+    const ready2 = [], skipped = [];
+    rows2.forEach((row3) => {
+      const reason = action.blocker(row3);
+      if (reason) skipped.push({ row: row3, reason });
+      else ready2.push(row3);
+    });
+    return { ready: ready2, skipped };
+  }
+  function summaryText2(action, done, failures) {
+    const head = t("listSelection.summary.done", { count: formatNumber(done), what: action.done });
+    if (!failures.length) return head;
+    const lines2 = failures.slice(0, LISTED_MAX).map((failure4) => `· ${failure4.row.label}: ${failure4.reason}`);
+    if (failures.length > LISTED_MAX) lines2.push(t("listSelection.summary.andMore", { count: formatNumber(failures.length - LISTED_MAX) }));
+    return `${head}
+
+${t("listSelection.summary.couldNot", { count: formatNumber(failures.length) })}
+${lines2.join("\n")}`;
+  }
+  async function showSummary(action, total, done, failures) {
+    const title2 = t("listSelection.summary.title", { done: formatNumber(done), total: formatNumber(total) });
+    const close3 = { k: "ok", t: t("common.close") };
+    const buttons = failures.length ? [{ k: "keep", t: t("listSelection.summary.keepFailed", { count: formatNumber(failures.length) }), cls: "sec" }, close3] : [close3];
+    return await chooseOption(title2, summaryText2(action, done, failures), buttons) === "keep";
+  }
+  var reasonOf = (error) => error instanceof Error ? error.message : String(error);
+  async function runRows(action, ready2, answer, onProgress) {
+    const failures = [];
+    let done = 0;
+    for (const [index, row3] of ready2.entries()) {
+      onProgress(t("listSelection.progress", { what: action.progress, index: formatNumber(index + 1), count: formatNumber(ready2.length) }));
+      const blocked = action.blocker(row3);
+      const reason = blocked ?? await action.runOne(row3, answer).catch(reasonOf);
+      if (reason) failures.push({ row: row3, reason });
+      else done += 1;
+    }
+    return { done, failures };
+  }
+  async function runAction(state2, action, onProgress) {
+    if (!action.allowed()) return false;
+    const rows2 = [...state2.rows.values()], { ready: ready2, skipped } = splitRows(action, rows2);
+    if (!ready2.length) return false;
+    const answer = action.ask ? await action.ask() : null;
+    if (action.ask && !answer) return false;
+    const skippedText = skipped.length ? t("listSelection.confirm.skipped", { count: formatNumber(skipped.length), total: formatNumber(rows2.length), reasons: groupedReasons(skipped) }) : "";
+    const question = action.confirm(ready2.length, skippedText, answer);
+    if (!await confirmAction(question.texto, { titulo: question.titulo, ok: question.ok, peligro: action.danger })) return false;
+    const { done, failures } = await runRows(action, ready2, answer, onProgress);
+    onProgress("");
+    const all = [...failures, ...skipped];
+    const keep = await showSummary(action, rows2.length, done, all);
+    clearSelection(state2);
+    if (keep) setRows(state2, all.map((failure4) => failure4.row), true);
+    return true;
+  }
+
+  // src/app/components/list-bar/selection/bar.ts
+  var BAR2 = "plselbar";
+  var ON = "plselon";
+  var BAR_CLASSES = { clear: "plselx", allOfFilter: "plselallf", action: "plsela", exportButton: "plselexp" };
+  var allowedActions = (config) => config.actions().filter((action) => action.allowed());
+  function actionButton(action, state2) {
+    const rows2 = [...state2.rows.values()], count4 = splitRows(action, rows2).ready.length, off = !count4 || Boolean(state2.running);
+    return `<button type="button" class="btn sec chico${action.danger ? " dang" : ""}" data-${BAR_CLASSES.action}="${escapeHtml(action.id)}"${off ? " disabled" : ""}>${escapeHtml(action.label)} (${formatNumber(count4)})</button>`;
+  }
+  function actionsHtml4(config, state2, canExport2) {
+    const own = allowedActions(config).map((action) => actionButton(action, state2)).join("");
+    const exportButton = canExport2 ? `<button type="button" class="btn sec chico" data-${BAR_CLASSES.exportButton}${state2.running ? " disabled" : ""}>${t("listSelection.export")}</button>` : "";
+    return `<span class="plselacts">${own}${exportButton}</span>`;
+  }
+  function countHtml4(config, state2, page) {
+    if (state2.running) return `<span class="plselcnt" role="status">${escapeHtml(state2.running)}</span>`;
+    const size = state2.rows.size, values2 = { count: formatNumber(size), what: escapeHtml(size === 1 ? config.one() : config.what()) }, total = { count: formatNumber(page.total) };
+    const count4 = size === 1 ? config.feminine ? t("listSelection.countOneFeminine", values2) : t("listSelection.countOne", values2) : config.feminine ? t("listSelection.countFeminine", values2) : t("listSelection.count", values2);
+    const label = config.feminine ? t("listSelection.selectAllFeminine", total) : t("listSelection.selectAll", total);
+    const more2 = page.all && size < page.total ? `<button type="button" class="btn sec chico ${BAR_CLASSES.allOfFilter}">${label}</button>` : "";
+    return `<span class="plselcnt" role="status">${count4}</span>${more2}`;
+  }
+  function paintBar(section, config, view) {
+    const { state: state2, page, canExport: canExport2 } = view;
+    const bar = section.querySelector(":scope > .pltool");
+    if (!bar) return;
+    let own = bar.querySelector(`:scope > .${BAR2}`);
+    if (!own) {
+      own = document.createElement("div");
+      own.className = BAR2;
+      bar.appendChild(own);
+    }
+    const active2 = state2.rows.size > 0 || Boolean(state2.running);
+    if (bar.classList.contains(ON) !== active2) bar.classList.toggle(ON, active2);
+    const html = active2 ? `<button type="button" class="btn sec icoonly chico ${BAR_CLASSES.clear}" aria-label="${t("listSelection.clear")}" title="${t("listSelection.clear")}"${state2.running ? " disabled" : ""}>${listBarLegacy.lineIcon("x")}</button>${countHtml4(config, state2, page)}${actionsHtml4(config, state2, canExport2)}` : "";
+    if (own.dataset.h !== html) {
+      own.dataset.h = html;
+      own.innerHTML = html;
+    }
+  }
+  function removeBar(section) {
+    const bar = section.querySelector(":scope > .pltool");
+    bar?.classList.remove(ON);
+    bar?.querySelector(`:scope > .${BAR2}`)?.remove();
+  }
+
+  // src/app/components/list-bar/selection/checks.ts
+  var CELL = "plselc";
+  var ROW_BOX = "plselk";
+  var PAGE_BOX = "plselall";
+  var MARKED = "plselon";
+  var TABLE = "plsel";
+  var boxHtml = (kind, label) => `<label class="${CELL}"><input type="checkbox" class="${kind}" aria-label="${escapeHtml(label)}"></label>`;
+  var rowsOf3 = (section, config) => [...section.querySelectorAll(config.shape.rows)];
+  var idOf = (element, config) => element.dataset[config.shape.idKey] ?? "";
+  function pageRowOf(element, config, page) {
+    const id = idOf(element, config);
+    return id ? page.rows.find((row3) => row3.id === id) : void 0;
+  }
+  function setBox(box3, checked5, mixed = false) {
+    if (!box3) return;
+    if (box3.checked !== checked5) box3.checked = checked5;
+    if (box3.indeterminate !== mixed) box3.indeterminate = mixed;
+  }
+  function paintRows2(section, config, state2, page) {
+    let shown3 = 0, marked = 0;
+    rowsOf3(section, config).forEach((element) => {
+      const row3 = pageRowOf(element, config, page);
+      if (!row3) return;
+      let box3 = element.querySelector(`:scope > .${CELL} > .${ROW_BOX}`);
+      if (!box3) {
+        element.insertAdjacentHTML("beforeend", boxHtml(ROW_BOX, t("listSelection.selectRow", { name: row3.label })));
+        box3 = element.querySelector(`:scope > .${CELL} > .${ROW_BOX}`);
+      }
+      const on3 = state2.rows.has(row3.id);
+      shown3 += 1;
+      if (on3) marked += 1;
+      setBox(box3, on3);
+      if (box3) box3.disabled = Boolean(state2.running);
+      if (element.classList.contains(MARKED) !== on3) element.classList.toggle(MARKED, on3);
+    });
+    return { shown: shown3, marked };
+  }
+  function paintChecks(section, config, state2, page) {
+    const table = section.querySelector(config.shape.table), head = section.querySelector(config.shape.head);
+    if (!table || !head) return;
+    if (!table.classList.contains(TABLE)) table.classList.add(TABLE);
+    if (!head.querySelector(`:scope > .${CELL}`)) head.insertAdjacentHTML("beforeend", boxHtml(PAGE_BOX, t("listSelection.selectPage")));
+    const { shown: shown3, marked } = paintRows2(section, config, state2, page), all = head.querySelector(`.${PAGE_BOX}`);
+    setBox(all, shown3 > 0 && marked === shown3, marked > 0 && marked < shown3);
+    if (all) all.disabled = Boolean(state2.running) || !shown3;
+  }
+  function removeChecks(section, config) {
+    section.querySelectorAll(`.${CELL}`).forEach((cell2) => {
+      cell2.remove();
+    });
+    section.querySelectorAll(`.${MARKED}`).forEach((row3) => {
+      row3.classList.remove(MARKED);
+    });
+    section.querySelector(config.shape.table)?.classList.remove(TABLE);
+  }
+  var CLASSES2 = { cell: CELL, rowBox: ROW_BOX, pageBox: PAGE_BOX };
+
+  // src/app/components/list-bar/selection/export.ts
+  var HIDDEN = "htno";
+  function shownColumns(section, config) {
+    return dataCells(section.querySelector(config.shape.head)).map((cell2, index) => ({ index, name: (cell2.textContent ?? "").trim(), hidden: cell2.classList.contains(HIDDEN) })).filter((column) => !column.hidden && column.name).map(({ index, name }) => ({ index, name }));
+  }
+  async function exportSelection(section, config, state2, page) {
+    const values2 = page.values;
+    if (!values2) return false;
+    const columns = shownColumns(section, config), rows2 = [...state2.rows.values()];
+    const body3 = rows2.map((row3) => {
+      const all = values2(row3);
+      return columns.map((column) => all[column.index] ?? null);
+    });
+    return exportSheet({ list: config.key, head: columns.map((column) => column.name), body: body3 }, `${config.key}_${todayIso()}.xlsx`);
+  }
+
+  // src/app/components/list-bar/selection/view.ts
+  var DESKTOP = "(min-width: 761px)";
+  var LONG_PRESS_MS = 500;
+  var MOVE_TOLERANCE = 10;
+  var isDesktop = () => window.matchMedia(DESKTOP).matches;
+  var exportRecorded = false;
+  var exportAllowed = () => exportRecorded && canManageOrganization();
+  var showsSelection = (config) => isDesktop() && (allowedActions(config).length > 0 || exportAllowed());
+  var active = /* @__PURE__ */ new Map();
+  var limitNotice = () => {
+    notices.toast(t("listSelection.limit", { count: SELECTION_LIMIT }), true);
+  };
+  function paintSelection(section, config) {
+    const state2 = selectionOf(config.key), page = pageOf(config.key);
+    bindOnce(section, config);
+    askExport(section, config);
+    if (!page || !showsSelection(config)) {
+      removeChecks(section, config);
+      removeBar(section);
+      if (!isDesktop()) clearSelection(state2);
+      active.delete(config.key);
+      return;
+    }
+    active.set(config.key, { section, config });
+    paintChecks(section, config, state2, page);
+    paintBar(section, config, { state: state2, page, canExport: exportAllowed() });
+  }
+  var asked = false;
+  function askExport(section, config) {
+    if (asked || !isDesktop() || !canManageOrganization()) return;
+    asked = true;
+    void canExport().then((allowed) => {
+      exportRecorded = allowed;
+      if (allowed) paintSelection(section, config);
+    });
+  }
+  function toggleRow(section, config, box3, range2) {
+    const state2 = selectionOf(config.key), page = pageOf(config.key), element = box3.closest(config.shape.rows);
+    const row3 = element && page ? pageRowOf(element, config, page) : void 0;
+    if (!row3 || !page) return;
+    const ids = rowsOf3(section, config).map((item) => idOf(item, config)), from = state2.anchor ? ids.indexOf(state2.anchor) : -1, to = ids.indexOf(row3.id);
+    const inRange2 = (id) => {
+      const at = ids.indexOf(id);
+      return at >= Math.min(from, to) && at <= Math.max(from, to);
+    };
+    const chosen4 = range2 && from >= 0 && to >= 0 ? page.rows.filter((item) => inRange2(item.id)) : [row3];
+    if (!setRows(state2, chosen4, box3.checked)) limitNotice();
+    state2.anchor = row3.id;
+    paintSelection(section, config);
+  }
+  function togglePage(section, config, box3) {
+    const page = pageOf(config.key);
+    if (page && !setRows(selectionOf(config.key), page.rows, box3.checked)) limitNotice();
+    paintSelection(section, config);
+  }
+  async function selectAllOfFilter(section, config) {
+    const page = pageOf(config.key);
+    if (!page?.all) return;
+    const rows2 = await page.all(SELECTION_LIMIT);
+    if (!setRows(selectionOf(config.key), rows2, true) || page.total > SELECTION_LIMIT) notices.toast(t("listSelection.limitFilter", { count: SELECTION_LIMIT }), true);
+    paintSelection(section, config);
+  }
+  async function startAction(section, config, id) {
+    const state2 = selectionOf(config.key), action = allowedActions(config).find((item) => item.id === id);
+    if (!action || state2.running) return;
+    const progress = (text2) => {
+      state2.running = text2;
+      paintSelection(section, config);
+    };
+    if (await runAction(state2, action, progress)) config.reload();
+    paintSelection(section, config);
+  }
+  function onBarClick(target, section, config) {
+    const state2 = selectionOf(config.key), page = pageOf(config.key);
+    if (target.closest(`.${BAR_CLASSES.clear}`)) {
+      clearSelection(state2);
+      paintSelection(section, config);
+      return;
+    }
+    if (target.closest(`.${BAR_CLASSES.allOfFilter}`)) {
+      void selectAllOfFilter(section, config);
+      return;
+    }
+    if (target.closest(`[data-${BAR_CLASSES.exportButton}]`)) {
+      if (page) void exportSelection(section, config, state2, page);
+      return;
+    }
+    const button3 = target.closest(`[data-${BAR_CLASSES.action}]`);
+    if (button3) void startAction(section, config, button3.dataset[BAR_CLASSES.action] ?? "");
+  }
+  function onClick4(event, section, config) {
+    const target = event.target;
+    if (target.closest(`.${CLASSES2.cell}`)) {
+      event.stopPropagation();
+      if (selectionOf(config.key).running) {
+        event.preventDefault();
+        return;
+      }
+      if (target.matches(`.${CLASSES2.rowBox}`)) toggleRow(section, config, target, event.shiftKey);
+      else if (target.matches(`.${CLASSES2.pageBox}`)) togglePage(section, config, target);
+      return;
+    }
+    if (target.closest(".plselbar")) onBarClick(target, section, config);
+  }
+  function bindLongPress(section, config) {
+    let timer3 = 0, fired = false, startX = 0, startY = 0;
+    section.addEventListener("pointerdown", (event) => {
+      if (isDesktop() || !event.target.closest(config.shape.rows) || !allowedActions(config).length) return;
+      fired = false;
+      startX = event.clientX;
+      startY = event.clientY;
+      timer3 = window.setTimeout(() => {
+        fired = true;
+        notices.toast(t("listSelection.useComputer"));
+      }, LONG_PRESS_MS);
+    });
+    const cancel3 = () => {
+      window.clearTimeout(timer3);
+    };
+    const moved = (event) => Math.abs(event.clientX - startX) > MOVE_TOLERANCE || Math.abs(event.clientY - startY) > MOVE_TOLERANCE;
+    section.addEventListener("pointermove", (event) => {
+      if (moved(event)) cancel3();
+    });
+    section.addEventListener("pointerup", cancel3);
+    section.addEventListener("pointercancel", cancel3);
+    section.addEventListener("contextmenu", (event) => {
+      if (fired) event.preventDefault();
+    });
+    section.addEventListener("click", (event) => {
+      if (fired) {
+        fired = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+  }
+  function bindOnce(section, config) {
+    if (section.dataset.plselbound?.split(" ").includes(config.key)) return;
+    section.dataset.plselbound = `${section.dataset.plselbound ?? ""} ${config.key}`.trim();
+    section.addEventListener("click", (event) => {
+      if (active.get(config.key)?.section === section) onClick4(event, section, config);
+    }, true);
+    bindLongPress(section, config);
+    bindEscape();
+  }
+  var escapeBound = false;
+  function bindEscape() {
+    if (escapeBound) return;
+    escapeBound = true;
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      active.forEach(({ section, config }) => {
+        const state2 = selectionOf(config.key);
+        if (!section.isConnected || !state2.rows.size || state2.running || !section.querySelector(".pltool.plselon")) return;
+        clearSelection(state2);
+        paintSelection(section, config);
+      });
+    });
+  }
+
   // src/app/components/list-bar/sync.ts
   var PERIOD_FILTERS = ["pper", "pcanal", "pestado", "popf", "porigf", "prepf"];
   var FOREIGN = {
@@ -17452,10 +21686,10 @@
       panel.appendChild(aside);
     }
     const foreign = new Set(FOREIGN[key] ?? []);
-    [...own.children, ...aside.children].forEach((field10) => {
-      const select = field10.querySelector("select"), id = field10.id || (select?.id ?? ""), isForeign = foreign.has(id);
-      if (isForeign && field10.parentElement !== aside) aside.appendChild(field10);
-      else if (!isForeign && field10.parentElement === aside) own.appendChild(field10);
+    [...own.children, ...aside.children].forEach((field11) => {
+      const select = field11.querySelector("select"), id = field11.id || (select?.id ?? ""), isForeign = foreign.has(id);
+      if (isForeign && field11.parentElement !== aside) aside.appendChild(field11);
+      else if (!isForeign && field11.parentElement === aside) own.appendChild(field11);
     });
   }
   function removeModel(section) {
@@ -17483,14 +21717,14 @@
     });
   }
   function blockChip(tab) {
-    const block3 = blocks3[tab];
-    if (!block3) return;
+    const block4 = blocks3[tab];
+    if (!block4) return;
     const chip = document.querySelector(`#v-${tab} > .pltool [data-plr="#plg-${tab}"]`), select = document.getElementById(`plg-${tab}`);
     if (!chip || !select) return;
     const nothing = select.options.length < 2;
     if (nothing && chip.classList.contains("hide")) chip.classList.remove("hide");
     toggleIfDifferent(chip, "plnada", nothing);
-    if (nothing && chip.textContent !== block3.grupo) chip.textContent = block3.grupo;
+    if (nothing && chip.textContent !== block4.grupo) chip.textContent = block4.grupo;
   }
   function professionalChip() {
     const quick2 = document.querySelector("#v-pacientes > .pltool .plrap");
@@ -17537,6 +21771,7 @@
     const anchor = syncHeader(section, tab, config, key);
     syncBar(section, tab, config, { key, anchor });
     syncTable(section, tab, config);
+    if (config.seleccion) paintSelection(section, config.seleccion);
   }
   function afterSync(section, tab) {
     if (section.classList.contains("plantilla")) tabsFirst(section);
@@ -17815,6 +22050,12 @@
     }
   }
 
+  // src/app/components/list-bar/selection/shown.ts
+  function selectionShown(tab) {
+    const selection = configOf(tab)?.seleccion;
+    return selection ? showsSelection(selection) : false;
+  }
+
   // src/app/components/list-bar/index.ts
   function startScreens() {
     FIRST_SCREENS.forEach(observe2);
@@ -17849,24 +22090,24 @@
 
   // src/app/components/list/pagination.ts
   var EXCLUDED = ".carsel, .picker, #lista, #slista, #kpis, .gsug, .umenu, .dl-menu, #tools, .opciones, .chips, .pag, #c-agenda, #c-acciones, #c-urgentes, #c-ultimas, #c-recom, #c-pend";
-  function pageNumbers(pages4, page) {
+  function pageNumbers(pages5, page) {
     const numbers = [];
-    for (const index of range(pages4)) {
-      if (index === 0 || index === pages4 - 1 || Math.abs(index - page) <= 1) numbers.push(index);
+    for (const index of range(pages5)) {
+      if (index === 0 || index === pages5 - 1 || Math.abs(index - page) <= 1) numbers.push(index);
       else if (numbers[numbers.length - 1] !== "…") numbers.push("…");
     }
     return numbers;
   }
-  function pageHtml4(total, page, size) {
-    const pages4 = Math.max(1, Math.ceil(total / size));
+  function pageHtml6(total, page, size) {
+    const pages5 = Math.max(1, Math.ceil(total / size));
     const from = total ? page * size + 1 : 0, to = Math.min(total, (page + 1) * size);
-    const buttons = pageNumbers(pages4, page).map((item) => item === "…" ? '<span class="sm">…</span>' : `<button data-pg="${item}" aria-current="${String(item === page)}">${item + 1}</button>`).join("");
+    const buttons = pageNumbers(pages5, page).map((item) => item === "…" ? '<span class="sm">…</span>' : `<button data-pg="${item}" aria-current="${String(item === page)}">${item + 1}</button>`).join("");
     return `<div class="pag">
     <span>${t("listComponents.pagination.range", { from: formatNumber(from), to: formatNumber(to), total: formatNumber(total) })}</span>
     <span class="pbtns">
       <button data-pg="${page - 1}" ${page <= 0 ? "disabled" : ""} aria-label="${t("listComponents.pagination.previous")}">‹</button>
       ${buttons}
-      <button data-pg="${page + 1}" ${page >= pages4 - 1 ? "disabled" : ""} aria-label="${t("listComponents.pagination.next")}">›</button>
+      <button data-pg="${page + 1}" ${page >= pages5 - 1 ? "disabled" : ""} aria-label="${t("listComponents.pagination.next")}">›</button>
     </span>
     <span class="ptam">${t("listComponents.pagination.show")} <select class="chico" data-pgtam aria-label="${t("listComponents.pagination.pageSize")}">${listsLegacy.pageSizes().map((option3) => `<option value="${option3}" ${option3 === size ? "selected" : ""}>${option3}</option>`).join("")}</select></span></div>`;
   }
@@ -17944,8 +22185,8 @@
       return;
     }
     choosePage(list, state2, rows2);
-    const pages4 = Math.ceil(rows2.length / size);
-    const page = Math.min(state2.page ?? 0, pages4 - 1);
+    const pages5 = Math.ceil(rows2.length / size);
+    const page = Math.min(state2.page ?? 0, pages5 - 1);
     state2.page = page;
     if (list.id) rememberedPage.set(list.id, page);
     const shown3 = [rows2.length, page, size].join("|");
@@ -17955,7 +22196,7 @@
       row3.style.display = Math.floor(index / size) === page ? "" : "none";
     });
     const bar = barOf2(list, state2), holder = document.createElement("div");
-    holder.innerHTML = pageHtml4(rows2.length, page, size);
+    holder.innerHTML = pageHtml6(rows2.length, page, size);
     bar.innerHTML = holder.firstElementChild?.innerHTML ?? "";
     bindBar(list, state2, bar);
   }
@@ -18016,8 +22257,8 @@
   }
 
   // src/app/components/list/remembered-sort.ts
-  function fieldValue4(row3, field10) {
-    const value10 = typeof field10 === "function" ? field10(row3) : row3[field10];
+  function fieldValue5(row3, field11) {
+    const value10 = typeof field11 === "function" ? field11(row3) : row3[field11];
     return value10 === null || value10 === void 0 || value10 === "" ? null : value10;
   }
   var NUMBER3 = /^-?\d+(\.\d+)?$/;
@@ -18028,11 +22269,11 @@
   function sortRemembered(kind, list) {
     const order = listsLegacy.sortState()[kind], settings2 = listsLegacy.rememberedSort()[kind];
     if (!order || !settings2 || !Array.isArray(list)) return list;
-    const field10 = settings2.campos[order.i];
-    if (field10 === void 0) return list;
+    const field11 = settings2.campos[order.i];
+    if (field11 === void 0) return list;
     const rows2 = list;
     return rows2.map((row3, position) => ({ row: row3, position })).sort((first, second) => {
-      const one = fieldValue4(first.row, field10), other = fieldValue4(second.row, field10);
+      const one = fieldValue5(first.row, field11), other = fieldValue5(second.row, field11);
       if (one === null || other === null) return Number(one === null) - Number(other === null) || first.position - second.position;
       return order.dir * compareValues(one, other) || first.position - second.position;
     }).map((item) => item.row);
@@ -18044,19 +22285,19 @@
   var ROWS = 8;
   var HEADER_BAR = 46;
   var cell = (width, barWidth) => `<span class="plskc" style="width:${width}px;min-width:${width}px"><i class="plsk" style="width:${barWidth}%"></i></span>`;
-  function rowHtml6(widths, row3) {
+  function rowHtml11(widths, row3) {
     return `<div class="plskr">${widths.map((width, index) => cell(width, BAR_WIDTHS[(index + row3) % BAR_WIDTHS.length] ?? 0)).join("")}<span class="plcard"><i class="plsk" style="width:62%"></i><i class="plsk" style="width:44%"></i></span></div>`;
   }
   function tableSkeleton(screen3, withHeader) {
     const widths = screen3 === "directorio" ? columnSettings().filter((column) => column.on).map((column) => column.w) : DEFAULT_WIDTHS;
     const header2 = withHeader ? `<div class="plskh">${widths.map((width) => cell(width, HEADER_BAR)).join("")}</div>` : "";
-    return `<div class="plsktab">${header2}${range(ROWS).map((row3) => rowHtml6(widths, row3)).join("")}</div>`;
+    return `<div class="plsktab">${header2}${range(ROWS).map((row3) => rowHtml11(widths, row3)).join("")}</div>`;
   }
 
   // src/app/screens/portal/index.ts
   var portal_exports = {};
   __export(portal_exports, {
-    failureText: () => failureText4,
+    failureText: () => failureText7,
     formatText: () => formatText,
     listenToCentreDocs: () => listenToCentreDocs,
     listenToForm: () => listenToForm,
@@ -18110,10 +22351,10 @@
   };
 
   // src/app/screens/portal/model.ts
-  var model_exports6 = {};
-  __export(model_exports6, {
+  var model_exports7 = {};
+  __export(model_exports7, {
     WEEKDAYS: () => WEEKDAYS,
-    failureText: () => failureText4,
+    failureText: () => failureText7,
     helpButton: () => helpButton,
     isCentre: () => isCentre,
     messageThread: () => messageThread,
@@ -18121,7 +22362,7 @@
     portalState: () => portalState,
     shortDateTime: () => shortDateTime,
     skeleton: () => skeleton,
-    words: () => words6
+    words: () => words7
   });
   var portalState = {
     tab: "res",
@@ -18135,7 +22376,7 @@
   };
   var WEEKDAYS = ["L", "M", "X", "J", "V", "S"];
   var isCentre = () => cardSectionsLegacy.can("portal_centro");
-  var words6 = () => ({
+  var words7 = () => ({
     orders: term("pauta", { number: "p" }),
     order: term("pauta"),
     Orders: term("pauta", { number: "p", articleCapital: "C" }),
@@ -18161,18 +22402,18 @@
     ["cerrada", "portal.failures.closed"],
     ["no_existe", "portal.failures.gone"]
   ]);
-  var failureText4 = (result) => t(FAILURES.get(result?.motivo ?? "") ?? "portal.failures.generic");
+  var failureText7 = (result) => t(FAILURES.get(result?.motivo ?? "") ?? "portal.failures.generic");
   var shortDateTime = (value10) => new Date(value10).toLocaleString(t("dates.locale"), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   function messageThread(list, fromProfessional) {
     if (!list.length) return `<div class="sm">${t("portal.messages.none")}</div>`;
     return `<div class="hilo">${list.map((message) => `<div class="msj ${message.del_portal === fromProfessional ? "mio" : "suyo"}"><div>${escapeHtml(message.texto)}</div>
-      <span class="sm">${message.del_portal ? escapeHtml(words6().Professional) : t("portal.messages.team")} · ${shortDateTime(message.creado_en)}</span></div>`).join("")}</div>`;
+      <span class="sm">${message.del_portal ? escapeHtml(words7().Professional) : t("portal.messages.team")} · ${shortDateTime(message.creado_en)}</span></div>`).join("")}</div>`;
   }
   function missingText2() {
     const labels = /* @__PURE__ */ new Map([
       ["horario", t(isCentre() ? "portal.missing.timetableCentre" : "portal.missing.timetable")],
       ["telefono", t("portal.missing.phone")],
-      ["visitas", t("portal.missing.visits", words6())]
+      ["visitas", t("portal.missing.visits", words7())]
     ]);
     const list = portalState.missing.map((key) => labels.get(key)).filter((label) => Boolean(label));
     const last = list[list.length - 1];
@@ -18190,9 +22431,9 @@
     return (batches.length ? `<span class="sm pclotes">${t(batches.length > 1 ? "portal.docs.batches" : "portal.docs.batch")}: ${batchText}</span>` : "") + (invoices.length ? `<span class="pcfacs">${invoices.map((invoice2) => `<button type="button" class="lnk" data-pcfac="${invoice2.id}">${t(invoice2.rectificativa ? "portal.docs.correction" : "portal.docs.invoice")} ${escapeHtml(invoice2.numero ?? "")}</button>`).join("")}</span>` : "");
   }
   function owesHtml(orders2) {
-    const count = orders2.filter((order) => order.proforma).length;
-    if (!count) return "";
-    return `<div class="pmaviso pcdebe"><div><b>${count === 1 ? t("portal.docs.oneToPay") : t("portal.docs.toPay", { count: formatNumber(count) })}</b><span class="sm">${t("portal.docs.toPayText")}</span></div></div>`;
+    const count4 = orders2.filter((order) => order.proforma).length;
+    if (!count4) return "";
+    return `<div class="pmaviso pcdebe"><div><b>${count4 === 1 ? t("portal.docs.oneToPay") : t("portal.docs.toPay", { count: formatNumber(count4) })}</b><span class="sm">${t("portal.docs.toPayText")}</span></div></div>`;
   }
   async function withButton(button3, work, failure4) {
     if (button3) button3.disabled = true;
@@ -18208,7 +22449,7 @@
     await withButton(button3, async () => {
       const { data } = await callRpc("portal_proforma", { p_id: id });
       if (!data?.ok) {
-        notices.toast(data?.motivo === "no_encontrado" ? t("portal.docs.notPending") : failureText4(data), true);
+        notices.toast(data?.motivo === "no_encontrado" ? t("portal.docs.notPending") : failureText7(data), true);
         return;
       }
       await portalPageLegacy.saveInvoice(data, "", { titulo: t("portal.docs.proformaTitle"), formaPago: true, iban: true, vencimiento: false }, `${data.numero ?? ""}.pdf`);
@@ -18222,7 +22463,7 @@
     await withButton(button3, async () => {
       const { data } = await callRpc("portal_factura", { p_id: id });
       if (!data?.ok) {
-        notices.toast(failureText4(data), true);
+        notices.toast(failureText7(data), true);
         return;
       }
       await portalPageLegacy.saveInvoice(data, data.rectifica_num ?? "", {}, null);
@@ -18235,7 +22476,7 @@
     await withButton(button3, async () => {
       const { data } = await callRpc("portal_material_archivo", { p_id: id });
       if (!data?.ok) {
-        notices.toast(failureText4(data), true);
+        notices.toast(failureText7(data), true);
         return;
       }
       const binary = atob(data.datos ?? ""), bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
@@ -18285,27 +22526,27 @@
   // src/app/screens/portal/centre-order.ts
   var MAX_UNITS = 1e3;
   var MAX_PACKS = 50;
-  var euros3 = (value10) => portalLegacy.euros(value10);
+  var euros5 = (value10) => portalLegacy.euros(value10);
   var withVat = (product) => round2((Number(product.precio) || 0) * (1 + (Number(product.iva) || 0) / 100));
   var percent2 = (value10) => `${(Math.round(value10 * 1e3) / 10).toLocaleString(t("dates.locale"), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
   function packRow(product, pack, index) {
     const unitPrice = withVat(product), bought = Number(pack.compra) || 0, free = Number(pack.regalo) || 0, retail = Number(product.pvp_recomendado) || 0;
     const amount2 = round2(bought * unitPrice), cost = bought + free ? amount2 / (bought + free) : 0, name = `${formatNumber(bought)}${free ? `+${formatNumber(free)}` : ""}`;
     return `<div class="pclin pcpack"><span class="pcpk"><b>${t("portal.order.pack", { pack: `${formatNumber(bought)}${free ? ` + ${formatNumber(free)}` : ""}` })}</b><span class="sm">${t("portal.order.packUnits", { units: formatNumber(bought + free) })}${free ? t("portal.order.packFree", { free: formatNumber(free) }) : ""}</span></span>
-          <span class="pcdato"><b>${euros3(amount2)}</b><span class="sm">${t("portal.order.withVat")}</span></span>
-          <span class="pcdato"><b>${euros3(cost)}</b><span class="sm">${t("portal.order.perUnit")}</span></span>
+          <span class="pcdato"><b>${euros5(amount2)}</b><span class="sm">${t("portal.order.withVat")}</span></span>
+          <span class="pcdato"><b>${euros5(cost)}</b><span class="sm">${t("portal.order.perUnit")}</span></span>
           ${retail ? `<span class="pcdato"><b>${percent2((retail - cost) / retail)}</b><span class="sm">${t("portal.order.margin")}</span></span>` : "<span></span>"}
           <input type="number" step="1" value="0" data-pcpk="${product.producto_id}" data-pci="${index}" data-pcc="${bought}" data-pcg="${free}" data-pcimp="${amount2}" aria-label="${t("portal.order.howManyPacks", { pack: name })}">
           <span class="pcerr" hidden></span></div>`;
   }
   function productHtml(product) {
     const unitPrice = withVat(product), packs = Array.isArray(product.packs) ? product.packs : [], retail = Number(product.pvp_recomendado) || 0;
-    if (!packs.length) return `<div class="pcprod"><div class="pcpcab"><b>${escapeHtml(product.nombre)}</b><span class="sm">${t("portal.order.unitPrice", { price: euros3(unitPrice) })}${product.propio ? t("portal.order.yourPrice") : ""}</span></div>
+    if (!packs.length) return `<div class="pcprod"><div class="pcpcab"><b>${escapeHtml(product.nombre)}</b><span class="sm">${t("portal.order.unitPrice", { price: euros5(unitPrice) })}${product.propio ? t("portal.order.yourPrice") : ""}</span></div>
       <div class="pclin"><span class="sm">${t("portal.order.units")}</span><input type="number" step="1" value="0" data-ctp="${product.producto_id}" data-ctpr="${unitPrice}" aria-label="${t("portal.order.unitsOf", { name: escapeHtml(product.nombre) })}"><span class="pcerr" hidden></span></div></div>`;
-    return `<div class="pcprod"><div class="pcpcab"><b>${escapeHtml(product.nombre)}</b><span class="sm">${t("portal.order.unitPrice", { price: euros3(unitPrice) })}${retail ? t("portal.order.retail", { price: euros3(retail) }) : ""}</span></div>
+    return `<div class="pcprod"><div class="pcpcab"><b>${escapeHtml(product.nombre)}</b><span class="sm">${t("portal.order.unitPrice", { price: euros5(unitPrice) })}${retail ? t("portal.order.retail", { price: euros5(retail) }) : ""}</span></div>
       <div class="pcpacks">${packs.map((pack, index) => packRow(product, pack, index)).join("")}</div></div>`;
   }
-  function formHtml2(products3) {
+  function formHtml4(products3) {
     const addresses = [...new Set(portalState.places.map((place3) => [place3.direccion, place3.municipio].filter(Boolean).join(", ")).filter(Boolean))];
     return `<div id="ctprods">${products3.map(productHtml).join("")}</div>
       <div class="pcent"><b>${t("portal.order.delivery")}</b>
@@ -18314,15 +22555,15 @@
         <div id="pcentl" class="pcentl" hidden><datalist id="pcdirs">${addresses.map((address) => `<option value="${escapeHtml(address)}">`).join("")}</datalist>
           <div id="pcentf"></div><button type="button" class="btn sec chico" id="pcentmas">${t("portal.order.otherAddress")}</button><span class="sm" id="pcentres"></span></div></div>
       ${portalState.prepayment ? `<p class="sm pcant">${t("portal.order.prepayment")}</p>` : ""}<label for="ctnota">${t("portal.order.note")}</label><input id="ctnota" placeholder="${t("portal.order.notePlaceholder")}">
-      <div class="pctot"><span id="pctxt">${t("portal.order.total", { total: `<b id="cttot">${euros3(0)}</b>` })}</span><button type="button" class="btn" id="ctok">${t("portal.order.send")}</button></div>`;
+      <div class="pctot"><span id="pctxt">${t("portal.order.total", { total: `<b id="cttot">${euros5(0)}</b>` })}</span><button type="button" class="btn" id="ctok">${t("portal.order.send")}</button></div>`;
   }
   var deliveryRow = () => `<div class="pcef"><input list="pcdirs" placeholder="${t("portal.order.addressPlaceholder")}" value="" data-pced><input type="number" step="1" placeholder="${t("portal.order.units")}" value="" data-pceu><button type="button" class="pmhx" data-pcex aria-label="${t("portal.order.removeAddress")}">✕</button></div>`;
   function checkQuantity(input6) {
-    const count = Number(input6.value || 0), error = input6.closest(".pclin")?.querySelector(".pcerr"), isPack = Boolean(input6.dataset.pcpk), max = isPack ? MAX_PACKS : MAX_UNITS;
-    const wrong2 = !Number.isInteger(count) || count < 0 || count > max;
+    const count4 = Number(input6.value || 0), error = input6.closest(".pclin")?.querySelector(".pcerr"), isPack = Boolean(input6.dataset.pcpk), max = isPack ? MAX_PACKS : MAX_UNITS;
+    const wrong2 = !Number.isInteger(count4) || count4 < 0 || count4 > max;
     if (error) {
       error.hidden = !wrong2;
-      error.textContent = !wrong2 ? "" : count > max ? t(isPack ? "portal.order.maxPacks" : "portal.order.maxUnits", { max: formatNumber(max) }) : t("portal.order.wholeNumber");
+      error.textContent = !wrong2 ? "" : count4 > max ? t(isPack ? "portal.order.maxPacks" : "portal.order.maxUnits", { max: formatNumber(max) }) : t("portal.order.wholeNumber");
     }
     return !wrong2;
   }
@@ -18345,7 +22586,7 @@
     }
     const units = totals.units ? ` · ${t("portal.order.totalUnits", { units: formatNumber(totals.units) })}${totals.free ? t("portal.order.packFree", { free: formatNumber(totals.free) }) : ""}` : "";
     const text2 = document.getElementById("pctxt");
-    if (text2) text2.innerHTML = t("portal.order.total", { total: `<b id="cttot">${euros3(totals.amount)}</b>` }) + units;
+    if (text2) text2.innerHTML = t("portal.order.total", { total: `<b id="cttot">${euros5(totals.amount)}</b>` }) + units;
   }
   function review(box3) {
     const totals = { amount: 0, units: 0, free: 0 };
@@ -18355,14 +22596,14 @@
         wrong2++;
         return;
       }
-      const count = Number(input6.value || 0), data = input6.dataset;
+      const count4 = Number(input6.value || 0), data = input6.dataset;
       if (data.pcpk) {
-        totals.amount += count * (Number(data.pcimp) || 0);
-        totals.units += count * ((Number(data.pcc) || 0) + (Number(data.pcg) || 0));
-        totals.free += count * (Number(data.pcg) || 0);
+        totals.amount += count4 * (Number(data.pcimp) || 0);
+        totals.units += count4 * ((Number(data.pcc) || 0) + (Number(data.pcg) || 0));
+        totals.free += count4 * (Number(data.pcg) || 0);
       } else {
-        totals.amount += count * (Number(data.ctpr) || 0);
-        totals.units += count;
+        totals.amount += count4 * (Number(data.ctpr) || 0);
+        totals.units += count4;
       }
     });
     const shared = box3.querySelector("[name=pcent]:checked")?.value === "varias";
@@ -18371,12 +22612,12 @@
     return result;
   }
   function orderLines(box3) {
-    const lines2 = [], count = (input6) => Math.floor(Number(input6.value) || 0);
+    const lines2 = [], count4 = (input6) => Math.floor(Number(input6.value) || 0);
     box3.querySelectorAll("[data-pcpk]").forEach((input6) => {
-      if (count(input6) > 0) lines2.push({ producto_id: input6.dataset.pcpk, pack: { compra: Number(input6.dataset.pcc), regalo: Number(input6.dataset.pcg) }, packs: count(input6) });
+      if (count4(input6) > 0) lines2.push({ producto_id: input6.dataset.pcpk, pack: { compra: Number(input6.dataset.pcc), regalo: Number(input6.dataset.pcg) }, packs: count4(input6) });
     });
     box3.querySelectorAll("[data-ctp]").forEach((input6) => {
-      if (count(input6) > 0) lines2.push({ producto_id: input6.dataset.ctp, unidades: count(input6) });
+      if (count4(input6) > 0) lines2.push({ producto_id: input6.dataset.ctp, unidades: count4(input6) });
     });
     return lines2;
   }
@@ -18386,7 +22627,7 @@
     if (reason === "vacio") return t("portal.order.chooseSomething");
     if (reason === "pack") return t("portal.order.packGone", { product: answer?.producto ?? t("portal.order.product") });
     if (reason === "unidades") return t("portal.order.checkProduct", { product: answer?.producto ?? t("portal.order.aProduct") });
-    return reason === "entregas" ? t("portal.order.deliveriesMustAdd", { total: formatNumber(answer?.total) }) : failureText4(answer);
+    return reason === "entregas" ? t("portal.order.deliveriesMustAdd", { total: formatNumber(answer?.total) }) : failureText7(answer);
   }
   async function send3(box3, button3, onSent) {
     const checked5 = review(box3);
@@ -18420,7 +22661,7 @@
     if (!box3) return;
     const title2 = t("portal.order.title");
     box3.innerHTML = `<div class="card ancard pmcons pcped"><h2>${title2} ${helpButton(title2, t("portal.order.help", { packs: formatNumber(MAX_PACKS) }))}</h2>
-    ${products3.length ? formHtml2(products3) : `<p class="sm">${t("portal.order.noProducts")}</p>`}</div>`;
+    ${products3.length ? formHtml4(products3) : `<p class="sm">${t("portal.order.noProducts")}</p>`}</div>`;
     if (!products3.length) return;
     const check2 = () => {
       review(box3);
@@ -18498,14 +22739,14 @@
       notas: sent2.notas ?? ""
     };
   }
-  var field2 = (id) => document.getElementById(id)?.value ?? "";
+  var field4 = (id) => document.getElementById(id)?.value ?? "";
   function readForm() {
     const form = portalState.form;
     if (!form || !document.getElementById("pmtel")) return;
-    form.telefono = field2("pmtel").trim();
-    form.email = field2("pmmail").trim();
-    form.visitas = { como: field2("pmcomo"), momento: field2("pmmom").trim() };
-    form.notas = field2("pmnot").trim();
+    form.telefono = field4("pmtel").trim();
+    form.email = field4("pmmail").trim();
+    form.visitas = { como: field4("pmcomo"), momento: field4("pmmom").trim() };
+    form.notas = field4("pmnot").trim();
     document.querySelectorAll("#pmficha [data-pmcf]").forEach((input6) => {
       const [index = "", key = ""] = (input6.dataset.pmcf ?? "").split("|"), place3 = form.consultas[Number(index)];
       if (!place3) return;
@@ -18528,13 +22769,13 @@
   var SEARCH_WAIT_MS7 = 250;
   var MIN_SEARCH2 = 2;
   var HOW_OPTIONS = ["portal.form.howBooked", "portal.form.howEndOfDay", "portal.form.howAnyGap", "portal.form.howPhone", "portal.form.howWriteFirst"];
-  var DAY_NAMES = /* @__PURE__ */ new Map([["L", "portal.form.monday"], ["M", "portal.form.tuesday"], ["X", "portal.form.wednesday"], ["J", "portal.form.thursday"], ["V", "portal.form.friday"], ["S", "portal.form.saturday"]]);
+  var DAY_NAMES2 = /* @__PURE__ */ new Map([["L", "portal.form.monday"], ["M", "portal.form.tuesday"], ["X", "portal.form.wednesday"], ["J", "portal.form.thursday"], ["V", "portal.form.friday"], ["S", "portal.form.saturday"]]);
   function timetableDay(index, day, ranges) {
     const rows2 = ranges.map((range2, row3) => `<span class="pmhf"><input data-pmhi="${index}|${day}|${row3}|0" value="${escapeHtml(range2[0])}" inputmode="numeric" maxlength="5" aria-label="${t("portal.form.from")}">
           <span>${t("portal.form.to")}</span><input data-pmhi="${index}|${day}|${row3}|1" value="${escapeHtml(range2[1])}" inputmode="numeric" maxlength="5" aria-label="${t("portal.form.until")}">
           <button type="button" class="pmhx" data-pmhx="${index}|${day}|${row3}" aria-label="${t("portal.form.removeRange")}">✕</button></span>`).join("");
     return `<div class="pmhd ${ranges.length ? "on" : ""}">
-      <button type="button" class="pmhdia" data-pmhd="${index}|${day}" aria-pressed="${String(Boolean(ranges.length))}">${t(DAY_NAMES.get(day) ?? "portal.form.monday")}</button>
+      <button type="button" class="pmhdia" data-pmhd="${index}|${day}" aria-pressed="${String(Boolean(ranges.length))}">${t(DAY_NAMES2.get(day) ?? "portal.form.monday")}</button>
       <div class="pmhr">${ranges.length ? `${rows2}<button type="button" class="pmhmas" data-pmha="${index}|${day}">${t("portal.form.addRange")}</button>` : `<span class="sm">${t("portal.form.closed")}</span>`}</div></div>`;
   }
   function timetableHtml(days, index) {
@@ -18548,7 +22789,7 @@
   function placeHtml(place3, index) {
     const isNew = !place3.centro_id && !place3.ubicacion_id || !String(place3.nombre ?? "").trim();
     const head = isNew ? `<div class="g2 pmcnuevo"><div><label>${t("portal.form.placeName")}</label><input data-pmcf="${index}|nombre" value="${escapeHtml(place3.nombre ?? "")}"></div>
-        <div><label>${t("portal.form.placeAddress")}</label><input data-pmcf="${index}|direccion" value="${escapeHtml(placeText(place3, ", "))}" placeholder="${t("portal.form.placeAddressPlaceholder")}"></div></div>` : `<div><b>${escapeHtml(orFallback(place3.nombre, words6().place))}</b><span class="sm">${escapeHtml(placeText(place3, " · "))}</span></div>`;
+        <div><label>${t("portal.form.placeAddress")}</label><input data-pmcf="${index}|direccion" value="${escapeHtml(placeText(place3, ", "))}" placeholder="${t("portal.form.placeAddressPlaceholder")}"></div></div>` : `<div><b>${escapeHtml(orFallback(place3.nombre, words7().place))}</b><span class="sm">${escapeHtml(placeText(place3, " · "))}</span></div>`;
     return `<div class="pmc" data-pmc="${index}">
     <div class="pmccab">${head}
       <button type="button" class="btn sec chico pmcx" data-pmcx="${index}">${t("portal.form.remove")}</button></div>
@@ -18567,7 +22808,7 @@
     const done = phone && how && timetable;
     box3.classList.toggle("ok", done);
     box3.innerHTML = `<b>${t(done ? "portal.form.checkDone" : "portal.form.checkTitle")}</b>
-    <ul><li class="${phone ? "ok" : ""}">${t("portal.form.checkPhone")}</li><li class="${timetable ? "ok" : ""}">${t(isCentre() ? "portal.form.checkTimetableCentre" : "portal.form.checkTimetable")}</li><li class="${how ? "ok" : ""}">${t("portal.form.checkHow", words6())}</li></ul>
+    <ul><li class="${phone ? "ok" : ""}">${t("portal.form.checkPhone")}</li><li class="${timetable ? "ok" : ""}">${t(isCentre() ? "portal.form.checkTimetableCentre" : "portal.form.checkTimetable")}</li><li class="${how ? "ok" : ""}">${t("portal.form.checkHow", words7())}</li></ul>
     <span class="sm">${t(done ? "portal.form.checkDoneText" : "portal.form.checkText")}</span>`;
   }
   function repaintPlaces() {
@@ -18594,13 +22835,13 @@
     return proposal.estado === "Pendiente" ? t("portal.form.sentOn", { date: shortDateTime(proposal.modificado_en ?? "") }) : t("portal.form.reviewed");
   }
   function contactCard() {
-    const form = portalState.form, title2 = t("portal.form.contactTitle", words6());
+    const form = portalState.form, title2 = t("portal.form.contactTitle", words7());
     if (!form) return "";
     const how = HOW_OPTIONS.map((key) => `<option ${form.visitas.como === t(key) ? "selected" : ""}>${escapeHtml(t(key))}</option>`).join("");
     return `<div class="card ancard pmcons pmcont"><h2>${title2} ${helpButton(title2, t("portal.form.contactHelp"))}</h2>
       <div class="pmcampos"><div><label for="pmtel">${t("portal.form.phone")} <span class="pmreq">${t("portal.form.required")}</span></label><input id="pmtel" inputmode="tel" value="${escapeHtml(form.telefono)}" placeholder="${t("portal.form.phonePlaceholder")}"></div>
         <div><label for="pmmail">${t("portal.form.email")}</label><input id="pmmail" type="email" value="${escapeHtml(form.email)}" placeholder="${t("portal.form.emailPlaceholder")}"></div>
-        <div><label for="pmcomo">${t("portal.form.how", words6())} <span class="pmreq">${t("portal.form.required")}</span></label><select id="pmcomo"><option value="">${t("portal.form.choose")}</option>${how}</select></div>
+        <div><label for="pmcomo">${t("portal.form.how", words7())} <span class="pmreq">${t("portal.form.required")}</span></label><select id="pmcomo"><option value="">${t("portal.form.choose")}</option>${how}</select></div>
         <div><label for="pmmom">${t("portal.form.when")}</label><input id="pmmom" value="${escapeHtml(form.visitas.momento)}" placeholder="${t("portal.form.whenPlaceholder")}"></div>
         <div class="pmancho"><label for="pmnot">${t("portal.form.notes")}</label><textarea id="pmnot" rows="2" placeholder="${t("portal.form.notesPlaceholder")}">${escapeHtml(form.notas)}</textarea></div></div></div>`;
   }
@@ -18782,28 +23023,28 @@
       <textarea id="mdmsgt" rows="2" placeholder="${t("portal.material.questionPlaceholder")}" aria-label="${t("portal.material.questionLabel")}"></textarea>
       <div class="acts u-start"><button type="button" class="btn" id="mdmsgok">${t("portal.material.send")}</button></div></div>`;
   }
-  var value3 = (id) => document.getElementById(id)?.value ?? "";
+  var value6 = (id) => document.getElementById(id)?.value ?? "";
   var chosenMax = () => Number(document.getElementById("mdmatm")?.selectedOptions[0]?.dataset.max);
   function showMaximum() {
     const hint = document.getElementById("mdmatmax");
     if (!hint || !document.getElementById("mdmatm")) return;
-    const max = chosenMax(), count = Number(value3("mdmatn")) || 0;
-    hint.classList.toggle("mdmatpasa", count > max);
-    hint.textContent = t(count > max ? "portal.material.atMost" : "portal.material.max", { max: formatNumber(max) });
+    const max = chosenMax(), count4 = Number(value6("mdmatn")) || 0;
+    hint.classList.toggle("mdmatpasa", count4 > max);
+    hint.textContent = t(count4 > max ? "portal.material.atMost" : "portal.material.max", { max: formatNumber(max) });
   }
   async function ask(button3) {
     button3.disabled = true;
-    const max = chosenMax(), count = Number(value3("mdmatn")) || 0;
-    if (count < 1 || count > max) {
+    const max = chosenMax(), count4 = Number(value6("mdmatn")) || 0;
+    if (count4 < 1 || count4 > max) {
       button3.disabled = false;
       showMaximum();
-      notices.toast(count < 1 ? t("portal.material.howMany") : t("portal.material.tooMany", { max: formatNumber(max) }), true);
+      notices.toast(count4 < 1 ? t("portal.material.howMany") : t("portal.material.tooMany", { max: formatNumber(max) }), true);
       return;
     }
-    const { data: result } = await legacyDb().rpc("pedir_material", { p_material: value3("mdmatm"), p_cantidad: count, p_nota: value3("mdmatt").trim() || null });
+    const { data: result } = await legacyDb().rpc("pedir_material", { p_material: value6("mdmatm"), p_cantidad: count4, p_nota: value6("mdmatt").trim() || null });
     button3.disabled = false;
     if (!result?.ok) {
-      notices.toast(result?.motivo === "cantidad" ? t("portal.material.atMostShort", { max: formatNumber(result.max) }) : failureText4(result), true);
+      notices.toast(result?.motivo === "cantidad" ? t("portal.material.atMostShort", { max: formatNumber(result.max) }) : failureText7(result), true);
       return;
     }
     notices.toast(t("portal.material.asked"));
@@ -18812,14 +23053,14 @@
   async function cancel(id) {
     const { data: result } = await legacyDb().rpc("cerrar_material", { p_id: id, p_estado: CANCELLED });
     if (!result?.ok) {
-      notices.toast(failureText4(result), true);
+      notices.toast(failureText7(result), true);
       return;
     }
     notices.toast(t("portal.material.cancelled"));
     void paintMaterial();
   }
   async function sendMessage(button3) {
-    const text2 = value3("mdmsgt").trim();
+    const text2 = value6("mdmsgt").trim();
     if (!text2) {
       notices.toast(t("portal.failures.empty"), true);
       return;
@@ -18828,13 +23069,13 @@
     const { data: result } = await legacyDb().rpc("enviar_mensaje_cuenta", { p_cuenta: null, p_texto: text2 });
     button3.disabled = false;
     if (!result?.ok) {
-      notices.toast(failureText4(result), true);
+      notices.toast(failureText7(result), true);
       return;
     }
     notices.toast(t("portal.material.messageSent"));
     void paintMaterial();
   }
-  function bind7(box3) {
+  function bind11(box3) {
     const select = document.getElementById("mdmatm");
     if (select) select.onchange = showMaximum;
     document.getElementById("mdmatn")?.addEventListener("input", showMaximum);
@@ -18865,7 +23106,7 @@
     if (!box3) return;
     const list = messages ?? [];
     box3.innerHTML = cardsHtml(Array.isArray(allowed) ? allowed : [], requests2 ?? [], list);
-    bind7(box3);
+    bind11(box3);
     if (list.some((message) => !message.del_portal && !message.leido_en)) void callRpc("leer_mensajes_cuenta", { p_cuenta: null });
   }
 
@@ -18892,16 +23133,16 @@
   }
 
   // src/app/screens/portal/centre.ts
-  var TABS = ["res", "ped", "ficha", "mat"];
+  var TABS2 = ["res", "ped", "ficha", "mat"];
   var SHOWN_ORDERS = 8;
   var CANCELLED2 = "Anulado";
   var PREPARED = "Preparado";
-  var euros4 = (value10) => portalLegacy.euros(value10);
+  var euros6 = (value10) => portalLegacy.euros(value10);
   function orderRow(order) {
     const lines2 = (order.lineas ?? []).map((line2) => `${line2.producto} × ${formatNumber(line2.unidades)}${line2.regalo ? t("portal.centre.free") : ""}`).join(", ");
     return `<div class="item"><span class="tx">
             <b>${order.numero ? `${escapeHtml(order.numero)} · ` : ""}${formatShortDate(String(order.fecha).slice(0, 10))}</b>
-            <span class="sm">${escapeHtml(lines2)}${order.total !== null && order.total !== void 0 ? ` · ${euros4(order.total)}` : ""}</span>${orderExtras(order)}</span>
+            <span class="sm">${escapeHtml(lines2)}${order.total !== null && order.total !== void 0 ? ` · ${euros6(order.total)}` : ""}</span>${orderExtras(order)}</span>
             <span class="pcpst"><span class="pill ${portalPageLegacy.centreStateClass(order.estado)}">${escapeHtml(order.estado)}</span>${order.proforma ? `<button type="button" class="btn sec chico" data-pcpro="${order.id}">${t("portal.centre.proforma")}</button>` : ""}</span></div>`;
   }
   function indicators3(orders2, bought, products3) {
@@ -18960,7 +23201,7 @@
   async function loadCentre() {
     const page = document.getElementById("v-informe");
     if (!page) return;
-    if (!TABS.includes(portalState.tab)) portalState.tab = "res";
+    if (!TABS2.includes(portalState.tab)) portalState.tab = "res";
     page.innerHTML = `<div class="medhero"><div><div class="sm" style="color:rgba(255,255,255,.8)">${t("portal.centre.kicker")}</div><h1 id="ctnom">…</h1>
       <div class="sm" style="color:rgba(255,255,255,.85)">${t("portal.centre.subtitle")}</div></div></div>
     ${tabBar([["res", "portal.tabs.summary"], ["ped", "portal.tabs.order"], ["ficha", "portal.tabs.centre"], ["mat", "portal.tabs.material"]])}
@@ -18996,25 +23237,25 @@
     return format === "1" ? t("portal.summary.oneUnit") : t("portal.summary.units", { count: format });
   }
   function formatsCard(data) {
-    const list = data.formatos ?? [], total = sum(list.map((item) => item.n ?? 0)), title2 = t("portal.summary.formatsTitle", { Orders: capitalise(words6().orders) });
-    const chart = total ? portalPageLegacy.barChart(list.map((item) => ({ n: formatText(item.formato), v: Math.round((item.n ?? 0) / total * 100) })), (value10) => `${value10} %`) : portalPageLegacy.emptyChart(t("portal.summary.formatsEmpty", words6()));
-    return `<div class="card ancard" id="pmformatos"><h2>${title2} ${helpButton(title2, t("portal.summary.formatsHelp", words6()))}</h2>
+    const list = data.formatos ?? [], total = sum(list.map((item) => item.n ?? 0)), title2 = t("portal.summary.formatsTitle", { Orders: capitalise(words7().orders) });
+    const chart = total ? portalPageLegacy.barChart(list.map((item) => ({ n: formatText(item.formato), v: Math.round((item.n ?? 0) / total * 100) })), (value10) => `${value10} %`) : portalPageLegacy.emptyChart(t("portal.summary.formatsEmpty", words7()));
+    return `<div class="card ancard" id="pmformatos"><h2>${title2} ${helpButton(title2, t("portal.summary.formatsHelp", words7()))}</h2>
     ${chart}</div>`;
   }
   function periodCard(data) {
-    const last = t("portal.summary.lastOrder", words6());
+    const last = t("portal.summary.lastOrder", words7());
     const rows2 = [
-      [formatNumber(data.unidades), t("portal.summary.unitsLabel"), t("portal.summary.unitsHelp", words6())],
-      [data.ultima_pauta ? formatShortDate(data.ultima_pauta) : "—", last, t("portal.summary.lastOrderHelp", words6())]
+      [formatNumber(data.unidades), t("portal.summary.unitsLabel"), t("portal.summary.unitsHelp", words7())],
+      [data.ultima_pauta ? formatShortDate(data.ultima_pauta) : "—", last, t("portal.summary.lastOrderHelp", words7())]
     ];
     return `<div class="card ancard" id="pmperiodo"><h2>${t("portal.summary.periodTitle")}</h2>
-    <div class="pmperl">${rows2.map(([value10, label, help4]) => `<div><span>${escapeHtml(label)} ${helpButton(label, help4)}</span><b>${value10}</b></div>`).join("")}</div></div>`;
+    <div class="pmperl">${rows2.map(([value10, label, help5]) => `<div><span>${escapeHtml(label)} ${helpButton(label, help5)}</span><b>${value10}</b></div>`).join("")}</div></div>`;
   }
   function activityBanner(data) {
     const select = document.querySelector("#mdper [data-per]"), key = PERIODS2.get(select ? select.value : "semana");
-    const when = key ? t(key) : t("portal.periods.thisPeriod"), count = Number(data.pautas) || 0;
+    const when = key ? t(key) : t("portal.periods.thisPeriod"), count4 = Number(data.pautas) || 0;
     const word = portalPageLegacy.wordOf("pauta");
-    if (count > 0) return `<div class="banda-ok pmact" id="pmact"><b>${t(count === 1 ? "portal.summary.activatedOne" : "portal.summary.activated", { when, count: formatNumber(count), word: escapeHtml(count === 1 ? word.s : word.p) })}</b></div>`;
+    if (count4 > 0) return `<div class="banda-ok pmact" id="pmact"><b>${t(count4 === 1 ? "portal.summary.activatedOne" : "portal.summary.activated", { when, count: formatNumber(count4), word: escapeHtml(count4 === 1 ? word.s : word.p) })}</b></div>`;
     return `<div class="banda-info pmact" id="pmact"><b>${t(word.g === "f" ? "portal.summary.noneFeminine" : "portal.summary.noneMasculine", { when, word: escapeHtml(word.s) })}</b>
     ${t("portal.summary.needHelp")}
     <button type="button" class="btn sec chico" data-pmir="mat">${t("portal.tabs.material")}</button></div>`;
@@ -19022,20 +23263,20 @@
   function monthColumn(month, figures, max) {
     const units = figures?.unidades ?? 0, orders2 = figures?.pautas ?? 0;
     const name = (/* @__PURE__ */ new Date(`${month}-01T12:00`)).toLocaleDateString(t("dates.locale"), { month: "short" }).replace(".", "");
-    const title2 = t("portal.summary.monthTitle", { month: name, units: formatNumber(units), orders: formatNumber(orders2), ordersWord: words6().orders });
+    const title2 = t("portal.summary.monthTitle", { month: name, units: formatNumber(units), orders: formatNumber(orders2), ordersWord: words7().orders });
     return `<div class="pmcol" title="${escapeHtml(title2)}"><div class="pmbar"><b>${units ? formatNumber(units) : ""}</b><i style="height:${units ? Math.max(3, units / max * 100) : 0}%"></i></div>
         <span class="pmm">${escapeHtml(name)}</span><span class="pmn">${orders2 ? `<em>${formatNumber(orders2)}</em>` : ""}</span></div>`;
   }
   function evolution(data) {
-    if (!data.unidades) return portalPageLegacy.emptyChart(t("portal.summary.evolutionEmpty", words6()));
+    if (!data.unidades) return portalPageLegacy.emptyChart(t("portal.summary.evolutionEmpty", words7()));
     const months = portalPageLegacy.monthsBetween(data.desde, data.hasta), series = new Map((data.serie ?? []).map((item) => [item.mes, item]));
     const max = Math.max(1, ...months.map((month) => series.get(month)?.unidades ?? 0));
-    return `<div class="pmleg"><span><i></i>${t("portal.summary.unitsLabel")}</span><span><i class="v"></i>${words6().Orders}</span></div>
+    return `<div class="pmleg"><span><i></i>${t("portal.summary.unitsLabel")}</span><span><i class="v"></i>${words7().Orders}</span></div>
     <div class="pmev" style="--n:${months.length}">${months.map((month) => monthColumn(month, series.get(month), max)).join("")}</div>`;
   }
   function continuity(figures) {
     if (!figures.ok) return `<p class="sm">${t("portal.summary.notAvailable")}</p>`;
-    if (figures.pocos) return `<p class="sm">${t("portal.summary.fewStarted", { ...words6(), months: formatNumber(figures.meses ?? DEFAULT_RECURRENCE.meses), started: formatNumber(figures.empezaron), minimum: formatNumber(figures.minimo ?? DEFAULT_RECURRENCE.minimo) })}</p>`;
+    if (figures.pocos) return `<p class="sm">${t("portal.summary.fewStarted", { ...words7(), months: formatNumber(figures.meses ?? DEFAULT_RECURRENCE.meses), started: formatNumber(figures.empezaron), minimum: formatNumber(figures.minimo ?? DEFAULT_RECURRENCE.minimo) })}</p>`;
     const started = figures.empezaron ?? 0;
     return `<div class="minis cons"><div><b>${formatNumber(started)}</b><span>${t("portal.summary.started")}</span></div><div><b>${started ? `${Math.round((figures.repiten ?? 0) / started * 100)}%` : "—"}</b><span>${t("portal.summary.repeated")}</span></div>
         <div><b>${figures.dias_entre ? t("portal.summary.days", { count: formatNumber(figures.dias_entre) }) : "—"}</b><span>${t("portal.summary.between")}</span></div><div><b>${formatNumber(figures.sin_pedir)}</b><span>${t("portal.summary.overDays", { days: formatNumber(figures.dias ?? DEFAULT_RECURRENCE.dias) })}</span></div></div>`;
@@ -19046,17 +23287,17 @@
       <button type="button" class="btn" data-pmir="ficha">${t("portal.summary.completeCardButton")}</button></div>`;
   }
   function metricsCard(data) {
-    const title2 = t("portal.summary.metricsTitle", words6());
-    const last = data.ultima_pauta ? t("portal.summary.metricsLast", { ...words6(), date: formatShortDate(data.ultima_pauta) }) : "";
-    return `<div class="card ancard"><h2>${title2} ${helpButton(title2, t("portal.summary.metricsHelp", words6()) + last)}</h2>${evolution(data)}</div>`;
+    const title2 = t("portal.summary.metricsTitle", words7());
+    const last = data.ultima_pauta ? t("portal.summary.metricsLast", { ...words7(), date: formatShortDate(data.ultima_pauta) }) : "";
+    return `<div class="card ancard"><h2>${title2} ${helpButton(title2, t("portal.summary.metricsHelp", words7()) + last)}</h2>${evolution(data)}</div>`;
   }
   function productsCard(data) {
     const title2 = t("portal.summary.byProduct"), products3 = data.productos ?? [];
-    return `<div class="card ancard"><h2>${title2} ${helpButton(title2, t("portal.summary.byProductHelp", words6()))}</h2>
+    return `<div class="card ancard"><h2>${title2} ${helpButton(title2, t("portal.summary.byProductHelp", words7()))}</h2>
         ${products3.length ? `<div class="pmdon">${portalPageLegacy.donut(products3.map((item) => ({ n: item.nombre, v: item.unidades })))}</div>` : portalPageLegacy.emptyChart(t("portal.summary.byProductEmpty"))}</div>`;
   }
   function summaryHtml3(data, figures) {
-    const title2 = t("portal.summary.continuityTitle", words6());
+    const title2 = t("portal.summary.continuityTitle", words7());
     return `${activityBanner(data)}${missingBanner()}
     <div class="pmfila pm3">
       ${periodCard(data)}
@@ -19064,7 +23305,7 @@
       ${productsCard(data)}</div>
     <div class="pmfila">
       ${formatsCard(data)}
-      <div class="card ancard" id="pmconst"><h2>${title2} ${helpButton(title2, t("portal.summary.continuityHelp", { ...words6(), months: formatNumber(figures.meses ?? DEFAULT_RECURRENCE.meses), days: formatNumber(figures.dias ?? DEFAULT_RECURRENCE.dias) }))}</h2>${continuity(figures)}</div></div>`;
+      <div class="card ancard" id="pmconst"><h2>${title2} ${helpButton(title2, t("portal.summary.continuityHelp", { ...words7(), months: formatNumber(figures.meses ?? DEFAULT_RECURRENCE.meses), days: formatNumber(figures.dias ?? DEFAULT_RECURRENCE.dias) }))}</h2>${continuity(figures)}</div></div>`;
   }
 
   // src/app/screens/portal/report.ts
@@ -19184,10 +23425,10 @@
   var FORMATS = "rgfmt";
   var RECURRENCE = "rgrec";
   var ALL = "todos";
-  var MARKED = "marcados";
+  var MARKED2 = "marcados";
   var repaint = () => void 0;
   var LIMITS = { group: [2, 99], meses: [1, 36], dias: [7, 365], minimo: [MIN_RECURRENCE, 100] };
-  var words7 = () => ({
+  var words8 = () => ({
     order: term("pauta"),
     orders: term("pauta", { number: "p" }),
     Orders: term("pauta", { number: "p", capital: "C" }),
@@ -19202,14 +23443,14 @@
     return ruleCardHtml({
       id: REPORTS,
       title: t("settingsRules.portalReports.title"),
-      info: t("settingsRules.portalReports.info", words7()),
-      intro: t("settingsRules.portalReports.intro", words7()),
+      info: t("settingsRules.portalReports.info", words8()),
+      intro: t("settingsRules.portalReports.intro", words8()),
       rows: [selectRowHtml({
         id: `${REPORTS}p`,
-        label: t("settingsRules.portalReports.orders", words7()),
+        label: t("settingsRules.portalReports.orders", words8()),
         help: t("settingsRules.portalReports.ordersHelp"),
-        value: setting2.pedidos === ALL ? ALL : MARKED,
-        options: [{ value: ALL, text: t("settingsRules.portalReports.all") }, { value: MARKED, text: t("settingsRules.portalReports.marked") }]
+        value: setting2.pedidos === ALL ? ALL : MARKED2,
+        options: [{ value: ALL, text: t("settingsRules.portalReports.all") }, { value: MARKED2, text: t("settingsRules.portalReports.marked") }]
       })]
     });
   }
@@ -19217,8 +23458,8 @@
     return ruleCardHtml({
       id: FORMATS,
       title: t("settingsRules.portalFormats.title"),
-      info: t("settingsRules.portalFormats.info", words7()),
-      intro: t("settingsRules.portalFormats.intro", words7()),
+      info: t("settingsRules.portalFormats.info", words8()),
+      intro: t("settingsRules.portalFormats.intro", words8()),
       rows: [numberRowHtml({
         id: `${FORMATS}n`,
         label: t("settingsRules.portalFormats.groupFrom"),
@@ -19231,10 +23472,10 @@
   }
   function recurrenceHtml(setting2) {
     const own = setting2.recurrencia ?? {};
-    const row3 = (key, label, help4) => numberRowHtml({
+    const row3 = (key, label, help5) => numberRowHtml({
       id: `${RECURRENCE}${key}`,
-      label: t(label, words7()),
-      help: t(help4, { ...words7(), count: DEFAULT_RECURRENCE[key], min: MIN_RECURRENCE }),
+      label: t(label, words8()),
+      help: t(help5, { ...words8(), count: DEFAULT_RECURRENCE[key], min: MIN_RECURRENCE }),
       value: numberOr(own[key], DEFAULT_RECURRENCE[key]),
       min: LIMITS[key][0],
       max: LIMITS[key][1]
@@ -19242,7 +23483,7 @@
     return ruleCardHtml({
       id: RECURRENCE,
       title: t("settingsRules.portalRecurrence.title"),
-      info: t("settingsRules.portalRecurrence.info", words7()),
+      info: t("settingsRules.portalRecurrence.info", words8()),
       intro: t("settingsRules.portalRecurrence.intro"),
       rows: [
         row3("meses", "settingsRules.portalRecurrence.months", "settingsRules.portalRecurrence.monthsHelp"),
@@ -19252,10 +23493,10 @@
     });
   }
   function wrong(label, [min, max]) {
-    notices.toast(t("settingsRules.wrongNumber", { field: t(label, words7()), min, max }), true);
+    notices.toast(t("settingsRules.wrongNumber", { field: t(label, words8()), min, max }), true);
   }
   async function saveReports() {
-    const value10 = inputValue(`${REPORTS}p`) === ALL ? ALL : MARKED;
+    const value10 = inputValue(`${REPORTS}p`) === ALL ? ALL : MARKED2;
     if (await saveRule("portal", { ...await portalSetting(), pedidos: value10 })) repaint();
   }
   async function saveFormats() {
@@ -19307,7 +23548,7 @@
         <input type="checkbox" data-cfpm="${escapeHtml(item.valor)}" ${chosen4 ? "checked" : ""}> <span class="tx"><b>${escapeHtml(item.valor)}</b></span>
         <span class="sm">${t("portal.settings.maximum")}</span> <input type="number" min="1" max="${MAX_LIMIT3}" value="${chosen4 ? chosen4.max : DEFAULT_MAX2}" data-cfpx="${escapeHtml(item.valor)}" style="max-width:110px" aria-label="${t("portal.settings.maximumOf", { name: escapeHtml(item.valor) })}"></label>`;
   }
-  function materialHtml(catalog2, allowed, saved3) {
+  function materialHtml2(catalog2, allowed, saved3) {
     if (!catalog2.length) return `<div class="vacio">${t("portal.settings.noCatalog")}</div>`;
     return `<div class="lista" id="cfpmat">${catalog2.map((item) => materialRow(item, allowed.find((other) => other.valor === item.valor))).join("")}</div>
       ${saved3 ? "" : `<p class="sm u-p-0-16">${t("portal.settings.everything")}</p>`}
@@ -19346,7 +23587,7 @@
     if (!box3) return;
     box3.innerHTML = `<div class="card"><div class="fh"><div><h2>${t("portal.settings.title", { ofProfessional: term("medico", { article: "del" }) })}</h2>
       <div class="sm">${t("portal.settings.subtitle", { theProfessionals: term("medico", { number: "p", article: "el" }) })}</div></div></div>
-    ${materialHtml(catalog2 ?? [], Array.isArray(allowed) ? allowed : [], Boolean(setting2.material))}</div>
+    ${materialHtml2(catalog2 ?? [], Array.isArray(allowed) ? allowed : [], Boolean(setting2.material))}</div>
   ${prepaymentHtml(Boolean(setting2.pago_anticipado))}${portalRulesHtml(setting2)}`;
     const save26 = document.getElementById("cfpok");
     if (save26) save26.onclick = () => {
@@ -19479,9 +23720,9 @@
   var editScheme = fromChunk8("editScheme");
 
   // src/app/screens/home/indicator-settings.ts
-  var dialog4 = () => document.getElementById("dlg");
+  var dialog5 = () => document.getElementById("dlg");
   var markChanged = () => {
-    const box3 = dialog4();
+    const box3 = dialog5();
     if (box3) box3.dataset.sucio = "1";
   };
   function startingList() {
@@ -19496,7 +23737,7 @@
     const placeholder = definition ? definition.t.charAt(0).toUpperCase() + definition.t.slice(1) : filterText(item.filtro ?? {});
     return { description, placeholder };
   }
-  function cardHtml4(item, index, count) {
+  function cardHtml4(item, index, count4) {
     const definition = indicatorCatalog.definitions().find((entry2) => entry2.id === item.id);
     if (definition ? !indicatorCatalog.allowed(definition) : !item.filtro) return "";
     const { description, placeholder } = texts2(item, definition);
@@ -19506,11 +23747,11 @@
             <span class="sm">${escapeHtml(description)}</span></div>
           <div class="kord">
             <button type="button" class="kmv" data-kmv="${index}|-1" aria-label="${t("ordersMore.indicators.up")}" ${index === 0 ? "disabled" : ""}>${legacyIcons.arrow("arriba")}</button>
-            <button type="button" class="kmv" data-kmv="${index}|1" aria-label="${t("ordersMore.indicators.down")}" ${index === count - 1 ? "disabled" : ""}>${legacyIcons.arrow("abajo")}</button>
+            <button type="button" class="kmv" data-kmv="${index}|1" aria-label="${t("ordersMore.indicators.down")}" ${index === count4 - 1 ? "disabled" : ""}>${legacyIcons.arrow("abajo")}</button>
             ${item.filtro ? `<button type="button" class="kmv" data-kdel="${index}" aria-label="${t("ordersMore.indicators.remove")}" title="${t("ordersMore.indicators.remove")}">✕</button>` : ""}</div>
         </div>`;
   }
-  function windowHtml(list) {
+  function windowHtml2(list) {
     return `
       <div class="fh"><div><h2>${t("ordersMore.indicators.title")}</h2>
         <div class="sm">${t("ordersMore.indicators.subtitle")}</div></div>
@@ -19520,18 +23761,18 @@
         <button class="btn sec" id="kres">${t("ordersMore.indicators.restore")}</button>
         <button class="btn" id="kok">${t("ordersMore.indicators.save")}</button></div>`;
   }
-  async function save8(list, button3) {
+  async function save12(list, button3) {
     button3.disabled = true;
     button3.textContent = t("ordersMore.indicators.saving");
     const saved3 = await indicatorSettingsLegacy.save(list.map((item) => ({ id: item.id, on: item.on, t: item.t, ...item.filtro ? { filtro: item.filtro } : {} })));
     button3.disabled = false;
     button3.textContent = t("ordersMore.indicators.save");
     if (!saved3) return;
-    dialog4()?.close();
+    dialog5()?.close();
     notices.toast(t("ordersMore.indicators.saved"));
     indicatorSettingsLegacy.reloadHome();
   }
-  function bind8(body3, state2) {
+  function bind12(body3, state2) {
     const readNames = () => {
       body3.querySelectorAll("[data-kt]").forEach((input6) => {
         const item = state2.list[Number(input6.dataset.kt)];
@@ -19542,7 +23783,7 @@
       readNames();
       work();
       markChanged();
-      paint3(state2);
+      paint6(state2);
     };
     body3.querySelectorAll("[data-kon]").forEach((button3) => {
       button3.onclick = () => {
@@ -19561,7 +23802,7 @@
         state2.list[from] = second;
         state2.list[to] = first;
         markChanged();
-        paint3(state2);
+        paint6(state2);
       };
     });
     body3.querySelectorAll("[data-kdel]").forEach((button3) => {
@@ -19575,2513 +23816,24 @@
     if (restore) restore.onclick = () => {
       state2.list = indicatorCatalog.definitions().map((definition) => ({ id: definition.id, on: indicatorSettingsLegacy.defaults().includes(definition.id), t: "" }));
       markChanged();
-      paint3(state2);
+      paint6(state2);
     };
     const ok = document.getElementById("kok");
     if (ok) ok.onclick = () => {
       readNames();
-      void save8(state2.list, ok);
+      void save12(state2.list, ok);
     };
   }
-  function paint3(state2) {
+  function paint6(state2) {
     const body3 = document.getElementById("dbody");
     if (!body3) return;
-    body3.innerHTML = windowHtml(state2.list);
-    bind8(body3, state2);
+    body3.innerHTML = windowHtml2(state2.list);
+    bind12(body3, state2);
   }
   function openIndicatorSettings() {
-    paint3({ list: startingList() });
-    dialog4()?.showModal();
+    paint6({ list: startingList() });
+    dialog5()?.showModal();
   }
-
-  // src/app/screens/products/index.ts
-  var products_exports = {};
-  __export(products_exports, {
-    editProduct: () => editProduct,
-    editService: () => editService,
-    editStores: () => editStores,
-    loadProductsModule: () => loadProductsModule,
-    paintProducts: () => paintProducts,
-    paintServices: () => paintServices,
-    paintStock: () => paintStock,
-    paintStores: () => paintStores,
-    paintVisitMaterial: () => paintVisitMaterial,
-    promotedProducts: () => promotedProducts,
-    showDeposit: () => showDeposit,
-    showStock: () => showStock,
-    stockMovement: () => stockMovement,
-    traceability: () => traceability
-  });
-
-  // src/app/screens/visit/index.ts
-  var visit_exports = {};
-  __export(visit_exports, {
-    editSamples: () => editSamples,
-    editVisit: () => editVisit,
-    loadMaterials: () => loadMaterials,
-    openVisit: () => openVisit,
-    presentOnly: () => presentOnly,
-    saveRevisitNotice: () => saveRevisitNotice,
-    showVisitPhotos: () => showVisitPhotos,
-    uploadVisitPhotos: () => uploadVisitPhotos,
-    visitBlock: () => visitBlock,
-    visitConsultation: () => visitConsultation
-  });
-
-  // src/app/screens/visit/card-block.ts
-  var card_block_exports = {};
-  __export(card_block_exports, {
-    visitBlock: () => visitBlock,
-    visitConsultation: () => visitConsultation
-  });
-
-  // src/app/legacy/visit-bridge.ts
-  var visitLegacy = {
-    setCurrent: (draft) => {
-      accountsStore.currentVisit = draft;
-    },
-    /** The day chosen in the Agenda for the visit (used once). */
-    takeDate: () => {
-      const date = VISITA_FECHA;
-      VISITA_FECHA = "";
-      return date;
-    },
-    withLoading: (work) => withDialogLoading(work),
-    saveCopy: (key, data) => {
-      read_cache_exports.saveCopy(key, data);
-    },
-    readCopy: (key) => read_cache_exports.readCopy(key)?.d ?? null,
-    resultValues: () => CAT.resultado_visita ?? [],
-    dataField: (value10, key) => valueDataField(value10, key, void 0),
-    signaturePad: (canvas) => signaturePad(canvas),
-    promotedProducts: () => promotedProducts(),
-    reloadProducts: async () => {
-      await cargarProductos();
-      return productsStore.products;
-    },
-    readPhoto: (file) => files_exports.readReceipt(file),
-    photosMax: () => FOTOS_VISITA_MAX,
-    normalise: (text2) => normalise2(text2),
-    weekdayLetter: () => calendar_exports.todayLetter(),
-    /** The write queue: without connection the call is kept and `data.encolada` is true. */
-    writeRpc: (name, payload10) => read_cache_exports.writeQueued(name, payload10),
-    reloadHome: () => {
-      void loadWithCache();
-    },
-    loading: (element, text2) => {
-      showLoading(element, text2);
-    },
-    materials: () => productsStore.presentationMaterials,
-    materialsTime: () => productsStore.presentationTime,
-    setMaterials: (list, time) => {
-      productsStore.presentationMaterials = list;
-      productsStore.presentationTime = time;
-    },
-    /** Downloaded material files by id (Productos forgets one when it is removed). */
-    materialFiles: () => PRES_DATOS,
-    preferences: () => sessionStore.profile.preferencias ?? {},
-    setPreferences: (value10) => {
-      sessionStore.profile.preferencias = value10;
-    }
-  };
-
-  // src/app/screens/visit/card-block.ts
-  var WEEK2 = "LMXJVSD";
-  var WORKDAYS = ["L", "M", "X", "J", "V"];
-  var DAY_NAMES2 = /* @__PURE__ */ new Map([
-    ["L", "visit.days.monday"],
-    ["M", "visit.days.tuesday"],
-    ["X", "visit.days.wednesday"],
-    ["J", "visit.days.thursday"],
-    ["V", "visit.days.friday"],
-    ["S", "visit.days.saturday"],
-    ["D", "visit.days.sunday"]
-  ]);
-  function visitConsultation(consultations) {
-    const centre = editorLegacy.centreFromCard(), preferred = centre ? visitLegacy.normalise(centre) : "";
-    const fromAppointment = preferred ? consultations.find((item) => visitLegacy.normalise(item.centro_nombre ?? "") === preferred) : void 0;
-    if (fromAppointment) return fromAppointment;
-    const today2 = visitLegacy.weekdayLetter();
-    return consultations.find((item) => item.dias?.[today2]) ?? consultations[0];
-  }
-  var row = (iconName, html, extraClass = "") => `<div class="fvfila ${extraClass}"><span class="fvico">${icon(iconName)}</span><div>${html}</div></div>`;
-  function placeRow(consultation) {
-    const where = [consultation.planta, consultation.sala].map((part) => String(part ?? "").trim()).filter((part) => part && !/^[-–·.]+$/.test(part)).map(escapeHtml).join(" · ");
-    const address = escapeHtml([consultation.direccion, [consultation.cp, consultation.municipio].filter(Boolean).join(" ")].filter(Boolean).join(", ")) || t("visit.block.noAddress");
-    const directions = consultation.lat ? `<button class="btn sec fvbtn" type="button" data-nav="${cardBaseLegacy.directionsAttribute([consultation.lat, consultation.lon ?? 0])}">${icon("map-pin")} ${t("visit.block.directions")}</button>` : "";
-    return row("building-2", `<b>${escapeHtml(orFallback(consultation.centro_nombre, privateConsultation()))}</b>${where ? `<span class="fvdonde">${where}</span>` : ""}
-      <div class="sm">${address}</div>
-      ${directions}`);
-  }
-  function whenRow(consultation) {
-    const days = consultation.dias ?? {}, today2 = visitLegacy.weekdayLetter(), hours2 = days[today2];
-    const position = WEEK2.indexOf(today2), next = hours2 ? void 0 : [...WEEK2.slice(position + 1), ...WEEK2.slice(0, position + 1)].find((day) => days[day]);
-    const centre = consultation.horario_centro?.[today2];
-    const head = hours2 ? `<b>${t("visit.block.attendsToday", { hours: escapeHtml(hours2) })}</b>` : next ? t("visit.block.notToday", { day: t(DAY_NAMES2.get(next) ?? "visit.days.monday"), hours: escapeHtml(days[next]) }) : t("visit.block.noTimetable");
-    return row("clock", `${head}
-      ${centre ? `<div class="sm">${t("visit.block.centreOpen", { hours: escapeHtml(centre) })}</div>` : ""}
-      <div class="dias fvdias">${WORKDAYS.map((day) => `<span class="${days[day] ? "on" : ""} ${day === today2 ? "hoy" : ""}" title="${escapeHtml(days[day] ?? "")}">${day}</span>`).join("")}</div>`);
-  }
-  function consultationRows(consultation) {
-    if (!consultation) return [row("building-2", `<span class="sm">${t("visit.block.noConsultation", { consultation: term("consulta") })}</span>`)];
-    const rows2 = [placeRow(consultation), whenRow(consultation)];
-    if (consultation.indicaciones) rows2.push(row("info", `<b>${t("visit.block.inside")}</b> ${escapeHtml(consultation.indicaciones)}`, "fvind"));
-    return rows2;
-  }
-  function lastVisitRow(last) {
-    if (!last) return [];
-    const material = cardSectionsLegacy.visitDetails(last);
-    return [row("notebook-pen", `<b>${t("visit.block.lastVisit", { visit: term("visita"), date: formatShortDate(last.fecha) })}</b> · ${escapeHtml(orFallback((last.resultados ?? []).join(" + "), t("visit.block.noResult")))}
-      ${last.nota ? `<div class="sm">${escapeHtml(last.nota)}</div>` : ""}${material ? `<div class="sm">${t("visit.block.material", { material: escapeHtml(material) })}</div>` : ""}`)];
-  }
-  function pendingRow(visits2) {
-    const pending = visits2.find((visit2) => Boolean(visit2.proxima_accion) || Boolean(visit2.proxima_fecha));
-    if (!pending) return [];
-    const date = pending.proxima_fecha, today2 = todayIso();
-    const pill = !date ? "" : date < today2 ? `<span class="pill p-bor">${t("visit.block.late")}</span>` : date === today2 ? `<span class="pill p-est">${t("visit.block.today")}</span>` : "";
-    return [row("clipboard-list", `<b>${t("visit.block.pending")}</b> ${escapeHtml(orFallback(pending.proxima_accion, t("visit.block.visitAgain", { visit: term("visita") })))}${date ? ` · ${formatShortDate(date)}` : ""} ${pill}`)];
-  }
-  function contactRows(account, consultation) {
-    const rows2 = account.nota ? [row("message-circle", `<b>${t("visit.block.notes")}</b> ${escapeHtml(account.nota)}`)] : [];
-    const phones = [account.telefono, consultation?.telefono].filter((phone) => Boolean(phone)).filter((phone, index, all) => all.indexOf(phone) === index);
-    if (phones.length || account.contacto) {
-      rows2.push(row("phone", `${phones.map((phone) => `<a href="tel:${escapeHtml(phone.replace(/\s+/g, ""))}"><b>${escapeHtml(phone)}</b></a>`).join(" · ")}
-    ${account.contacto ? `<div class="sm">${escapeHtml(account.contacto)}</div>` : ""}`));
-    }
-    return rows2;
-  }
-  function visitBlock(account, consultations, visits2) {
-    const person = account, consultation = visitConsultation(consultations);
-    const urgent = person.urgente ? [row("circle-alert", `<b>${t("visit.block.urgent")}</b>${person.urgente_motivo ? `: ${escapeHtml(person.urgente_motivo)}` : ""}`, "fvurg")] : [];
-    const rows2 = [...urgent, ...consultationRows(consultation), ...lastVisitRow(visits2[0]), ...pendingRow(visits2), ...contactRows(person, consultation)];
-    const title2 = t("visit.block.title", { visit: term("visita") });
-    return `<section class="fvis" aria-label="${title2}"><h3>${title2}</h3>${rows2.join("")}</section>`;
-  }
-
-  // src/app/screens/visit/edit.ts
-  var edit_exports = {};
-  __export(edit_exports, {
-    editVisit: () => editVisit
-  });
-
-  // src/app/screens/visit/model.ts
-  var NEGATIVE = "neg";
-  var MODES = [["presencial", "visit.modes.inPerson"], ["telefono", "visit.modes.phone"], ["video", "visit.modes.video"]];
-  var modeButtons = (attribute, chosen4) => MODES.map(([mode, label]) => `<button type="button" data-${attribute}="${mode}" class="${mode === chosen4 ? "on" : ""}" aria-pressed="${String(mode === chosen4)}">${t(label)}</button>`).join("");
-  var pressed = (button3) => button3.getAttribute("aria-pressed") === "true";
-  function togglePressed(button3) {
-    const on3 = !pressed(button3);
-    button3.setAttribute("aria-pressed", String(on3));
-    return on3;
-  }
-
-  // src/app/screens/visit/edit.ts
-  var value4 = (id) => document.getElementById(id)?.value ?? "";
-  function resultButtons(values2, marked, negative) {
-    return values2.map((result) => `<button type="button" class="opt${negative ? " neg" : ""}" data-res="${escapeHtml(result.valor)}"${negative ? ' data-neg="1"' : ""}
-      aria-pressed="${String(marked.includes(result.valor))}"><span class="mk"></span>${escapeHtml(result.valor)}</button>`).join("");
-  }
-  function extraHtml(extra) {
-    const products3 = extra.productList.length ? `<label>${t("visit.record.products")}</label><div class="opciones" id="evprods">${extra.productList.map((product) => `<button type="button" class="opt" data-evprod="${product.id}" aria-pressed="${String(extra.products.includes(product.id))}"><span class="mk"></span>${escapeHtml(product.nombre)}</button>`).join("")}</div>` : "";
-    return `<label>${t("visit.record.howItWas")}</label>
-      <div class="segs" id="evmodo" role="group" aria-label="${t("visit.record.howItWas")}">${modeButtons("evmodo", extra.mode)}</div>
-      ${products3}`;
-  }
-  function editorHtml5(visit2, extra) {
-    const results = visitLegacy.resultValues(), marked = visit2.resultados ?? [];
-    return `
-    <div class="fh"><div><h2>${t("visit.edit.title", { visit: term("visita") })}</h2><div class="sm">${t("visit.edit.recordedOn", { date: formatShortDate(visit2.fecha) })}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    <div class="g2">
-      <div><label for="evf">${t("visit.edit.date")}</label><input id="evf" type="date" value="${escapeHtml(visit2.fecha)}"></div>
-      <div><label for="evm">${t("visit.edit.samples")}</label><input id="evm" type="number" min="0" value="${visit2.muestras ?? 0}"></div>
-    </div>
-    ${extraHtml(extra)}
-    <label>${t("visit.edit.result")}</label>
-    <div class="opciones">${resultButtons(results.filter((result) => result.extra !== NEGATIVE), marked, false)}</div>
-    <div class="opciones u-mt-8">${resultButtons(results.filter((result) => result.extra === NEGATIVE), marked, true)}</div>
-    <div class="g2 u-mt-6">
-      <div><label for="evpa">${t("visit.edit.nextAction")}</label><input id="evpa" value="${escapeHtml(visit2.proxima_accion ?? "")}"></div>
-      <div><label for="evpf">${t("visit.edit.date")}</label><input id="evpf" type="date" value="${escapeHtml(visit2.proxima_fecha ?? "")}"></div>
-    </div>
-    <label for="evn">${t("visit.edit.note")}</label><textarea id="evn" rows="3">${escapeHtml(visit2.nota ?? "")}</textarea>
-    <div class="acts u-between">
-      <button class="btn sec dang" id="evborrar">${t("visit.edit.delete", { visit: term("visita") })}</button>
-      <span class="acts u-m-0"><button class="btn sec" data-cerrar>${t("common.cancel")}</button>
-        <button class="btn" id="evok">${t("common.save")}</button></span></div>`;
-  }
-  async function loadExtra(visitId, planHasCoverage) {
-    const { data: activity } = await legacyDb().from("actividades").select("modo,productos").eq("id", visitId).maybeSingle();
-    const chosen4 = activity?.productos ?? [];
-    let productList = [];
-    if (planHasCoverage) {
-      productList = [...await visitLegacy.promotedProducts()];
-      const missing2 = chosen4.filter((id) => !productList.some((product) => product.id === id));
-      if (missing2.length) {
-        const { data } = await legacyDb().from("productos").select("id,nombre").in("id", missing2);
-        productList = productList.concat(data ?? []);
-      }
-    }
-    return { mode: activity?.modo ?? "presencial", products: [...chosen4], productList };
-  }
-  function afterChange(accountId, message) {
-    document.getElementById("dlg")?.close();
-    notices.toast(message);
-    agendaActions.openAccount(accountId);
-    visitLegacy.reloadHome();
-  }
-  async function save9(visit2, extra, accountId, button3) {
-    const body3 = document.getElementById("dbody");
-    const results = [...body3?.querySelectorAll("[data-res][aria-pressed=true]") ?? []].map((item) => item.dataset.res ?? "");
-    button3.disabled = true;
-    button3.textContent = t("visit.edit.saving");
-    const { data: result, error } = await legacyDb().rpc("actualizar_actividad", { p: {
-      id: visit2.id,
-      fecha: value4("evf"),
-      resultados: results,
-      muestras: Number(value4("evm")) || 0,
-      nota: value4("evn").trim(),
-      proxima_accion: value4("evpa").trim(),
-      proxima_fecha: value4("evpf"),
-      modo: extra.mode,
-      ...document.getElementById("evprods") ? { productos: extra.products } : {}
-    } });
-    button3.disabled = false;
-    button3.textContent = t("common.save");
-    if (error || result?.ok === false) {
-      notices.toast(t("visit.edit.couldNotSave"), true);
-      return;
-    }
-    afterChange(accountId, t("visit.edit.saved", { visit: term("visita", { capital: "C", adjective: "actualizado" }) }));
-  }
-  async function remove(visit2, accountId) {
-    const text2 = t("visit.edit.deleteText", { visit: term("visita", { article: "el", articleCapital: "C" }), professional: term("medico", { article: "del" }) });
-    if (!await notices.confirm(text2, { titulo: t("visit.edit.deleteTitle", { visit: term("visita", { article: "el" }) }), ok: t("visit.edit.deleteOk"), peligro: true })) return;
-    const { data: result, error } = await legacyDb().rpc("borrar_actividad", { p_id: visit2.id });
-    if (error || result?.ok === false) {
-      notices.toast(t("visit.edit.couldNotDelete"), true);
-      return;
-    }
-    afterChange(accountId, t("visit.edit.deleted", { visit: term("visita", { capital: "C", adjective: "borrado" }) }));
-  }
-  function bind9(body3, visit2, extra, accountId) {
-    body3.querySelectorAll("[data-res]").forEach((button3) => {
-      button3.onclick = () => {
-        const negative = button3.dataset.neg === "1", on3 = pressed(button3);
-        body3.querySelectorAll("[data-res]").forEach((other) => {
-          if (negative || other.dataset.neg === "1") other.setAttribute("aria-pressed", "false");
-        });
-        button3.setAttribute("aria-pressed", String(!on3));
-      };
-    });
-    const modes = body3.querySelectorAll("[data-evmodo]");
-    modes.forEach((button3) => {
-      button3.onclick = () => {
-        extra.mode = button3.dataset.evmodo ?? "presencial";
-        modes.forEach((other) => {
-          other.classList.toggle("on", other === button3);
-          other.setAttribute("aria-pressed", String(other === button3));
-        });
-      };
-    });
-    body3.querySelectorAll("[data-evprod]").forEach((button3) => {
-      button3.onclick = () => {
-        togglePressed(button3);
-        extra.products = [...body3.querySelectorAll("[data-evprod][aria-pressed=true]")].map((item) => item.dataset.evprod ?? "");
-      };
-    });
-    const ok = document.getElementById("evok");
-    if (ok) ok.onclick = () => {
-      void save9(visit2, extra, accountId, ok);
-    };
-    const del = document.getElementById("evborrar");
-    if (del) del.onclick = () => {
-      void remove(visit2, accountId);
-    };
-  }
-  async function editVisit(visit2, accountId) {
-    const extra = await loadExtra(visit2.id, accountCardLegacy.planIncludes("cobertura")).catch(() => ({ mode: "presencial", products: [], productList: [] }));
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = editorHtml5(visit2, extra);
-    bind9(body3, visit2, extra, accountId);
-    box3.showModal();
-  }
-
-  // src/app/screens/visit/photos.ts
-  async function readVisitPhoto(file) {
-    if (!file.type.startsWith("image/")) {
-      notices.toast(t("visit.photos.chooseImage"), true);
-      return null;
-    }
-    return visitLegacy.readPhoto(file);
-  }
-  function paintPhotos(box3, photos, remove6) {
-    if (!box3) return;
-    box3.innerHTML = photos.map((photo, index) => `<span class="vfoto"><img alt="${t("visit.photos.photo", { number: index + 1 })}" src="data:${photo.tipo};base64,${photo.datos}">
-    ${remove6 ? `<button type="button" class="vfquitar" data-vfq="${index}" aria-label="${t("visit.photos.remove")}">✕</button>` : ""}</span>`).join("");
-    if (remove6) box3.querySelectorAll("[data-vfq]").forEach((button3) => {
-      button3.onclick = () => {
-        remove6(Number(button3.dataset.vfq));
-      };
-    });
-  }
-  async function uploadVisitPhotos(activityId, photos) {
-    for (const photo of photos) {
-      const { error } = await legacyDb().from("actividad_fotos").insert({ actividad_id: activityId, nombre: photo.nombre, tipo: photo.tipo, tamano: photo.tamano, datos: photo.datos });
-      if (error) {
-        notices.toast(t("visit.photos.uploadFailed", { visit: term("visita", { capital: "C", adjective: "guardado" }) }), true);
-        return false;
-      }
-    }
-    return true;
-  }
-  var photoCount = (count) => count ? count === 1 ? t("visit.photos.one") : t("visit.photos.many", { count }) : t("visit.photos.none");
-  function galleryHtml(photos) {
-    const canDelete = (photo) => photo.creado_por === salesTeam.currentUserId() || cardSectionsLegacy.can("administrar");
-    return `<div class="fh"><div><h2>${t("visit.photos.title", { visit: term("visita", { article: "el" }) })}</h2><div class="sm">${photoCount(photos.length)}</div></div>
-      <button class="x" data-cerrar2 aria-label="${t("common.close")}">✕</button></div>
-    <div class="vfotos grande">${photos.map((photo) => `<span class="vfoto"><img alt="${escapeHtml(orFallback(photo.nombre, t("visit.photos.photoAlt")))}" src="data:${escapeHtml(photo.tipo)};base64,${photo.datos}">
-      ${canDelete(photo) ? `<button type="button" class="vfquitar" data-vfdel="${photo.id}" aria-label="${t("visit.photos.delete")}">✕</button>` : ""}</span>`).join("")}</div>
-    <div class="acts u-end"><label class="btn sec u-inline-flex">${icon("camera")} ${t("visit.photos.add")}<input type="file" id="vfmas" accept="image/*" data-fp="1" hidden multiple></label>
-      <button type="button" class="btn" data-cerrar2>${t("visit.photos.done")}</button></div>`;
-  }
-  function refresh(activityId, accountId) {
-    void showVisitPhotos(activityId, accountId);
-    if (accountCardLegacy.shownId() === accountId) agendaActions.openAccount(accountId);
-  }
-  async function deletePhoto(id, activityId, accountId) {
-    if (!await notices.confirm(t("visit.photos.deleteText", { visit: term("visita", { article: "este" }) }), { titulo: t("visit.photos.deleteTitle"), ok: t("visit.photos.deleteOk"), peligro: true })) return;
-    const { error } = await legacyDb().from("actividad_fotos").delete().eq("id", id);
-    if (error) {
-      notices.toast(t("visit.photos.couldNotDelete"), true);
-      return;
-    }
-    notices.toast(t("visit.photos.deleted"));
-    refresh(activityId, accountId);
-  }
-  async function addPhotos(input6, shown3, activityId, accountId) {
-    const files = [...input6.files ?? []], room = Math.max(0, visitLegacy.photosMax() - shown3), added = [];
-    for (const file of files.slice(0, room)) {
-      const photo = await readVisitPhoto(file);
-      if (photo) added.push(photo);
-    }
-    if (files.length > visitLegacy.photosMax() - shown3) notices.toast(t("visit.photos.atMost", { max: visitLegacy.photosMax(), visit: term("visita") }), true);
-    if (!added.length) return;
-    if (await uploadVisitPhotos(activityId, added)) {
-      notices.toast(t(added.length === 1 ? "visit.photos.added" : "visit.photos.addedMany"));
-      refresh(activityId, accountId);
-    }
-  }
-  async function showVisitPhotos(activityId, accountId) {
-    const { data, error } = await legacyDb().from("actividad_fotos").select("id,nombre,tipo,datos,creado_por").eq("actividad_id", activityId).order("creado_en");
-    if (error) {
-      notices.toast(t("visit.photos.couldNotOpen"), true);
-      return;
-    }
-    const photos = data ?? [], body3 = document.getElementById("dlg2body"), box3 = document.getElementById("dlg2");
-    if (!body3 || !box3) return;
-    body3.innerHTML = galleryHtml(photos);
-    body3.querySelectorAll("[data-vfdel]").forEach((button3) => {
-      button3.onclick = () => {
-        void deletePhoto(button3.dataset.vfdel ?? "", activityId, accountId);
-      };
-    });
-    const input6 = document.getElementById("vfmas");
-    if (input6) input6.onchange = () => {
-      void addPhotos(input6, photos.length, activityId, accountId);
-    };
-    if (!box3.open) box3.showModal();
-  }
-
-  // src/app/screens/visit/presentation.ts
-  var MATERIALS_FRESH_MS = 3e5;
-  var showing = null;
-  async function loadMaterials(force = false) {
-    const cached4 = visitLegacy.materials();
-    if (cached4 && !force && Date.now() - visitLegacy.materialsTime() < MATERIALS_FRESH_MS) return cached4;
-    if (!navigator.onLine) return cached4 ?? [];
-    try {
-      const { data, error } = await legacyDb().from("producto_materiales").select("id,producto_id,nombre,tipo,orden,para_portal").order("orden").order("creado_en");
-      if (!error) visitLegacy.setMaterials(data ?? [], Date.now());
-    } catch {
-    }
-    return visitLegacy.materials() ?? [];
-  }
-  var materialsOf = (productId) => (visitLegacy.materials() ?? []).filter((material) => material.producto_id === productId);
-  function blobUrl(material, data) {
-    const binary = atob(String(data).replace(/^data:[^,]*,/, "")), bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return URL.createObjectURL(new Blob([bytes], { type: material.tipo }));
-  }
-  function close2() {
-    showing?.urls.forEach((url) => {
-      URL.revokeObjectURL(url);
-    });
-    showing = null;
-    const box3 = document.getElementById("presenta");
-    if (box3?.open) box3.close();
-  }
-  async function fileOf(material, box3, current) {
-    const known = visitLegacy.materialFiles().get(material.id);
-    if (known) return known;
-    visitLegacy.loading(box3, t("common.loading"));
-    if (!navigator.onLine) {
-      box3.innerHTML = `<p class="vacio">${t("visit.presentation.offline")}</p>`;
-      return null;
-    }
-    const { data, error } = await legacyDb().from("producto_materiales").select("datos").eq("id", material.id).maybeSingle();
-    if (showing !== current || current.list[current.index] !== material) return null;
-    if (error || !data) {
-      box3.innerHTML = `<p class="vacio">${t("visit.presentation.couldNotLoad", { reason: escapeHtml(error?.message ?? t("visit.presentation.missing")) })}</p>`;
-      return null;
-    }
-    visitLegacy.materialFiles().set(material.id, data.datos);
-    return data.datos;
-  }
-  async function paint4() {
-    const current = showing;
-    if (!current) return;
-    const material = current.list[current.index], box3 = document.getElementById("prescuerpo");
-    if (!material || !box3) return;
-    const count = document.getElementById("presn");
-    if (count) count.textContent = current.list.length > 1 ? t("visit.presentation.position", { number: current.index + 1, total: current.list.length, name: material.nombre }) : material.nombre;
-    const previous = document.getElementById("presant"), next = document.getElementById("pressig");
-    if (previous) previous.disabled = current.index === 0;
-    if (next) next.disabled = current.index === current.list.length - 1;
-    const data = await fileOf(material, box3, current);
-    if (!data || showing !== current || current.list[current.index] !== material) return;
-    const url = blobUrl(material, data);
-    current.urls.push(url);
-    box3.innerHTML = material.tipo === "application/pdf" ? `<iframe class="prespdf" src="${url}" title="${escapeHtml(material.nombre)}"></iframe>` : `<img class="presimg" src="${url}" alt="${escapeHtml(material.nombre)}">`;
-  }
-  function move(step) {
-    if (!showing) return;
-    const index = showing.index + step;
-    if (index < 0 || index >= showing.list.length) return;
-    showing.index = index;
-    void paint4();
-  }
-  function dialog5() {
-    if (!document.getElementById("presenta")) document.body.insertAdjacentHTML("beforeend", `<dialog id="presenta" class="presdlg" aria-label="${t("visit.presentation.label")}"></dialog>`);
-    return document.getElementById("presenta");
-  }
-  function open(title2, list, index) {
-    const box3 = dialog5();
-    if (!box3) return;
-    box3.innerHTML = `<div class="prescab"><b>${escapeHtml(title2)}</b><span class="sm" id="presn"></span><button type="button" class="x" id="prescerrar" aria-label="${t("common.close")}">✕</button></div>
-    <div class="prescuerpo" id="prescuerpo"></div>
-    <button type="button" class="presnav ant" id="presant" aria-label="${t("visit.presentation.previous")}">‹</button><button type="button" class="presnav sig" id="pressig" aria-label="${t("visit.presentation.next")}">›</button>`;
-    showing = { list, index, urls: [] };
-    const on3 = (id, action) => {
-      const button3 = document.getElementById(id);
-      if (button3) button3.onclick = action;
-    };
-    on3("prescerrar", close2);
-    on3("presant", () => {
-      move(-1);
-    });
-    on3("pressig", () => {
-      move(1);
-    });
-    box3.oncancel = (event) => {
-      event.preventDefault();
-      close2();
-    };
-    box3.onkeydown = (event) => {
-      if (event.key === "ArrowRight") move(1);
-      if (event.key === "ArrowLeft") move(-1);
-    };
-    box3.showModal();
-    void paint4();
-  }
-  function presentProduct(productId) {
-    const list = materialsOf(productId);
-    if (!list.length) return;
-    const chip = document.querySelector(`#vprods [data-vprod="${productId}"]`);
-    if (chip && chip.getAttribute("aria-pressed") !== "true") chip.click();
-    open(chip?.textContent?.trim() ?? t("visit.presentation.label"), list, 0);
-  }
-  function presentOnly(product, materialId) {
-    const list = materialsOf(product.id);
-    if (!list.length) return;
-    open(orFallback(product.nombre, t("visit.presentation.material")), list, Math.max(0, list.findIndex((material) => material.id === materialId)));
-  }
-
-  // src/app/screens/visit/record/data.ts
-  var CENTRE3 = "Centro";
-  async function cardAndResults(id) {
-    const [card3, results] = await Promise.all([
-      cachedRpc("ficha_cuenta", { p_id: id }, `ficha-${id}`),
-      cachedRpc("clasificadores_actividad", { p_cuenta: id }, `clasact-${id}`)
-    ]);
-    let groups2 = results.data;
-    if (groups2 && !results.cache) visitLegacy.saveCopy("clasact", groups2);
-    groups2 ?? (groups2 = visitLegacy.readCopy("clasact"));
-    return { card: card3.data, groups: groups2 ?? [] };
-  }
-  async function accountFlags(id) {
-    try {
-      return (await legacyDb().from("cuentas").select("tipo,sin_reporting,clasificadores").eq("id", id).maybeSingle()).data;
-    } catch {
-      return null;
-    }
-  }
-  async function samplesLeft(id, type) {
-    if (!navigator.onLine || type === CENTRE3) return [];
-    const { data } = await legacyDb().rpc("muestras_de_cuenta", { p_cuenta: id });
-    return Array.isArray(data) ? data : [];
-  }
-  function withoutReports(groups2) {
-    const kept = groups2.map((group) => ({ ...group, valores: group.valores.filter((value10) => !isReportResult(value10)) }));
-    return { groups: kept, hidden: kept.some((group, index) => group.valores.length !== groups2[index]?.valores.length) };
-  }
-  async function loadVisitData(id) {
-    const coverage = accountCardLegacy.planIncludes("cobertura");
-    const [{ card: card3, groups: groups2 }, flags, products3, missingTimetable2] = await Promise.all([
-      cardAndResults(id),
-      accountFlags(id),
-      coverage ? visitLegacy.promotedProducts().catch(() => []) : Promise.resolve([]),
-      missingTimetable(id).catch(() => false)
-    ]);
-    if (!card3?.medico) return navigator.onLine ? "online" : "offline";
-    const samples = await samplesLeft(id, flags?.tipo).catch(() => []);
-    const noReporting = hasNoReports(flags ?? card3.medico), shown3 = noReporting ? withoutReports(groups2) : { groups: groups2, hidden: false };
-    return { account: card3.medico, consultations: card3.consultas ?? [], groups: shown3.groups, samples, products: products3, noReporting, reportsHidden: shown3.hidden, missingTimetable: missingTimetable2 };
-  }
-
-  // src/app/screens/visit/record/form.ts
-  var RESULT_ROLE = "resultado_visita";
-  function splitGroups(groups2) {
-    const filled = groups2.filter((group) => group.valores.length);
-    const results = filled.find((group) => group.papel === RESULT_ROLE) ?? { clave: "", papel: RESULT_ROLE, nombre: t("visit.record.result"), valores: [...visitLegacy.resultValues()] };
-    return { results, others: filled.filter((group) => group !== results) };
-  }
-  function button2(index, group, value10, isResult) {
-    const key = `${group.clave}::${value10.valor}`, negative = isResult && value10.extra === NEGATIVE;
-    index.set(key, { group: group.clave, value: value10 });
-    return `<span class="optw"${value10.oculto ? ' data-oculto="1"' : ""}><button type="button" class="opt ${negative ? "neg" : ""}" data-vk="${escapeHtml(key)}" ${isResult ? `data-res="${escapeHtml(value10.valor)}"` : ""} ${negative ? 'data-neg="1"' : ""} aria-pressed="false">
-      <span class="mk"></span>${escapeHtml(value10.valor)}${value10.dato_tipo ? ` <span class="datom">${t("visit.record.withData")}</span>` : ""}</button>
-      ${value10.dato_tipo ? `<span class="datobox hide" data-box="${escapeHtml(key)}">${visitLegacy.dataField(value10, key)}</span>` : ""}</span>`;
-  }
-  function hiddenButton(groups2) {
-    const hidden = groups2.flatMap((group) => group.valores).filter((value10) => value10.oculto).length;
-    if (!hidden) return "";
-    return `<button type="button" class="lnk" id="vtodos">${hidden === 1 ? t("visit.record.showOneHidden") : t("visit.record.showHidden", { count: hidden })}</button>`;
-  }
-  var noReportsNote = () => `<p class="sm srnota">${t("visit.record.noReports", { professional: term("medico", { article: "este", articleCapital: "C" }) })}</p>`;
-  function resultsHtml(index, groups2, reportsHidden) {
-    const { results, others } = groups2;
-    const positive = results.valores.filter((value10) => value10.extra !== NEGATIVE), negative = results.valores.filter((value10) => value10.extra === NEGATIVE);
-    const more2 = hiddenButton([results, ...others]);
-    return `<label>${t("visit.record.resultLabel")} <span class="sm">${t("visit.record.severalResults", { done: term("visita", { adjective: "realizado" }) })}</span></label>
-    <div class="opciones">${positive.map((value10) => button2(index, results, value10, true)).join("")}</div>${reportsHidden ? noReportsNote() : ""}${negative.length ? "" : more2}
-    <div class="opciones u-mt-8">${negative.map((value10) => button2(index, results, value10, true)).join("")}</div>${negative.length ? more2 : ""}
-    ${others.map((group) => `<label>${escapeHtml(group.nombre)}${group.descripcion ? ` <span class="sm">· ${escapeHtml(group.descripcion)}</span>` : ""}</label>
-      <div class="opciones">${group.valores.map((value10) => button2(index, group, value10, false)).join("")}</div>`).join("")}`;
-  }
-  var LEFT_TEXTS = { anio: "visit.samples.left", trimestre: "visit.samples.leftQuarter", mes: "visit.samples.leftMonth" };
-  function sampleRow(sample) {
-    const available2 = sample.en_plazo && sample.quedan;
-    const text2 = !sample.en_plazo ? t("visit.samples.expired", { date: formatShortDate(sample.hasta ?? "") }) : t(LEFT_TEXTS[deliveryRule().period], { left: sample.quedan, max: sample.max }) + (sample.hasta ? t("visit.samples.until", { date: formatShortDate(sample.hasta) }) : "");
-    return `<div class="vmrow ${available2 ? "" : "agotada"}"><span><b>${escapeHtml(sample.nombre)}</b><span class="sm">${text2}</span></span>
-      <input type="number" min="0" max="${sample.en_plazo ? sample.quedan : 0}" step="1" value="0" data-vmprod="${sample.producto_id}" aria-label="${t("visit.samples.of", { name: escapeHtml(sample.nombre) })}" ${available2 ? "" : "disabled"}></div>`;
-  }
-  function samplesHtml(samples, name) {
-    const rule = deliveryRule();
-    if (!samples.length || !rule.active) return "";
-    return `<div class="vmuestras" id="vmuestras"><label>${escapeHtml(rule.name ?? t("visit.samples.title"))}</label>
-    ${samples.map(sampleRow).join("")}
-    ${rule.signature ? `<div class="vmfirma hide" id="vmfirma"><label>${t("visit.samples.signature")} <span class="sm">${t("visit.samples.signatureHint")}</span></label>
-      <canvas id="vmcanvas" aria-label="${t("visit.samples.signatureArea")}"></canvas>
-      <div class="vmfpie"><input id="vmfirmante" value="${escapeHtml(name)}" aria-label="${t("visit.samples.signer")}" placeholder="${t("visit.samples.signer")}"><button type="button" class="lnk" id="vmborrar">${t("visit.samples.clear")}</button></div></div>` : ""}</div>`;
-  }
-  function productsHtml(products3) {
-    if (!products3.length) return "";
-    const materials = visitLegacy.materials() ?? [], withMaterial = products3.filter((product) => materials.some((material) => material.producto_id === product.id));
-    return `<label>${t("visit.record.products")}</label>
-      <div class="opciones" id="vprods">${products3.map((product) => `<button type="button" class="opt" data-vprod="${product.id}" aria-pressed="false"><span class="mk"></span>${escapeHtml(product.nombre)}</button>`).join("")}</div>
-      ${withMaterial.length ? `<div class="vpres" id="vpres"><span class="sm">${t("visit.record.present")}</span>${withMaterial.map((product) => `<button type="button" class="chip" data-vpres="${product.id}">▶ ${escapeHtml(product.nombre)}</button>`).join("")}</div>` : ""}`;
-  }
-  function noticesHtml(data) {
-    const timetable = data.missingTimetable ? `<div class="avisoh" id="vhorario"><span>${t("visit.record.missingTimetable", { visit: term("visita", { article: "el" }) })}</span></div>` : "";
-    const offline = navigator.onLine ? "" : `<div class="banda-aviso vsinred"><b>${t("visit.record.offlineTitle")}</b> ${t("visit.record.offline", { visit: escapeHtml(term("visita", { article: "la", capital: "C" })) })}</div>`;
-    return timetable + offline;
-  }
-  function centreOptions(consultations) {
-    return consultations.map((item) => `<option value="${item.id ?? ""}">${escapeHtml(orFallback(item.centro_nombre, privateConsultation()))}${item.municipio ? ` · ${escapeHtml(item.municipio)}` : ""}</option>`).join("");
-  }
-  function visitHtml(data, index) {
-    const groups2 = splitGroups(data.groups), visit2 = term("visita");
-    return `
-    <div class="fh"><div><h2>${t("visit.record.title", { visit: visit2 })}</h2><div class="sm">${escapeHtml(data.account.nombre)}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>${noticesHtml(data)}
-    <div class="g2">
-      <div><label for="vf">${t("visit.edit.date")}</label><input id="vf" type="date" value="${todayIso()}"></div>
-      <div><label for="vc">${t("visit.record.centre", { visit: term("visita", { article: "del" }) })}</label><select id="vc">
-        ${centreOptions(data.consultations)}
-      </select></div>
-    </div><label>${t("visit.record.howItWas")}</label>
-    <div class="segs" id="vmodo" role="group" aria-label="${t("visit.record.howItWas")}">${modeButtons("vmodo", "presencial")}</div>${productsHtml(data.products)}
-    ${resultsHtml(index, groups2, data.reportsHidden)}
-    <div class="g2 u-mt-6">
-      <div><label for="vpa">${t("visit.edit.nextAction")}</label><input id="vpa" placeholder="${t("visit.record.nextActionPlaceholder")}"></div>
-      <div><label for="vpf">${t("visit.record.nextActionDate")}</label><input id="vpf" type="date"></div>
-    </div>
-    ${samplesHtml(data.samples, data.account.nombre)}<label for="vn">${t("visit.edit.note")}</label><textarea id="vn" rows="3"></textarea><div class="vfotosw"><label class="btn sec u-inline-flex" id="vfotobtn">${icon("camera")} ${t("visit.photos.add")}<input type="file" id="vfotof" accept="image/*" data-fp="1" hidden multiple></label>
-    <span class="sm">${t("visit.photos.hint", { max: visitLegacy.photosMax() })}</span><div class="vfotos" id="vfotos"></div></div>
-    <div class="acts u-end">
-      <button class="btn sec" data-cerrar>${t("common.cancel")}</button>
-      <button class="btn" id="vguardar">${t("visit.record.save", { visit: visit2 })}</button>
-    </div>`;
-  }
-
-  // src/app/screens/visit/record/save.ts
-  var operationId = null;
-  var forgetOperation = () => {
-    operationId = null;
-  };
-  var value5 = (id) => document.getElementById(id)?.value ?? "";
-  function details(body3, marked, index) {
-    return marked.map((key) => {
-      const field10 = body3.querySelector(`[data-dato="${CSS.escape(key)}"]`), extra = field10 ? field10.value.trim() : "";
-      const info = index.get(key);
-      return { clasificador: info?.group ?? "", valor: info?.value.valor ?? "", ...extra ? { dato: extra } : {} };
-    });
-  }
-  async function askUrgent(account, id) {
-    const message = t("visit.record.urgentText", { name: `${account.nombre}${account.urgente_motivo ? ` · ${account.urgente_motivo}` : ""}` });
-    const choice = await notices.choose(t("visit.record.urgentTitle"), message, [{ k: "dejar", t: t("visit.record.keepUrgent"), cls: "sec" }, { k: "quitar", t: t("visit.record.removeUrgent") }]);
-    if (choice !== "quitar") return;
-    const { error } = await legacyDb().from("cuentas").update({ urgente: false, urgente_motivo: null }).eq("id", id);
-    notices.toast(t(error ? "visit.record.couldNotUnmark" : "visit.record.unmarked"), Boolean(error));
-  }
-  function payload4(id, results, detailList) {
-    operationId ?? (operationId = `v-${id}-${Date.now()}`);
-    return {
-      cuenta_id: id,
-      ubicacion_id: value5("vc") || null,
-      fecha: value5("vf"),
-      resultados: results,
-      detalles: detailList,
-      nota: value5("vn").trim(),
-      proxima_accion: value5("vpa").trim(),
-      proxima_fecha: value5("vpf") || null,
-      op_id: operationId
-    };
-  }
-  function savedNotice(saved3) {
-    if (saved3?.encolada) return;
-    notices.toast(t("visit.record.saved", { visit: term("visita", { capital: "C", adjective: "registrado" }) }) + (saved3?.estado ? t("visit.record.newState", { state: saved3.estado }) : ""));
-  }
-  async function saveVisit(visit2, button3) {
-    const { id, account, index, resultsKey } = visit2;
-    const body3 = document.getElementById("dbody");
-    if (!body3) return;
-    const marked = [...body3.querySelectorAll("[data-vk][aria-pressed=true]")].map((item) => item.dataset.vk ?? "");
-    const isResult = (key) => index.get(key)?.group === resultsKey;
-    const results = marked.filter(isResult).map((key) => index.get(key)?.value.valor ?? "");
-    if (!results.length) {
-      notices.toast(t("visit.record.chooseResult"), true);
-      return;
-    }
-    button3.disabled = true;
-    button3.textContent = t("visit.edit.saving");
-    const { data, error } = await visitLegacy.writeRpc("registrar_actividad", { p: payload4(id, results, details(body3, marked, index)) });
-    button3.disabled = false;
-    button3.textContent = t("visit.record.save", { visit: term("visita") });
-    if (error) {
-      notices.toast(t("visit.record.couldNotSave", { error: error.message ?? "" }), true);
-      return;
-    }
-    document.getElementById("dlg")?.close();
-    savedNotice(data);
-    const done = marked.some((key) => isResult(key) && index.get(key)?.value.extra !== NEGATIVE);
-    if (account.urgente && done) await askUrgent(account, id);
-    visitLegacy.reloadHome();
-    if (accountCardLegacy.shownId() === id) agendaActions.openAccount(id);
-  }
-
-  // src/app/screens/visit/record/index.ts
-  function bindResults(body3, visit2) {
-    body3.querySelectorAll("[data-vk]").forEach((button3) => {
-      button3.onclick = () => {
-        const key = button3.dataset.vk ?? "", on3 = pressed(button3);
-        if (visit2.index.get(key)?.group === visit2.resultsKey) {
-          const negative = button3.dataset.neg === "1";
-          body3.querySelectorAll("[data-res]").forEach((other) => {
-            if ((negative || other.dataset.neg === "1") && other !== button3) {
-              other.setAttribute("aria-pressed", "false");
-              body3.querySelector(`[data-box="${CSS.escape(other.dataset.vk ?? "")}"]`)?.classList.add("hide");
-            }
-          });
-        }
-        button3.setAttribute("aria-pressed", String(!on3));
-        const box3 = body3.querySelector(`[data-box="${CSS.escape(key)}"]`);
-        if (box3) {
-          box3.classList.toggle("hide", on3);
-          if (!on3) {
-            const field10 = box3.querySelector("input, select");
-            if (field10) setTimeout(() => {
-              field10.focus();
-            }, 30);
-          }
-        }
-      };
-    });
-    const more2 = document.getElementById("vtodos");
-    if (more2) more2.onclick = () => {
-      body3.classList.add("vertodos");
-      more2.remove();
-    };
-  }
-  function bindModeAndProducts(body3, draft) {
-    const modes = body3.querySelectorAll("[data-vmodo]");
-    modes.forEach((button3) => {
-      button3.onclick = () => {
-        draft.modo = button3.dataset.vmodo ?? "presencial";
-        modes.forEach((other) => {
-          other.classList.toggle("on", other === button3);
-          other.setAttribute("aria-pressed", String(other === button3));
-        });
-      };
-    });
-    body3.querySelectorAll("[data-vprod]").forEach((button3) => {
-      button3.onclick = () => {
-        togglePressed(button3);
-        draft.productos = [...body3.querySelectorAll("[data-vprod][aria-pressed=true]")].map((item) => item.dataset.vprod ?? "");
-      };
-    });
-    body3.querySelectorAll("[data-vpres]").forEach((button3) => {
-      button3.onclick = () => {
-        presentProduct(button3.dataset.vpres ?? "");
-      };
-    });
-  }
-  function bindPhotos(draft) {
-    const paint10 = () => {
-      paintPhotos(document.getElementById("vfotos"), draft.fotos, (index) => {
-        draft.fotos.splice(index, 1);
-        paint10();
-      });
-    };
-    const input6 = document.getElementById("vfotof");
-    if (input6) input6.onchange = async () => {
-      for (const file of [...input6.files ?? []]) {
-        if (draft.fotos.length >= visitLegacy.photosMax()) {
-          notices.toast(t("visit.photos.atMost", { max: visitLegacy.photosMax(), visit: term("visita") }), true);
-          break;
-        }
-        const photo = await readVisitPhoto(file);
-        if (photo) draft.fotos.push(photo);
-      }
-      input6.value = "";
-      paint10();
-    };
-  }
-  function bindSamples(body3, samples, draft) {
-    if (!samples.length || !deliveryRule().active) return;
-    const signature = deliveryRule().signature;
-    let pad3 = null;
-    const items = () => [...body3.querySelectorAll("[data-vmprod]")].map((input6) => ({ producto_id: input6.dataset.vmprod ?? "", unidades: Math.max(0, Math.floor(Number(input6.value) || 0)), max: Number(input6.max) })).filter((item) => item.unidades > 0);
-    const show2 = () => {
-      const any = items().length > 0, canvas = document.getElementById("vmcanvas");
-      document.getElementById("vmfirma")?.classList.toggle("hide", !any);
-      if (any && !pad3 && canvas) pad3 = visitLegacy.signaturePad(canvas);
-    };
-    body3.querySelectorAll("[data-vmprod]").forEach((input6) => {
-      input6.addEventListener("input", show2);
-    });
-    const clear = document.getElementById("vmborrar");
-    if (clear) clear.onclick = () => {
-      pad3?.borrar();
-    };
-    draft.muestras = {
-      items,
-      firmante: () => document.getElementById("vmfirmante")?.value.trim() ?? "",
-      firma: () => pad3?.imagen() ?? null,
-      validar: () => {
-        const chosen4 = items();
-        if (!chosen4.length) return null;
-        if (chosen4.some((item) => item.unidades > item.max)) return t("visit.samples.overLimit");
-        return signature && (!pad3 || pad3.vacia()) ? t("visit.samples.missingSignature") : null;
-      }
-    };
-  }
-  function applyDateRules(date) {
-    const field10 = document.getElementById("vf");
-    if (!field10) return;
-    const today2 = todayIso();
-    field10.max = today2;
-    if (!cardSectionsLegacy.can("visita_fecha_pasada")) {
-      field10.value = today2;
-      field10.min = today2;
-      field10.disabled = true;
-      field10.title = t("visit.record.sameDay");
-    } else if (date && date <= today2) field10.value = date;
-  }
-  function paint5(id, data, date) {
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    const index = /* @__PURE__ */ new Map(), resultsKey = splitGroups(data.groups).results.clave;
-    body3.classList.remove("vertodos");
-    body3.innerHTML = visitHtml(data, index);
-    const draft = { id, modo: "presencial", fotos: [], ...data.products.length ? { productos: [] } : {} };
-    visitLegacy.setCurrent(draft);
-    const visit2 = { id, account: data.account, index, resultsKey };
-    bindResults(body3, visit2);
-    bindModeAndProducts(body3, draft);
-    bindPhotos(draft);
-    bindSamples(body3, data.samples, draft);
-    applyDateRules(date);
-    const save26 = document.getElementById("vguardar");
-    if (save26) save26.onclick = () => {
-      void saveVisit(visit2, save26);
-    };
-    box3.showModal();
-  }
-  async function openVisit(id) {
-    const date = visitLegacy.takeDate();
-    forgetOperation();
-    await visitLegacy.withLoading(async () => {
-      const data = await loadVisitData(id);
-      if (typeof data === "string") {
-        notices.toast(t("visit.record.couldNotOpen", { reason: t(data === "online" ? "visit.record.cardUnreadable" : "visit.record.noCopy") }), true);
-        return;
-      }
-      paint5(id, data, date);
-    });
-  }
-
-  // src/app/screens/visit/settings.ts
-  function samplesHtml2(setting2, products3) {
-    return `
-    <div class="fh"><div><h2>${t("visit.settings.samplesTitle")}</h2><div class="sm">${t("visit.settings.samplesSubtitle", { visit: term("visita", { article: "un" }) })}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    <label class="opt u-mt-10"><input type="checkbox" id="murest" ${setting2.restar_stock ? "checked" : ""}>
-      <span><b>${t("visit.settings.fromStock")}</b><br><span class="sm">${t("visit.settings.fromStockHint", { visit: term("visita", { article: "el" }) })}</span></span></label>
-    <label for="muprod">${t("visit.settings.product")}</label><select id="muprod"><option value="">—</option>${products3.map((product) => `<option value="${product.id}" ${product.id === setting2.producto_id ? "selected" : ""}>${escapeHtml(product.nombre)}</option>`).join("")}</select>
-    <div class="acts u-end"><button class="btn sec" data-cerrar>${t("common.cancel")}</button><button class="btn" id="muok">${t("common.save")}</button></div>`;
-  }
-  async function saveSamples(box3) {
-    const fromStock = document.getElementById("murest")?.checked ?? false, product = document.getElementById("muprod")?.value ?? "";
-    if (fromStock && !product) {
-      notices.toast(t("visit.settings.chooseProduct"), true);
-      return;
-    }
-    const { error } = await legacyDb().rpc("guardar_ajuste", { p_clave: "muestras", p_valor: { producto_id: product || null, restar_stock: fromStock } });
-    if (error) {
-      notices.toast(t("visit.settings.couldNotSave"), true);
-      return;
-    }
-    box3.close();
-    notices.toast(t("visit.settings.saved"));
-  }
-  async function editSamples() {
-    const [, products3] = await Promise.all([cycleLegacy.loadSettings(), visitLegacy.reloadProducts()]);
-    const setting2 = { producto_id: null, restar_stock: false, ...cycleLegacy.setting("muestras") };
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = samplesHtml2(setting2, products3);
-    box3.showModal();
-    const ok = document.getElementById("muok");
-    if (ok) ok.onclick = () => {
-      void saveSamples(box3);
-    };
-  }
-  async function saveRevisitNotice(notice2) {
-    const preferences = { ...visitLegacy.preferences() };
-    preferences.avisos = { ...preferences.avisos, revisita: notice2 };
-    const { data, error } = await legacyDb().rpc("guardar_preferencias", { p: preferences });
-    if (error) {
-      notices.toast(t("visit.settings.couldNotSave"), true);
-      return false;
-    }
-    visitLegacy.setPreferences(data ?? preferences);
-    return true;
-  }
-
-  // src/app/legacy/products-bridge.ts
-  var productsLegacy = {
-    section: () => productsStore.section,
-    setSection: (section) => {
-      productsStore.section = section;
-    },
-    /** Through the global names (the adapters of pantallas/productos.js), which call the screen with its cache and «‹ Volver». */
-    reload: () => {
-      void loadProductsModule();
-    },
-    openStock: (line2) => {
-      void showStock(line2);
-    },
-    openDeposit: (accountId, name, notice2) => showDeposit(accountId, name, notice2 ?? ""),
-    editProduct: (product) => {
-      void editProduct(product ?? null);
-    },
-    editSamples: () => {
-      void editSamples();
-    },
-    clearModules: (except) => {
-      session_exports.emptyModules(except);
-    },
-    showLoading: (element, text2) => {
-      showLoading(element, text2);
-    },
-    matchesFieldFilters: (values2) => Boolean(matchesFilters(values2, productsStore.filters)),
-    hasFieldFilters: () => Object.keys(productsStore.filters).length > 0,
-    visibleFieldColumns: () => visibleFields("producto"),
-    fieldHeaders: (fields) => columnHeaders(fields),
-    fieldCells: (fields, values2) => columnCells(fields, values2),
-    widenGrid: (grid, count) => {
-      widenGrid(grid, count);
-    }
-  };
-
-  // src/app/screens/products/model.ts
-  var ORDER_MARGIN_DAYS = 14;
-  var EXPIRY_SOON_DAYS = 90;
-  var euros5 = (value10) => formatCurrency(round2(value10));
-  function stockState(line2) {
-    if (line2.stock <= 0) return [t("products.stock.outOfStock"), "p-anu"];
-    if (line2.stock_minimo !== null && line2.stock_minimo !== void 0 && line2.stock < line2.stock_minimo) return [t("products.stock.belowMinimum"), "p-bor"];
-    if (line2.dias_cobertura !== null && line2.dias_cobertura !== void 0 && line2.dias_cobertura <= line2.plazo_dias + ORDER_MARGIN_DAYS && !line2.en_camino) return [t("products.stock.orderNow"), "p-bor"];
-    return [t("products.stock.fine"), "p-est"];
-  }
-  function expiryClass(isoDate) {
-    if (!isoDate) return "";
-    const today2 = todayIso();
-    if (isoDate < today2) return "cad-pasada";
-    return isoDate <= addDays(today2, EXPIRY_SOON_DAYS) ? "cad-pronto" : "";
-  }
-  var storeIcon = (store4) => store4.tipo === "central" || store4.tipo === "deposito" ? "🏢" : "💼";
-  function storeKind(store4) {
-    if (store4.tipo === "central") return t("products.stores.central");
-    return store4.tipo === "deposito" ? t("products.stores.deposit") : t("products.stores.caseOf", { name: escapeHtml(orFallback(store4.usuario, "—")) });
-  }
-  var errorMessage = (error) => error?.message ?? "";
-
-  // src/app/screens/products/catalog.ts
-  var money = (value10) => isPresent(value10) ? euros5(value10) : "—";
-  var activePill = (active) => `<span class="pill ${active ? "p-est" : "p-anu"}">${t(active ? "products.catalog.activeState" : "products.catalog.inactiveState")}</span>`;
-  function countHtml2(rows2) {
-    const active = rows2.filter((row3) => row3.activo).length, inactive = rows2.length - active;
-    return `<b>${formatNumber(active)}</b> ${t(active === 1 ? "products.catalog.oneActive" : "products.catalog.active")}${inactive ? t("products.catalog.inactive", { count: formatNumber(inactive) }) : ""}`;
-  }
-  function rowHtml7(row3, fields) {
-    const photo = row3.foto_url ? `background-image:url('${escapeHtml(row3.foto_url)}')` : "";
-    return `<button class="dr" data-prod="${row3.id}" style="${row3.activo ? "" : "opacity:.55"}">
-        <span><span class="pfoto" style="${photo}">${row3.foto_url ? "" : "◧"}</span></span>
-        <span><b>${escapeHtml(row3.nombre)}</b><span class="sm">${escapeHtml(orFallback(row3.presentacion, t("products.catalog.noPresentation")))}</span></span>
-        <span class="sm">${escapeHtml(orFallback(row3.referencia, "—"))}</span><span class="num">${money(row3.precio)}</span>
-        <span class="num">${formatNumber(row3.iva ?? 0)}%</span><span class="num"><b>${money(row3.pvp)}</b></span>
-        <span>${activePill(row3.activo)}</span>${productsLegacy.fieldCells(fields, row3.clasificadores)}</button>`;
-  }
-  function tableHtml2(rows2, fields) {
-    const head = [["", ""], ["", "product"], ["", "reference"], ["num", "withoutVat"], ["num", "vat"], ["num", "withVat"], ["", "state"]];
-    const empty2 = `<div class="vacio">${t(productsLegacy.hasFieldFilters() ? "products.catalog.noneFiltered" : "products.catalog.none")}</div>`;
-    return `<div class="dgrid-wrap"><div class="dgrid prods">
-      <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${key ? t(`products.catalog.${key}`) : ""}</span>`).join("")}${productsLegacy.fieldHeaders(fields)}</div>
-      ${rows2.map((row3) => rowHtml7(row3, fields)).join("") || empty2}
-    </div></div>`;
-  }
-  async function paintProducts() {
-    const admin = cardSectionsLegacy.can("administrar");
-    productsLegacy.showLoading(document.getElementById("vcuerpo"), t("products.catalog.loading"));
-    const { data } = await callRpc("productos_lista", { p_todos: admin });
-    const body3 = document.getElementById("vcuerpo");
-    if (!body3) return;
-    const rows2 = (data ?? []).filter((row3) => orFallback(row3.tipo, "producto") === "producto" && productsLegacy.matchesFieldFilters(row3.clasificadores));
-    const fields = productsLegacy.visibleFieldColumns();
-    body3.innerHTML = `<div class="panel">
-    <div class="cuenta">${countHtml2(rows2)}</div>
-    ${tableHtml2(rows2, fields)}</div>`;
-    productsLegacy.widenGrid(body3.querySelector(".dgrid.prods"), fields.length);
-    body3.querySelectorAll("[data-prod]").forEach((button3) => {
-      button3.onclick = () => {
-        productsLegacy.editProduct(rows2.find((row3) => row3.id === button3.dataset.prod) ?? null);
-      };
-    });
-  }
-
-  // src/app/screens/products/services.ts
-  var PRICE_DECIMALS = 4;
-  var money2 = (value10) => isPresent(value10) ? euros5(value10) : "—";
-  var field3 = (id) => document.getElementById(id);
-  function rowHtml8(service) {
-    const byDefault = service.por_defecto ? `<span class="pill p-est">${t("products.services.byDefault")}</span>` : '<span class="vac">—</span>';
-    return `<button class="dr" data-serv="${service.id ?? ""}" style="${service.activo ? "" : "opacity:.55"}">
-        <span><b>${escapeHtml(service.nombre ?? "")}</b></span><span class="num">${money2(service.precio)}</span>
-        <span class="num">${formatNumber(service.iva ?? 0)}%</span><span class="num"><b>${money2(service.pvp)}</b></span>
-        <span>${byDefault}</span>
-        <span><span class="pill ${service.activo ? "p-est" : "p-anu"}">${t(service.activo ? "products.catalog.activeState" : "products.catalog.inactiveState")}</span></span></button>`;
-  }
-  async function paintServices() {
-    const admin = cardSectionsLegacy.can("administrar");
-    productsLegacy.showLoading(document.getElementById("vcuerpo"), t("products.services.loading"));
-    const { data } = await callRpc("productos_lista", { p_todos: admin });
-    const body3 = document.getElementById("vcuerpo");
-    if (!body3) return;
-    const list = (data ?? []).filter((item) => item.tipo === "servicio");
-    const head = [["", "products.services.service"], ["num", "products.catalog.withoutVat"], ["num", "products.catalog.vat"], ["num", "products.catalog.withVat"], ["", "products.services.inNewOrders"], ["", "products.catalog.state"]];
-    body3.innerHTML = `<div class="panel">
-    <div class="cuenta"><b>${formatNumber(list.filter((item) => item.activo).length)}</b>${t("products.services.activeCount")}</div>
-    <div class="dgrid-wrap"><div class="dgrid servs">
-      <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${t(key)}</span>`).join("")}</div>
-      ${list.map(rowHtml8).join("") || `<div class="vacio">${t("products.services.none")}</div>`}
-    </div></div></div>`;
-    body3.querySelectorAll("[data-serv]").forEach((button3) => {
-      button3.onclick = () => {
-        editService(list.find((item) => item.id === button3.dataset.serv) ?? null);
-      };
-    });
-  }
-  function prices(service) {
-    if (!isPresent(service.precio)) return ["", ""];
-    return [String(Number(Number(service.precio).toFixed(PRICE_DECIMALS))), String(round2(service.precio * (1 + (service.iva ?? 0) / 100)))];
-  }
-  var checkbox = (id, on3, locked) => `<input type="checkbox" id="${id}" ${on3 ? "checked" : ""} ${locked}>`;
-  function editorHtml6(service, admin) {
-    const locked = admin ? "" : "disabled", vat = service.iva ?? defaultVat("servicios"), [price, withVat2] = prices(service);
-    return `
-    <div class="fh"><div><h2>${service.id ? escapeHtml(service.nombre ?? "") : t("products.services.newTitle")}</h2>
-      <div class="sm">${t("products.services.hint")}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    <label for="svn">${t("products.services.name")}</label><input id="svn" value="${escapeHtml(service.nombre ?? "")}" placeholder="${t("products.services.namePlaceholder")}" ${locked}>
-    <div class="pvp">
-      <div><label for="svs">${t("products.services.withoutVat")}</label><input id="svs" type="number" step="0.01" min="0" value="${price}" ${locked}></div>
-      <div><label for="svi">${t("products.services.vat")}</label><input id="svi" type="number" step="1" min="0" max="21" value="${vat}" ${locked}></div>
-      <div><label for="svc">${t("products.services.withVat")}</label><input id="svc" type="number" step="0.01" min="0" value="${withVat2}" ${locked}></div></div>
-    <label class="opt u-mt-12">${checkbox("svdef", service.por_defecto, locked)} ${t("products.services.proposeByDefault")}</label>
-    ${service.id ? `<label class="opt u-mt-8">${checkbox("svact", service.activo, locked)} ${t("products.services.active")}</label>` : ""}
-    <div class="acts u-end"><button class="btn sec" data-cerrar>${t(admin ? "common.cancel" : "common.close")}</button>
-      ${admin ? `<button class="btn" id="svok">${t(service.id ? "common.save" : "products.services.create")}</button>` : ""}</div>`;
-  }
-  function bindPrices() {
-    const without = field3("svs"), vat = field3("svi"), withVat2 = field3("svc");
-    if (!without || !vat || !withVat2) return;
-    const rate = () => (Number(vat.value) || 0) / 100;
-    without.oninput = () => {
-      withVat2.value = without.value === "" ? "" : String(round2(Number(without.value) * (1 + rate())));
-    };
-    withVat2.oninput = () => {
-      without.value = withVat2.value === "" ? "" : String(Number((Number(withVat2.value) / (1 + rate())).toFixed(PRICE_DECIMALS)));
-    };
-    vat.oninput = () => {
-      if (without.value !== "") withVat2.value = String(round2(Number(without.value) * (1 + rate())));
-    };
-  }
-  function payload5(service, name) {
-    const active = field3("svact");
-    return {
-      id: service.id ?? null,
-      tipo: "servicio",
-      nombre: name,
-      precio: field3("svs")?.value,
-      iva: field3("svi")?.value,
-      por_defecto: Boolean(field3("svdef")?.checked),
-      ...active ? { activo: active.checked } : {}
-    };
-  }
-  async function save10(service) {
-    const name = field3("svn")?.value.trim() ?? "";
-    if (!name) {
-      notices.toast(t("products.services.writeName"), true);
-      return;
-    }
-    const { data: result, error } = await legacyDb().rpc("guardar_producto", { p: payload5(service, name) });
-    if (error || result?.ok === false) {
-      notices.toast(t("products.services.couldNotSave"), true);
-      return;
-    }
-    document.getElementById("dlg")?.close();
-    notices.toast(t(service.id ? "products.services.saved" : "products.services.created"));
-    await purchasesLegacy.loadProducts();
-    if (currentScreen() === "productos") void paintServices();
-  }
-  function editService(existing) {
-    const admin = cardSectionsLegacy.can("administrar"), service = existing ?? { iva: defaultVat("servicios"), activo: true };
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = editorHtml6(service, admin);
-    box3.showModal();
-    if (!admin) return;
-    bindPrices();
-    const ok = document.getElementById("svok");
-    if (ok) ok.onclick = () => {
-      void save10(service);
-    };
-  }
-
-  // src/app/screens/products/stock.ts
-  function rowHtml9(line2) {
-    const [label, kind] = stockState(line2);
-    const unbatched = line2.sin_lote ? ` · <span class="u-warn">${t("products.stock.soldWithoutBatch", { units: formatNumber(-line2.sin_lote) })}</span>` : "";
-    const byStore = (line2.por_almacen ?? []).map((store4) => `${escapeHtml(store4.almacen)}: ${formatNumber(store4.unidades)}`).join(" · ") || "—";
-    const coverage = isPresent(line2.dias_cobertura) ? t("products.stock.coverageDays", { days: formatNumber(line2.dias_cobertura), supplier: formatNumber(line2.plazo_dias) }) : t("products.stock.noSales");
-    const onTheWay = line2.en_camino ? formatNumber(line2.en_camino) + (line2.llegada ? `<span class="sm">${formatShortDate(line2.llegada)}</span>` : "") : "—";
-    return `<button class="dr" data-stk="${line2.id}">
-        <span><b>${escapeHtml(line2.nombre)}</b><span class="sm">${escapeHtml(line2.presentacion ?? "")}${unbatched}</span></span>
-        <span class="num"><b>${formatNumber(line2.stock)}</b></span>
-        <span class="sm">${byStore}</span>
-        <span class="${expiryClass(line2.proxima_caducidad)}">${line2.proxima_caducidad ? formatShortDate(line2.proxima_caducidad) : "—"}</span>
-        <span class="sm">${coverage}</span>
-        <span class="num">${onTheWay}</span>
-        <span><span class="pill ${kind}">${label}</span></span></button>`;
-  }
-  async function paintStock() {
-    productsLegacy.showLoading(document.getElementById("vcuerpo"), t("products.stock.loading"));
-    await purchasesLegacy.loadStores();
-    const { data, error } = await callRpc("stock_resumen", {});
-    const body3 = document.getElementById("vcuerpo");
-    if (!body3) return;
-    if (error) {
-      body3.innerHTML = `<div class="vacio">${escapeHtml(errorMessage(error))}</div>`;
-      return;
-    }
-    const list = (data ?? []).filter((line2) => Boolean(line2.activo) || Boolean(line2.stock));
-    const head = [["", "product"], ["num", "stock"], ["", "byStore"], ["", "nextExpiry"], ["", "coverage"], ["num", "onTheWay"], ["", "state"]];
-    body3.innerHTML = `<div class="panel">
-    <div class="cuenta">${t("products.stock.intro")}</div>
-    <div class="dgrid-wrap"><div class="dgrid stock">
-      <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${t(`products.stock.${key}`)}</span>`).join("")}</div>
-      ${list.map(rowHtml9).join("") || `<div class="vacio">${t("products.stock.none")}</div>`}
-    </div></div></div>`;
-    body3.querySelectorAll("[data-stk]").forEach((button3) => {
-      button3.onclick = () => {
-        const line2 = list.find((item) => item.id === button3.dataset.stk);
-        if (line2) productsLegacy.openStock(line2);
-      };
-    });
-  }
-
-  // src/app/screens/products/movement.ts
-  var TEXTS = {
-    inicial: ["products.movement.entryTitle", "products.movement.entryHint"],
-    ajuste: ["products.movement.adjustTitle", "products.movement.adjustHint"],
-    traspaso: ["products.movement.transferTitle", "products.movement.transferHint"]
-  };
-  var value6 = (id) => document.getElementById(id)?.value ?? "";
-  var options = (list, selected2) => list.map((item) => `<option value="${item.id ?? ""}" ${selected2 && item.id === selected2 ? "selected" : ""}>${escapeHtml(item.nombre ?? "")}</option>`).join("");
-  function entryHtml2(line2) {
-    const stores2 = purchasesLegacy.stores().filter((store4) => store4.activo);
-    return `<div class="g2">
-      <div><label for="mvp">${t("products.movement.product")}</label><select id="mvp">${options(purchasesLegacy.products(), line2?.id)}</select></div>
-      <div><label for="mva">${t("products.movement.store")}</label><select id="mva">${options(stores2)}</select></div></div>
-      <div class="g2"><div><label for="mvl">${t("products.movement.batch")}</label><input id="mvl" placeholder="${t("products.movement.batchPlaceholder")}"></div>
-        <div><label for="mvpr">${t("products.movement.supplier")}</label><select id="mvpr"><option value="">—</option>${options(purchasesLegacy.suppliers())}</select></div></div>
-      <div class="g2"><div><label for="mvc">${t("products.movement.expiry")}</label><input id="mvc" type="date"></div><div><label for="mvf">${t("products.movement.made")}</label><input id="mvf" type="date"></div></div>`;
-  }
-  function formHtml3(line2, kind, place3) {
-    const [title2, hint] = TEXTS[kind], adjust = kind === "ajuste";
-    const destinations = purchasesLegacy.stores().filter((store4) => store4.activo && store4.id !== place3?.storeId);
-    return `
-    <div class="fh"><div><h2>${t(title2)}</h2><div class="sm">${t(hint)}</div></div>
-      <button class="x" data-cerrar2 aria-label="${t("common.close")}">✕</button></div>
-    ${kind === "inicial" ? entryHtml2(line2) : ""}
-    ${kind === "traspaso" ? `<label for="mvd">${t("products.movement.destination")}</label><select id="mvd">${options(destinations)}</select>` : ""}
-    <div class="g2"><div><label for="mvu">${t(adjust ? "products.movement.unitsSigned" : "products.movement.units")}</label><input id="mvu" type="number" ${adjust ? "" : 'min="1"'}></div>
-      <div><label for="mvn">${t("products.movement.note")}</label><input id="mvn" placeholder="${t(adjust ? "products.movement.adjustPlaceholder" : "products.movement.optional")}"></div></div>
-    <div class="acts u-end"><button class="btn sec" data-cerrar2>${t("common.cancel")}</button><button class="btn" id="mvok">${t("products.movement.register")}</button></div>`;
-  }
-  function payload6(line2, kind, place3, units) {
-    const note = value6("mvn").trim();
-    if (kind === "inicial") {
-      return {
-        tipo: kind,
-        producto_id: value6("mvp"),
-        almacen_id: value6("mva"),
-        numero_lote: value6("mvl").trim(),
-        caducidad: value6("mvc"),
-        fecha_fabricacion: value6("mvf"),
-        proveedor_id: value6("mvpr"),
-        unidades: units,
-        nota: note
-      };
-    }
-    return { tipo: kind, producto_id: line2?.id, lote_id: place3?.batchId, almacen_id: place3?.storeId, destino_id: document.getElementById("mvd") ? value6("mvd") : null, unidades: units, nota: note };
-  }
-  function missing(kind, units) {
-    if (!units) return t("products.movement.writeUnits");
-    return kind === "inicial" && !value6("mvl").trim() ? t("products.movement.writeBatch") : "";
-  }
-  async function register(line2, kind, place3) {
-    const units = Number(value6("mvu")), problem = missing(kind, units);
-    if (problem) {
-      notices.toast(problem, true);
-      return;
-    }
-    const { data: result, error } = await legacyDb().rpc("movimiento_manual", { p: payload6(line2, kind, place3, units) });
-    if (error || result?.ok === false) {
-      notices.toast(t("products.movement.failed", { error: orFallback(errorMessage(error), result?.error ?? "") }), true);
-      return;
-    }
-    for (const id of ["dlg2", "dlg"]) document.getElementById(id)?.close();
-    notices.toast(t("products.movement.registered"));
-    if (currentScreen() === "productos") void paintStock();
-  }
-  async function stockMovement(line2, kind, place3) {
-    await Promise.all([purchasesLegacy.loadProducts(), purchasesLegacy.loadStores(), purchasesLegacy.loadSuppliers()]);
-    const body3 = document.getElementById("dlg2body"), box3 = document.getElementById("dlg2");
-    if (!body3 || !box3) return;
-    body3.innerHTML = formHtml3(line2, kind, place3);
-    box3.showModal();
-    const ok = document.getElementById("mvok");
-    if (ok) ok.onclick = () => {
-      void register(line2, kind, place3);
-    };
-  }
-
-  // src/app/screens/products/stock-sheet.ts
-  var MOVEMENTS = /* @__PURE__ */ new Map([
-    ["inicial", "products.trace.initial"],
-    ["entrada_compra", "products.trace.purchaseEntry"],
-    ["salida_venta", "products.trace.sale"],
-    ["anulacion_venta", "products.trace.saleCancelled"],
-    ["salida_muestra", "products.trace.sample"],
-    ["ajuste", "products.trace.adjustment"],
-    ["traspaso_salida", "products.trace.transferOut"],
-    ["traspaso_entrada", "products.trace.transferIn"],
-    ["devolucion", "products.trace.returned"],
-    ["consumo_deposito", "products.trace.depositUse"],
-    ["consumo_cirugia", "products.trace.surgeryUse"]
-  ]);
-  var movementName = (type) => {
-    const key = MOVEMENTS.get(type);
-    return key ? t(key, { visit: term("visita") }) : type;
-  };
-  function traceRow(item) {
-    return `<div class="dr u-cursor-default"><span>${formatShortDate(String(item.fecha).slice(0, 10))}</span><span>${escapeHtml(movementName(item.tipo))}${item.pedido ? `<span class="sm">${t("products.trace.order", { number: escapeHtml(item.pedido) })}</span>` : ""}</span>
-        <span class="num" style="color:${item.unidades < 0 ? "var(--danger)" : "var(--ok)"}"><b>${item.unidades > 0 ? "+" : ""}${formatNumber(item.unidades)}</b></span>
-        <span>${escapeHtml(orFallback(item.cliente, "—"))}${item.telefono ? `<span class="sm">${escapeHtml(item.telefono)}</span>` : ""}</span><span class="sm">${escapeHtml(orFallback(item.medico, "—"))}</span><span class="sm">${escapeHtml(item.almacen)}</span></div>`;
-  }
-  function batchDetails(batch) {
-    return `${escapeHtml(batch.producto ?? "")}${batch.caducidad ? t("products.trace.expires", { date: formatShortDate(batch.caducidad) }) : ""}${batch.proveedor ? ` · ${escapeHtml(batch.proveedor)}` : ""}${batch.compra ? t("products.trace.purchase", { number: escapeHtml(batch.compra) }) : ""}`;
-  }
-  async function traceability(batchId) {
-    const { data } = await callRpc("trazabilidad_lote", { p_lote: batchId });
-    const batch = data?.lote ?? {}, movements = data?.movimientos ?? [];
-    const body3 = document.getElementById("dlg2body"), box3 = document.getElementById("dlg2");
-    if (!body3 || !box3) return;
-    const details2 = batchDetails(batch);
-    const head = [t("products.trace.date"), t("products.trace.movement"), t("products.trace.units"), t("products.trace.client"), term("medico", { capital: "C" }), t("products.trace.store")];
-    body3.innerHTML = `
-    <div class="fh"><div><h2>${t("products.trace.title", { number: escapeHtml(batch.numero_lote ?? "") })}</h2>
-      <div class="sm">${details2}</div></div>
-      <button class="x" data-cerrar2 aria-label="${t("common.close")}">✕</button></div>
-    <p class="sm">${t("products.trace.intro")}</p>
-    <div class="dgrid-wrap"><div class="dgrid traz">
-      <div class="dh">${head.map((title2, index) => `<span${index === 2 ? ' class="num"' : ""}>${title2}</span>`).join("")}</div>
-      ${movements.map(traceRow).join("") || `<div class="vacio">${t("products.trace.none")}</div>`}</div></div>
-    <div class="acts u-end"><button class="btn sec" data-cerrar2>${t("common.close")}</button></div>`;
-    box3.showModal();
-  }
-  function summaryText(line2) {
-    const use = Number(line2.consumo_diario) ? t("products.sheet.dailyUse", { value: String(line2.consumo_diario).replace(".", ",") }) : t("products.sheet.noUse");
-    return `${t("products.sheet.units", { units: formatNumber(line2.stock) })} · ${use}${isPresent(line2.dias_cobertura) ? t("products.sheet.covers", { days: formatNumber(line2.dias_cobertura) }) : ""}`;
-  }
-  function settingsHtml(line2) {
-    const suppliers = purchasesLegacy.suppliers().map((supplier) => `<option value="${supplier.id ?? ""}" ${supplier.nombre === line2.proveedor ? "selected" : ""}>${t("products.sheet.supplierOption", { name: escapeHtml(supplier.nombre ?? ""), days: formatNumber(supplier.plazo_dias) })}</option>`).join("");
-    return `<div class="g2">
-      <div><label for="stmin">${t("products.sheet.minimum")}</label><input id="stmin" type="number" min="0" value="${line2.stock_minimo ?? ""}" placeholder="${t("products.sheet.noMinimum")}"></div>
-      <div><label for="stprov">${t("products.sheet.supplier")}</label><select id="stprov"><option value="">—</option>${suppliers}</select></div></div>`;
-  }
-  function batchHtml(batch, canBuy2) {
-    const expiry = expiryClass(batch.caducidad), manyStores = purchasesLegacy.stores().filter((store4) => store4.activo).length > 1;
-    const tools = canBuy2 ? `<button class="btn sec" data-aju="${batch.id}|${batch.almacen_id}">${t("products.sheet.adjust")}</button>${manyStores ? `<button class="btn sec" data-tras="${batch.id}|${batch.almacen_id}">${t("products.sheet.transfer")}</button>` : ""}` : "";
-    return `<div class="item u-cursor-default">
-        <span class="ic ${expiry === "cad-pasada" ? "w" : ""}">📦</span>
-        <span class="tx"><b>${t("products.sheet.batch", { number: escapeHtml(batch.numero_lote), units: formatNumber(batch.unidades) })}</b>
-          <span class="sm"><span class="${expiry}">${batch.caducidad ? t("products.sheet.expiresOn", { date: formatShortDate(batch.caducidad) }) : t("products.sheet.noExpiry")}</span>${batch.fecha_fabricacion ? t("products.sheet.madeOn", { date: formatShortDate(batch.fecha_fabricacion) }) : ""} · ${escapeHtml(batch.almacen)}${batch.proveedor ? ` · ${escapeHtml(batch.proveedor)}` : ""}</span></span>
-        <span class="acts u-m-0"><button class="btn sec" data-traz="${batch.id}">${t("products.sheet.traceability")}</button>
-          ${tools}</span></div>`;
-  }
-  function sheetHtml3(line2, canBuy2) {
-    const [label, kind] = stockState(line2), batches = line2.lotes ?? [];
-    return `
-    <div class="fh"><div><h2>${escapeHtml(line2.nombre)} <span class="pill ${kind}">${label}</span></h2>
-      <div class="sm">${summaryText(line2)}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    ${canBuy2 ? settingsHtml(line2) : ""}
-    <div class="blk"><h3>${t("products.sheet.batches")}</h3>
-      ${batches.length ? `<div class="lista">${batches.map((batch) => batchHtml(batch, canBuy2)).join("")}</div>` : `<div class="sm">${t("products.sheet.noBatches")}</div>`}</div>
-    <div class="acts u-end">
-      <button class="btn sec" data-cerrar>${t("common.close")}</button>
-      ${canBuy2 ? `<button class="btn sec" id="stent">${t("products.sheet.entry")}</button><button class="btn" id="stgu">${t("products.sheet.saveMinimum")}</button>` : ""}</div>`;
-  }
-  async function saveSettings(line2) {
-    const minimum = document.getElementById("stmin")?.value ?? "", supplier = document.getElementById("stprov")?.value ?? "";
-    const { error } = await legacyDb().from("productos").update({ stock_minimo: minimum === "" ? null : Number(minimum), proveedor_id: supplier || null }).eq("id", line2.id);
-    if (error) {
-      notices.toast(t("products.sheet.couldNotSave"), true);
-      return;
-    }
-    document.getElementById("dlg")?.close();
-    notices.toast(t("products.sheet.saved"));
-    void paintStock();
-  }
-  function bind10(body3, line2) {
-    body3.querySelectorAll("[data-traz]").forEach((button3) => {
-      button3.onclick = () => {
-        void traceability(button3.dataset.traz ?? "");
-      };
-    });
-    for (const [attribute, kind] of [["aju", "ajuste"], ["tras", "traspaso"]]) {
-      body3.querySelectorAll(`[data-${attribute}]`).forEach((button3) => {
-        const [batchId = "", storeId = ""] = (button3.dataset[attribute] ?? "").split("|");
-        button3.onclick = () => {
-          void stockMovement(line2, kind, { batchId, storeId });
-        };
-      });
-    }
-    const entry2 = document.getElementById("stent");
-    if (entry2) entry2.onclick = () => {
-      void stockMovement(line2, "inicial");
-    };
-    const save26 = document.getElementById("stgu");
-    if (save26) save26.onclick = () => {
-      void saveSettings(line2);
-    };
-  }
-  async function showStock2(line2) {
-    await purchasesLegacy.loadSuppliers();
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = sheetHtml3(line2, purchasesLegacy.canBuy());
-    if (!box3.open) box3.showModal();
-    bind10(body3, line2);
-  }
-
-  // src/app/screens/products/stores.ts
-  var stores = () => purchasesLegacy.stores();
-  var members = () => salesTeam.members();
-  async function load() {
-    await purchasesLegacy.loadStores();
-    if (!salesTeam.members().length) await salesTeam.load();
-  }
-  async function createCase(member) {
-    const { error } = await legacyDb().rpc("guardar_almacen", { p: { nombre: t("products.stores.caseName", { name: String(member.nombre).split(" ")[0] ?? "" }), tipo: "maletin", usuario_id: member.id } });
-    if (error) {
-      notices.toast(t("products.stores.couldNotCreate"), true);
-      return false;
-    }
-    notices.toast(t("products.stores.created"));
-    return true;
-  }
-  var chosenMember = () => members().find((member) => member.id === document.getElementById("almu")?.value);
-  function windowHtml2() {
-    const list = stores().map((store4) => `<div class="item u-cursor-default"><span class="ic">${storeIcon(store4)}</span>
-        <span class="tx"><b>${escapeHtml(store4.nombre)}</b><span class="sm">${storeKind(store4)}${t("products.stores.unitsTail", { units: formatNumber(store4.unidades) })}${store4.activo ? "" : t("products.stores.inactive")}</span></span></div>`).join("");
-    return `
-      <div class="fh"><div><h2>${t("products.stores.title")}</h2><div class="sm">${t("products.stores.subtitle")}</div></div>
-        <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-      <div class="lista">${list}</div>
-      <h3 class="u-mt-14">${t("products.stores.newCase")}</h3>
-      <div class="g2"><div><label for="almu">${t("products.stores.salesperson")}</label><select id="almu">${members().map((member) => `<option value="${member.id}">${escapeHtml(member.nombre)}</option>`).join("")}</select></div>
-        <div><label>&nbsp;</label><button class="btn" id="almok">${t("products.stores.createCase")}</button></div></div>
-      <p class="sm">${t("products.stores.caseHint", { theVisit: term("visita", { article: "el" }) })}</p>`;
-  }
-  function paintWindow() {
-    const body3 = document.getElementById("dbody");
-    if (!body3) return;
-    body3.innerHTML = windowHtml2();
-    const ok = document.getElementById("almok");
-    if (ok) ok.onclick = async () => {
-      const member = chosenMember();
-      if (!member || !await createCase(member)) return;
-      await purchasesLegacy.loadStores();
-      paintWindow();
-    };
-  }
-  async function editStores() {
-    await load();
-    paintWindow();
-    document.getElementById("dlg")?.showModal();
-  }
-  function storeCard(store4) {
-    return `<div class="almc"><span class="ic">${storeIcon(store4)}</span>
-        <b>${escapeHtml(store4.nombre)}</b><span class="sm">${storeKind(store4)}${store4.activo ? "" : t("products.stores.inactive")}</span>
-        <span class="almu"><b>${formatNumber(store4.unidades ?? 0)}</b> ${t("products.stores.units")}</span></div>`;
-  }
-  function withoutCaseHtml(withoutCase) {
-    if (!withoutCase.length) return "";
-    const who2 = withoutCase.length === 1 ? t("products.stores.oneWithout", { name: escapeHtml(withoutCase[0]?.nombre ?? "") }) : t("products.stores.manyWithout", { count: withoutCase.length });
-    return `<div class="avisoh u-mt-12"><span>${who2}${t("products.stores.withoutCase")}</span></div>`;
-  }
-  async function paintStores() {
-    await load();
-    const body3 = document.getElementById("cfgcuerpo");
-    if (!body3) return;
-    const canHaveCase = members().filter((member) => cardSectionsLegacy.roleCan(member.rol ?? "", "almacen_propio"));
-    const withoutCase = canHaveCase.filter((member) => !stores().some((store4) => store4.usuario_id === member.id));
-    body3.innerHTML = `
-    <div class="card cfgpanel"><h2>${t("products.stores.title")}</h2>
-      <p class="sm">${t("products.stores.pageIntro")}</p>
-      <div class="mattipos"><div><b>${t("products.stores.centralTitle")}</b><span>${t("products.stores.centralText")}</span></div>
-        <div><b>${t("products.stores.caseTitle")}</b><span>${t("products.stores.caseText", { visits: term("visita", { number: "p" }) })}</span></div></div></div>
-    <div class="card cfgpanel"><h2>${t("products.stores.yours")}</h2>
-      <div class="almgrid">${stores().map(storeCard).join("")}</div>
-      ${withoutCaseHtml(withoutCase)}
-      <div class="matadd u-mt-12"><select id="almu">${canHaveCase.map((member) => `<option value="${member.id}">${escapeHtml(member.nombre)}</option>`).join("")}</select>
-        <button class="btn sec" id="almok">${t("products.stores.createCase")}</button></div>
-      <p class="sm">${t("products.stores.transferHint")}</p></div>`;
-    const ok = document.getElementById("almok");
-    if (ok) ok.onclick = async () => {
-      const member = chosenMember();
-      if (member && await createCase(member)) void paintStores();
-    };
-  }
-
-  // src/app/core/plans.ts
-  var plans_exports = {};
-  __export(plans_exports, {
-    PLAN_EXTRAS: () => PLAN_EXTRAS2,
-    PLAN_SECTIONS: () => PLAN_SECTIONS,
-    currentPlanName: () => currentPlanName,
-    isDowngrade: () => isDowngrade,
-    minimumPlan: () => minimumPlan,
-    notificationTypesOfRole: () => notificationTypesOfRole,
-    planIncludes: () => planIncludes,
-    planIncludesSection: () => planIncludesSection,
-    planNotice: () => planNotice,
-    planOf: () => planOf,
-    planRank: () => planRank,
-    planRows: () => planRows
-  });
-  var PLAN_ORDER = ["campo", "comercial", "empresa", "medida"];
-  var DEFAULT_PLAN_INDEX = 3;
-  var PLAN_EXTRAS2 = { oportunidades: ["comercial", "empresa", "medida"], portal: ["empresa", "medida"] };
-  var PLAN_SECTIONS = { compras: ["empresa", "medida"], proveedores: ["empresa", "medida"] };
-  var planOf = (id) => {
-    const plans2 = coreLegacy.plans();
-    const plan2 = plans2.find((item) => item.id === id) ?? plans2[DEFAULT_PLAN_INDEX];
-    if (!plan2) throw new Error("The plans are not loaded");
-    return plan2;
-  };
-  var planIncludes = (module) => !(module in MODULE_AREA) || planOf(coreLegacy.currentPlan().plan).modulos.includes(module) || module === "facturacion" && coreLegacy.billingReadOnly();
-  var minimumPlan = (module) => coreLegacy.plans().find((plan2) => plan2.modulos.includes(module));
-  var planIncludesSection = (section) => !(section in PLAN_SECTIONS) || Boolean(PLAN_SECTIONS[section]?.includes(coreLegacy.currentPlan().plan));
-  var currentPlanName = () => {
-    try {
-      return planOf(coreLegacy.currentPlan().plan).nombre;
-    } catch {
-      return "";
-    }
-  };
-  var planRank = (id) => PLAN_ORDER.indexOf(id);
-  var isDowngrade = (from, to) => planRank(to.plan) < planRank(from.plan) || planRank(to.plan) === planRank(from.plan) && (Number(to.usuarios) < Number(from.usuarios) || from.pago === "anual" && to.pago === "mensual");
-  var notificationTypesOfRole = () => coreLegacy.notificationTypes().filter((type) => can(`aviso_${String(type[0])}`));
-  function planRows() {
-    const all = PLAN_ORDER, fromSales = PLAN_ORDER.slice(1), fromCompany = PLAN_ORDER.slice(2), custom = PLAN_ORDER.slice(3);
-    const words16 = { professionals: wordFor("medico", "p"), visits: wordFor("visita", "p"), customers: wordFor("paciente", "p"), visit: wordFor("visita", "s") };
-    const row3 = (key, plans2, detail = true) => plans2 ? [t(`core.planRows.${key}`, words16), detail ? t(`core.planRows.${key}Detail`, words16) : null, plans2] : [t(`core.planRows.${key}`, words16), null];
-    return [
-      row3("field", null),
-      row3("portfolio", all),
-      row3("agenda", all),
-      row3("routes", all),
-      row3("cycle", all),
-      row3("samples", all),
-      row3("quality", all),
-      row3("notifications", all),
-      row3("users", all),
-      row3("import", all),
-      row3("sale", null),
-      row3("orders", fromSales),
-      row3("webOrders", fromSales),
-      row3("opportunities", fromSales),
-      row3("coverage", fromSales),
-      row3("events", fromSales),
-      row3("products", fromSales),
-      row3("analytics", fromSales),
-      row3("commissions", fromSales),
-      row3("office", null),
-      row3("invoicing", fromCompany),
-      row3("purchases", fromCompany),
-      row3("deposit", fromCompany),
-      row3("surgeries", fromCompany),
-      row3("tenders", fromCompany),
-      row3("equipment", fromCompany),
-      row3("audit", fromCompany),
-      row3("service", null),
-      row3("migration", custom),
-      row3("support", custom, false)
-    ];
-  }
-  function noticeHtml(title2, plan2, canChange2) {
-    const current = planOf(coreLegacy.currentPlan().plan).nombre;
-    return `<div class="fh"><div><h2>${escapeHtml(title2)}</h2><div class="sm">${escapeHtml(t("core.plans.notInPlan", { plan: current }))}</div></div>
-    <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    <p>${t("core.plans.availableFrom", { plan: escapeHtml(plan2 ? plan2.nombre : t("core.plans.custom")) })}${plan2 ? ` (${coreLegacy.planPrice(plan2)})` : ""}.</p>
-    ${plan2 ? `<ul class="manlist">${plan2.ventajas.map((advantage) => `<li><span>✓</span><span>${escapeHtml(advantage)}</span></li>`).join("")}</ul>` : ""}
-    <div class="acts u-end"><button class="btn sec" data-cerrar>${t("core.plans.notNow")}</button>${canChange2 ? `<button class="btn" id="vplan">${t("core.plans.seePlans")}</button>` : ""}</div>`;
-  }
-  function showNotice(html) {
-    const body3 = document.getElementById("dbody"), dialog7 = document.getElementById("dlg");
-    if (!body3 || !dialog7) return;
-    body3.innerHTML = html;
-    dialog7.showModal();
-    const button3 = document.getElementById("vplan");
-    if (button3) button3.onclick = () => {
-      dialog7.close();
-      coreLegacy.openPlanSettings();
-    };
-  }
-  function planNotice(module) {
-    const sectionPlans = PLAN_SECTIONS[module];
-    if (sectionPlans) {
-      showNotice(noticeHtml(coreLegacy.sectionTitle(module) ?? module, planOf(sectionPlans[0] ?? ""), canManageOrganization()));
-      return;
-    }
-    const name = (document.querySelector(`nav.main [data-t="${module}"]`)?.textContent ?? module).replace("🔒", "").trim();
-    showNotice(noticeHtml(`🔒 ${name}`, minimumPlan(module), can("administrar")));
-  }
-
-  // src/app/legacy/settings1-bridge.ts
-  var settings1_bridge_exports = {};
-  __export(settings1_bridge_exports, {
-    settingsLegacy: () => settingsLegacy
-  });
-  var settingsLegacy = {
-    user: () => sessionStore.profile,
-    setPreferences: (preferences) => {
-      sessionStore.profile.preferencias = preferences;
-    },
-    place: (key) => sessionStore.profile.preferencias?.[key] ?? null,
-    changeNavigator: (name) => {
-      void maps_exports.changeNavigator(name);
-    },
-    revisitNotice: () => avisoRevisita(),
-    /** The legacy name answers whether it was saved (its declaration says void). */
-    saveRevisitNotice: (value10) => saveRevisitNotice(value10),
-    moduleIcon: (module) => ICO_MOD[module],
-    classifiers: () => settingsStore.catalogs,
-    setClassifiers: (list) => {
-      settingsStore.catalogs = list;
-    },
-    openClassifier: (id) => {
-      openClassifier(id);
-    },
-    reloadCatalogs: () => {
-      void loadCatalogs();
-    },
-    undoable: (entry2) => isUndoable(entry2),
-    undoPersonBox: (box3, options3) => {
-      cajaDeshacerPersona(box3, options3.userId, options3.from, options3.name, options3.then);
-    },
-    billingEventDetail: (detail) => eventDetail(detail),
-    fields: () => CAMPOS,
-    fieldTable: (area) => CAMPO_TABLA[area],
-    areaOfTable: (table) => Object.keys(CAMPO_TABLA).find((area) => CAMPO_TABLA[area] === table),
-    fieldInput: (field10, value10) => customFieldInput(field10, value10),
-    fieldText: (field10, value10) => fieldText(field10, value10),
-    testEnvironment: () => RPC_ORIG_FROM("entorno_pruebas"),
-    refreshReason: (reason) => MOTIVO_REFRESCO[reason],
-    edgeFunctions: () => db.functions,
-    resetTestData: () => {
-      void backToTestData();
-    },
-    clearLocalData: () => {
-      session_exports.clearLocalData();
-    },
-    showLoading: (element, text2) => {
-      showLoading(element, text2);
-    },
-    skeletonCard: (text2) => cardSkeleton(text2),
-    /** The range chosen in a period box mounted with mountPeriod (the legacy box keeps it in a property of the element). */
-    periodRange: (element) => {
-      const read3 = element ? Reflect.get(element, "__rango") : void 0;
-      return read3 ? read3() : { desde: null, hasta: null };
-    },
-    mountPeriod: (element, options3) => {
-      mountPeriod(element, [options3]);
-    },
-    modules: () => Object.keys(MODULO_AREA).filter((module) => permissions_exports.canUseModule(module))
-  };
-
-  // src/app/screens/settings/custom-fields/card.ts
-  var keyName = (key) => key.replace(/_/g, " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
-  var blockHtml3 = (cells) => `<div class="campospers"><h3>${t("settings.customFields.title")}</h3><div class="cpgrid">${cells}</div></div>`;
-  function knownHtml(definitions2, values2, keys) {
-    const ordered = [
-      ...definitions2.filter((field10) => keys.includes(field10.clave)),
-      ...keys.filter((key) => !definitions2.some((field10) => field10.clave === key)).map((key) => ({ clave: key, nombre: keyName(key) }))
-    ];
-    return blockHtml3(ordered.map((field10) => `<div><span class="sm">${escapeHtml(field10.nombre)}</span><b>${escapeHtml(settingsLegacy.fieldText(field10, values2[field10.clave]))}</b></div>`).join(""));
-  }
-  var rawText = (value10) => typeof value10 === "object" ? JSON.stringify(value10) : String(value10);
-  async function paintCustomFieldsBlock(table, id, container) {
-    if (!container || !id || container.querySelector(".campospers")) return;
-    const { data } = await legacyDb().from(table).select("clasificadores").eq("id", id).maybeSingle();
-    const values2 = data?.clasificadores ?? {}, keys = Object.keys(values2).filter((key) => values2[key] !== "" && values2[key] !== null && values2[key] !== void 0);
-    const area = settingsLegacy.areaOfTable(table), definitions2 = area ? settingsLegacy.fields()[area] ?? [] : [];
-    if (!keys.length || container.querySelector(".campospers")) return;
-    container.insertAdjacentHTML("beforeend", definitions2.length ? knownHtml(definitions2, values2, keys) : blockHtml3(keys.map((key) => `<div><span class="sm">${escapeHtml(keyName(key))}</span><b>${escapeHtml(rawText(values2[key]))}</b></div>`).join("")));
-  }
-  function bindCustomFieldFilters(zone, state2, onChange) {
-    zone.querySelectorAll("[data-fcp]").forEach((select) => {
-      select.onchange = () => {
-        const key = select.dataset.fcp ?? "";
-        if (!select.value) Reflect.deleteProperty(state2, key);
-        else state2[key] = select.dataset.fcpt === "si_no" ? select.value === "true" : select.value;
-        onChange();
-      };
-    });
-  }
-
-  // src/app/screens/settings/custom-fields/form.ts
-  var definitions = (area) => settingsLegacy.fields()[area] ?? [];
-  async function loadCustomFields() {
-    const fields = settingsLegacy.fields(), areas2 = Object.keys(fields);
-    const results = await Promise.all(areas2.map((area) => legacyDb().rpc("campos_de", { p_ambito: area })));
-    areas2.forEach((area, index) => {
-      const result = results[index];
-      if (result && !result.error) fields[area] = result.data ?? [];
-    });
-  }
-  function customFieldsHtml(area, values2) {
-    const list = definitions(area).filter((field10) => field10.en_ficha);
-    if (!list.length) return "";
-    return `<div class="cpersform" data-cpamb="${area}"><h3>${t("settings.customFields.title")}</h3><div class="g2">${list.map((field10) => `<div><label>${escapeHtml(field10.nombre)}${field10.obligatorio ? ' <span class="cpob">*</span>' : ""}</label>${settingsLegacy.fieldInput(field10, values2?.[field10.clave])}</div>`).join("")}</div></div>`;
-  }
-  function readCustomFields(root) {
-    const block3 = root?.querySelector(".cpersform");
-    if (!block3) return null;
-    const area = block3.dataset.cpamb ?? "", values2 = {}, missing2 = [];
-    block3.querySelectorAll("[data-cpk]:not([disabled])").forEach((input6) => {
-      const key = input6.dataset.cpk ?? "", field10 = definitions(area).find((item) => item.clave === key);
-      values2[key] = input6.value.trim();
-      if (field10?.obligatorio && !input6.value.trim()) missing2.push(field10.nombre);
-    });
-    return { amb: area, valores: values2, falta: missing2 };
-  }
-  var PROBLEMS = /* @__PURE__ */ new Map([
-    ["obligatorio", "settings.customFields.problems.obligatorio"],
-    ["numero", "settings.customFields.problems.numero"],
-    ["fecha", "settings.customFields.problems.fecha"],
-    ["lista", "settings.customFields.problems.lista"],
-    ["si_no", "settings.customFields.problems.siNo"],
-    ["solo_lectura", "settings.customFields.problems.soloLectura"],
-    ["desconocido", "settings.customFields.problems.desconocido"]
-  ]);
-  function failureText5(area, failure4) {
-    if (!failure4) return t("settings.customFields.couldNotSave");
-    const field10 = definitions(area).find((item) => item.clave === failure4.campo), problem = PROBLEMS.get(failure4.error);
-    return t("settings.customFields.check", { field: field10 ? field10.nombre : failure4.campo, problem: problem ? t(problem) : failure4.error });
-  }
-  async function saveCustomFields(read3, id) {
-    if (!read3 || !id || !Object.keys(read3.valores).length) return true;
-    const { data, error } = await legacyDb().rpc("guardar_campos", { p_ambito: read3.amb, p_id: id, p_valores: read3.valores });
-    if (!error && data?.ok) return true;
-    notices.toast(failureText5(read3.amb, (data?.errores ?? [])[0]), true);
-    return false;
-  }
-  async function insertCustomFields(root, area, id, before) {
-    if (!root || !definitions(area).some((field10) => field10.en_ficha) || root.querySelector(".cpersform")) return;
-    let values2 = {};
-    const table = settingsLegacy.fieldTable(area);
-    if (id && table) {
-      const { data } = await legacyDb().from(table).select("clasificadores").eq("id", id).maybeSingle();
-      values2 = data?.clasificadores ?? {};
-    }
-    if (root.querySelector(".cpersform") || !root.isConnected) return;
-    if (before?.isConnected) before.insertAdjacentHTML("beforebegin", customFieldsHtml(area, values2));
-    else root.insertAdjacentHTML("beforeend", customFieldsHtml(area, values2));
-  }
-
-  // src/app/screens/products/editor/blocks.ts
-  var PRODUCT_STATES = ["Activo", "En pausa", "Descatalogado"];
-  var stateHtml2 = (state2) => `<div class="blk" id="prestado"><h3>${t("productsMore.state.title")}</h3><div class="segs">${PRODUCT_STATES.map((item) => `<button type="button" data-pest="${item}" class="${item === state2 ? "on" : ""}">${item}</button>`).join("")}</div>
-      <div class="sm u-mt-6">${t("productsMore.state.hint")}</div></div>`;
-  var PERIOD_WORDS = { anio: "productsMore.samples.periodYear", trimestre: "productsMore.samples.periodQuarter", mes: "productsMore.samples.periodMonth" };
-  var periodWord = (period) => t(PERIOD_WORDS[period]);
-  var samplesTitle = () => deliveryRule().name ?? t("productsMore.samples.title");
-  var samplesForNewHtml = () => deliveryRule().active ? `<div class="blk" id="prmuestra"><h3>${escapeHtml(samplesTitle())}</h3><p class="sm">${t("productsMore.samples.saveFirst")}</p></div>` : "";
-  function samplesTexts() {
-    const rule = deliveryRule(), professional = term("medico");
-    if (rule.name === null) return { regulated: t("productsMore.samples.regulated"), max: t("productsMore.samples.maxPerYear"), legal: t("productsMore.samples.law") };
-    return { regulated: t("productsMore.samples.regulatedOwn", { name: rule.name, professional }), max: t("productsMore.samples.maxPer", { professional, period: periodWord(rule.period) }), legal: rule.legal ?? "" };
-  }
-  function samplesHtml3(extras) {
-    const rule = deliveryRule(), texts3 = samplesTexts(), cap = rule.cap;
-    if (!rule.active) return "";
-    return `<div class="blk" id="prmuestra"><h3>${escapeHtml(samplesTitle())}</h3>
-      <label class="opt"><input type="checkbox" id="prmreg" ${extras.muestra_regulada ? "checked" : ""}> ${escapeHtml(texts3.regulated)}</label>
-      <div class="g2 ${extras.muestra_regulada ? "" : "hide"}" id="prmdat">
-        <div><label for="prmdesde">${t("productsMore.samples.authorised")}</label><input id="prmdesde" type="date" value="${escapeHtml(extras.muestra_desde ?? "")}"></div>
-        <div><label for="prmmax">${escapeHtml(texts3.max)}</label><input id="prmmax" type="number" min="1" max="${cap}" step="1" value="${Math.min(Number(extras.muestra_max) || cap, cap)}"></div></div>
-      ${texts3.legal ? `<p class="sm">${escapeHtml(texts3.legal)}</p>` : ""}</div>`;
-  }
-  var promotionHtml = (extras) => `<div class="blk" id="prpromo"><h3>${t("productsMore.promotion.title")}</h3>
-      <label class="opt"><input type="checkbox" id="prpromoc" ${extras.promocionado ? "checked" : ""}> ${t("productsMore.promotion.promoted", { visits: term("visita", { number: "p" }) })}</label>
-      <p class="sm">${t("productsMore.promotion.hint", { visit: term("visita") })}</p></div>`;
-  var equipmentHtml = (extras) => `<div class="blk" id="prequipo"><h3>${t("productsMore.equipment.title")}</h3>
-      <label class="opt"><input type="checkbox" id="preqc" ${extras.es_equipo ? "checked" : ""}> ${t("productsMore.equipment.isEquipment")}</label>
-      <div class="${extras.es_equipo ? "" : "hide"}" id="preqd"><label for="preqr">${t("productsMore.equipment.review")}</label><input id="preqr" type="number" min="0" max="120" step="1" value="${Number(extras.revision_meses) || 0}" style="max-width:140px"></div>
-      <p class="sm">${t("productsMore.equipment.hint")}</p></div>`;
-  var packsHtml = (extras) => `<div class="blk" id="prpacks"><h3>${t("productsMore.packs.title")}</h3>
-      <p class="sm">${t("productsMore.packs.hint")}</p>
-      <div id="prpkl"></div><button type="button" class="btn sec chico" id="prpkmas">${t("productsMore.packs.add")}</button>
-      <div class="g2 u-mt-10"><div><label for="prpkpvp">${t("productsMore.packs.retailPrice")}</label><input id="prpkpvp" type="number" step="0.01" value="${extras.pvp_recomendado !== null && extras.pvp_recomendado !== void 0 ? Number(extras.pvp_recomendado) : ""}" placeholder="${t("productsMore.packs.notSet")}"></div></div>
-      <span class="pcerr" id="prpkerr" hidden></span>
-      <div class="prpkacts"><button type="button" class="btn sec" id="prpkok">${t("productsMore.packs.save")}</button></div></div>`;
-  var materialHtml2 = () => `<div class="blk" id="prmat"><h3>${t("productsMore.material.title")}</h3>
-      <p class="sm">${escapeHtml(t("productsMore.material.hint", { aVisit: term("visita", { article: "una" }) }))}</p>
-      <div class="prmatl" id="prmatl"></div>
-      <label class="btn sec prmatadd">${t("productsMore.material.add")}<input type="file" id="prmatf" accept="image/*,application/pdf" data-fp="1" multiple hidden></label></div>`;
-
-  // src/app/screens/products/editor/blocks-bind.ts
-  var MAX_REVIEW_MONTHS = 120;
-  var byId10 = (id) => document.getElementById(id);
-  var input3 = (id) => byId10(id);
-  var orNull = (value10) => value10 === void 0 || value10 === "" ? null : value10;
-  var update = (id, values2) => legacyDb().from("productos").update(values2).eq("id", id);
-  function bindState(body3, product) {
-    body3.querySelectorAll("[data-pest]").forEach((button3) => {
-      button3.onclick = async () => {
-        const state2 = button3.dataset.pest ?? "";
-        const { data, error } = await billing2Legacy.rawRpc("estado_producto", { p_id: product.id, p_estado: state2 });
-        if (error || !data?.ok) {
-          notices.toast(t("productsMore.state.couldNotChange"), true);
-          return;
-        }
-        billing2Legacy.productStates()[product.id] = state2;
-        const listed = billing2Legacy.products().find((item) => item.id === product.id);
-        if (listed) listed.estado = state2;
-        body3.querySelectorAll("[data-pest]").forEach((other) => {
-          other.classList.toggle("on", other === button3);
-        });
-        notices.toast(t("productsMore.state.changed", { state: state2 }));
-      };
-    });
-  }
-  function bindSamples2(productId) {
-    const save26 = async () => {
-      const regulated = Boolean(input3("prmreg")?.checked), cap = deliveryRule().cap, max = Math.min(cap, Math.max(1, Number(input3("prmmax")?.value) || cap));
-      byId10("prmdat")?.classList.toggle("hide", !regulated);
-      const { error } = await update(productId, { muestra_regulada: regulated, muestra_desde: orNull(input3("prmdesde")?.value), muestra_max: max });
-      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : t("productsMore.samples.saved"), Boolean(error));
-    };
-    ["prmreg", "prmdesde", "prmmax"].forEach((id) => {
-      byId10(id)?.addEventListener("change", () => {
-        void save26();
-      });
-    });
-  }
-  function bindPromotion(productId) {
-    const box3 = input3("prpromoc");
-    if (!box3) return;
-    box3.onchange = async () => {
-      const { error } = await update(productId, { promocionado: box3.checked });
-      const done = box3.checked ? t("productsMore.promotion.on", { visits: term("visita", { number: "p" }) }) : t("productsMore.promotion.off");
-      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : done, Boolean(error));
-      if (!error) billing2Legacy.setPromoted(null);
-    };
-  }
-  function bindEquipment(productId) {
-    const save26 = async () => {
-      const equipment2 = Boolean(input3("preqc")?.checked);
-      byId10("preqd")?.classList.toggle("hide", !equipment2);
-      const months2 = Math.min(MAX_REVIEW_MONTHS, Math.max(0, Math.floor(Number(input3("preqr")?.value) || 0)));
-      const { error } = await update(productId, { es_equipo: equipment2, revision_meses: months2 });
-      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : t("productsMore.equipment.saved"), Boolean(error));
-    };
-    const box3 = input3("preqc"), months = input3("preqr");
-    if (box3) box3.onchange = () => {
-      void save26();
-    };
-    if (months) months.onchange = () => {
-      void save26();
-    };
-  }
-
-  // src/app/screens/products/editor/materials.ts
-  var PDF = "application/pdf";
-  var listOf = async (productId) => (await loadMaterials(true)).filter((item) => item.producto_id === productId);
-  var rowHtml10 = (item) => `<div class="prmati"><span>${item.tipo === PDF ? t("productsMore.material.pdf") : t("productsMore.material.image")} · ${escapeHtml(item.nombre)}</span><label class="prmatpp"><input type="checkbox" data-prmatpp="${item.id}" ${item.para_portal ? "checked" : ""}> ${t("productsMore.material.forCentres")}</label>
-          <button type="button" class="lnk" data-prmatver="${item.id}">${t("productsMore.material.see")}</button><button type="button" class="lnk" data-prmatdel="${item.id}" aria-label="${t("productsMore.material.removeLabel", { name: escapeHtml(item.nombre) })}">${t("productsMore.material.remove")}</button></div>`;
-  async function remove2(product, item) {
-    if (!await notices.confirm(t("productsMore.material.removeText", { name: item.nombre }), { titulo: t("productsMore.material.removeTitle"), ok: t("productsMore.material.remove"), peligro: true })) return;
-    const { error } = await legacyDb().from("producto_materiales").delete().eq("id", item.id);
-    if (error) {
-      notices.toast(t("productsMore.material.couldNotRemove", { error: errorMessage(error) }), true);
-      return;
-    }
-    billing2Legacy.presentationFiles().delete(item.id);
-    paintMaterials(product, await listOf(product.id));
-    notices.toast(t("productsMore.material.removed"));
-  }
-  function paintMaterials(product, list) {
-    const box3 = document.getElementById("prmatl");
-    if (!box3) return;
-    box3.innerHTML = list.length ? list.map(rowHtml10).join("") : `<p class="sm">${t("productsMore.material.none")}</p>`;
-    box3.querySelectorAll("[data-prmatver]").forEach((button3) => {
-      button3.onclick = async () => {
-        await loadMaterials();
-        presentOnly({ id: product.id, nombre: product.nombre ?? null }, button3.dataset.prmatver ?? "");
-      };
-    });
-    box3.querySelectorAll("[data-prmatdel]").forEach((button3) => {
-      button3.onclick = () => {
-        const item = list.find((other) => other.id === button3.dataset.prmatdel);
-        if (item) void remove2(product, item);
-      };
-    });
-  }
-  async function uploadOf(file) {
-    if (file.type === PDF) {
-      if (file.size > billing2Legacy.presentationMax()) {
-        notices.toast(t("productsMore.material.tooBig", { name: file.name }), true);
-        return null;
-      }
-      return { nombre: file.name, tipo: file.type, tamano: file.size, datos: await toBase64(file) };
-    }
-    if (file.type.startsWith("image/")) return readReceipt(file);
-    notices.toast(t("productsMore.material.notAllowed", { name: file.name }), true);
-    return null;
-  }
-  async function addFiles(product, files, start3) {
-    let added = 0, order = start3;
-    for (const file of files) {
-      const upload = await uploadOf(file);
-      if (!upload) continue;
-      const { error } = await legacyDb().from("producto_materiales").insert({ producto_id: product.id, nombre: upload.nombre, tipo: upload.tipo, tamano: upload.tamano, datos: upload.datos, orden: order++ });
-      if (error) {
-        notices.toast(t("productsMore.material.couldNotUpload", { name: file.name, error: errorMessage(error) }), true);
-        continue;
-      }
-      added++;
-    }
-    if (added) notices.toast(added === 1 ? t("productsMore.material.oneAdded") : t("productsMore.material.added", { count: added }));
-    if (document.getElementById("prmatl")) paintMaterials(product, await listOf(product.id));
-  }
-  function bindMaterials(product, list) {
-    paintMaterials(product, list);
-    const picker = document.getElementById("prmatf");
-    if (!picker) return;
-    picker.onchange = () => {
-      const files = [...picker.files ?? []];
-      picker.value = "";
-      void addFiles(product, files, list.length);
-    };
-  }
-
-  // src/app/screens/products/editor/packs.ts
-  var byId11 = (id) => document.getElementById(id);
-  function read() {
-    return [...byId11("prpkl")?.querySelectorAll(".prpkf") ?? []].map((row3) => ({
-      compra: row3.querySelector("[data-pkc]")?.value ?? "",
-      regalo: row3.querySelector("[data-pkg]")?.value ?? ""
-    }));
-  }
-  function problemOf(packs, price) {
-    const bad = packs.some((pack) => !Number.isInteger(pack.compra) || pack.compra < 1 || !Number.isInteger(pack.regalo) || pack.regalo < 0);
-    if (bad) return t("productsMore.packs.badPack");
-    if (packs.some((pack, index) => packs.findIndex((other) => other.compra === pack.compra && other.regalo === pack.regalo) !== index)) return t("productsMore.packs.repeated");
-    return price !== null && !(price >= 0) ? t("productsMore.packs.badPrice") : "";
-  }
-  function bindPacks(productId, extras) {
-    let packs = (Array.isArray(extras.packs) ? extras.packs : []).map((pack) => ({ compra: Number(pack.compra) || 0, regalo: Number(pack.regalo) || 0 }));
-    const paint10 = () => {
-      const list = byId11("prpkl");
-      if (!list) return;
-      list.innerHTML = packs.length ? packs.map((pack, index) => `<div class="prpkf"><label>${t("productsMore.packs.buy")} <input type="number" step="1" data-pkc value="${pack.compra || ""}"></label>
-          <label>${t("productsMore.packs.free")} <input type="number" step="1" data-pkg value="${pack.regalo || 0}"></label><button type="button" class="pmhx" data-pkx="${index}" aria-label="${t("productsMore.packs.removePack")}">✕</button></div>`).join("") : `<p class="sm">${t("productsMore.packs.none")}</p>`;
-      list.querySelectorAll("[data-pkx]").forEach((button3) => {
-        button3.onclick = () => {
-          packs = read();
-          packs.splice(Number(button3.dataset.pkx), 1);
-          paint10();
-        };
-      });
-    };
-    paint10();
-    const add = byId11("prpkmas");
-    if (add) add.onclick = () => {
-      packs = read();
-      packs.push({ compra: "", regalo: 0 });
-      paint10();
-    };
-    const ok = byId11("prpkok");
-    if (ok) ok.onclick = async () => {
-      const list = read().map((pack) => ({ compra: Number(pack.compra), regalo: Number(pack.regalo || 0) })), error = byId11("prpkerr");
-      const priceText = byId11("prpkpvp")?.value ?? "", price = priceText === "" ? null : Number(priceText);
-      const problem = problemOf(list, price);
-      if (error) {
-        error.hidden = !problem;
-        error.textContent = problem;
-      }
-      if (problem) return;
-      ok.disabled = true;
-      const { error: failed5 } = await legacyDb().from("productos").update({ packs: list.length ? list.sort((first, second) => first.compra - second.compra) : null, pvp_recomendado: price }).eq("id", productId);
-      ok.disabled = false;
-      if (failed5) {
-        notices.toast(t("productsMore.packs.couldNotSave", { error: errorMessage(failed5) }), true);
-        return;
-      }
-      packs = list;
-      paint10();
-      notices.toast(list.length ? t("productsMore.packs.saved", { count: formatNumber(list.length) }) : t("productsMore.packs.noPacks"));
-    };
-  }
-
-  // src/app/screens/products/editor/remove.ts
-  function failureText6(error, result) {
-    if (result?.error === "stock") return t("productsMore.remove.stock", { units: formatNumber(result.unidades) });
-    if (result?.error === "permiso") return t("productsMore.remove.noPermission");
-    return t("productsMore.remove.couldNotRemove", { error: error?.message ?? result?.error ?? "" });
-  }
-  function doneText(result) {
-    const detail = result.detalle ?? {};
-    if (result.modo === "borrado") return Number(detail.unidades) ? t("productsMore.remove.removedWithStock", { units: formatNumber(detail.unidades) }) : t("productsMore.remove.removed");
-    const uses = billing2Legacy.productUses();
-    return t("productsMore.remove.kept", { uses: Object.entries(detail).map(([key, count]) => `${formatNumber(count)} ${uses[key] ?? key}`).join(", ") });
-  }
-  async function remove3(product) {
-    if (!await notices.confirm(t("productsMore.remove.text"), { titulo: t("productsMore.remove.title", { name: product.nombre ?? "" }), ok: t("productsMore.remove.ok"), peligro: true })) return;
-    const { data: result, error } = await legacyDb().rpc("eliminar_producto", { p_id: product.id });
-    if (error || !result?.ok) {
-      notices.toast(failureText6(error, result), true);
-      return;
-    }
-    const box3 = document.getElementById("dlg");
-    if (box3?.open) box3.close();
-    notices.toast(doneText(result));
-    billing2Legacy.refreshProducts();
-  }
-  function addRemoveButton(product) {
-    const save26 = document.getElementById("prok"), row3 = save26?.closest(".acts");
-    if (!row3 || document.getElementById("prelim")) return;
-    row3.insertAdjacentHTML("afterbegin", `<button type="button" class="btn sec dang prelimb" id="prelim">${t("productsMore.remove.button")}</button>`);
-    const button3 = document.getElementById("prelim");
-    if (button3) button3.onclick = () => {
-      void remove3(product);
-    };
-  }
-
-  // src/app/screens/products/editor/form.ts
-  var field4 = (id) => document.getElementById(id);
-  var valueOf6 = (id) => field4(id)?.value ?? "";
-  function bindPrices2() {
-    const vat = () => (Number(valueOf6("priva")) || 0) / 100, net = field4("prpr"), gross = field4("prpvp"), rate = field4("priva");
-    if (net && gross) net.oninput = () => {
-      gross.value = net.value === "" ? "" : String(round2(Number(net.value) * (1 + vat())));
-    };
-    if (net && gross) gross.oninput = () => {
-      net.value = gross.value === "" ? "" : String(Number((Number(gross.value) / (1 + vat())).toFixed(4)));
-    };
-    if (net && gross && rate) rate.oninput = () => {
-      if (net.value !== "") gross.value = String(round2(Number(net.value) * (1 + vat())));
-    };
-  }
-  function bindPhoto() {
-    const input6 = field4("prfoto"), preview3 = document.getElementById("prfprev");
-    if (!input6 || !preview3) return;
-    input6.onchange = () => {
-      const file = input6.files?.[0];
-      if (!file) return;
-      preview3.style.backgroundImage = `url('${URL.createObjectURL(file)}')`;
-      preview3.textContent = "";
-    };
-  }
-  async function uploadPhoto() {
-    const file = field4("prfoto")?.files?.[0];
-    if (!file) return void 0;
-    const storage = legacyDb().storage, path = `p-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "")}`;
-    const { error } = await storage.from("productos").upload(path, file, { upsert: true });
-    if (error) {
-      notices.toast(t("productsMore.editor.photoFailed", { error: error.message ?? "" }), true);
-      return void 0;
-    }
-    return storage.from("productos").getPublicUrl(path).data.publicUrl;
-  }
-  function payload7(product, photo) {
-    const active = field4("pract");
-    return {
-      id: product.id ?? null,
-      nombre: valueOf6("prn").trim(),
-      presentacion: valueOf6("prp").trim(),
-      precio: valueOf6("prpr"),
-      iva: valueOf6("priva"),
-      referencia: valueOf6("prref").trim(),
-      codigo_barras: valueOf6("prcb").trim(),
-      unidades_envase: valueOf6("prue"),
-      coste: valueOf6("prco"),
-      ...photo ? { foto_url: photo } : {},
-      ...active ? { activo: active.checked } : {}
-    };
-  }
-  function checked(body3) {
-    if (!valueOf6("prn").trim()) {
-      notices.toast(t("productsMore.editor.writeName"), true);
-      return false;
-    }
-    const fields = readCustomFields(body3);
-    if (fields?.falta.length) {
-      notices.toast(t("productsMore.editor.fillField", { field: fields.falta[0] ?? "" }), true);
-      return false;
-    }
-    return fields;
-  }
-  async function store(product, button3) {
-    button3.disabled = true;
-    button3.textContent = t("productsMore.editor.saving");
-    const photo = await uploadPhoto();
-    const { data: result, error } = await legacyDb().rpc("guardar_producto", { p: payload7(product, photo) });
-    button3.disabled = false;
-    button3.textContent = t(product.id ? "productsMore.editor.save" : "productsMore.editor.create");
-    if (!error && result?.ok !== false) return result ?? {};
-    notices.toast(t("productsMore.editor.couldNotSave", { error: errorMessage(error) || (result?.error ?? "") }), true);
-    return null;
-  }
-  async function save11(body3, product, button3, after) {
-    const fields = checked(body3);
-    if (fields === false) return;
-    const result = await store(product, button3);
-    if (!result) return;
-    if (fields && !await saveCustomFields(fields, result.id ?? product.id)) return;
-    document.getElementById("dlg")?.close();
-    notices.toast(t(product.id ? "productsMore.editor.saved" : "productsMore.editor.created"));
-    await billing2Legacy.loadProducts();
-    after();
-  }
-  function bindForm(body3, product, after) {
-    bindPrices2();
-    bindPhoto();
-    const ok = document.getElementById("prok");
-    if (ok) ok.onclick = () => {
-      void save11(body3, product, ok, after);
-    };
-  }
-
-  // src/app/screens/products/editor/editor.ts
-  var EXTRAS = "muestra_regulada,muestra_desde,muestra_max,promocionado,es_equipo,revision_meses,packs,pvp_recomendado";
-  var disabled = (admin) => admin ? "" : "disabled";
-  function headerHtml2(product, admin) {
-    const photo = product.foto_url ?? "";
-    return `<div class="fh"><div><h2>${product.id ? escapeHtml(product.nombre) : t("productsMore.editor.newTitle")}</h2>
-      <div class="sm">${t(admin ? "productsMore.editor.hintAdmin" : "productsMore.editor.hintOthers")}</div></div>
-      <button class="x" data-cerrar aria-label="${t("productsMore.editor.close")}">✕</button></div>
-    <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
-      <span class="pfoto" id="prfprev" style="width:72px;height:72px;${photo ? `background-image:url('${escapeHtml(photo)}')` : ""}">${photo ? "" : "◧"}</span>
-      ${admin ? `<div class="u-flex-1"><label for="prfoto" class="u-mt-0">${t("productsMore.editor.photo")}</label><input id="prfoto" type="file" accept="image/*"></div>` : ""}</div>`;
-  }
-  function pricesHtml(product, off) {
-    const price = product.precio ?? null, vat = product.iva ?? defaultVat("productos");
-    const net = price === null ? "" : String(Number(Number(price).toFixed(4))), gross = price === null ? "" : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
-    return `<div class="pvp">
-      <div><label for="prpr">${t("productsMore.editor.priceWithoutVat")}</label><input id="prpr" type="number" step="0.01" min="0" value="${net}" ${off}></div>
-      <div><label for="priva">${t("productsMore.editor.vat")}</label><input id="priva" type="number" step="1" min="0" max="${highestVat()}" value="${vat}" ${off}></div>
-      <div><label for="prpvp">${t("productsMore.editor.priceWithVat")}</label><input id="prpvp" type="number" step="0.01" min="0" value="${gross}" ${off}></div></div>`;
-  }
-  function formHtml4(product, admin) {
-    const off = disabled(admin);
-    return `${headerHtml2(product, admin)}
-    <div class="g2">
-      <div><label for="prn">${t("productsMore.editor.name")}</label><input id="prn" value="${escapeHtml(product.nombre ?? "")}" ${off}></div>
-      <div><label for="prp">${t("productsMore.editor.presentation")}</label><input id="prp" value="${escapeHtml(product.presentacion ?? "")}" placeholder="${t("productsMore.editor.presentationPlaceholder")}" ${off}></div></div>
-    ${pricesHtml(product, off)}
-    <div class="g2">
-      <div><label for="prref">${t("productsMore.editor.reference")}</label><input id="prref" value="${escapeHtml(product.referencia ?? "")}" ${off}></div>
-      <div><label for="prcb">${t("productsMore.editor.barcode")}</label><input id="prcb" value="${escapeHtml(product.codigo_barras ?? "")}" ${off}></div></div>
-    <div class="g2">
-      <div><label for="prue">${t("productsMore.editor.unitsPerPack")}</label><input id="prue" type="number" min="1" value="${Number(product.unidades_envase) || 1}" ${off}></div>
-      <div><label for="prco">${t("productsMore.editor.cost")}</label><input id="prco" type="number" step="0.01" min="0" value="${product.coste ?? ""}" ${off}></div></div>
-    ${admin && product.id ? `<label class="opt u-mt-12"><input type="checkbox" id="pract" ${product.activo ? "checked" : ""}> ${t("productsMore.editor.active")}</label>` : ""}`;
-  }
-  var actionsHtml2 = (product, admin) => `<div class="acts u-end">
-      <button class="btn sec" data-cerrar>${t(admin ? "productsMore.editor.cancel" : "productsMore.editor.close")}</button>
-      ${admin ? `<button class="btn" id="prok">${t(product.id ? "productsMore.editor.save" : "productsMore.editor.create")}</button>` : ""}</div>`;
-  function blocksHtml(product, loaded) {
-    if (!product.id) return loaded.admin ? samplesForNewHtml() : "";
-    const state2 = billing2Legacy.productStates()[product.id] ?? product.estado ?? "Activo";
-    if (!loaded.admin) return stateHtml2(state2);
-    return [
-      stateHtml2(state2),
-      samplesHtml3(loaded.extras),
-      loaded.promotion ? promotionHtml(loaded.extras) : "",
-      loaded.equipment ? equipmentHtml(loaded.extras) : "",
-      packsHtml(loaded.extras),
-      materialHtml2()
-    ].join("");
-  }
-  async function load2(product) {
-    const admin = can("administrar"), promotion = planIncludesSection("cobertura"), equipment2 = planIncludesSection("parque");
-    if (!admin || !product.id) return { admin, extras: {}, materials: [], promotion, equipment: equipment2 };
-    const [{ data }, all] = await Promise.all([legacyDb().from("productos").select(EXTRAS).eq("id", product.id).maybeSingle(), loadMaterials(true)]);
-    return { admin, extras: data ?? {}, materials: all.filter((item) => item.producto_id === product.id), promotion, equipment: equipment2 };
-  }
-  function bindBlocks(body3, product, loaded) {
-    bindState(body3, product);
-    if (!loaded.admin) return;
-    bindSamples2(product.id);
-    if (loaded.promotion) bindPromotion(product.id);
-    if (loaded.equipment) bindEquipment(product.id);
-    bindPacks(product.id, loaded.extras);
-    bindMaterials(product, loaded.materials);
-    if (canDeleteProduct()) addRemoveButton(product);
-  }
-  async function editProduct(given) {
-    const product = given ?? { iva: defaultVat("productos"), activo: true, unidades_envase: 1 };
-    const loaded = await load2(product), body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = formHtml4(product, loaded.admin) + blocksHtml(product, loaded) + actionsHtml2(product, loaded.admin);
-    if (loaded.admin) await insertCustomFields(body3, "producto", product.id ?? null, body3.querySelector(".blk") ?? body3.querySelector(".acts:last-of-type"));
-    if (product.id) await paintCustomFieldsBlock("productos", product.id, body3).catch(() => void 0);
-    if (!box3.open) box3.showModal();
-    if (loaded.admin) bindForm(body3, product, () => {
-      if (currentScreen() === "productos") void paintProducts();
-    });
-    if (product.id) bindBlocks(body3, { ...product, id: product.id }, loaded);
-  }
-
-  // src/app/screens/products/editor/visit-material.ts
-  var MATERIAL_ROLE = "material_visita";
-  var NUMBER_KIND = "numero";
-  var UNITS_LABEL = "Unidades";
-  var DISCONTINUED = "Descatalogado";
-  var byId12 = (id) => document.getElementById(id);
-  var words8 = () => ({
-    visit: term("visita"),
-    aVisit: term("visita", { article: "un" }),
-    theVisit: term("visita", { article: "el" }),
-    theVisits: term("visita", { number: "p", article: "el" }),
-    ofProfessional: term("medico", { article: "del" }),
-    professional: term("medico")
-  });
-  function samplesHtml4(samples) {
-    const products3 = billing2Legacy.products().filter((item) => item.tipo !== "servicio");
-    return `<div class="card cfgpanel"><h2>${t("productsMore.visitMaterial.samplesKind")}</h2>
-      <div class="g2"><div><label for="muprod">${t("productsMore.visitMaterial.sampleProduct")}</label><select id="muprod"><option value="">${t("productsMore.visitMaterial.none")}</option>${products3.map((item) => `<option value="${item.id}" ${item.id === samples.producto_id ? "selected" : ""}>${escapeHtml(item.nombre)}</option>`).join("")}</select></div><div></div></div>
-      <label class="vfswitch u-mt-10"><input type="checkbox" id="murest" ${samples.restar_stock ? "checked" : ""}><span class="sw"></span>
-        <span><b>${t("productsMore.visitMaterial.discount")}</b><br><span class="sm">${t("productsMore.visitMaterial.discountText", words8())}</span></span></label>
-      <div class="acts u-end"><button class="btn" id="muok">${t("productsMore.visitMaterial.save")}</button></div></div>`;
-  }
-  var valueRow = (value10) => `<div class="matfila ${value10.activo ? "" : "off"}"><b>${escapeHtml(value10.valor)}</b><span class="sm">${t(value10.dato_tipo === NUMBER_KIND ? "productsMore.visitMaterial.asksQuantity" : "productsMore.visitMaterial.onlyMarked")}</span>
-        <label class="vfswitch mini"><input type="checkbox" data-mact="${value10.id}" ${value10.activo ? "checked" : ""}><span class="sw"></span><span class="sm">${t(value10.activo ? "productsMore.visitMaterial.active" : "productsMore.visitMaterial.hidden")}</span></label></div>`;
-  function pageHtml5(samples, values2, canAdd) {
-    return `
-    <div class="card cfgpanel"><h2>${t("productsMore.visitMaterial.title", words8())}</h2>
-      <p class="sm">${t("productsMore.visitMaterial.intro", words8())}</p>
-      <div class="mattipos"><div><b>${t("productsMore.visitMaterial.samplesKind")}</b><span>${t("productsMore.visitMaterial.samplesKindText")}</span></div>
-        <div><b>${t("productsMore.visitMaterial.promoKind")}</b><span>${t("productsMore.visitMaterial.promoKindText")}</span></div></div></div>
-    ${samplesHtml4(samples)}
-    <div class="card cfgpanel"><h2>${t("productsMore.visitMaterial.promoKind")}</h2>
-      <p class="sm">${t("productsMore.visitMaterial.promoText", words8())}</p>
-      <div class="matlista">${values2.map(valueRow).join("") || `<div class="sm">${t("productsMore.visitMaterial.noMaterial")}</div>`}</div>
-      <div class="matadd"><input id="matn" placeholder="${t("productsMore.visitMaterial.newPlaceholder")}"><label class="opt u-m-0"><input type="checkbox" id="matq" checked> ${t("productsMore.visitMaterial.countUnits")}</label>
-        <button class="btn sec" id="matok" ${canAdd ? "" : "disabled"}>${t("productsMore.visitMaterial.add")}</button></div></div>`;
-  }
-  async function saveSamples2() {
-    const product = byId12("muprod")?.value ?? "", discount = Boolean(byId12("murest")?.checked);
-    if (discount && !product) {
-      notices.toast(t("productsMore.visitMaterial.chooseProduct"), true);
-      return;
-    }
-    const value10 = { producto_id: product || null, restar_stock: discount };
-    const { error } = await legacyDb().rpc("guardar_ajuste", { p_clave: "muestras", p_valor: value10 });
-    if (error) {
-      notices.toast(t("productsMore.visitMaterial.couldNotSave"), true);
-      return;
-    }
-    billing2Legacy.settings().muestras = value10;
-    notices.toast(t("productsMore.visitMaterial.saved"));
-  }
-  async function addMaterial(classifierId) {
-    const name = (byId12("matn")?.value ?? "").trim();
-    if (!name) return;
-    const counted2 = Boolean(byId12("matq")?.checked);
-    const { error } = await legacyDb().rpc("guardar_valor", { p: { clasificador_id: classifierId, valor: name, ...counted2 ? { dato_tipo: NUMBER_KIND, dato_etiqueta: UNITS_LABEL } : {} } });
-    if (error) {
-      notices.toast(t("productsMore.visitMaterial.couldNotAdd", { error: error.message ?? "" }), true);
-      return;
-    }
-    notices.toast(t("productsMore.visitMaterial.added"));
-    billing2Legacy.loadCatalogs();
-    void paintVisitMaterial();
-  }
-  function bind11(box3, classifierId) {
-    const ok = byId12("muok");
-    if (ok) ok.onclick = () => {
-      void saveSamples2();
-    };
-    box3.querySelectorAll("[data-mact]").forEach((input6) => {
-      input6.onchange = async () => {
-        await legacyDb().rpc("guardar_valor", { p: { id: input6.dataset.mact, activo: input6.checked } });
-        notices.toast(t(input6.checked ? "productsMore.visitMaterial.visible" : "productsMore.visitMaterial.hiddenIn", words8()));
-        billing2Legacy.loadCatalogs();
-        void paintVisitMaterial();
-      };
-    });
-    const add = byId12("matok");
-    if (add && classifierId) add.onclick = () => {
-      void addMaterial(classifierId);
-    };
-  }
-  async function paintVisitMaterial() {
-    await Promise.all([billing2Legacy.loadSettings(), billing2Legacy.loadProducts()]);
-    const samples = { producto_id: null, restar_stock: false, ...billing2Legacy.settings().muestras };
-    await legacyDb().rpc("clasificadores_actividad");
-    const { data: classifier } = await legacyDb().from("clasificadores").select("id").eq("papel", MATERIAL_ROLE).maybeSingle();
-    const { data: values2 } = classifier ? await legacyDb().from("valores_clasificador").select("id,valor,activo,dato_tipo").eq("clasificador_id", classifier.id).order("orden") : { data: [] };
-    const box3 = byId12("cfgcuerpo");
-    if (!box3) return;
-    box3.innerHTML = pageHtml5(samples, values2 ?? [], Boolean(classifier));
-    bind11(box3, classifier?.id ?? null);
-    try {
-      await improveMaterial();
-    } catch (error) {
-      registerError("error", t("productsMore.visitMaterial.errorLog", { error: error.message }));
-    }
-  }
-  async function promotedProducts() {
-    const read3 = async () => {
-      if (!navigator.onLine) return billing2Legacy.promoted() ?? [];
-      try {
-        const { data, error } = await legacyDb().from("productos").select("id,nombre,estado").eq("promocionado", true).order("nombre");
-        if (!error) billing2Legacy.setPromoted((data ?? []).filter((item) => (item.estado ?? "Activo") !== DISCONTINUED).map((item) => ({ id: item.id, nombre: item.nombre })));
-      } catch {
-      }
-      return billing2Legacy.promoted() ?? [];
-    };
-    const [list] = await Promise.all([read3(), loadMaterials()]);
-    return list;
-  }
-
-  // src/app/screens/products/deposit-form.ts
-  var whole2 = (input6) => Math.max(0, Math.floor(Number(input6.value) || 0));
-  var batchOf = (line2) => escapeHtml(orFallback(line2.numero_lote, t("products.deposit.noBatchLower")));
-  var actsHtml = (ok) => `<div class="acts u-end"><button type="button" class="btn sec" id="depcanc">${t("common.cancel")}</button><button type="button" class="btn" id="depok">${ok}</button></div>`;
-  function replenishHtml() {
-    const products3 = purchasesLegacy.products().filter((item) => item.activo !== false && orFallback(item.estado, "Activo") !== "Descatalogado");
-    return `<div class="depbox"><b>${t("products.deposit.replenishTitle")}</b>
-      <div class="segs" id="depori" role="group" aria-label="${t("products.deposit.from")}"><button type="button" data-o="maletin" class="on" aria-pressed="true">${t("products.deposit.fromCase")}</button><button type="button" data-o="central" aria-pressed="false">${t("products.deposit.fromCentral")}</button></div>
-      <div class="depitems">${products3.map((item) => `<label><span>${escapeHtml(item.nombre)}</span><input type="number" min="0" step="1" data-dprod="${item.id}" placeholder="0" aria-label="${t("products.deposit.unitsOfProduct", { name: escapeHtml(item.nombre) })}"></label>`).join("")}</div>
-      ${actsHtml(t("products.deposit.replenish"))}</div>`;
-  }
-  function useHtml(lines2) {
-    return `<div class="depbox"><b>${t("products.deposit.useTitle")}</b>
-      <div class="depitems">${lines2.map((line2, index) => `<label><span>${escapeHtml(line2.nombre)} <span class="sm">· ${batchOf(line2)} · ${t("products.deposit.left", { units: formatNumber(line2.unidades) })}</span></span>
-        <input type="number" min="0" max="${line2.unidades}" step="1" data-dlin="${index}" placeholder="0" aria-label="${t("products.deposit.usedOf", { name: escapeHtml(line2.nombre) })}"></label>`).join("")}</div>
-      <label for="depref">${t("products.deposit.reference")}</label><input id="depref" maxlength="120" placeholder="${t("products.deposit.referencePlaceholder", { ofTheCustomer: term("paciente", { article: "del" }) })}">
-      ${actsHtml(t("products.deposit.record"))}</div>`;
-  }
-  function countHtml3(lines2) {
-    return `<div class="depbox"><b>${t("products.deposit.countTitle")}</b><span class="sm">${t("products.deposit.countHint")}</span>
-      <div class="depitems">${lines2.map((line2, index) => `<label><span>${escapeHtml(line2.nombre)} <span class="sm">· ${batchOf(line2)} · ${t("products.deposit.had", { units: formatNumber(line2.unidades) })}</span></span>
-        <input type="number" min="0" step="1" data-dcnt="${index}" value="${line2.unidades}" aria-label="${t("products.deposit.countedOf", { name: escapeHtml(line2.nombre) })}"></label>`).join("")}</div>
-      ${actsHtml(t("products.deposit.saveCount"))}</div>`;
-  }
-  function request(form, deposit, action) {
-    const base = { cuenta_id: deposit.accountId, accion: action, op_id: `d${Date.now()}` };
-    if (action === "reponer") {
-      const items = [...form.querySelectorAll("[data-dprod]")].map((input6) => ({ producto_id: input6.dataset.dprod, unidades: whole2(input6) })).filter((item) => item.unidades > 0);
-      return items.length ? { ...base, origen: form.querySelector("#depori .on")?.dataset.o, items } : t("products.deposit.writeReplenish");
-    }
-    const lineAt = (input6, key) => deposit.lines[Number(input6.dataset[key])];
-    if (action === "consumo") {
-      const items = [...form.querySelectorAll("[data-dlin]")].map((input6) => {
-        const line2 = lineAt(input6, "dlin");
-        return { producto_id: line2?.producto_id, lote_id: line2?.lote_id, unidades: whole2(input6), max: line2?.unidades ?? 0 };
-      }).filter((item) => item.unidades > 0);
-      if (!items.length) return t("products.deposit.writeUsed");
-      if (items.some((item) => item.unidades > item.max)) return t("products.deposit.tooMany");
-      return { ...base, items, referencia: document.getElementById("depref")?.value.trim() ?? "" };
-    }
-    return { ...base, items: [...form.querySelectorAll("[data-dcnt]")].map((input6) => {
-      const line2 = lineAt(input6, "dcnt");
-      return { producto_id: line2?.producto_id, lote_id: line2?.lote_id, contadas: whole2(input6) };
-    }) };
-  }
-  function failureText7(result) {
-    if (result?.error === "sin_origen") return t("products.deposit.noSource");
-    return t(result?.error === "permiso" ? "products.deposit.noMovePermission" : "products.deposit.couldNotSave");
-  }
-  async function replenishUsed(deposit, used, button3) {
-    button3.disabled = true;
-    const { data: result } = await legacyDb().rpc("deposito_mover", { p: { cuenta_id: deposit.accountId, accion: "reponer", items: used.map((item) => ({ producto_id: item.producto_id, unidades: item.unidades })), op_id: `r${Date.now()}` } });
-    if (!result || result.ok === false) {
-      button3.disabled = false;
-      notices.toast(result?.error === "sin_origen" ? t("products.deposit.noSource") : t("products.deposit.couldNotReplenish"), true);
-      return;
-    }
-    notices.toast(t("products.deposit.usedReplenished"));
-    void productsLegacy.openDeposit(deposit.accountId, deposit.name);
-  }
-  async function afterSave(deposit, action, result) {
-    const used = result.usado ?? [];
-    let notice2 = "";
-    if (action === "reponer") notices.toast(t("products.deposit.replenished"));
-    else if (!used.length) notices.toast(t("products.deposit.nothingMissing"));
-    else {
-      notices.toast(t("products.deposit.usedRecorded"));
-      notice2 = `<div class="banda-ok depaviso">${t("products.deposit.usedNotice", { list: used.map((item) => `${escapeHtml(item.nombre)} ${formatNumber(item.unidades)}`).join(" · ") })}
-        <span class="depav"><button type="button" class="btn sec" id="depverped">${t("products.deposit.seeOrder")}</button><button type="button" class="btn" id="depreponer">${t("products.deposit.replenishUsed")}</button></span></div>`;
-    }
-    await productsLegacy.openDeposit(deposit.accountId, deposit.name, notice2);
-    const order = document.getElementById("depverped"), again = document.getElementById("depreponer");
-    if (order && result.pedido_id) order.onclick = () => {
-      appLegacy.openOrder(result.pedido_id ?? "");
-    };
-    if (again) again.onclick = () => {
-      void replenishUsed(deposit, used, again);
-    };
-  }
-  async function save12(form, deposit, action, button3) {
-    const payload10 = request(form, deposit, action);
-    if (typeof payload10 === "string") {
-      notices.toast(payload10, true);
-      return;
-    }
-    button3.disabled = true;
-    const { data: result, error } = await legacyDb().rpc("deposito_mover", { p: payload10 });
-    button3.disabled = false;
-    if (error || !result || result.ok === false) {
-      notices.toast(failureText7(result), true);
-      return;
-    }
-    await afterSave(deposit, action, result);
-  }
-  function openDepositForm(deposit, action) {
-    const form = document.getElementById("depform");
-    if (!form) return;
-    form.innerHTML = action === "reponer" ? replenishHtml() : action === "consumo" ? useHtml(deposit.lines) : countHtml3(deposit.lines);
-    const origins = form.querySelectorAll("[data-o]");
-    origins.forEach((button3) => {
-      button3.onclick = () => {
-        origins.forEach((other) => {
-          other.classList.toggle("on", other === button3);
-          other.setAttribute("aria-pressed", String(other === button3));
-        });
-      };
-    });
-    const cancel3 = document.getElementById("depcanc");
-    if (cancel3) cancel3.onclick = () => {
-      form.innerHTML = "";
-    };
-    const ok = document.getElementById("depok");
-    if (ok) ok.onclick = () => {
-      void save12(form, deposit, action, ok);
-    };
-  }
-
-  // src/app/screens/products/deposit.ts
-  var MOVEMENTS2 = /* @__PURE__ */ new Map([
-    ["traspaso_entrada", "products.deposit.moveIn"],
-    ["traspaso_salida", "products.deposit.moveOut"],
-    ["consumo_deposito", "products.deposit.moveUsed"],
-    ["ajuste", "products.deposit.moveAdjust"]
-  ]);
-  function summary2(lines2) {
-    const total = sum(lines2.map((line2) => line2.unidades));
-    if (!total) return t("products.deposit.empty");
-    const count = new Set(lines2.map((line2) => line2.producto_id)).size;
-    return t("products.deposit.unitsOf", { units: formatNumber(total), products: count === 1 ? t("products.deposit.oneProduct") : t("products.deposit.products", { count }) });
-  }
-  function tableHtml3(lines2) {
-    if (!lines2.length) return `<div class="vacio vlinea">${t("products.deposit.emptyDeposit")}</div>`;
-    const rows2 = lines2.map((line2) => `<div class="depf"><span>${escapeHtml(line2.nombre)}</span>
-      <span>${escapeHtml(orFallback(line2.numero_lote, t("products.deposit.noBatch")))}</span><span class="${relatedLegacy.expiresSoon(line2.caducidad) ? "depcad" : ""}">${line2.caducidad ? formatShortDate(line2.caducidad) : "—"}</span><b>${formatNumber(line2.unidades)}</b></div>`).join("");
-    return `<div class="deptab"><div class="deph"><span>${t("products.deposit.product")}</span><span>${t("products.deposit.batch")}</span><span>${t("products.deposit.expires")}</span><span>${t("products.deposit.units")}</span></div>${rows2}</div>`;
-  }
-  function movementRow(item) {
-    const key = MOVEMENTS2.get(item.tipo);
-    return `<div class="depmf"><span>${formatShortDate(String(item.fecha).slice(0, 10))}</span>
-      <span>${key ? t(key) : escapeHtml(item.tipo)}</span><span>${escapeHtml(item.nombre)}${item.numero_lote ? ` · ${escapeHtml(item.numero_lote)}` : ""}</span><b>${item.unidades > 0 ? "+" : ""}${formatNumber(item.unidades)}</b>
-      <span class="sm">${escapeHtml(String(item.nota ?? "").replace(/\s*\[[^\]]*\]$/, ""))}</span></div>`;
-  }
-  function historyHtml(detail) {
-    const used = detail.usado_90 ?? [], movements = detail.movimientos ?? [];
-    const usedText = used.length ? `<p class="sm">${t("products.deposit.used90", { list: used.map((item) => `${escapeHtml(item.nombre)} ${formatNumber(item.unidades)}`).join(" · ") })}</p>` : "";
-    return usedText + (movements.length ? `<details class="depmov"><summary>${t("products.deposit.lastMovements")}</summary>${movements.map(movementRow).join("")}</details>` : "");
-  }
-  function sheetHtml4(detail, name, notice2, lines2) {
-    const none = lines2.length ? "" : "disabled";
-    return `<div class="fh"><div><h2>${t("products.deposit.title", { name: escapeHtml(name) })}</h2><div class="sm">${summary2(lines2)}${t("products.deposit.stillYours")}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    ${notice2}
-    <div class="depacts"><button type="button" class="btn" data-dep="reponer">${t("products.deposit.replenish")}</button><button type="button" class="btn sec" data-dep="consumo" ${none}>${t("products.deposit.recordUse")}</button>
-      <button type="button" class="btn sec" data-dep="recuento" ${none}>${t("products.deposit.count")}</button></div>
-    <div id="depform"></div>
-    ${tableHtml3(lines2)}
-    ${historyHtml(detail)}
-    <div class="acts u-end"><button type="button" class="btn sec" data-cerrar>${t("common.close")}</button></div>`;
-  }
-  async function showDeposit2(accountId, name, notice2 = "") {
-    const { data: detail, error } = await legacyDb().rpc("deposito_estado", { p_cuenta: accountId });
-    if (error || !detail || detail.ok === false) {
-      notices.toast(t(detail?.error === "permiso" ? "products.deposit.noPermission" : "products.deposit.couldNotOpen"), true);
-      return;
-    }
-    if (!purchasesLegacy.products().length) await purchasesLegacy.loadProducts();
-    const lines2 = (detail.lineas ?? []).filter((line2) => line2.unidades > 0);
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = sheetHtml4(detail, name, notice2, lines2);
-    if (!box3.open) box3.showModal();
-    const deposit = { accountId, name, lines: lines2 };
-    body3.querySelectorAll("[data-dep]").forEach((button3) => {
-      button3.onclick = () => {
-        openDepositForm(deposit, button3.dataset.dep ?? "reponer");
-      };
-    });
-  }
-
-  // src/app/screens/products/page.ts
-  var TABS2 = [["productos", "products.page.products"], ["servicios", "products.page.services"], ["stock", "products.page.stock"]];
-  function actionsHtml3(section) {
-    if (section === "stock") {
-      if (!purchasesLegacy.canBuy()) return "";
-      return `<button class="btn sec" id="stalm">${t("products.page.stores")}</button><button class="btn sec" id="stmue">${t("products.page.samples")}</button><button class="btn" id="stini">${t("products.page.stockEntry")}</button>`;
-    }
-    if (!cardSectionsLegacy.can("administrar")) return "";
-    return `<button class="btn" id="prodnuevo">${t(section === "servicios" ? "products.page.newService" : "products.page.newProduct")}</button>`;
-  }
-  var on2 = (id, action) => {
-    const button3 = document.getElementById(id);
-    if (button3) button3.onclick = action;
-  };
-  function bind12(screen3, section) {
-    screen3.querySelectorAll("[data-ps]").forEach((button3) => {
-      button3.onclick = () => {
-        productsLegacy.setSection(button3.dataset.ps ?? "productos");
-        productsLegacy.reload();
-      };
-    });
-    on2("prodnuevo", () => {
-      if (section === "servicios") editService(null);
-      else productsLegacy.editProduct(null);
-    });
-    on2("stalm", () => {
-      void editStores();
-    });
-    on2("stmue", () => {
-      productsLegacy.editSamples();
-    });
-    on2("stini", () => {
-      void stockMovement(null, "inicial");
-    });
-  }
-  function loadProductsModule2() {
-    productsLegacy.clearModules("v-productos");
-    const screen3 = document.getElementById("v-productos");
-    if (!screen3) return Promise.resolve();
-    const section = productsLegacy.section();
-    screen3.innerHTML = `
-    <div class="saludo"><div><h1>${t("products.page.title")}</h1><div class="fecha">${t("products.page.subtitle")}</div></div>
-      <div class="acts u-m-0">${actionsHtml3(section)}</div></div>
-    <div class="subnav">${TABS2.map(([key, label]) => `<button data-ps="${key}" aria-pressed="${String(section === key)}">${t(label)}</button>`).join("\n      ")}</div>
-    <div id="vcuerpo"></div>`;
-    bind12(screen3, section);
-    if (section === "stock") void paintStock();
-    else if (section === "servicios") void paintServices();
-    else void paintProducts();
-    return Promise.resolve();
-  }
-
-  // src/app/screens/products/index.ts
-  var loadProductsModule = cachedModuleLoader("productos", loadProductsModule2);
-  var showStock = backOpener("fichaStock", sheetOpener(showStock2));
-  var showDeposit = backOpener("verDeposito", sheetOpener(showDeposit2));
 
   // src/app/legacy/legado-a-bridge.ts
   var startupLegacy = {
@@ -22526,7 +24278,7 @@
     loading: (element, text2) => {
       showLoading(element, text2);
     },
-    pages: (total, page, size) => pageHtml4(total, page, size),
+    pages: (total, page, size) => pageHtml6(total, page, size),
     reloadAdmin: () => {
       void loadAdmin([]);
     }
@@ -22694,6 +24446,17 @@
         });
       }
     }, LOADER_STEP_MS);
+  }
+  function switchToNotice(screen3, paint10) {
+    cancelPending(screen3);
+    if (!document.getElementById(`v-${screen3}`)) document.querySelector("main")?.insertAdjacentHTML("beforeend", `<section id="v-${screen3}"></section>`);
+    show(screen3);
+    const section = document.getElementById(`v-${screen3}`);
+    if (section) {
+      section.classList.remove("cargando", "plantilla");
+      paint10(section);
+    }
+    switchLegacy.paintBottomBar();
   }
   function switchScreen(screen3) {
     const redirected = redirect(screen3);
@@ -22987,16 +24750,16 @@
 
   // src/app/core/legacy-a/connection.ts
   var RETRY_MS = 6e4;
-  var changes2 = (count) => count === 1 ? t("legacyA.connection.oneChange") : t("legacyA.connection.changes", { count });
+  var changes2 = (count4) => count4 === 1 ? t("legacyA.connection.oneChange") : t("legacyA.connection.changes", { count: count4 });
   function paintConnection2() {
-    const count = connectionLegacy.queued(), element = document.getElementById("conex");
+    const count4 = connectionLegacy.queued(), element = document.getElementById("conex");
     if (!element) return;
     if (!navigator.onLine) {
       element.className = "conex off";
-      element.textContent = count ? t("legacyA.connection.offlineWaiting", { changes: changes2(count) }) : t("legacyA.connection.offline");
-    } else if (count) {
+      element.textContent = count4 ? t("legacyA.connection.offlineWaiting", { changes: changes2(count4) }) : t("legacyA.connection.offline");
+    } else if (count4) {
       element.className = "conex esp";
-      element.textContent = t("legacyA.connection.sending", { changes: changes2(count) });
+      element.textContent = t("legacyA.connection.sending", { changes: changes2(count4) });
     } else {
       element.className = "conex hide";
       element.textContent = "";
@@ -23096,7 +24859,7 @@
   var LIMIT2 = 6;
   var DOWNLOADERS = { seg: "__dlSeg", an: "__dlAn", dir: "__dlDir" };
   var timer2;
-  var asked = 0;
+  var asked2 = 0;
   var box = () => document.getElementById("gsug");
   var hideMenus = (keep) => {
     document.querySelectorAll(".dl-menu").forEach((menu) => {
@@ -23132,7 +24895,7 @@
   async function search3(query, wrapper, request2) {
     const { data } = await legacyDb().rpc("buscar_global", { q: query, lim: LIMIT2 });
     const results = box();
-    if (request2 !== asked || !results) return;
+    if (request2 !== asked2 || !results) return;
     wrapper?.classList.remove("buscando");
     if (!data) {
       results.innerHTML = `<div class="gload">${t("legacyA.search.couldNot")}</div>`;
@@ -23157,7 +24920,7 @@
     wrapper?.classList.add("buscando");
     results.innerHTML = `<div class="gload"><span class="spin"></span>${t("legacyA.search.searching")}</div>`;
     results.classList.remove("hide");
-    const request2 = ++asked;
+    const request2 = ++asked2;
     timer2 = setTimeout(() => {
       void search3(query, wrapper, request2);
     }, WAIT_MS2);
@@ -23755,8 +25518,8 @@
   function clearFilters2(panel, filters3) {
     Object.assign(filters3, { q: "", prov: "", muni: "", esp: "", est: "", urg: false, mios: false, sin: false, orden: "nombre", com: "", rep: "", campos: {} });
     for (const id of ["frep", "fcom", "q"]) {
-      const field10 = document.getElementById(id);
-      if (field10) field10.value = "";
+      const field11 = document.getElementById(id);
+      if (field11) field11.value = "";
     }
     toolsPanelLegacy.search();
     panel.classList.remove("abierto");
@@ -24100,7 +25863,7 @@
         <button class="btn sec" data-uver="${user.id}">${t("legacyA.admin.seePortfolio")}</button>
         <button class="btn sec" data-ucart="${user.id}">${t("legacyA.admin.assign")}</button>
         <button class="btn sec" data-upass="${user.id}">${t("legacyA.admin.password")}</button>
-        ${adminLegacy.canImpersonate(user) ? `<button class="btn sec" data-ucomo="${user.id}" title="${t("legacyA.admin.impersonateHint")}">${t("legacyA.admin.impersonate")}</button>` : ""}</span></div>`;
+        ${adminLegacy.canImpersonate(user) ? `<button class="btn sec" data-desktop-only data-ucomo="${user.id}" title="${t("legacyA.admin.impersonateHint")}">${t("legacyA.admin.impersonate")}</button>` : ""}</span></div>`;
   }
   function bindUsers() {
     const each = (attribute, action) => {
@@ -24193,7 +25956,7 @@
       <button class="btn sec" id="aquitar">${t("legacyA.portfolio.removeSelected", { professionals })}</button>
       <button class="btn" id="aasignar">${t("legacyA.portfolio.assignSelected", { professionals })}</button></div></div>`;
   }
-  function rowHtml11(item, state2) {
+  function rowHtml12(item, state2) {
     const chips2 = (item.comerciales ?? []).map((person) => `<span>${escapeHtml(portfolioLegacy.firstName(person.nombre))}</span>`).join("") || `<span class="sin">${t("legacyA.portfolio.unassigned")}</span>`;
     return `<label class="item" style="cursor:pointer;margin:0">
         <input type="checkbox" data-am="${item.id}" ${state2.left.has(item.id) ? "" : "checked"}>
@@ -24222,7 +25985,7 @@
     const { data } = await legacyDb().rpc("buscar_cuentas", { q: null, f_area: null, f_mios: false, f_sin_visitar: false, orden: "nombre", lim: PAGE, desplaz: state2.page * PAGE, ...filters() });
     state2.total = data ? data.total : 0;
     const rows2 = data?.filas ?? [];
-    list.innerHTML = `<div class="carsel">${rows2.map((row3) => rowHtml11(row3, state2)).join("") || `<div class="vacio">${t("legacyA.portfolio.none", { noProfessional: term("medico", { article: "ningun", articleCapital: "C" }) })}</div>`}</div><div id="apag"></div>`;
+    list.innerHTML = `<div class="carsel">${rows2.map((row3) => rowHtml12(row3, state2)).join("") || `<div class="vacio">${t("legacyA.portfolio.none", { noProfessional: term("medico", { article: "ningun", articleCapital: "C" }) })}</div>`}</div><div id="apag"></div>`;
     list.querySelectorAll("[data-am]").forEach((box3) => {
       box3.onchange = () => {
         if (box3.checked) state2.left.delete(box3.dataset.am ?? "");
@@ -24230,9 +25993,9 @@
         paintCount(state2, repaint2);
       };
     });
-    const pages4 = byId17("apag");
-    if (pages4) pages4.innerHTML = state2.total > PAGE ? portfolioLegacy.pages(state2.total, state2.page, PAGE).replace(/<span class="ptam">[\s\S]*?<\/span><\/div>$/, "</div>") : "";
-    pages4?.querySelectorAll("[data-pg]").forEach((button3) => {
+    const pages5 = byId17("apag");
+    if (pages5) pages5.innerHTML = state2.total > PAGE ? portfolioLegacy.pages(state2.total, state2.page, PAGE).replace(/<span class="ptam">[\s\S]*?<\/span><\/div>$/, "</div>") : "";
+    pages5?.querySelectorAll("[data-pg]").forEach((button3) => {
       button3.onclick = () => {
         state2.page = Number(button3.dataset.pg);
         repaint2();
@@ -24240,8 +26003,8 @@
     });
     paintCount(state2, repaint2);
   }
-  function confirmChange(user, count, remove6) {
-    const text2 = t(remove6 ? "legacyA.portfolio.confirmRemove" : "legacyA.portfolio.confirmAssign", { count: formatNumber(count), professionals: term("medico", { number: "p" }), name: user.nombre });
+  function confirmChange(user, count4, remove6) {
+    const text2 = t(remove6 ? "legacyA.portfolio.confirmRemove" : "legacyA.portfolio.confirmAssign", { count: formatNumber(count4), professionals: term("medico", { number: "p" }), name: user.nombre });
     return notices.confirm(text2, { titulo: t(remove6 ? "legacyA.portfolio.removeTitle" : "legacyA.portfolio.assignTitle"), ok: t(remove6 ? "legacyA.portfolio.remove" : "legacyA.portfolio.assign"), peligro: remove6 });
   }
   var failureText8 = (error) => t("legacyA.portfolio.couldNot", { error: error?.message ?? t("legacyA.portfolio.noPermission") });
@@ -24280,8 +26043,8 @@
     body3.innerHTML = windowHtml3(user, options3 ?? {});
     const state2 = { total: 0, page: 0, left: /* @__PURE__ */ new Set() };
     FILTER_IDS.forEach((key) => {
-      const field10 = byId17(key);
-      if (field10) field10.onchange = () => {
+      const field11 = byId17(key);
+      if (field11) field11.onchange = () => {
         state2.page = 0;
         state2.left.clear();
         void paintList2(state2);
@@ -24474,8 +26237,8 @@
   function chartFor(id, kpis, panel, charts) {
     return CHARTS.get(id)?.({ id, kpis, panel, charts, today: todayIso() }) ?? EMPTY_CHART;
   }
-  function helpButton2(help4, title2) {
-    return help4 ? `<button class="ai" data-ayuda-txt="${escapeHtml(help4)}" data-ayuda-tit="${escapeHtml(title2)}" aria-label="${t("home.indicators.whatIsIt")}">i</button>` : "";
+  function helpButton2(help5, title2) {
+    return help5 ? `<button class="ai" data-ayuda-txt="${escapeHtml(help5)}" data-ayuda-tit="${escapeHtml(title2)}" aria-label="${t("home.indicators.whatIsIt")}">i</button>` : "";
   }
   function figure(raw) {
     const text2 = String(raw), fraction = /^(\d+)\/(\d+)$/.exec(text2);
@@ -24487,12 +26250,12 @@
     const classes = `kpi ${definition.cls ? definition.cls(context.kpis) : ""} ${definition.h ? "click" : ""}${context.panel ? " kv" : ""}`;
     const action = definition.h ? ` data-k="${definition.h}"` : "";
     const icon3 = indicatorCatalog.icon(definition.id), description = indicatorCatalog.description(definition.id);
-    const help4 = helpButton2(indicatorCatalog.help(definition.id), title2);
+    const help5 = helpButton2(indicatorCatalog.help(definition.id), title2);
     const raw = definition.v(context.kpis);
     const body3 = context.panel ? liveBody(definition.id, capitalise(title2).trim(), raw, context) : `
-       ${help4}
+       ${help5}
        <b>${typeof raw === "string" ? raw : formatNumber(raw)}</b><span>${escapeHtml(capitalise(title2))}</span>`;
-    return `<div class="${classes}"${action} data-kid="${definition.id}" data-comp="1">${icon3 ? `<span class="kico" aria-hidden="true">${icon3}</span>` : ""}${context.panel ? help4 : ""}${body3}${description ? `<em class="kdesc">${escapeHtml(description)}</em>` : ""}</div>`;
+    return `<div class="${classes}"${action} data-kid="${definition.id}" data-comp="1">${icon3 ? `<span class="kico" aria-hidden="true">${icon3}</span>` : ""}${context.panel ? help5 : ""}${body3}${description ? `<em class="kdesc">${escapeHtml(description)}</em>` : ""}</div>`;
   }
   function liveBody(id, title2, raw, context) {
     const { summary: summary4, visual } = chartFor(id, context.kpis, context.panel, context.charts);
@@ -24503,13 +26266,13 @@
   function filterCard(setting2, index, live) {
     const filter = setting2.filtro ?? {};
     const name = setting2.t ? setting2.t : filterText(filter);
-    const help4 = `<button class="ai" data-ayuda-txt="${escapeHtml(t("home.indicators.filterHelp", { help: indicatorCatalog.help("filtro") ?? "", filter: filterText(filter) }))}" data-ayuda-tit="${escapeHtml(setting2.t ? setting2.t : t("home.indicators.savedFilter"))}" aria-label="${t("home.indicators.whatIsIt")}">i</button>`;
-    const count = '<b class="cont"><span class="spin" style="width:18px;height:18px;border-width:2px;display:inline-block"></span></b>';
+    const help5 = `<button class="ai" data-ayuda-txt="${escapeHtml(t("home.indicators.filterHelp", { help: indicatorCatalog.help("filtro") ?? "", filter: filterText(filter) }))}" data-ayuda-tit="${escapeHtml(setting2.t ? setting2.t : t("home.indicators.savedFilter"))}" aria-label="${t("home.indicators.whatIsIt")}">i</button>`;
+    const count4 = '<b class="cont"><span class="spin" style="width:18px;height:18px;border-width:2px;display:inline-block"></span></b>';
     return live ? `<div class="kpi click kv" data-kf="${escapeHtml(JSON.stringify(filter))}" data-kfi="${index}">
-        ${help4}
-        <span class="kvt">${escapeHtml(name)}</span><div class="kvn">${count}</div></div>` : `<div class="kpi click" data-kf="${escapeHtml(JSON.stringify(filter))}" data-kfi="${index}">
-        ${help4}
-        ${count}<span>${escapeHtml(name)}</span></div>`;
+        ${help5}
+        <span class="kvt">${escapeHtml(name)}</span><div class="kvn">${count4}</div></div>` : `<div class="kpi click" data-kf="${escapeHtml(JSON.stringify(filter))}" data-kfi="${index}">
+        ${help5}
+        ${count4}<span>${escapeHtml(name)}</span></div>`;
   }
 
   // src/app/screens/home/indicators/index.ts
@@ -24553,9 +26316,9 @@
   function countSavedFilters(settings2) {
     settings2.forEach((setting2, index) => {
       if (!setting2.filtro) return;
-      countFilter(setting2.filtro).then((count) => {
+      countFilter(setting2.filtro).then((count4) => {
         const figure2 = document.querySelector(`#kpis [data-kfi="${index}"] .cont`);
-        if (figure2) figure2.textContent = formatNumber(count);
+        if (figure2) figure2.textContent = formatNumber(count4);
       }).catch(() => void 0);
     });
   }
@@ -24619,7 +26382,7 @@
   var EDITABLE_STATES = [STATES4.draft, STATES4.sent, STATES4.inTransit];
   var CLOSED_STATES = [STATES4.received, STATES4.cancelled];
   var errorText4 = (error, result) => error?.message ?? result?.error ?? "";
-  var euros6 = (value10) => formatCurrency(round2(value10));
+  var euros7 = (value10) => formatCurrency(round2(value10));
   function purchasePill(state2) {
     const kind = state2 === STATES4.received ? "p-est" : state2 === STATES4.cancelled ? "p-anu" : state2 === STATES4.draft ? "p-bor" : "p-per";
     return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
@@ -24636,10 +26399,10 @@
       <div class="kpi"><b>${formatNumber(open2.length)}</b><span>${t("purchases.list.inProgress")}</span></div>
       <div class="kpi"><b>${formatNumber(sum(open2.map((row3) => row3.unidades - row3.recibidas)))}</b><span>${t("purchases.list.unitsOnTheWay")}</span></div>
       <div class="kpi ${late.length ? "warn" : ""}"><b>${formatNumber(late.length)}</b><span>${t("purchases.list.late")}</span></div>
-      <div class="kpi"><b>${euros6(bought)}</b><span>${t("purchases.list.boughtThisYear")}</span></div>
+      <div class="kpi"><b>${euros7(bought)}</b><span>${t("purchases.list.boughtThisYear")}</span></div>
     </div>`;
   }
-  function rowHtml12(row3) {
+  function rowHtml13(row3) {
     const expected = row3.fecha_prevista ? formatShortDate(row3.fecha_prevista) + (row3.retrasada ? t("purchases.list.lateTag") : "") : "—";
     const received = row3.recibidas && row3.recibidas < row3.unidades ? `${formatNumber(row3.recibidas)}/` : "";
     return `<button class="dr" data-comp="${row3.id}">
@@ -24647,14 +26410,14 @@
         <span>${formatShortDate(row3.fecha)}</span>
         <span style="${row3.retrasada ? LATE_STYLE : ""}">${expected}</span>
         <span class="num">${received}${formatNumber(row3.unidades)}</span>
-        <span class="num">${euros6(row3.importe)}</span><span>${purchasePill(row3.estado)}</span></button>`;
+        <span class="num">${euros7(row3.importe)}</span><span>${purchasePill(row3.estado)}</span></button>`;
   }
   function tableHtml4(rows2) {
     if (!rows2.length) return `<div class="vacio">${t("purchases.list.none")}${purchasesLegacy.canBuy() ? t("purchases.list.createFirst") : ""}</div>`;
     const head = [["", "number"], ["", "supplier"], ["", "products"], ["", "date"], ["", "expected"], ["num", "units"], ["num", "amount"], ["", "state"]];
     return `<div class="dgrid-wrap"><div class="dgrid comps">
       <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${t(`purchases.list.${key}`)}</span>`).join("")}</div>
-      ${rows2.map(rowHtml12).join("")}
+      ${rows2.map(rowHtml13).join("")}
     </div></div>`;
   }
   async function paintPurchases() {
@@ -24681,7 +26444,7 @@
 
   // src/app/screens/purchases/suppliers.ts
   var joined2 = (values2) => values2.filter(Boolean).join(" · ");
-  function rowHtml13(supplier) {
+  function rowHtml14(supplier) {
     return `<button class="dr" data-prov="${supplier.id ?? ""}" style="${supplier.activo ? "" : "opacity:.55"}">
       <span><b>${escapeHtml(supplier.nombre)}</b><span class="sm">${escapeHtml(joined2([supplier.municipio, supplier.pais]))}</span></span>
       <span>${escapeHtml(orFallback(supplier.nif, "—"))}</span><span class="sm">${escapeHtml(orFallback(joined2([supplier.contacto, supplier.email, supplier.telefono]), "—"))}</span>
@@ -24694,7 +26457,7 @@
     const head = [["", "supplier"], ["", "taxId"], ["", "contact"], ["num", "leadTime"], ["num", "purchases"], ["", "lastPurchase"], ["", "state"]];
     return `<div class="dgrid-wrap"><div class="dgrid provs">
     <div class="dh">${head.map(([kind, key]) => `<span${kind ? ` class="${kind}"` : ""}>${t(`purchases.suppliers.${key}`)}</span>`).join("")}</div>
-    ${suppliers.map(rowHtml13).join("")}
+    ${suppliers.map(rowHtml14).join("")}
   </div></div>`;
   }
   async function paintSuppliers() {
@@ -24728,13 +26491,13 @@
     ["cuenta_contable", "purchases.supplierEditor.account", 'placeholder="400xxxxx"']
   ];
   var SAVED_FIELDS = [...FIELDS2.map(([name]) => name), "nota"];
-  function fieldHtml(supplier, [name, label, extra = ""], readOnly) {
+  function fieldHtml2(supplier, [name, label, extra = ""], readOnly) {
     const current = supplier[name];
     return `<div><label for="pv_${name}">${t(label)}</label><input id="pv_${name}" value="${escapeHtml(current ?? "")}" ${extra} ${readOnly}></div>`;
   }
   function editorHtml7(supplier, canBuy2) {
     const readOnly = canBuy2 ? "" : "disabled", pairs2 = [];
-    for (let i = 0; i < FIELDS2.length; i += 2) pairs2.push(`<div class="g2">${FIELDS2.slice(i, i + 2).map((item) => fieldHtml(supplier, item, readOnly)).join("")}</div>`);
+    for (let i = 0; i < FIELDS2.length; i += 2) pairs2.push(`<div class="g2">${FIELDS2.slice(i, i + 2).map((item) => fieldHtml2(supplier, item, readOnly)).join("")}</div>`);
     return `
     <div class="fh"><div><h2>${supplier.id ? escapeHtml(supplier.nombre) : t("purchases.supplierEditor.newTitle")}</h2><div class="sm">${t("purchases.supplierEditor.subtitle")}</div></div>
       <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
@@ -24746,8 +26509,8 @@
   function readValues(supplier) {
     const values2 = { id: supplier.id ?? null };
     for (const name of SAVED_FIELDS) values2[name] = (document.getElementById(`pv_${name}`)?.value ?? "").trim();
-    const active = document.getElementById("pv_activo");
-    if (active) values2.activo = active.checked;
+    const active2 = document.getElementById("pv_activo");
+    if (active2) values2.activo = active2.checked;
     return values2;
   }
   async function save13(supplier) {
@@ -24770,7 +26533,7 @@
     const supplier = existing ?? { activo: true, plazo_dias: usualLeadDays(), pais: organisationCountry() };
     const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
     if (!body3 || !box3) return;
-    body3.innerHTML = editorHtml7(supplier, purchasesLegacy.canBuy());
+    body3.innerHTML = editorHtml7(supplier, purchasesLegacy.canBuy() && levelNow("proveedores") !== "read");
     box3.showModal();
     const ok = document.getElementById("pvok");
     if (ok) ok.onclick = () => {
@@ -24854,7 +26617,7 @@
   function totalsHtml2(lines2, shipping) {
     const amount2 = sum(lines2.map((line2) => (Number(line2.unidades) || 0) * (Number(line2.coste_unitario) || 0))) + shipping;
     return `<div><span>${t("purchases.editor.totalUnits")}</span><b>${formatNumber(sum(lines2.map((line2) => Number(line2.unidades) || 0)))}</b></div>
-        <div class="tot"><span>${t("purchases.editor.totalAmount")}</span><b>${euros6(amount2)}</b></div>`;
+        <div class="tot"><span>${t("purchases.editor.totalAmount")}</span><b>${euros7(amount2)}</b></div>`;
   }
 
   // src/app/screens/purchases/receive.ts
@@ -24942,17 +26705,17 @@
     if (box3) box3.innerHTML = totalsHtml2(editor.lines, Number(value7("cpport")) || 0);
   }
   function onLineChange(editor, target) {
-    const [index = "", field10 = ""] = (target.dataset.cl ?? "").split("|"), line2 = editor.lines[Number(index)];
-    if (!field10 || !line2) return;
-    if (field10 === "producto_id") {
+    const [index = "", field11 = ""] = (target.dataset.cl ?? "").split("|"), line2 = editor.lines[Number(index)];
+    if (!field11 || !line2) return;
+    if (field11 === "producto_id") {
       line2.producto_id = target.value;
       const product = purchasesLegacy.products().find((item) => item.id === target.value);
       if (product && product.coste !== null && product.coste !== void 0) {
         line2.coste_unitario = product.coste;
-        paint6(editor);
+        paint7(editor);
         return;
       }
-    } else if (field10 === "unidades") line2.unidades = Number(target.value);
+    } else if (field11 === "unidades") line2.unidades = Number(target.value);
     else line2.coste_unitario = Number(target.value);
     paintTotals2(editor);
   }
@@ -24973,12 +26736,12 @@
     const add = document.getElementById("cpmas");
     if (add) add.onclick = () => {
       editor.lines.push(newLine());
-      paint6(editor);
+      paint7(editor);
     };
     lines2?.querySelectorAll("[data-clx]").forEach((button3) => {
       button3.onclick = () => {
         editor.lines.splice(Number(button3.dataset.clx), 1);
-        paint6(editor);
+        paint7(editor);
       };
     });
     const supplier = document.getElementById("cpprov");
@@ -25059,7 +26822,7 @@
       if (editor.id && editor.detail) receivePurchase(editor.id, editor.detail);
     });
   }
-  function paint6(editor) {
+  function paint7(editor) {
     const body3 = document.getElementById("dbody");
     if (!body3) return;
     body3.innerHTML = editorHtml8(editor);
@@ -25078,7 +26841,7 @@
       editable: purchasesLegacy.canBuy() && EDITABLE_STATES.includes(purchase.estado),
       lines: detail ? detail.lineas.map((line2) => ({ ...line2 })) : [newLine()]
     };
-    paint6(editor);
+    paint7(editor);
     document.getElementById("dlg")?.showModal();
   }
 
@@ -25169,8 +26932,8 @@
         alert.remove();
         return;
       }
-      const count = [...summary4.querySelectorAll("span, b")].find((element) => /^\d+$/.test((element.textContent ?? "").trim()));
-      if (count && items.length) count.textContent = String(left);
+      const count4 = [...summary4.querySelectorAll("span, b")].find((element) => /^\d+$/.test((element.textContent ?? "").trim()));
+      if (count4 && items.length) count4.textContent = String(left);
     });
     const card3 = box3.querySelector("details.alerta2")?.closest(".card") ?? null;
     const total = card3?.querySelector("h2 .n");
@@ -25314,12 +27077,12 @@
   async function paintOperations() {
     if (!isHome() || !document.getElementById("iniextra") || !(permissions.seesEverything() && permissions.salesLevel() >= 1)) return;
     const { data } = await callRpc("operativa_pendiente", {});
-    const count = (key) => (data?.[key] ?? []).length;
-    if (!(count("pago") + count("paquete") + count("email_factura") + count("email_pago")) || document.getElementById("iniops")) return;
+    const count4 = (key) => (data?.[key] ?? []).length;
+    if (!(count4("pago") + count4("paquete") + count4("email_factura") + count4("email_pago")) || document.getElementById("iniops")) return;
     const rows2 = [
-      [count("pago"), t("homeMore.operations.toCollect"), count("pago") ? "aviso" : ""],
-      [count("paquete"), t("homeMore.operations.toPack"), ""],
-      [count("email_factura") + count("email_pago"), t("homeMore.operations.toSend"), ""]
+      [count4("pago"), t("homeMore.operations.toCollect"), count4("pago") ? "aviso" : ""],
+      [count4("paquete"), t("homeMore.operations.toPack"), ""],
+      [count4("email_factura") + count4("email_pago"), t("homeMore.operations.toSend"), ""]
     ];
     document.getElementById("iniextra")?.insertAdjacentHTML("afterbegin", `<div class="card" id="iniops"><h2>${t("homeMore.operations.title")}</h2>
     <div class="opfilas">${rows2.map(([value10, label, kind]) => `<button class="opfila" data-opver><b class="${kind}">${formatNumber(value10)}</b><span>${label}</span>${CHEVRON}</button>`).join("")}</div></div>`);
@@ -25332,10 +27095,10 @@
   async function paintCallsToday() {
     if (!isHome() || !permissions.seesEverything() || !permissions.hasOpportunities() || !document.getElementById("iniextra") || document.getElementById("inillam")) return;
     const { data } = await callRpc("llamadas_seguimiento", {});
-    const today2 = todayIso(), due = (data ?? []).filter((call2) => call2.proxima_fecha <= today2);
+    const today2 = todayIso(), due = (data ?? []).filter((call3) => call3.proxima_fecha <= today2);
     if (!due.length || document.getElementById("inillam")) return;
     document.getElementById("iniextra")?.insertAdjacentHTML("afterbegin", `<div class="card" id="inillam"><h2>${t("homeMore.calls.title")}<span class="n">${due.length}</span></h2>
-    <p class="sm u-p-0-16">${t("homeMore.calls.hint", { late: due.some((call2) => call2.proxima_fecha < today2) ? t("homeMore.calls.late") : "" })}</p>
+    <p class="sm u-p-0-16">${t("homeMore.calls.hint", { late: due.some((call3) => call3.proxima_fecha < today2) ? t("homeMore.calls.late") : "" })}</p>
     <div class="acts u-p-0-16-14"><button class="btn sec" id="inillamver">${t("homeMore.calls.seeOpportunities")}</button></div></div>`);
     const see = document.getElementById("inillamver");
     if (see) see.onclick = () => {
@@ -25389,8 +27152,8 @@
     }
   }
   function removeOldBlocks() {
-    document.getElementById("v-inicio")?.querySelectorAll(":scope > .cols, :scope > #iniextra, :scope > #inialerta, :scope > #vistazo").forEach((block3) => {
-      block3.remove();
+    document.getElementById("v-inicio")?.querySelectorAll(":scope > .cols, :scope > #iniextra, :scope > #inialerta, :scope > #vistazo").forEach((block4) => {
+      block4.remove();
     });
   }
 
@@ -25432,23 +27195,23 @@
   }
   var delta = (now, before) => !before ? "" : `<span class="delta ${now >= before ? "up" : "down"}">${now >= before ? "▲" : "▼"} ${Math.abs(Math.round((now - before) / before * 100))}%</span>`;
   var warn = (on3) => on3 ? "color:var(--warn)" : "";
-  var mini = (value10, label, style = "") => `<div><b${style ? ` style="${style}"` : ""}>${value10}</b><span>${label}</span></div>`;
+  var mini2 = (value10, label, style = "") => `<div><b${style ? ` style="${style}"` : ""}>${value10}</b><span>${label}</span></div>`;
   function myWeekHtml(data) {
     const today2 = todayIso(), past = data.week.filter((item) => item.fecha < today2 && item.estado !== DISCARDED);
     const compliance2 = past.length ? Math.round(past.filter((item) => item.estado === VISITED2).length / past.length * 100) : null;
     const visited = data.week.filter((item) => item.estado === VISITED2).length, open2 = data.week.filter((item) => appointments.isOpen(item.estado) && item.fecha >= today2).length;
     return `<div class="card"><h2>${t("homeMore.week.myWeek")}</h2>
-      <div class="minis">${mini(formatNumber(visited), t("homeMore.week.visited"))}${mini(formatNumber(open2), t("homeMore.week.toDo"))}
-        ${mini(compliance2 === null ? "—" : `${compliance2}%`, t("homeMore.week.compliance"), warn(compliance2 !== null && compliance2 < LOW_COMPLIANCE))}
-        ${mini(formatNumber(data.due), t("homeMore.week.due", { visit: term("visita") }), warn(data.due > 0))}</div>
+      <div class="minis">${mini2(formatNumber(visited), t("homeMore.week.visited"))}${mini2(formatNumber(open2), t("homeMore.week.toDo"))}
+        ${mini2(compliance2 === null ? "—" : `${compliance2}%`, t("homeMore.week.compliance"), warn(compliance2 !== null && compliance2 < LOW_COMPLIANCE))}
+        ${mini2(formatNumber(data.due), t("homeMore.week.due", { visit: term("visita") }), warn(data.due > 0))}</div>
       <div class="acts u-p-0-16-14"><button class="btn sec" data-inisem="semana">${t("homeMore.week.seeMyWeek")}</button>${data.due ? `<button class="btn sec" data-inisem="plan">${t("homeMore.week.planThem")}</button>` : ""}</div></div>`;
   }
   function salesHtml(data) {
     const units = Number(data.now.unidades ?? 0), unitsBefore = Number(data.before.unidades ?? 0), amount2 = Number(data.now.importe ?? 0);
     return `<div class="card"><h2>${t("homeMore.week.salesOfMonth")}</h2>
-      <div class="minis">${mini(formatNumber(units), `${t("homeMore.week.units")} ${delta(units, unitsBefore)}`)}
-        ${permissions.canSeeAmounts() ? mini(portalLegacy.euros(amount2), `${t("homeMore.week.withoutVat")} ${delta(amount2, Number(data.before.importe ?? 0))}`) : ""}
-        ${mini(formatNumber(data.now.medicos ?? 0), t("homeMore.week.withSales", { professionals: term("medico", { number: "p" }) }))}</div>
+      <div class="minis">${mini2(formatNumber(units), `${t("homeMore.week.units")} ${delta(units, unitsBefore)}`)}
+        ${permissions.canSeeAmounts() ? mini2(portalLegacy.euros(amount2), `${t("homeMore.week.withoutVat")} ${delta(amount2, Number(data.before.importe ?? 0))}`) : ""}
+        ${mini2(formatNumber(data.now.medicos ?? 0), t("homeMore.week.withSales", { professionals: term("medico", { number: "p" }) }))}</div>
       <p class="sm u-p-0-16-14">${t("homeMore.week.compared", { units: formatNumber(unitsBefore) })}</p></div>`;
   }
   function teamHtml(team3) {
@@ -25457,10 +27220,10 @@
     const base = sum(["visitadas", "no_estaba", "aplazadas", "sin_hacer"].map((key) => totals[key] ?? 0));
     const value10 = (key) => totals[key] ?? 0;
     return `<div class="card"><h2>${t("homeMore.week.teamThisWeek")}</h2>
-      <div class="minis">${mini(base ? `${Math.round(value10("visitadas") / base * 100)}%` : "—", t("homeMore.week.compliance"))}
-        ${mini(formatNumber(value10("visitadas")), t("homeMore.week.visited"))}
-        ${mini(formatNumber(value10("sin_hacer")), t("homeMore.week.notDone"), warn(value10("sin_hacer") > 0))}
-        ${mini(formatNumber(value10("atrasados")), t("homeMore.week.dueShort"), warn(value10("atrasados") > 0))}</div>
+      <div class="minis">${mini2(base ? `${Math.round(value10("visitadas") / base * 100)}%` : "—", t("homeMore.week.compliance"))}
+        ${mini2(formatNumber(value10("visitadas")), t("homeMore.week.visited"))}
+        ${mini2(formatNumber(value10("sin_hacer")), t("homeMore.week.notDone"), warn(value10("sin_hacer") > 0))}
+        ${mini2(formatNumber(value10("atrasados")), t("homeMore.week.dueShort"), warn(value10("atrasados") > 0))}</div>
       <div class="acts u-p-0-16-14"><button class="btn sec" id="iniequipo">${t("homeMore.week.seeTeam")}</button></div></div>`;
   }
   function bind14(box3) {
@@ -25616,8 +27379,8 @@
   }
   function callBackItem(data, add) {
     if (!data.calls) return;
-    const due = data.calls.filter((call2) => call2.proxima_fecha && call2.proxima_fecha <= data.today);
-    const late = due.some((call2) => (call2.proxima_fecha ?? "") < data.today);
+    const due = data.calls.filter((call3) => call3.proxima_fecha && call3.proxima_fecha <= data.today);
+    const late = due.some((call3) => (call3.proxima_fecha ?? "") < data.today);
     add({
       count: due.length,
       priority: "media",
@@ -25750,8 +27513,8 @@
     const step = (now) => {
       const progress = Math.min(1, (now - start3) / COUNT_DURATION_MS2), eased = 1 - Math.pow(1 - progress, 3);
       figures.forEach((el) => {
-        const euros7 = el.dataset.meur;
-        el.textContent = euros7 === void 0 ? formatNumber(Math.round(Number(el.dataset.mcnt) * eased)) : formatEuros(Number(euros7) * eased);
+        const euros8 = el.dataset.meur;
+        el.textContent = euros8 === void 0 ? formatNumber(Math.round(Number(el.dataset.mcnt) * eased)) : formatEuros(Number(euros8) * eased);
       });
       if (progress < 1) requestAnimationFrame(step);
     };
@@ -26286,9 +28049,9 @@
     });
   }
   async function linkToCall(result) {
-    const call2 = legacyBState.pendingCall();
-    if (result.error || !result.data?.ok || !result.data.id || !call2) return;
-    await legacyBActions.rpcOriginal("vincular_llamada_pedido", { p_llamada: call2, p_pedido: result.data.id });
+    const call3 = legacyBState.pendingCall();
+    if (result.error || !result.data?.ok || !result.data.id || !call3) return;
+    await legacyBActions.rpcOriginal("vincular_llamada_pedido", { p_llamada: call3, p_pedido: result.data.id });
     legacyBState.forgetPendingCall();
     notices.toast(t("legacyB.orders.linkedToCall"));
   }
@@ -26310,11 +28073,11 @@
 
   // src/app/core/boot/watchers.ts
   function inBatches(handle2, options3 = {}) {
-    const active = options3.active ?? (() => true);
+    const active2 = options3.active ?? (() => true);
     const pending = /* @__PURE__ */ new Set();
     let queued2 = false;
     new MutationObserver((mutations) => {
-      if (!active()) return;
+      if (!active2()) return;
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           const element = node.nodeType === Node.ELEMENT_NODE ? node : options3.anyNode || node.nodeType === Node.TEXT_NODE ? node.parentElement : null;
@@ -26392,13 +28155,13 @@
     let { data: result, error } = await legacyBActions.rpcOriginal("pruebas_resetear_responsable", { p_confirmacion: CONFIRMATION });
     if (error && missingFunction.test(error.message ?? "")) ({ data: result, error } = await legacyBActions.rpcOriginal("pruebas_resetear", { p_confirmacion: CONFIRMATION }));
     if (error || !result?.ok) {
-      failed3(result, error);
+      failed2(result, error);
       return;
     }
     legacyBActions.clearLocalData();
     location.reload();
   }
-  function failed3(result, error) {
+  function failed2(result, error) {
     legacyBActions.hideLoadingScreen();
     notices.toast(result?.error === "permiso" ? t("legacyB.testEnvironment.onlyResponsible") : t("legacyB.testEnvironment.couldNot", { error: error?.message ?? result?.error ?? "" }), true);
   }
@@ -26655,16 +28418,16 @@
     input6.value = step < 1 ? value10.toFixed((String(step).split(".")[1] ?? "").length) : String(value10);
     legacyBActions.emit(input6);
   }
-  function onClick3(event) {
+  function onClick5(event) {
     const target = event.target;
     const stepper = target.closest(".numw .nb");
     if (stepper) {
       stepNumber(stepper);
       return;
     }
-    const field10 = target.closest(".selw");
-    if (field10) {
-      const input6 = field10.querySelector("input");
+    const field11 = target.closest(".selw");
+    if (field11) {
+      const input6 = field11.querySelector("input");
       if (!input6 || input6.disabled || input6.dataset.ro === "1") return;
       event.preventDefault();
       openPicker(input6);
@@ -26673,7 +28436,7 @@
     if (justOpened(layer())) return;
     if (!target.closest(".selpop")) legacyBActions.closeSelector();
   }
-  function onKey2(event) {
+  function onKey3(event) {
     const target = event.target, input6 = target instanceof Element ? target.closest(".selw input") : null;
     if (input6 && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
@@ -26682,11 +28445,11 @@
     if (event.key === "Escape") legacyBActions.closeSelector();
   }
   function listenToPickers() {
-    document.addEventListener("click", onClick3, true);
+    document.addEventListener("click", onClick5, true);
     document.addEventListener("mousedown", (event) => {
       if (event.target.closest(".selw input")) event.preventDefault();
     }, true);
-    document.addEventListener("keydown", onKey2);
+    document.addEventListener("keydown", onKey3);
     document.addEventListener("scroll", (event) => {
       const popover = legacyBState.selectedPopover(), target = event.target;
       if (popover && Date.now() - (popover.__t ?? 0) > GHOST_CLICK_MS && !(target instanceof Element && target.closest(".selpop"))) legacyBActions.closeSelector();
@@ -26723,14 +28486,14 @@
   function placePicker(reference2) {
     const dialog7 = layer();
     if (!dialog7) return;
-    const mobile = legacyBState.isMobile();
-    dialog7.style.right = mobile ? "" : "auto";
-    dialog7.style.bottom = mobile ? "" : "auto";
+    const mobile2 = legacyBState.isMobile();
+    dialog7.style.right = mobile2 ? "" : "auto";
+    dialog7.style.bottom = mobile2 ? "" : "auto";
     if (!dialog7.open) {
       dialog7.__abierto = Date.now();
       dialog7.showModal();
     }
-    if (mobile) {
+    if (mobile2) {
       dialog7.classList.add("hoja");
       dialog7.style.top = "";
       dialog7.style.left = "";
@@ -27087,7 +28850,7 @@
     await legacyBActions.teamTable();
     const header2 = document.getElementById("agcuerpo")?.querySelector(".semhead");
     if (!header2 || !legacyBActions.can("administrar") || document.getElementById("eqcart")) return;
-    header2.insertAdjacentHTML("beforeend", `<button class="btn sec" id="eqcart">${t("legacyB.team.portfolioRules")}</button>`);
+    header2.insertAdjacentHTML("beforeend", `<button class="btn sec" id="eqcart" data-desktop-only>${t("legacyB.team.portfolioRules")}</button>`);
     const rules = document.getElementById("eqcart");
     if (rules) rules.onclick = () => {
       legacyBActions.portfolioRules();
@@ -27192,6 +28955,12 @@
   // src/app/core/navigation/menu/mobile.ts
   var MENU_OUT = ["usuarios"];
   var BAR_DEFAULT = ["inicio", "agenda", "rutas", "directorio"];
+  function defaultBar() {
+    if (can("televenta")) return ["inicio", "ventas", "pacientes", "oportunidades"];
+    if (can("administrar")) return ["inicio", "ventas", "facturacion", "pacientes"];
+    if (can("ver_todo")) return ["inicio", "analitica", "agenda", "ventas"];
+    return BAR_DEFAULT;
+  }
   var SUBSECTION_MENU = { llamadas: "oportunidades", compras: "compras", proveedores: "proveedores" };
   var BAR_SIZE = 4;
   var CLOSE_MS2 = 180;
@@ -27218,16 +28987,17 @@
     return [...document.querySelectorAll("nav.main [data-t]")].filter((button3) => {
       const key = button3.dataset.t ?? "";
       if (seen.has(key) || button3.classList.contains("hide") || button3.disabled || button3.classList.contains("bloq") || button3.classList.contains("mlplan") || MENU_OUT.includes(key)) return false;
+      if (blockedOnPhone(key)) return false;
       seen.add(key);
       return true;
     }).map((button3) => button3.dataset.t ?? "").sort((first, second) => menuPosition(first) - menuPosition(second));
   }
   function bottomBar() {
     const available2 = availableScreens(), chosen4 = menuPrefs2().barra;
-    let bar = (Array.isArray(chosen4) && chosen4.length ? chosen4 : BAR_DEFAULT).filter((key) => available2.includes(key) && key !== "inicio");
+    let bar = (Array.isArray(chosen4) && chosen4.length ? chosen4 : defaultBar()).filter((key) => available2.includes(key) && key !== "inicio");
     if (available2.includes("inicio")) bar.unshift("inicio");
     bar = bar.slice(0, BAR_SIZE);
-    return bar.length ? bar : BAR_DEFAULT.filter((key) => available2.includes(key));
+    return bar.length ? bar : defaultBar().filter((key) => available2.includes(key));
   }
   function moreOrder(keys) {
     const own = menuPrefs2().mas ?? [];
@@ -27372,22 +29142,22 @@
       if (last) state2.groups.mas.unshift(last);
     }
   };
-  function rowHtml14(key, zone, index, count) {
+  function rowHtml15(key, zone, index, count4) {
     const zones = ZONES.map((other) => `<button type="button" data-mpz="${other}|${key}" class="${zone === other ? "on" : ""}">${t(ZONE_TEXTS[other])}</button>`).join("");
     return `<div class="movp movp-${zone}" data-mpt="${key}">
       <span class="movpdrag" data-mpd="${key}" aria-hidden="true" title="${t("navigationCore.mobileMenu.drag")}">⠿</span>
-      <span class="movpmv"><button type="button" class="kmv" data-mpm="-1|${key}" aria-label="${t("navigationCore.mobileMenu.up")}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" class="kmv" data-mpm="1|${key}" aria-label="${t("navigationCore.mobileMenu.down")}" ${index === count - 1 ? "disabled" : ""}>↓</button></span>
+      <span class="movpmv"><button type="button" class="kmv" data-mpm="-1|${key}" aria-label="${t("navigationCore.mobileMenu.up")}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" class="kmv" data-mpm="1|${key}" aria-label="${t("navigationCore.mobileMenu.down")}" ${index === count4 - 1 ? "disabled" : ""}>↓</button></span>
       <span class="movpico">${ICO_MOD[key] ?? "•"}</span><span class="movpn">${escapeHtml(mobileName(key))}</span>
       <div class="segs" role="group" aria-label="${t("navigationCore.mobileMenu.where")}">${zones}</div></div>`;
   }
   function groupHtml(state2, zone) {
-    const [title2, note] = GROUP_TEXTS[zone], list = state2.groups[zone], count = list.length + (zone === "barra" && state2.fixed ? 1 : 0);
+    const [title2, note] = GROUP_TEXTS[zone], list = state2.groups[zone], count4 = list.length + (zone === "barra" && state2.fixed ? 1 : 0);
     const fixed = zone === "barra" && state2.fixed ? `<div class="movp movp-barra movpfijo"><span class="movpico">${ICO_MOD[state2.fixed] ?? "•"}</span><span class="movpn">${escapeHtml(mobileName(state2.fixed))}</span><span class="sm">${t("navigationCore.mobileMenu.alwaysFirst")}</span></div>` : "";
-    return `<div class="movpg"><h3>${t(title2)} <span class="sm">· ${count}${note ? ` · ${t(note)}` : ""}</span></h3>
+    return `<div class="movpg"><h3>${t(title2)} <span class="sm">· ${count4}${note ? ` · ${t(note)}` : ""}</span></h3>
         ${fixed}
-        <div class="movpl" data-mpg="${zone}">${list.map((key, index) => rowHtml14(key, zone, index, list.length)).join("") || `<div class="movpvac sm">${t("navigationCore.mobileMenu.dropHere")}</div>`}</div></div>`;
+        <div class="movpl" data-mpg="${zone}">${list.map((key, index) => rowHtml15(key, zone, index, list.length)).join("") || `<div class="movpvac sm">${t("navigationCore.mobileMenu.dropHere")}</div>`}</div></div>`;
   }
-  function paint7(state2) {
+  function paint8(state2) {
     const box3 = body();
     if (!box3) return;
     box3.innerHTML = `<div class="fh"><div><h2>${t("navigationCore.menu.customise")}</h2></div><button class="x" data-cerrar2 aria-label="${t("navigationCore.menu.close")}">✕</button></div>
@@ -27395,14 +29165,14 @@
       ${ZONES.map((zone) => groupHtml(state2, zone)).join("")}
       <div class="acts"><button type="button" class="btn sec" id="movpdef">${t("navigationCore.menu.reset")}</button><button type="button" class="btn" id="movpok">${t("navigationCore.menu.save")}</button></div>`;
   }
-  function move2(state2, data) {
+  function move3(state2, data) {
     const [direction = "0", key = ""] = data.split("|"), list = state2.groups[zoneOf(state2, key)], index = list.indexOf(key), other = index + Number(direction);
     if (other < 0 || other >= list.length) return;
     const swapped = list[other];
     if (swapped === void 0) return;
     list[other] = key;
     list[index] = swapped;
-    paint7(state2);
+    paint8(state2);
   }
   function changeZone(state2, data) {
     const [zone, key = ""] = data.split("|"), from = zoneOf(state2, key);
@@ -27417,7 +29187,7 @@
       if (last) state2.groups.mas.unshift(last);
     }
     state2.groups[zone].push(key);
-    paint7(state2);
+    paint8(state2);
   }
   async function save17(state2, button3) {
     const prefs = menuPrefs2(), hidden = [.../* @__PURE__ */ new Set([...(prefs.ocultos ?? []).filter((key) => !state2.available.includes(key)), ...state2.groups.oculta])];
@@ -27441,10 +29211,10 @@
     }
     toast(t("navigationCore.menu.saved"), false);
   }
-  function onClick4(state2, event) {
+  function onClick6(state2, event) {
     const target = event.target, arrow = target.closest("[data-mpm]"), zone = target.closest("[data-mpz]");
     if (arrow) {
-      move2(state2, arrow.dataset.mpm ?? "");
+      move3(state2, arrow.dataset.mpm ?? "");
       return;
     }
     if (zone) {
@@ -27452,10 +29222,10 @@
       return;
     }
     if (target.closest("#movpdef")) {
-      state2.groups.barra = BAR_DEFAULT.filter((key) => state2.available.includes(key) && key !== state2.fixed);
+      state2.groups.barra = defaultBar().filter((key) => state2.available.includes(key) && key !== state2.fixed);
       state2.groups.mas = state2.available.filter((key) => !state2.groups.barra.includes(key) && key !== state2.fixed);
       state2.groups.oculta = [];
-      paint7(state2);
+      paint8(state2);
       return;
     }
     const ok = target.closest("#movpok");
@@ -27514,13 +29284,13 @@
       toast(t("navigationCore.mobileMenu.barNeedsOne"), true);
     }
     fit(state2);
-    paint7(state2);
+    paint8(state2);
   }
   function wire(state2, box3, dialog7) {
     let dragged = null;
     const handlers = [
       ["click", (event) => {
-        onClick4(state2, event);
+        onClick6(state2, event);
       }],
       ["pointerdown", (event) => {
         dragged = startDrag(event) ?? dragged;
@@ -27549,7 +29319,7 @@
     const available2 = availableScreens(), prefs = menuPrefs2(), fixed = available2.includes("inicio") ? "inicio" : null;
     const bar = bottomBar().filter((key) => key !== fixed), rest = moreOrder(available2.filter((key) => !bar.includes(key) && key !== fixed)), hidden = prefs.ocultos ?? [];
     const state2 = { fixed, available: available2, groups: { barra: [...bar], mas: rest.filter((key) => !hidden.includes(key)), oculta: rest.filter((key) => hidden.includes(key)) } };
-    paint7(state2);
+    paint8(state2);
     const dialog7 = document.getElementById("dlg2"), box3 = body();
     if (!dialog7 || !box3) return;
     wire(state2, box3, dialog7);
@@ -27677,14 +29447,16 @@
     plan: { t: t("navigationCore.pages.plan"), d: "", admin: true, tabs: [["plan", t("navigationCore.pages.planTab"), () => paintPlanPage2([])]] }
   };
   var byId18 = (id) => document.getElementById(id);
+  var shownTabs = (screen3, page) => page.tabs.filter((tab) => !blockedOnPhone(screen3, tab[0]));
   var chosenTab = (screen3, page) => {
     const wanted = navigationStore.pageTabs[screen3];
-    return page.tabs.some((tab) => tab[0] === wanted) && wanted ? wanted : page.tabs[0]?.[0] ?? "";
+    return page.tabs.some((tab) => tab[0] === wanted) && wanted ? wanted : (shownTabs(screen3, page)[0] ?? page.tabs[0])?.[0] ?? "";
   };
   var painterOf = (page, key) => page.tabs.find((tab) => tab[0] === key)?.[2];
   function headerHtml5(screen3, page, tab) {
     const header2 = screen3 === "plan" ? "" : `<div class="saludo"><div><h1>${escapeHtml(page.t)}</h1><div class="fecha">${escapeHtml(page.d)}</div></div></div>`;
-    const tabs = page.tabs.length > 1 ? `<div class="cfgsubs pagtabs">${page.tabs.map(([key, name]) => `<button data-ptab="${key}" class="${key === tab ? "on" : ""}">${escapeHtml(name)}</button>`).join("")}</div>` : "";
+    const shown3 = shownTabs(screen3, page);
+    const tabs = shown3.length > 1 ? `<div class="cfgsubs pagtabs">${shown3.map(([key, name]) => `<button data-ptab="${key}" class="${key === tab ? "on" : ""}">${escapeHtml(name)}</button>`).join("")}</div>` : "";
     return `${header2}
     ${tabs}
     <div id="cfgcuerpo" class="pagcuerpo" data-tab="${tab}"></div>`;
@@ -27704,6 +29476,15 @@
     if (title2) title2.textContent = found[2] ?? "";
     if (description) description.textContent = PANEL_DESC[tab] ?? "";
   }
+  function paintTabNotice(screen3, page, tab) {
+    const box3 = byId18("cfgcuerpo"), first = shownTabs(screen3, page)[0];
+    if (!box3) return;
+    const open2 = () => {
+      navigationStore.pageTabs[screen3] = first?.[0];
+      loadPage(screen3);
+    };
+    paintScreenNotice(box3, `${screen3}/${tab}`, first ? { label: first[1], open: open2 } : void 0);
+  }
   function buildPage(screen3, page) {
     if (page.permiso && !page.permiso()) {
       navigate("inicio");
@@ -27721,6 +29502,10 @@
       const box3 = other === screen3 ? null : byId18(`v-${other}`);
       if (box3) box3.innerHTML = "";
     });
+    if (blockedOnPhone(screen3)) {
+      paintScreenNotice(section, screen3);
+      return;
+    }
     const tab = chosenTab(screen3, page);
     section.innerHTML = headerHtml5(screen3, page, tab);
     section.querySelectorAll(".pagtabs [data-ptab]").forEach((button3) => {
@@ -27729,11 +29514,16 @@
         loadPage(screen3);
       };
     });
+    if (blockedOnPhone(screen3, tab)) {
+      paintTabNotice(screen3, page, tab);
+      return;
+    }
     void Promise.resolve().then(painterOf(page, tab));
     if (screen3 === "delcos" && navigationStore.platformMode) platformTitle();
   }
   function switchListTab(screen3, page, box3, tabs) {
     const tab = chosenTab(screen3, page);
+    if (blockedOnPhone(screen3, tab)) return null;
     tabs.querySelectorAll("[data-ptab]").forEach((button3) => button3.classList.toggle("on", button3.dataset.ptab === tab));
     const isList = PL_SECC[screen3];
     if (isList && !isList()) return null;
@@ -27765,8 +29555,8 @@
   });
 
   // src/app/screens/tenders/model.ts
-  var model_exports7 = {};
-  __export(model_exports7, {
+  var model_exports8 = {};
+  __export(model_exports8, {
     LOT_STATES: () => LOT_STATES,
     LOT_STATE_LIST: () => LOT_STATE_LIST,
     STATES: () => STATES5,
@@ -27774,7 +29564,7 @@
     contractEnd: () => contractEnd,
     daysLeft: () => daysLeft,
     isClosed: () => isClosed,
-    statePill: () => statePill4,
+    statePill: () => statePill5,
     tenderLine: () => tenderLine,
     writeFailure: () => writeFailure
   });
@@ -27784,7 +29574,7 @@
   var LOT_STATE_LIST = [LOT_STATES.pending, LOT_STATES.won, LOT_STATES.lost];
   var DAY_MS4 = 864e5;
   var isClosed = (state2) => state2 === STATES5.lost || state2 === STATES5.void;
-  function statePill4(state2) {
+  function statePill5(state2) {
     const kind = state2 === STATES5.awarded ? "p-est" : isClosed(state2) ? "p-anu" : state2 === STATES5.offerSent ? "p-per" : "p-warn";
     return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
   }
@@ -27817,8 +29607,8 @@
     <div class="g2"><div><label for="conimp">${t("tenders.editor.amount")}</label><input id="conimp" type="number" min="0" step="0.01" value="${isPresent(tender.importe_licitacion) ? Number(tender.importe_licitacion) : ""}"></div>
       <div><label for="conres">${t("tenders.editor.responsible")}</label><select id="conres">${people.map((person) => `<option value="${person.id}" ${person.id === tender.responsable_id ? "selected" : ""}>${escapeHtml(person.nombre)}</option>`).join("")}</select></div></div>
     <label for="conn">${t("tenders.editor.note")}</label><textarea id="conn" rows="2">${value10(tender.nota)}</textarea>
-    <div class="acts u-end">${existing ? `<button type="button" class="btn sec peligro" id="conborrar">${t("tenders.editor.delete")}</button>` : ""}
-      <button type="button" class="btn sec" data-cerrar>${t("tenders.editor.cancel")}</button><button type="button" class="btn" id="conok">${t(existing ? "tenders.editor.save" : "tenders.editor.create")}</button></div>`;
+    <div class="acts u-end">${existing ? `<button type="button" class="btn sec peligro" id="conborrar" data-desktop-only>${t("tenders.editor.delete")}</button>` : ""}
+      <button type="button" class="btn sec" data-cerrar>${t("tenders.editor.cancel")}</button><button type="button" class="btn" id="conok" data-desktop-only>${t(existing ? "tenders.editor.save" : "tenders.editor.create")}</button></div>`;
   }
   function row2(title2, account) {
     const amount2 = field7("conimp");
@@ -27868,6 +29658,7 @@
     if (!body3 || !box3) return;
     body3.innerHTML = editorHtml9(tender, existing, people);
     if (!box3.open) box3.showModal();
+    readOnlyOnPhone(body3, "concursos");
     let account = existing ? { id: existing.cuenta_id ?? "", nombre: existing.cuentas?.nombre ?? "" } : null;
     editorLegacy.pickAccount(document.getElementById("concta"), account, (picked) => {
       account = picked;
@@ -27944,23 +29735,23 @@
     const wonText = won ? won === 1 ? t("tenders.list.oneWon") : t("tenders.list.won", { count: won }) : "";
     return ` · ${lots.length === 1 ? t("tenders.list.oneLot") : t("tenders.list.lots", { count: lots.length })}${wonText}`;
   }
-  function rowHtml15(tender, view, warnDays) {
+  function rowHtml16(tender, view, warnDays) {
     const extra = view === "contratos" ? contractPill(tender, warnDays) : view === "marcha" ? deadlinePill(tender) : "";
     return `<button type="button" class="item conrow" data-con="${tender.id}"><span class="tx"><b>${escapeHtml(tender.titulo)}</b>
       <span class="sm">${escapeHtml(tenderLine(tender))}${lotsText(tender)}${tender.importe_licitacion ? ` · ${formatCurrency(tender.importe_licitacion)}` : ""}</span></span>
-      <span class="cirest">${statePill4(tender.estado)}${extra}</span></button>`;
+      <span class="cirest">${statePill5(tender.estado)}${extra}</span></button>`;
   }
   function contractsHint(days) {
     const when = days.length ? t("tenders.list.warnDays", { days: [...days].sort((first, second) => second - first).join(t("tenders.list.and")) }) : t("tenders.list.warnNever");
     return `<p class="sm">${t("tenders.list.contractsHint", { when })}</p>`;
   }
-  function pageHtml6(list, view) {
+  function pageHtml7(list, view) {
     const days = tendersLegacy.warningDays(), warnDays = Math.max(...days, 0);
     const empty2 = t(view === "contratos" ? "tenders.list.noContracts" : view === "cerrados" ? "tenders.list.noClosed" : "tenders.list.noOpen");
-    return `<div class="cirpag"><div class="evcab"><button type="button" class="btn" id="connuevo">${t("tenders.list.newTender")}</button>
+    return `<div class="cirpag"><div class="evcab"><button type="button" class="btn" id="connuevo" data-desktop-only>${t("tenders.list.newTender")}</button>
       ${cardSectionsLegacy.can("administrar") ? `<button type="button" class="btn sec" id="conavisos">${t("tenders.list.warnings")}</button>` : ""}</div>
     ${view === "contratos" ? contractsHint(days) : ""}
-    <section class="card cirbloque">${list.length ? `<div class="lista">${list.map((item) => rowHtml15(item, view, warnDays)).join("")}</div>` : `<div class="vacio vlinea">${empty2}</div>`}</section></div>`;
+    <section class="card cirbloque">${list.length ? `<div class="lista">${list.map((item) => rowHtml16(item, view, warnDays)).join("")}</div>` : `<div class="vacio vlinea">${empty2}</div>`}</section></div>`;
   }
   async function paintTenders(view) {
     if (!document.getElementById("cfgcuerpo")) return;
@@ -27976,7 +29767,7 @@
     }
     const days = setting2?.valor?.dias;
     if (Array.isArray(days)) tendersLegacy.setWarningDays(days.map(Number).filter((day) => day > 0));
-    box3.innerHTML = pageHtml6(shown2(data ?? [], view), view);
+    box3.innerHTML = pageHtml7(shown2(data ?? [], view), view);
     const add = document.getElementById("connuevo");
     if (add) add.onclick = () => {
       void editTender(null);
@@ -28008,11 +29799,11 @@
     return `<div class="conpadd"><select data-cpnuevo aria-label="${t("tenders.lot.addProduct")}"><option value="">${t("tenders.lot.addProductOption")}</option>${options3}</select></div>`;
   }
   function lotHtml(lot, products3) {
-    const states = LOT_STATE_LIST.map((state2) => `<option ${state2 === lot.estado ? "selected" : ""}>${state2}</option>`).join("");
+    const states2 = LOT_STATE_LIST.map((state2) => `<option ${state2 === lot.estado ? "selected" : ""}>${state2}</option>`).join("");
     return `<div class="conlote" data-lote="${lot.id}">
       <div class="conlcab"><input data-lf="numero" value="${escapeHtml(lot.numero ?? "")}" placeholder="${t("tenders.lot.number")}" aria-label="${t("tenders.lot.numberLabel")}" class="conln">
         <input data-lf="descripcion" value="${escapeHtml(lot.descripcion ?? "")}" placeholder="${t("tenders.lot.description")}" aria-label="${t("tenders.lot.description")}">
-        <select data-lf="estado" aria-label="${t("tenders.lot.stateLabel")}">${states}</select>
+        <select data-lf="estado" aria-label="${t("tenders.lot.stateLabel")}">${states2}</select>
         <button type="button" class="x" data-lq aria-label="${t("tenders.lot.remove")}">✕</button></div>
       <div class="conlimp"><label><span>${t("tenders.lot.tenderAmount")}</span><input type="number" min="0" step="0.01" data-lf="importe_licitacion" value="${amount(lot.importe_licitacion)}"></label>
         <label><span>${t("tenders.lot.awardedAmount")}</span><input type="number" min="0" step="0.01" data-lf="importe_adjudicado" value="${amount(lot.importe_adjudicado)}"></label>
@@ -28109,8 +29900,8 @@
   var CONTRACT_DATES = [["conini", "inicio"], ["confin", "fin"], ["conpro", "prorroga_hasta"]];
   var sortedLots = (tender) => [...tender.concurso_lotes ?? []].sort((first, second) => String(first.numero ?? "").localeCompare(String(second.numero ?? ""), "es", { numeric: true }) || String(first.creado_en).localeCompare(String(second.creado_en)));
   function dataHtml2(tender) {
-    const states = TENDER_STATES.map((state2) => `<option ${state2 === tender.estado ? "selected" : ""}>${state2}</option>`).join("");
-    return `<div class="cirdat"><span>${t("tenders.sheet.state")}</span><b><select id="conest" aria-label="${t("tenders.sheet.stateLabel")}">${states}</select></b>
+    const states2 = TENDER_STATES.map((state2) => `<option ${state2 === tender.estado ? "selected" : ""}>${state2}</option>`).join("");
+    return `<div class="cirdat"><span>${t("tenders.sheet.state")}</span><b><select id="conest" aria-label="${t("tenders.sheet.stateLabel")}">${states2}</select></b>
       ${tender.limite ? `<span>${t("tenders.sheet.submitBy")}</span><b>${escapeHtml(formatLongDate(tender.limite))}</b>` : ""}
       ${tender.importe_licitacion ? `<span>${t("tenders.sheet.amount")}</span><b>${t("tenders.sheet.withoutVat", { amount: formatCurrency(tender.importe_licitacion) })}</b>` : ""}</div>
     <div class="cong3 ${tender.estado === STATES5.awarded ? "" : "hide"}" id="confechas"><div><label for="conini">${t("tenders.sheet.contractFrom")}</label><input id="conini" type="date" value="${escapeHtml(tender.inicio ?? "")}"></div>
@@ -28214,8 +30005,8 @@
   });
 
   // src/app/screens/equipment/model.ts
-  var model_exports8 = {};
-  __export(model_exports8, {
+  var model_exports9 = {};
+  __export(model_exports9, {
     REVIEW_TYPES: () => REVIEW_TYPES,
     SALE: () => SALE,
     STATES: () => STATES6,
@@ -28371,13 +30162,13 @@
   var SEARCH_WAIT_MS9 = 300;
   var listState = { query: "" };
   var plain = (text2) => String(text2 ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  function rowHtml16(item) {
+  function rowHtml17(item) {
     const details2 = [item.serie ? t("equipment.list.serial", { serial: item.serie }) : "", item.cuentas?.nombre, item.ubicacion, item.contrato].filter(Boolean).join(" · ");
     return `<button type="button" class="item conrow" data-eq="${item.id}"><span class="tx"><b>${escapeHtml(orFallback(item.productos?.nombre, t("equipment.equipment")))}</b>
       <span class="sm">${escapeHtml(details2)}${t("equipment.list.since", { date: formatShortDate(item.instalado ?? "") })}</span></span>
     <span class="cirest">${reviewPill(item)}${expiryPill(item)}</span></button>`;
   }
-  var block2 = (title2, list) => `<section class="card cirbloque"><h2>${title2}</h2>${list.length ? `<div class="lista">${list.map(rowHtml16).join("")}</div>` : '<div class="vacio vlinea"></div>'}</section>`;
+  var block3 = (title2, list) => `<section class="card cirbloque"><h2>${title2}</h2>${list.length ? `<div class="lista">${list.map(rowHtml17).join("")}</div>` : '<div class="vacio vlinea"></div>'}</section>`;
   function upcoming(list) {
     const installed = list.filter((item) => item.estado === STATES6.installed), limit = addDays(todayIso(), SOON_DAYS2), warning = warningLimit();
     const reviews = installed.filter((item) => item.proxima_revision && item.proxima_revision <= limit).sort((first, second) => String(first.proxima_revision).localeCompare(String(second.proxima_revision)));
@@ -28387,15 +30178,15 @@
     }).sort((first, second) => String(expiryOf(first)).localeCompare(String(expiryOf(second))));
     return { reviews, expiring };
   }
-  function pageHtml7(list) {
+  function pageHtml8(list) {
     const { reviews, expiring } = upcoming(list), query = plain(listState.query);
     const found = list.filter((item) => !listState.query || plain([item.serie, item.productos?.nombre, item.cuentas?.nombre, item.ubicacion].join(" ")).includes(query));
     const empty2 = list.length ? t("equipment.list.noneFound") : t("equipment.list.noneYet");
     return `<div class="cirpag"><div class="evcab"><button type="button" class="btn" id="eqnuevo">${t("equipment.list.newEquipment")}</button></div>
-    ${reviews.length ? block2(t("equipment.list.reviewsSoon"), reviews) : ""}
-    ${expiring.length ? block2(t("equipment.list.expiring"), expiring) : ""}
+    ${reviews.length ? block3(t("equipment.list.reviewsSoon"), reviews) : ""}
+    ${expiring.length ? block3(t("equipment.list.expiring"), expiring) : ""}
     <section class="card cirbloque"><div class="cicbcab"><h2>${t("equipment.list.all", { count: formatNumber(list.length) })}</h2><input id="eqq" type="search" placeholder="${t("equipment.list.searchPlaceholder")}" value="${escapeHtml(listState.query)}" aria-label="${t("equipment.list.searchLabel")}"></div>
-      ${found.length ? `<div class="lista">${found.map(rowHtml16).join("")}</div>` : `<div class="vacio vlinea">${empty2}</div>`}</section></div>`;
+      ${found.length ? `<div class="lista">${found.map(rowHtml17).join("")}</div>` : `<div class="vacio vlinea">${empty2}</div>`}</section></div>`;
   }
   var searchTimer6;
   function bind17(box3, wasSearching) {
@@ -28441,7 +30232,7 @@
     }
     rememberWarningDays(setting2);
     const search5 = document.getElementById("eqq"), wasSearching = Boolean(search5) && document.activeElement === search5;
-    box3.innerHTML = pageHtml7(data ?? []);
+    box3.innerHTML = pageHtml8(data ?? []);
     bind17(box3, wasSearching);
   }
 
@@ -28651,7 +30442,7 @@
       element.innerHTML = "";
       return;
     }
-    element.innerHTML = pageHtml4(total, page, size);
+    element.innerHTML = pageHtml6(total, page, size);
     element.querySelectorAll("[data-pg]").forEach((button3) => {
       button3.onclick = () => {
         onPage(Number(button3.dataset.pg));
@@ -28802,6 +30593,11 @@
   }
   function reveal(element, maxMs, since2) {
     if (!element) return;
+    if (element.querySelector(":scope > .aviso-ordenador")) {
+      element.classList.remove("preparando");
+      arrive(element);
+      return;
+    }
     const limit = element.id === "fbody" ? Math.max(maxMs ?? 0, CARD_MAX_MS) : maxMs, screen3 = element.id.slice(2);
     const sections2 = PL_SECC[screen3];
     if (!sections2 || !isScreen(element)) {
@@ -28877,11 +30673,11 @@
   ];
   var VIEW_TITLES = Object.fromEntries(TITLES.map(([name, key]) => [name, t(key)]));
   var openView = () => ["ficha", "dlg"].map((id) => document.getElementById(id)).find((dialog7) => dialog7?.open) ?? null;
-  var idOf = (arg) => {
+  var idOf2 = (arg) => {
     const id = arg && typeof arg === "object" ? arg.id : void 0;
     return id ? id : arg;
   };
-  var idsOf = (view) => JSON.stringify(view.args.map(idOf));
+  var idsOf = (view) => JSON.stringify(view.args.map(idOf2));
   var sameView = (first, second) => Boolean(first && second && first.fn === second.fn && idsOf(first) === idsOf(second));
   var titleOf = (view) => (view ? VIEW_TITLES[view.fn] : void 0) ?? t("navigationCore.viewTitles.previousWindow");
   function backButton(view, dialog7) {
@@ -28983,8 +30779,8 @@
     iconOf: (type) => notificationIcon(type),
     typesForMyRole: () => plans_exports.notificationTypesOfRole(),
     unread: () => settingsStore.notificationCount,
-    setUnread: (count) => {
-      settingsStore.notificationCount = count;
+    setUnread: (count4) => {
+      settingsStore.notificationCount = count4;
     },
     refreshBell: () => {
       void live_exports.refreshBell();
@@ -29081,10 +30877,10 @@
       iban: company.iban ?? ""
     };
   }
-  function fillTemplate(use, field10, values2) {
+  function fillTemplate(use, field11, values2) {
     const list = templatesFor(use), chosen4 = settingsExtraLegacy.chosenTemplate(use);
     const template = list.find((item) => item.id === chosen4) ?? list.find((item) => item.defecto) ?? list[0];
-    const text2 = (template?.[field10] ?? "").trim() || defaultTemplate(use)[field10];
+    const text2 = (template?.[field11] ?? "").trim() || defaultTemplate(use)[field11];
     return text2.replace(/\[(\w+)\]/g, (whole3, name) => name in values2 ? values2[name] ?? "" : whole3).replace(/ {2,}/g, " ").trim();
   }
   async function chooseTemplate2(use) {
@@ -29129,11 +30925,11 @@
     return daily ? "r" : "m";
   }
   function summaryHtml4(types) {
-    const count = { m: 0, r: 0, n: 0 };
+    const count4 = { m: 0, r: 0, n: 0 };
     types.forEach(([key]) => {
-      count[modeOf(key)] += 1;
+      count4[modeOf(key)] += 1;
     });
-    return `<span>${t("settingsExtra.notificationSettings.atOnce", { count: count.m })}</span><span>${t("settingsExtra.notificationSettings.inDigest", { count: count.r })}</span><span>${t("settingsExtra.notificationSettings.off", { count: count.n })}</span>`;
+    return `<span>${t("settingsExtra.notificationSettings.atOnce", { count: count4.m })}</span><span>${t("settingsExtra.notificationSettings.inDigest", { count: count4.r })}</span><span>${t("settingsExtra.notificationSettings.off", { count: count4.n })}</span>`;
   }
   function quietHtml(quiet) {
     return `<div class="ajfila ntfsil"><div><div class="ntfsilt"><label class="vfswitch mini" title="${t("settingsExtra.notificationSettings.quietOn")}"><input type="checkbox" id="nsil" ${quiet.activo ? "checked" : ""} aria-label="${t("settingsExtra.notificationSettings.quietOn")}"><span class="sw"></span></label><b>${t("settingsExtra.notificationSettings.quietHours")}</b></div><span class="sm">${t("settingsExtra.notificationSettings.quietHint")}</span></div>
@@ -29141,7 +30937,7 @@
         <input type="time" id="nsild" value="${escapeHtml(quiet.desde ?? QUIET_FROM)}" aria-label="${t("settingsExtra.notificationSettings.from")}"> ${t("settingsExtra.notificationSettings.toWord")} <input type="time" id="nsilh" value="${escapeHtml(quiet.hasta ?? QUIET_TO)}" aria-label="${t("settingsExtra.notificationSettings.to")}">
         <label class="ntffin"><input type="checkbox" id="nsilf" ${quiet.finde !== false ? "checked" : ""}> ${t("settingsExtra.notificationSettings.weekends")}</label></div></div>`;
   }
-  function rowHtml17([key, icon3, title2, description]) {
+  function rowHtml18([key, icon3, title2, description]) {
     const mode = modeOf(key), daily = settingsExtraLegacy.dailyNotifications().includes(key);
     const button3 = (value10, label) => `<button type="button" data-v="${value10}" class="${mode === value10 ? "on" : ""}" aria-pressed="${String(mode === value10)}">${label}</button>`;
     return `<div class="ntfrow"><span class="ntfic">${icon3}</span><div><b>${escapeHtml(title2)}</b><span class="sm">${escapeHtml(description)}</span></div>
@@ -29184,7 +30980,7 @@
     box3.innerHTML = types.length ? `<div class="card cfgpanel ntf">
     <div class="ntfres" id="ntfres">${summaryHtml4(types)}</div>
     ${quietHtml(quiet)}
-    ${groupsOf(types).map(([title2, list]) => `<h3 class="ntfarea">${escapeHtml(title2)}</h3>${list.map(rowHtml17).join("")}`).join("")}
+    ${groupsOf(types).map(([title2, list]) => `<h3 class="ntfarea">${escapeHtml(title2)}</h3>${list.map(rowHtml18).join("")}`).join("")}
   </div>` : `<div class="card cfgpanel"><div class="vacio">${t("settingsExtra.notificationSettings.none")}</div></div>`;
     box3.querySelectorAll(".ntfseg button").forEach((button3) => {
       button3.onclick = () => {
@@ -29198,7 +30994,7 @@
   }
 
   // src/app/legacy/legado-d-bridge.ts
-  var pages = () => PAGINAS;
+  var pages2 = () => PAGINAS;
   var treeLegacy = {
     can: (capability) => permissions_exports.can(capability),
     canManageOrganisation: () => permissions_exports.canManageOrganization(),
@@ -29208,7 +31004,7 @@
     cardPaymentVisible: () => TPV_VISIBLE,
     inTestEnvironment: () => EN_PRUEBAS,
     configTree: () => settingsTree(),
-    pageTabs: (page) => pages()[page]?.tabs ?? [],
+    pageTabs: (page) => pages2()[page]?.tabs ?? [],
     // Returned: Configuración waits for it before painting the next part (Mi perfil is loaded on first use, plan 7.3 cut D3)
     paintProfile: () => paintMyProfile(),
     paintNotifications: () => {
@@ -29243,7 +31039,7 @@
     paintTenders: (view) => paintTenders(view),
     paintEquipment: () => paintEquipment(),
     setPage: (key, page) => {
-      pages()[key] = page;
+      pages2()[key] = page;
     },
     pageTab: (key) => navigationStore.pageTabs[key],
     tendersMenu: () => {
@@ -29252,6 +31048,9 @@
     equipmentMenu: () => {
       menuEquipment();
     },
+    depositsMenu: () => {
+      menuDeposits();
+    },
     lockSections: () => {
       lockSections();
     },
@@ -29259,7 +31058,7 @@
       Object.assign(PLAN_SECCIONES, sections2);
     },
     requirePlanSection: (key) => {
-      const page = pages()[key];
+      const page = pages2()[key];
       if (!page) return;
       const before = page.permiso;
       page.permiso = () => before() && plans_exports.planIncludesSection(key);
@@ -29278,7 +31077,8 @@
     manualAnchor: (screen3) => MANUAL_ANCLA[screen3],
     baseMenuPermissions: (args) => applyMenuPermissions2([...args]),
     term: (word) => vocabulary_exports.wordFor(word, "s", { determiner: "", determinerCase: "l", nounCase: "l" }),
-    hasPage: (screen3) => Boolean(pages()[screen3]),
+    depositsTitle: () => vocabulary_exports.wordFor("deposito", "p", { determiner: "", determinerCase: "l", nounCase: "C" }),
+    hasPage: (screen3) => Boolean(pages2()[screen3]),
     loadPage: (screen3) => {
       loadPage(screen3);
     },
@@ -29891,17 +31691,17 @@
         else agendaActions.openAccount(person.dataset.agti ?? "");
         return;
       }
-      const block3 = target?.closest("#agcuerpo .agtamb[data-agtc]");
-      if (block3) {
+      const block4 = target?.closest("#agcuerpo .agtamb[data-agtc]");
+      if (block4) {
         event.stopPropagation();
-        void showCentreSheet(block3.dataset.agtc ?? "");
+        void showCentreSheet(block4.dataset.agtc ?? "");
       }
     }, true);
     document.addEventListener("keydown", (event) => {
-      const block3 = event.target instanceof Element ? event.target.closest("#agcuerpo .agtamb[data-agtc]") : null;
-      if (block3 && event.target === block3 && (event.key === "Enter" || event.key === " ")) {
+      const block4 = event.target instanceof Element ? event.target.closest("#agcuerpo .agtamb[data-agtc]") : null;
+      if (block4 && event.target === block4 && (event.key === "Enter" || event.key === " ")) {
         event.preventDefault();
-        void showCentreSheet(block3.dataset.agtc ?? "");
+        void showCentreSheet(block4.dataset.agtc ?? "");
       }
     });
   }
@@ -29923,14 +31723,14 @@
     isDone: () => isDone,
     isOpen: () => isOpen,
     pointOf: () => pointOf,
-    statePill: () => statePill5
+    statePill: () => statePill6
   });
   var colorOf = (state2) => commercialStates.color(state2) ?? "var(--muted)";
   var isOpen = (state2) => appointments.isOpen(state2);
   var isCancelled = (state2) => appointments.isCancelled(state2);
   var isDone = (state2) => commercialStates.color(state2) === "var(--ok)";
   var isAbsent = (state2) => commercialStates.color(state2) === "var(--warn)" && !isOpen(state2);
-  function statePill5(state2) {
+  function statePill6(state2) {
     const color2 = colorOf(state2);
     return `<span class="pill cest" style="background:color-mix(in srgb, ${color2} 12%, transparent);color:${color2}">${escapeHtml(state2)}</span>`;
   }
@@ -29966,16 +31766,16 @@
     activeWorkingDay: () => activeWorkingDay
   });
   function activeWorkingDay() {
-    let stored3 = null;
+    let stored4 = null;
     try {
-      stored3 = JSON.parse(localStorage.getItem(restLegacy.workingDayKey()) ?? "null");
+      stored4 = JSON.parse(localStorage.getItem(restLegacy.workingDayKey()) ?? "null");
     } catch {
     }
-    if (stored3 && stored3.fecha !== todayIso()) {
+    if (stored4 && stored4.fecha !== todayIso()) {
       localStorage.removeItem(restLegacy.workingDayKey());
       return null;
     }
-    return stored3;
+    return stored4;
   }
 
   // src/app/screens/agenda/appointment-origin.ts
@@ -30136,7 +31936,7 @@
   var applyTaskFolding = fromChunk9("applyTaskFolding");
   var answerCardClick = fromChunk9("answerCardClick");
   var changeTime = fromChunk9("changeTime");
-  var runAction = fromChunk9("runAction");
+  var runAction2 = fromChunk9("runAction");
   var openMenu = fromChunk9("openMenu");
   var showAppointment = backOpener("verCita", fromChunk9("showAppointment"));
   var refreshQuietly = fromChunk9("refreshQuietly");
@@ -30200,7 +32000,7 @@
       agendaStore.dayTasks = tasks;
     },
     tasks: (isoDate) => rawDb2().from("tareas").select("*").eq("fecha", isoDate).order("orden", { ascending: true, nullsFirst: false }).order("hora", { ascending: true, nullsFirst: false }).order("creado_en"),
-    planned: (states, from, limit) => rawDb2().from("agenda").select("cuenta_id,fecha").eq("usuario_id", profile4().id).in("estado", states).gte("fecha", from).order("fecha").limit(limit),
+    planned: (states2, from, limit) => rawDb2().from("agenda").select("cuenta_id,fecha").eq("usuario_id", profile4().id).in("estado", states2).gte("fecha", from).order("fecha").limit(limit),
     mountPeriod: (element, options3) => {
       mountPeriod(element, [options3]);
     },
@@ -30399,17 +32199,17 @@
   function yesNo(attributes, value10) {
     return `<select ${attributes}><option value=""></option><option value="true" ${value10 === true ? "selected" : ""}>${t("leftovers.fields.yes")}</option><option value="false" ${value10 === false ? "selected" : ""}>${t("leftovers.fields.no")}</option></select>`;
   }
-  function customFieldInput(field10, current) {
-    const attributes = `data-cpk="${escapeHtml(field10.clave)}" ${field10.solo_lectura ? "disabled" : ""}`;
+  function customFieldInput(field11, current) {
+    const attributes = `data-cpk="${escapeHtml(field11.clave)}" ${field11.solo_lectura ? "disabled" : ""}`;
     const value10 = current ?? "", text2 = String(value10);
-    if (field10.tipo === "lista") {
-      const values2 = field10.valores ?? [], all = text2 !== "" && !values2.includes(text2) ? [...values2, text2] : values2;
+    if (field11.tipo === "lista") {
+      const values2 = field11.valores ?? [], all = text2 !== "" && !values2.includes(text2) ? [...values2, text2] : values2;
       return `<select ${attributes}><option value=""></option>${all.map((item) => `<option ${item === value10 ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select>`;
     }
-    if (field10.tipo === "si_no") return yesNo(attributes, value10);
-    if (field10.tipo === "fecha") return `<input type="date" ${attributes} value="${escapeHtml(text2)}">`;
-    if (field10.tipo === "numero") return `<input type="text" inputmode="decimal" ${attributes} value="${escapeHtml(String(value10).replace(".", ","))}">`;
-    return `<input ${attributes} value="${escapeHtml(text2)}" maxlength="500" placeholder="${escapeHtml(field10.descripcion ?? "")}">`;
+    if (field11.tipo === "si_no") return yesNo(attributes, value10);
+    if (field11.tipo === "fecha") return `<input type="date" ${attributes} value="${escapeHtml(text2)}">`;
+    if (field11.tipo === "numero") return `<input type="text" inputmode="decimal" ${attributes} value="${escapeHtml(String(value10).replace(".", ","))}">`;
+    return `<input ${attributes} value="${escapeHtml(text2)}" maxlength="500" placeholder="${escapeHtml(field11.descripcion ?? "")}">`;
   }
   function wideNote(input6) {
     if (!input6 || input6.dataset.nota || input6.type !== "text") return;
@@ -30429,8 +32229,8 @@
   }
   var HISTORY_FREE = "input:not([autocomplete]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]), textarea:not([autocomplete])";
   function withoutHistory(root) {
-    (root ?? document).querySelectorAll(HISTORY_FREE).forEach((field10) => {
-      field10.setAttribute("autocomplete", "off");
+    (root ?? document).querySelectorAll(HISTORY_FREE).forEach((field11) => {
+      field11.setAttribute("autocomplete", "off");
     });
   }
 
@@ -30511,17 +32311,17 @@
   }
   function hideButton(button3) {
     if (button3.closest(".cfgocultos")) return;
-    const row3 = button3.parentElement, block3 = button3.closest(".cfgsecc, .card, #cfgcuerpo, #fcuerpo") ?? row3;
-    if (!block3) return;
-    let hidden = block3.querySelector(":scope > .cfgocultos");
+    const row3 = button3.parentElement, block4 = button3.closest(".cfgsecc, .card, #cfgcuerpo, #fcuerpo") ?? row3;
+    if (!block4) return;
+    let hidden = block4.querySelector(":scope > .cfgocultos");
     if (!hidden) {
       hidden = document.createElement("div");
       hidden.className = "cfgocultos";
       hidden.hidden = true;
-      block3.appendChild(hidden);
+      block4.appendChild(hidden);
     }
     hidden.appendChild(button3);
-    if (row3 && row3 !== block3 && ![...row3.children].some((child) => child.getClientRects().length)) row3.style.display = "none";
+    if (row3 && row3 !== block4 && ![...row3.children].some((child) => child.getClientRects().length)) row3.style.display = "none";
   }
   function hideRepeatedTitles(page) {
     let previous = "";
@@ -30585,7 +32385,7 @@
     if (!save26 || save26.disabled || !page) return;
     save26.disabled = true;
     const changed = [...leftoversLegacy.changedBlocks()], all = saveButtons(page.cuerpo);
-    const buttons = all.filter((button3) => changed.some((block3) => block3.contains(button3)));
+    const buttons = all.filter((button3) => changed.some((block4) => block4.contains(button3)));
     for (const button3 of buttons.length ? buttons : all) {
       if (!button3.isConnected) continue;
       button3.click();
@@ -30652,7 +32452,7 @@
       neighbour.insertAdjacentHTML("afterend", `<button data-t="${entry2.screen}">${entry2.title()}</button>`);
       button3 = nav.querySelector(`[data-t="${entry2.screen}"]`);
     }
-    button3?.classList.toggle("hide", leftoversLegacy.isProfessionalPortal() || !leftoversLegacy.canUseModule(entry2.area) || !moduleInUse(entry2.screen));
+    button3?.classList.toggle("hide", leftoversLegacy.isProfessionalPortal() || !leftoversLegacy.canUseModule(entry2.area) || !(entry2.shown ?? moduleInUse)(entry2.screen));
   }
   var menuCycle = () => {
     placeEntry({ screen: "ciclo", after: ["rutas", "agenda"], area: "agenda", title: () => t("leftovers.menu.cycle", { visits: term("visita", { number: "p" }) }) });
@@ -30669,10 +32469,13 @@
   var menuEquipment = () => {
     placeEntry({ screen: "parque", after: ["concursos", "ventas"], area: "ventas", title: () => t("leftovers.menu.equipment") });
   };
+  var menuDeposits = () => {
+    placeEntry({ screen: "deposito", after: ["productos", "ventas"], area: "ventas", title: () => term("deposito", { number: "p", capital: "C" }), shown: sectionShown });
+  };
   function menuOrganization() {
     const plan2 = document.querySelector('[data-u="plan"]'), company = document.querySelector('[data-u="empresa"]'), anchor = company ?? plan2;
     if (!document.querySelector('[data-u="organizacion"]') && anchor) {
-      anchor.insertAdjacentHTML("beforebegin", `<button data-u="organizacion" class="hide">${leftoversLegacy.svgIcon(leftoversLegacy.namedIcon("building"))} ${t("leftovers.menu.organization")}</button>`);
+      anchor.insertAdjacentHTML("beforebegin", `<button data-u="organizacion" class="hide" data-desktop-only>${leftoversLegacy.svgIcon(leftoversLegacy.namedIcon("building"))} ${t("leftovers.menu.organization")}</button>`);
     }
     [plan2, company].forEach((button3) => button3?.classList.add("hide"));
     document.querySelector('[data-u="organizacion"]')?.classList.toggle("hide", !leftoversLegacy.canManageOrganization());
@@ -30732,7 +32535,7 @@
   }
 
   // src/app/services/scanner/scanner.ts
-  var FIELDS4 = [["#mvl", "lote"], ['[data-r="lote"]', "lote"], ["[data-cser]", "serie"], ["[data-pqs]", "serie"], ["#eqs", "serie"]];
+  var FIELDS4 = [["#mvl", "lote"], ['[data-r="lote"]', "lote"], ["[data-cser]", "serie"], ["[data-pqs]", "serie"], ["#eqs", "serie"], ["#depleer", "lote"]];
   var ZXING_URL = "https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js";
   var ZXING_HASH = "sha384-BzBxP10ZE72aitqj5UMmUsbKFliP/DZqA8Wq+BNNhlIJDGoEd1tpkMYXOg9+n6sB";
   var DETECT_EVERY_MS = 180;
@@ -30744,7 +32547,7 @@
     if (line2 && line2.textContent !== text2) line2.textContent = text2;
   };
   var modeOf2 = (input6) => FIELDS4.find(([selector]) => input6.matches(selector))?.[1] ?? "";
-  var unitsText = (count) => count === 1 ? t("leftovers.scanner.oneUnit") : t("leftovers.scanner.units", { count });
+  var unitsText = (count4) => count4 === 1 ? t("leftovers.scanner.oneUnit") : t("leftovers.scanner.units", { count: count4 });
   var vibrate = () => {
     try {
       navigator.vibrate(VIBRATION_MS);
@@ -30787,7 +32590,7 @@
     });
     return window.ZXing;
   }
-  function setValue(input6, value10) {
+  function setValue2(input6, value10) {
     input6.value = value10;
     input6.dispatchEvent(new Event("input", { bubbles: true }));
     input6.dispatchEvent(new Event("change", { bubbles: true }));
@@ -30820,14 +32623,14 @@
       closeScanner();
       return;
     }
-    setValue(empty2, value10);
+    setValue2(empty2, value10);
     current.read.add(value10);
     current.count++;
     vibrate();
     if (!current.group.some((input6) => !input6.value.trim())) {
-      const count = current.count;
+      const count4 = current.count;
       closeScanner();
-      leftoversLegacy.toast(t("leftovers.scanner.unitsRead", { units: unitsText(count) }));
+      leftoversLegacy.toast(t("leftovers.scanner.unitsRead", { units: unitsText(count4) }));
       return;
     }
     status(t("leftovers.scanner.readNext", { value: value10, read: current.read.size, total: current.group.length }));
@@ -30836,8 +32639,8 @@
     const box3 = input6.closest(".rcl"), entry2 = input6.id === "mvl";
     const expiry = box3 ? box3.querySelector('[data-r="cad"]') : entry2 ? document.getElementById("mvc") : null;
     const made = box3 ? box3.querySelector('[data-r="fab"]') : entry2 ? document.getElementById("mvf") : null;
-    if (gs1.cad && expiry && !expiry.value) setValue(expiry, gs1.cad);
-    if (gs1.fab && made && !made.value) setValue(made, gs1.fab);
+    if (gs1.cad && expiry && !expiry.value) setValue2(expiry, gs1.cad);
+    if (gs1.fab && made && !made.value) setValue2(made, gs1.fab);
   }
   function onRead(text2) {
     const current = session;
@@ -30848,7 +32651,7 @@
       readIntoGroup(current, value10);
       return;
     }
-    setValue(current.input, value10);
+    setValue2(current.input, value10);
     if (gs1 && current.mode === "lote") fillDates(current.input, gs1);
     vibrate();
     closeScanner();
@@ -30870,7 +32673,7 @@
     }
     const group = groupOf(input6);
     dialog7.innerHTML = windowHtml4(group.length > 1);
-    const opened = { input: input6, mode: modeOf2(input6), group, live: true, read: new Set(group.map((field10) => field10.value.trim()).filter(Boolean)), count: 0 };
+    const opened = { input: input6, mode: modeOf2(input6), group, live: true, read: new Set(group.map((field11) => field11.value.trim()).filter(Boolean)), count: 0 };
     session = opened;
     const finish2 = document.getElementById("escfin");
     if (finish2) finish2.onclick = closeScanner;
@@ -31035,7 +32838,7 @@
     if (percent3 === null) return '<span class="vac">—</span>';
     return `<span class="barra"><i style="width:${percent3}%;${percent3 < LOW_COMPLIANCE2 ? "background:var(--warn)" : ""}"></i><em>${percent3}%</em></span>`;
   }
-  function rowHtml18(member) {
+  function rowHtml19(member) {
     return `<button class="dr" data-eqver="${member.id}" title="${t("leftovers.team.seeAgenda")}">
         <span><b>${escapeHtml(member.nombre)}</b><span class="sm">${escapeHtml(member.rol)}</span></span>
         <span class="num">${formatNumber(member.cartera)}</span><span class="num">${formatNumber(member.citas)}</span>
@@ -31052,7 +32855,7 @@
       <div class="dh"><span>${t("leftovers.team.person")}</span><span class="num">${t("leftovers.team.portfolio")}</span><span class="num">${t("leftovers.team.appointments")}</span><span class="num">${t("leftovers.team.visited")}</span>
         <span class="num">${t("leftovers.team.absent")}</span><span class="num">${t("leftovers.team.postponed")}</span><span class="num">${t("leftovers.team.notDone")}</span><span>${t("leftovers.team.compliance")}</span>
         <span class="num">${words16.Visits}</span><span class="num">${t("leftovers.team.due")}</span></div>
-      ${members2.map(rowHtml18).join("")}
+      ${members2.map(rowHtml19).join("")}
     </div></div>
     <p class="sm" style="padding:10px 16px 14px">${t("leftovers.team.help", words16)}</p>`;
   }
@@ -31081,7 +32884,7 @@
     const body3 = document.getElementById("agcuerpo");
     if (!body3) throw new TypeError("#agcuerpo");
     body3.innerHTML = `<div class="semhead"><h2 class="u-p-0">${t("leftovers.team.title")}</h2>
-      ${leftoversLegacy.can("administrar") ? `<button class="btn sec" id="eqfrec">⚙ ${t("leftovers.team.frequency")}</button>` : ""}</div>
+      ${leftoversLegacy.can("administrar") ? `<button class="btn sec" id="eqfrec" data-desktop-only>⚙ ${t("leftovers.team.frequency")}</button>` : ""}</div>
     <div class="filtros" style="border:0;padding:4px 16px 10px"><div id="eqper"></div></div>
     <div id="eqtabla"></div>`;
     const frequency = document.getElementById("eqfrec");
@@ -31137,7 +32940,7 @@
   var real = (selector) => [...document.querySelectorAll(`#v-facturacion ${selector}`)].find((element) => !element.closest(".congelada"));
   function addSettingsButton(nav) {
     if (nav.querySelector("[data-faccfg]") || !leftoversLegacy.can("administrar")) return;
-    nav.insertAdjacentHTML("beforeend", `<button data-faccfg="1">${leftoversLegacy.svgIcon(leftoversLegacy.namedIcon("settings"))} ${t("leftovers.billing.settings")}</button>`);
+    nav.insertAdjacentHTML("beforeend", `<button data-faccfg="1" data-desktop-only>${leftoversLegacy.svgIcon(leftoversLegacy.namedIcon("settings"))} ${t("leftovers.billing.settings")}</button>`);
     const button3 = nav.querySelector("[data-faccfg]");
     if (button3) button3.onclick = () => {
       leftoversLegacy.setBillingSection(leftoversLegacy.lastBillingSettings());
@@ -31183,7 +32986,7 @@
   // src/app/screens/customers/contact-editor/state.ts
   var isCompany = (state2) => state2.type === TYPES.company;
   var field9 = (id) => document.getElementById(id);
-  var fieldValue5 = (id) => field9(id)?.value.trim() ?? "";
+  var fieldValue6 = (id) => field9(id)?.value.trim() ?? "";
   var freeAccount = () => Boolean(field9("komlibre")?.checked);
 
   // src/app/screens/customers/contact-editor/duplicates.ts
@@ -31198,7 +33001,7 @@
     return { nif: raw("konif"), email: raw("komail"), movil: raw("komov"), telefono: raw("kotel"), excluir: state2.customer.id ?? null };
   }
   function markFields(match) {
-    const marked = match.campo === "NIF" ? ["konif"] : match.campo === "correo" ? ["komail"] : ["komov", "kotel"].filter((id) => digits(fieldValue5(id)) >= MIN_PHONE);
+    const marked = match.campo === "NIF" ? ["konif"] : match.campo === "correo" ? ["komail"] : ["komov", "kotel"].filter((id) => digits(fieldValue6(id)) >= MIN_PHONE);
     marked.forEach((id) => field9(id)?.classList.add("campodup"));
   }
   function noticeHtml2(match, use) {
@@ -31210,7 +33013,7 @@
          <div class="kodupc"><b>${escapeHtml(match.nombre)}</b>${customerDataHtml(match)}</div>
          <button type="button" class="btn" id="kodupusar">${use ? t("leftovers.customer.useThis", { thisPatient: term("paciente", { article: "este" }) }) : t("leftovers.customer.seeCard")}</button>`;
   }
-  function paint8(state2, match, use) {
+  function paint9(state2, match, use) {
     const notice2 = document.getElementById("kodup");
     if (!notice2) return;
     FIELDS5.forEach((id) => field9(id)?.classList.remove("campodup"));
@@ -31244,12 +33047,12 @@
       timer3 = setTimeout(async () => {
         const written = read2(state2), mine = ++turn;
         if (!hasData(written)) {
-          paint8(state2, null, use);
+          paint9(state2, null, use);
           return;
         }
         const { data } = await legacyDb().rpc("clientes_coincidencias", { p: written });
         if (mine !== turn || !document.getElementById("kodup")) return;
-        paint8(state2, Array.isArray(data) && data.length ? data[0] ?? null : null, use);
+        paint9(state2, Array.isArray(data) && data.length ? data[0] ?? null : null, use);
       }, CHECK_WAIT_MS);
     };
     FIELDS5.forEach((id) => field9(id)?.addEventListener("input", check2));
@@ -31266,23 +33069,23 @@
   function payload9(state2, taxId) {
     return {
       id: state2.customer.id ?? null,
-      nombre: fieldValue5("konom"),
+      nombre: fieldValue6("konom"),
       nif: taxId,
       tipo: state2.type,
-      direccion: fieldValue5("kodir"),
-      cp: fieldValue5("kocp"),
-      municipio: fieldValue5("komun"),
-      provincia: fieldValue5("kopro"),
-      telefono: fieldValue5("kotel"),
-      movil: fieldValue5("komov"),
-      email: fieldValue5("komail"),
-      empresa: isCompany(state2) ? "" : fieldValue5("koemp"),
-      nota: fieldValue5("konota"),
+      direccion: fieldValue6("kodir"),
+      cp: fieldValue6("kocp"),
+      municipio: fieldValue6("komun"),
+      provincia: fieldValue6("kopro"),
+      telefono: fieldValue6("kotel"),
+      movil: fieldValue6("komov"),
+      email: fieldValue6("komail"),
+      empresa: isCompany(state2) ? "" : fieldValue6("koemp"),
+      nota: fieldValue6("konota"),
       cuenta_id: state2.account && !freeAccount() ? state2.account.id : null
     };
   }
   function checked4(state2) {
-    if (!fieldValue5("konom")) {
+    if (!fieldValue6("konom")) {
       notices.toast(t("leftovers.customer.writeName"), true);
       return false;
     }
@@ -31313,14 +33116,14 @@
     if (state2.customer.id) return t("common.save");
     return withOrder ? t("leftovers.customer.createAndOrder") : t("leftovers.customer.create", { patient: term("paciente") });
   }
-  async function saveCall(state2, call2, customer, withOrder) {
-    if (!call2 || !(withOrder || call2.motivo || call2.resultado || call2.nota || state2.options.llamada)) return null;
-    return saveCallRecord(call2, {
+  async function saveCall(state2, call3, customer, withOrder) {
+    if (!call3 || !(withOrder || call3.motivo || call3.resultado || call3.nota || state2.options.llamada)) return null;
+    return saveCallRecord(call3, {
       contacto_id: customer.id,
       nombre: customer.nombre,
       telefono: orFallback(customer.movil, customer.telefono ?? ""),
       medico: state2.account,
-      resultado: withOrder ? orFallback(call2.resultado, orderDoneResult()) : call2.resultado
+      resultado: withOrder ? orFallback(call3.resultado, orderDoneResult()) : call3.resultado
     }, state2.options.llamada);
   }
   async function afterSave2(state2, customer, callId, withOrder) {
@@ -31341,7 +33144,7 @@
     button3.textContent = buttonText(state2, withOrder);
     return { data: answer.data, error: answer.error };
   }
-  function failed4(error, result) {
+  function failed3(error, result) {
     if (error && (error.hint ?? "").includes(DUPLICATE_HINT)) {
       notices.toast(error.message ?? "", true);
       field9("konif")?.dispatchEvent(new Event("input"));
@@ -31355,14 +33158,14 @@
   }
   async function store3(state2, button3, ready2, withOrder) {
     const { data: result, error } = await send4(state2, button3, ready2.taxId, withOrder);
-    if (failed4(error, result)) return null;
+    if (failed3(error, result)) return null;
     const saved3 = { ...result?.contacto ?? {} }, id = result?.contacto?.id ?? state2.customer.id;
     if (ready2.fields && !await saveCustomFields(ready2.fields, id)) return null;
     if (!await saveFreeAccount(state2, id, saved3)) return null;
     return saved3;
   }
   async function saveCustomer(state2, button3, withOrder) {
-    const call2 = state2.withCall ? readCallRecord() : null, ready2 = checked4(state2);
+    const call3 = state2.withCall ? readCallRecord() : null, ready2 = checked4(state2);
     if (!ready2) return;
     const saved3 = await store3(state2, button3, ready2, withOrder);
     if (!saved3) return;
@@ -31370,31 +33173,31 @@
     document.getElementById("dlg2")?.close();
     notices.toast(term("paciente", { capital: "C", adjective: state2.customer.id ? "guardado" : "creado" }));
     const customer = { ...saved3, ...state2.account ? { medico: state2.account.nombre, medico_codigo: state2.account.codigo ?? null } : {} };
-    const callId = await saveCall(state2, call2, customer, withOrder);
+    const callId = await saveCall(state2, call3, customer, withOrder);
     await afterSave2(state2, customer, callId, withOrder);
   }
   async function saveCallOnly(state2, button3) {
-    const call2 = readCallRecord();
-    const name = fieldValue5("konom"), phone = orFallback(fieldValue5("komov"), fieldValue5("kotel"));
+    const call3 = readCallRecord();
+    const name = fieldValue6("konom"), phone = orFallback(fieldValue6("komov"), fieldValue6("kotel"));
     if (!name && !phone) {
       notices.toast(t("leftovers.customer.nameOrPhone"), true);
       return;
     }
-    if (!call2) return;
+    if (!call3) return;
     button3.disabled = true;
     const noted = {
       tipo: state2.type,
-      nif: fieldValue5("konif"),
-      email: fieldValue5("komail"),
-      direccion: fieldValue5("kodir"),
-      cp: fieldValue5("kocp"),
-      municipio: fieldValue5("komun"),
-      provincia: fieldValue5("kopro"),
-      empresa: fieldValue5("koemp"),
-      nota: fieldValue5("konota")
+      nif: fieldValue6("konif"),
+      email: fieldValue6("komail"),
+      direccion: fieldValue6("kodir"),
+      cp: fieldValue6("kocp"),
+      municipio: fieldValue6("komun"),
+      provincia: fieldValue6("kopro"),
+      empresa: fieldValue6("koemp"),
+      nota: fieldValue6("konota")
     };
     const data = Object.fromEntries(Object.entries(noted).filter(([, value10]) => value10));
-    const callId = await saveCallRecord(call2, { contacto_id: null, nombre: name, telefono: phone, medico: state2.account, resultado: call2.resultado, datos: data }, state2.options.llamada);
+    const callId = await saveCallRecord(call3, { contacto_id: null, nombre: name, telefono: phone, medico: state2.account, resultado: call3.resultado, datos: data }, state2.options.llamada);
     button3.disabled = false;
     if (!callId) return;
     document.getElementById("dlg2")?.close();
@@ -31456,19 +33259,19 @@
     )}
     <label for="konota">${t("leftovers.customer.note")}</label>${input5("konota", customer.nota)}`;
   }
-  function actionsHtml4(state2) {
-    const call2 = state2.withCall && Boolean(state2.options.llamada);
+  function actionsHtml5(state2) {
+    const call3 = state2.withCall && Boolean(state2.options.llamada);
     const save26 = state2.customer.id ? t("common.save") : t("leftovers.customer.create", words5());
     return `${state2.withCall ? callRecordHtml(state2.options.llamada) : ""}
     <div class="acts u-end u-wrap">
       <button class="btn sec" id="kocancel">${t("common.cancel")}</button>
-      <button class="btn ${call2 ? "sec" : ""}" id="kook">${save26}</button>
-      ${call2 ? `<button class="btn" id="kopedido">${t("leftovers.customer.createAndOrder")}</button>` : ""}</div>`;
+      <button class="btn ${call3 ? "sec" : ""}" id="kook">${save26}</button>
+      ${call3 ? `<button class="btn" id="kopedido">${t("leftovers.customer.createAndOrder")}</button>` : ""}</div>`;
   }
   var editorHtml11 = (state2) => `${headerHtml6(state2)}
     ${accountHtml()}
     ${contactHtml2(state2)}
-    ${actionsHtml4(state2)}`;
+    ${actionsHtml5(state2)}`;
 
   // src/app/screens/customers/contact-editor/index.ts
   var body2 = () => document.getElementById("dlg2body");
@@ -32318,7 +34121,7 @@
       void refreshQuietly(void 0, true);
     }
   };
-  var pages2 = () => PAGINAS;
+  var pages3 = () => PAGINAS;
   var navigationGlueLegacy = {
     profileLoaded: () => Boolean(sessionStore.profile),
     addIconIfMissing: (name, svg) => {
@@ -32362,7 +34165,7 @@
       inicioCabecera();
     },
     renameUsersPage: (title2, hint) => {
-      const page = pages2().usuarios;
+      const page = pages3().usuarios;
       if (!page) return;
       page.t = title2;
       page.d = hint;
@@ -32773,8 +34576,8 @@
     };
     listGlueLegacy.setIndicators("directorio", () => JSON.stringify(flags()), async () => {
       const now = filters3();
-      const count = (extra) => listGlueLegacy.total("buscar_cuentas", { ...base(), f_tipo: orNull3(now.tipo), f_urgentes: Boolean(now.urg), f_mios: Boolean(now.mios), f_sin_visitar: Boolean(now.sin), lim: 1, desplaz: 0, ...extra });
-      const [people, centres, urgent, never, mine] = await Promise.all([count({ f_tipo: "Persona" }), count({ f_tipo: "Centro" }), count({ f_urgentes: true }), count({ f_sin_visitar: true }), count({ f_mios: true })]);
+      const count4 = (extra) => listGlueLegacy.total("buscar_cuentas", { ...base(), f_tipo: orNull3(now.tipo), f_urgentes: Boolean(now.urg), f_mios: Boolean(now.mios), f_sin_visitar: Boolean(now.sin), lim: 1, desplaz: 0, ...extra });
+      const [people, centres, urgent, never, mine] = await Promise.all([count4({ f_tipo: "Persona" }), count4({ f_tipo: "Centro" }), count4({ f_urgentes: true }), count4({ f_sin_visitar: true }), count4({ f_mios: true })]);
       const sub = (plain2) => filtered() ? t("legacyD.lists.withFilters") : plain2;
       return [
         { k: "Persona", t: term("medico", { number: "p", capital: "C" }), n: people, s: sub(t("legacyD.lists.inTotal")) },
@@ -32798,8 +34601,8 @@
       return JSON.stringify([now.q, now.medico, now.municipio, now.tipo, now.pedidos, keysOf(now.campos) ? now.campos : {}]);
     }, async () => {
       const now = filters3();
-      const count = (extra) => listGlueLegacy.total("clientes_lista", { ...base(), p_tipo: orNull3(now.tipo), p_pedidos: orNull3(now.pedidos), lim: 1, desplaz: 0, ...extra });
-      const [all, withOrders, without, companies] = await Promise.all([count({ p_tipo: null, p_pedidos: null }), count({ p_pedidos: "con" }), count({ p_pedidos: "sin" }), count({ p_tipo: "Empresa" })]);
+      const count4 = (extra) => listGlueLegacy.total("clientes_lista", { ...base(), p_tipo: orNull3(now.tipo), p_pedidos: orNull3(now.pedidos), lim: 1, desplaz: 0, ...extra });
+      const [all, withOrders, without, companies] = await Promise.all([count4({ p_tipo: null, p_pedidos: null }), count4({ p_pedidos: "con" }), count4({ p_pedidos: "sin" }), count4({ p_tipo: "Empresa" })]);
       const filtered = [now.q, now.medico, now.municipio, now.tipo, now.pedidos, keysOf(now.campos)].some(Boolean);
       const sub = (plain2) => filtered ? t("legacyD.lists.withFilters") : plain2;
       return [
@@ -32988,7 +34791,7 @@
       void open2();
     };
   }
-  async function removedWindow({ title: title2, hint, listId, load: load4, rowHtml: rowHtml21, empty: empty2 }) {
+  async function removedWindow({ title: title2, hint, listId, load: load4, rowHtml: rowHtml23, empty: empty2 }) {
     const body3 = document.getElementById("dbody");
     if (!body3) return;
     body3.innerHTML = `<div class="fh"><div><h2>${title2}</h2><div class="sm">${hint}</div></div>
@@ -32996,7 +34799,7 @@
     removedLegacy.dialog("dlg")?.showModal();
     const rows2 = await load4(), list = document.getElementById(listId);
     if (!list) return;
-    list.innerHTML = rows2.length ? `<div class="lista">${rows2.map(rowHtml21).join("")}</div>` : `<div class="vacio">${empty2}</div>`;
+    list.innerHTML = rows2.length ? `<div class="lista">${rows2.map(rowHtml23).join("")}</div>` : `<div class="vacio">${empty2}</div>`;
   }
   function removeRowOnClick(selector) {
     document.addEventListener("click", (event) => {
@@ -33021,7 +34824,7 @@
       return;
     }
     if (result?.error === "historial") {
-      const has = Object.entries(result.detalle ?? {}).map(([key, count]) => `${removedLegacy.number(count)} ${removedLegacy.whatAccountHas(key)}`).join(", ");
+      const has = Object.entries(result.detalle ?? {}).map(([key, count4]) => `${removedLegacy.number(count4)} ${removedLegacy.whatAccountHas(key)}`).join(", ");
       if (await removedLegacy.confirm(t("legacyD.removed.accountHistoryText", { has }), { titulo: t("legacyD.removed.accountHistoryTitle"), ok: t("legacyD.removed.deregister") })) {
         if (await removedLegacy.deregisterAccount(id, true)) closeCard();
       }
@@ -33307,9 +35110,91 @@
     return { data: { ok: true }, error: null };
   }
 
+  // src/app/screens/settings/rules/modules.ts
+  var CARDS = {
+    cirugias: { key: "cirugias", texts: "surgeries", create: () => editSurgery(null), open: "cirugias" },
+    concursos: { key: "concursos", texts: "tenders", create: () => editTender(null), open: "concursos" },
+    deposito: { key: "deposito", texts: "deposit", create: () => {
+      chooseDepositCentre();
+    }, open: "deposito" },
+    parque: { key: "parque", texts: "equipment", create: () => {
+      goTo("productos");
+    }, open: "parque" }
+  };
+  var text = (card3, part) => t(`settingsRules.modules.${card3.texts}.${part}`);
+  function moduleCardHtml(key) {
+    const card3 = CARDS[key], id = `mu${key}`;
+    if (moduleInUse(key)) {
+      return `<div class="card cfgpanel" id="${id}" data-en-uso="1"><h2>${text(card3, "title")}</h2>
+      <p class="sm"><span class="pill p-est">${t("settingsRules.modules.inUse")}</span> ${text(card3, "used")}</p>
+      ${card3.open ? `<div class="acts u-start"><button type="button" class="btn sec" id="${id}ir">${text(card3, "open")}</button></div>` : ""}</div>`;
+    }
+    return `<div class="card cfgpanel" id="${id}" data-en-uso="0"><h2>${text(card3, "title")}</h2>
+    <div class="vacio vguia"><b>${text(card3, "none")}</b><span>${text(card3, "hint")}</span>
+      <button type="button" class="btn" id="${id}crear">${text(card3, "create")}</button></div></div>`;
+  }
+  async function refreshModulesInUse() {
+    const { data, error } = await callRpc("modulos_en_uso");
+    if (error || !data || typeof data !== "object") return;
+    const before = JSON.stringify(cycleLegacy.setting(SETTING_IN_USE) ?? null);
+    cycleLegacy.setSetting(SETTING_IN_USE, data);
+    if (before === JSON.stringify(data)) return;
+    shellLegacy.applyMenuPermissions();
+    for (const key of Object.keys(CARDS)) {
+      const shown3 = document.getElementById(`mu${key}`);
+      if (shown3) {
+        shown3.outerHTML = moduleCardHtml(key);
+        bindModuleCard(key);
+      }
+    }
+  }
+  function refreshWhenClosed() {
+    const dialog7 = document.getElementById("dlg");
+    dialog7?.addEventListener("close", () => {
+      void refreshModulesInUse();
+    }, { once: true });
+  }
+  function bindModuleCard(key) {
+    const card3 = CARDS[key], create = document.getElementById(`mu${key}crear`), open2 = document.getElementById(`mu${key}ir`);
+    if (create) create.onclick = async () => {
+      await card3.create();
+      refreshWhenClosed();
+    };
+    if (open2 && card3.open) {
+      const page = card3.open;
+      open2.onclick = () => {
+        goTo(page);
+      };
+    }
+  }
+  function chooseDepositCentre() {
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = `<div class="fh"><div><h2>${t("settingsRules.modules.deposit.chooseTitle")}</h2><div class="sm">${t("settingsRules.modules.deposit.chooseHint")}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    <label>${t("settingsRules.modules.deposit.centre")}</label><div id="mudepcta"></div>
+    <div class="acts u-end"><button type="button" class="btn sec" data-cerrar>${t("common.cancel")}</button></div>`;
+    if (!box3.open) box3.showModal();
+    editorLegacy.pickAccount(document.getElementById("mudepcta"), null, async (account) => {
+      if (!account.id) {
+        notices.toast(t("settingsRules.modules.deposit.noCentre"), true);
+        return;
+      }
+      await showDeposit(account.id, account.nombre ?? "", "");
+      refreshWhenClosed();
+    }, t("settingsRules.modules.deposit.centrePlaceholder"));
+  }
+  async function paintWithModule(key, cards2 = []) {
+    await paintRuleCards([{ id: `mu${key}`, html: () => moduleCardHtml(key), save: () => Promise.resolve() }, ...cards2]);
+    bindModuleCard(key);
+  }
+  var paintContractsSettings = () => paintWithModule("concursos");
+  var paintConsignmentSettings = () => paintWithModule("deposito");
+  var paintInstalledSettings = () => paintWithModule("parque");
+
   // src/app/core/layers/sales-modules.ts
   var GAVEL = '<path d="m14.5 12.5-8 8a2.12 2.12 0 1 1-3-3l8-8"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/>';
-  var MONITOR = '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>';
+  var MONITOR2 = '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>';
   var REPAINT_DELAY_MS2 = 300;
   var BUSINESS_PLANS = ["empresa", "medida"];
   var NEW_NOTIFICATIONS = [
@@ -33319,7 +35204,7 @@
     { key: "revision_equipo", icon: "📆", title: "legacyD.sales.reviewTitle", hint: "legacyD.sales.reviewHint", what: "legacyD.sales.reviewWhat", todo: "legacyD.sales.reviewTodo" }
   ];
   function addToSalesMenu(module, after, icon3, svg) {
-    menuLegacy.addIcon(icon3, svg);
+    if (svg) menuLegacy.addIcon(icon3, svg);
     menuLegacy.setModuleIcon(module, icon3);
     const group = menuLegacy.menuGroups().find((item) => item.id === "ventas");
     if (group && !group.items.includes(module)) group.items.splice(group.items.indexOf(after) + 1, 0, module);
@@ -33354,6 +35239,17 @@
     Object.defineProperty(page, "d", { get: () => t("legacyD.sales.equipmentHint") });
     return page;
   }
+  var paintDepositsTab = () => paintDeposits(showDeposit, chooseDepositCentre);
+  function depositsPage() {
+    const page = {
+      t: "",
+      permiso: () => !menuLegacy.isProfessionalPortal() && menuLegacy.canUseModule("ventas") && sectionShown("deposito"),
+      tabs: [["centros", t("legacyD.sales.depositsTab"), paintDepositsTab]]
+    };
+    Object.defineProperty(page, "t", { get: () => menuLegacy.depositsTitle() });
+    Object.defineProperty(page, "d", { get: () => t("legacyD.sales.depositsHint") });
+    return page;
+  }
   function installNotifications() {
     const keys = NEW_NOTIFICATIONS.map((item) => item.key);
     menuLegacy.addNotificationTypes(NEW_NOTIFICATIONS.map((item) => [item.key, item.icon, t(item.title), t(item.hint)]));
@@ -33385,7 +35281,7 @@
     }
     menuLegacy.setPlanSections({ cirugias: BUSINESS_PLANS, deposito: BUSINESS_PLANS, concursos: BUSINESS_PLANS, parque: BUSINESS_PLANS });
     for (const key of ["cirugias", "concursos"]) menuLegacy.requirePlanSection(key);
-    addToSalesMenu("parque", "concursos", "monitor", MONITOR);
+    addToSalesMenu("parque", "concursos", "monitor", MONITOR2);
     menuLegacy.setPage("parque", equipmentPage());
     repaintOnClose("parque", () => {
       menuLegacy.paintEquipment();
@@ -33395,30 +35291,30 @@
       menuLegacy.lockSections();
     } catch {
     }
+    addToSalesMenu("deposito", "productos", "warehouse");
+    menuLegacy.setPage("deposito", depositsPage());
+    repaintOnClose("deposito", () => {
+      void paintDepositsTab();
+    });
+    try {
+      menuLegacy.depositsMenu();
+    } catch {
+    }
     installNotifications();
     listenToManualButton();
   }
   function applyMenuPermissions(args) {
     const tryMenus = () => {
-      try {
-        menuLegacy.equipmentMenu();
-      } catch {
-      }
-      try {
-        menuLegacy.tendersMenu();
-      } catch {
+      for (const menu of [menuLegacy.equipmentMenu, menuLegacy.tendersMenu, menuLegacy.depositsMenu]) {
+        try {
+          menu();
+        } catch {
+        }
       }
     };
     tryMenus();
     const result = menuLegacy.baseMenuPermissions(args);
-    try {
-      menuLegacy.tendersMenu();
-    } catch {
-    }
-    try {
-      menuLegacy.equipmentMenu();
-    } catch {
-    }
+    tryMenus();
     const search5 = document.getElementById("q");
     if (search5?.placeholder.startsWith("Buscar ")) search5.placeholder = t("legacyD.sales.searchPlaceholder", { professional: menuLegacy.term("medico") });
     return result;
@@ -33514,7 +35410,7 @@
       general = value10;
     });
   }
-  var ACCESS_CHECK_MS2 = 15e3;
+  var ACCESS_CHECK_MS = 15e3;
   var LOGIN_TRY_MS = 250;
   var LOGIN_TRIES = 60;
   var PROFILE_TRY_MS = 1e3;
@@ -33546,7 +35442,7 @@
   function installAccessChecks() {
     setInterval(() => {
       if (document.visibilityState === "visible") sessionGlueLegacy.checkAccess();
-    }, ACCESS_CHECK_MS2);
+    }, ACCESS_CHECK_MS);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         sessionGlueLegacy.checkAccess(true);
@@ -33776,88 +35672,6 @@
     }).observe(settings2, { childList: true, subtree: true });
   }
 
-  // src/app/screens/settings/rules/modules.ts
-  var CARDS = {
-    cirugias: { key: "cirugias", texts: "surgeries", create: () => editSurgery(null), open: "cirugias" },
-    concursos: { key: "concursos", texts: "tenders", create: () => editTender(null), open: "concursos" },
-    deposito: { key: "deposito", texts: "deposit", create: () => {
-      chooseCentre();
-    } },
-    parque: { key: "parque", texts: "equipment", create: () => {
-      goTo("productos");
-    }, open: "parque" }
-  };
-  var text = (card3, part) => t(`settingsRules.modules.${card3.texts}.${part}`);
-  function moduleCardHtml(key) {
-    const card3 = CARDS[key], id = `mu${key}`;
-    if (moduleInUse(key)) {
-      return `<div class="card cfgpanel" id="${id}" data-en-uso="1"><h2>${text(card3, "title")}</h2>
-      <p class="sm"><span class="pill p-est">${t("settingsRules.modules.inUse")}</span> ${text(card3, "used")}</p>
-      ${card3.open ? `<div class="acts u-start"><button type="button" class="btn sec" id="${id}ir">${text(card3, "open")}</button></div>` : ""}</div>`;
-    }
-    return `<div class="card cfgpanel" id="${id}" data-en-uso="0"><h2>${text(card3, "title")}</h2>
-    <div class="vacio vguia"><b>${text(card3, "none")}</b><span>${text(card3, "hint")}</span>
-      <button type="button" class="btn" id="${id}crear">${text(card3, "create")}</button></div></div>`;
-  }
-  async function refreshModulesInUse() {
-    const { data, error } = await callRpc("modulos_en_uso");
-    if (error || !data || typeof data !== "object") return;
-    const before = JSON.stringify(cycleLegacy.setting(SETTING_IN_USE) ?? null);
-    cycleLegacy.setSetting(SETTING_IN_USE, data);
-    if (before === JSON.stringify(data)) return;
-    shellLegacy.applyMenuPermissions();
-    for (const key of Object.keys(CARDS)) {
-      const shown3 = document.getElementById(`mu${key}`);
-      if (shown3) {
-        shown3.outerHTML = moduleCardHtml(key);
-        bindModuleCard(key);
-      }
-    }
-  }
-  function refreshWhenClosed() {
-    const dialog7 = document.getElementById("dlg");
-    dialog7?.addEventListener("close", () => {
-      void refreshModulesInUse();
-    }, { once: true });
-  }
-  function bindModuleCard(key) {
-    const card3 = CARDS[key], create = document.getElementById(`mu${key}crear`), open2 = document.getElementById(`mu${key}ir`);
-    if (create) create.onclick = async () => {
-      await card3.create();
-      refreshWhenClosed();
-    };
-    if (open2 && card3.open) {
-      const page = card3.open;
-      open2.onclick = () => {
-        goTo(page);
-      };
-    }
-  }
-  function chooseCentre() {
-    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
-    if (!body3 || !box3) return;
-    body3.innerHTML = `<div class="fh"><div><h2>${t("settingsRules.modules.deposit.chooseTitle")}</h2><div class="sm">${t("settingsRules.modules.deposit.chooseHint")}</div></div>
-      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
-    <label>${t("settingsRules.modules.deposit.centre")}</label><div id="mudepcta"></div>
-    <div class="acts u-end"><button type="button" class="btn sec" data-cerrar>${t("common.cancel")}</button></div>`;
-    if (!box3.open) box3.showModal();
-    editorLegacy.pickAccount(document.getElementById("mudepcta"), null, async (account) => {
-      if (!account.id) {
-        notices.toast(t("settingsRules.modules.deposit.noCentre"), true);
-        return;
-      }
-      await showDeposit(account.id, account.nombre ?? "", "");
-      refreshWhenClosed();
-    }, t("settingsRules.modules.deposit.centrePlaceholder"));
-  }
-  async function paintWithModule(key, cards2 = []) {
-    await paintRuleCards([{ id: `mu${key}`, html: () => moduleCardHtml(key), save: () => Promise.resolve() }, ...cards2]);
-    bindModuleCard(key);
-  }
-  var paintContractsSettings = () => paintWithModule("concursos");
-  var paintConsignmentSettings = () => paintWithModule("deposito");
-  var paintInstalledSettings = () => paintWithModule("parque");
-
   // src/app/screens/settings/rules/sales.ts
   var REPLENISH = "rgrepo";
   var TAXES = "rgiva";
@@ -33899,7 +35713,7 @@
   }
   var rateOptions = () => vatRates().map(([rate, text2]) => ({ value: String(rate), text: text2 }));
   function taxesHtml() {
-    const options3 = rateOptions(), row3 = (id, label, help4, value10) => selectRowHtml({ id: `${TAXES}${id}`, label: t(label), help: t(help4), value: String(value10), options: options3 });
+    const options3 = rateOptions(), row3 = (id, label, help5, value10) => selectRowHtml({ id: `${TAXES}${id}`, label: t(label), help: t(help5), value: String(value10), options: options3 });
     return ruleCardHtml({ id: TAXES, title: t("settingsRules.taxes.title"), info: t("settingsRules.taxes.info"), intro: t("settingsRules.taxes.intro"), rows: [
       areaRowHtml({ id: `${TAXES}t`, label: t("settingsRules.taxes.rates"), help: t("settingsRules.taxes.ratesHelp"), value: ratesText(), rows: 4, placeholder: t("settingsRules.taxes.ratesPlaceholder") }),
       row3("g", "settingsRules.taxes.general", "settingsRules.taxes.generalHelp", generalVat()),
@@ -33928,6 +35742,214 @@
     if (await saveRule(SETTING_TAXES, { ...current, tipos: list, general: pick2("g"), productos: pick2("p"), servicios: pick2("s"), envios: pick2("e") })) void paintTaxesSettings();
   }
   var paintTaxesSettings = () => paintRuleCards([{ id: TAXES, html: taxesHtml, save: saveTaxes }]);
+
+  // src/app/screens/settings/rules/channel-editor.ts
+  var ERRORS5 = ["nombre", "nombre_largo", "nombre_repetido", "descuento", "por_defecto", "ultimo", "permiso"];
+  var MAX_NAME2 = 60;
+  var help4 = (text2) => `<span class="sm vhelp">${escapeHtml(text2)}</span>`;
+  var field10 = (id) => document.getElementById(id);
+  var valueOf12 = (id) => document.getElementById(id)?.value ?? "";
+  var NEW_CHANNEL = {
+    clave: "",
+    nombre: "",
+    compra: "cliente",
+    atribucion: "referencia",
+    une_cliente: true,
+    en_portal: true,
+    descuento: null,
+    origenes: [],
+    por_defecto: false,
+    orden: 0,
+    activo: true
+  };
+  function selectHtml(id, chosen4, options3) {
+    return `<select id="${id}">${options3.map(([value10, text2]) => `<option value="${value10}" ${value10 === chosen4 ? "selected" : ""}>${t(text2)}</option>`).join("")}</select>`;
+  }
+  function switchHtml(id, label, text2, state2) {
+    return `<div class="vfield"><label class="vfswitch u-mt-12"><input type="checkbox" role="switch" id="${id}" ${state2.checked ? "checked" : ""} ${state2.fixed ? "disabled" : ""}><span class="sw"></span><b>${escapeHtml(label)}</b></label>${help4(text2)}</div>`;
+  }
+  function nameHtml(channel) {
+    const key = channel.clave ? help4(t("salesChannels.editor.key", { key: channel.clave })) : "";
+    return `<div class="vfield"><label for="cvname">${t("salesChannels.editor.name")}</label><input id="cvname" value="${escapeHtml(channel.nombre)}" maxlength="${MAX_NAME2}" autocomplete="off" placeholder="${t("salesChannels.editor.namePlaceholder")}">${help4(t("salesChannels.editor.nameHelp"))}${key}</div>`;
+  }
+  function rulesHtml(channel) {
+    return `<div class="vfield"><label for="cvbuyer">${t("salesChannels.editor.buyer")}</label>${selectHtml(
+      "cvbuyer",
+      channel.compra,
+      [["cliente", "salesChannels.editor.buyerCustomer"], ["cuenta", "salesChannels.editor.buyerAccount"]]
+    )}${help4(t("salesChannels.editor.buyerHelp"))}</div>
+    <div class="vfield"><label for="cvattr">${t("salesChannels.editor.attribution")}</label>${selectHtml(
+      "cvattr",
+      channel.atribucion,
+      [["referencia", "salesChannels.editor.toReference"], ["compradora", "salesChannels.editor.toBuyer"], ["ninguna", "salesChannels.editor.toNobody"]]
+    )}${help4(t("salesChannels.editor.attributionHelp"))}</div>
+    ${switchHtml("cvjoins", t("salesChannels.editor.joins"), t("salesChannels.editor.joinsHelp"), { checked: channel.une_cliente })}
+    ${switchHtml("cvportal", t("salesChannels.editor.portal"), t("salesChannels.editor.portalHelp"), { checked: channel.en_portal })}
+    <div class="vfield"><label for="cvdisc">${t("salesChannels.editor.discount")}</label><input id="cvdisc" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${channel.descuento ? formatNumber(channel.descuento).replace(",", ".") : ""}">${help4(t("salesChannels.editor.discountHelp"))}</div>`;
+  }
+  function originsHtml(channel) {
+    const boxes = ORIGINS2.map((origin) => `<label class="opt"><input type="checkbox" data-cvori="${origin}" ${channel.origenes.includes(origin) ? "checked" : ""}> ${escapeHtml(t(`salesChannels.origins.${origin}`))}</label>`).join("");
+    return `<div class="vfield"><label>${t("salesChannels.editor.origins")}</label><div class="u-flex u-gap-8 u-wrap">${boxes}</div>${help4(t("salesChannels.editor.originsHelp"))}</div>`;
+  }
+  function stateHtml3(channel, isNew) {
+    const fixedDefault = channel.por_defecto;
+    return `${switchHtml("cvdefault", t("salesChannels.editor.isDefault"), t(fixedDefault ? "salesChannels.editor.defaultFixed" : "salesChannels.editor.defaultHelp"), { checked: channel.por_defecto, fixed: fixedDefault })}
+    ${isNew ? "" : switchHtml("cvactive", t("salesChannels.editor.active"), t(fixedDefault ? "salesChannels.editor.activeFixed" : "salesChannels.editor.activeHelp"), { checked: channel.activo, fixed: fixedDefault })}`;
+  }
+  function channelEditorHtml(existing) {
+    const channel = existing ?? NEW_CHANNEL, isNew = !existing;
+    return `<div class="fh"><div><h2>${t(isNew ? "salesChannels.editor.newTitle" : "salesChannels.editor.editTitle")}</h2><div class="sm">${escapeHtml(isNew ? t("salesChannels.editor.in") : channel.nombre)}</div></div>
+      <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
+    <div class="vform">${nameHtml(channel)}${rulesHtml(channel)}${originsHtml(channel)}${stateHtml3(channel, isNew)}</div>
+    <div class="acts u-end"><button type="button" class="btn sec" data-cerrar>${t("common.cancel")}</button><button type="button" class="btn" id="cvok">${t(isNew ? "salesChannels.editor.add" : "common.save")}</button></div>`;
+  }
+  function readChannel(channel) {
+    const checked5 = (id) => Boolean(field10(id)?.checked);
+    return {
+      clave: channel?.clave ?? "",
+      nombre: valueOf12("cvname").trim(),
+      compra: valueOf12("cvbuyer"),
+      atribucion: valueOf12("cvattr"),
+      une_cliente: checked5("cvjoins"),
+      en_portal: checked5("cvportal"),
+      descuento: valueOf12("cvdisc").trim(),
+      origenes: [...document.querySelectorAll("[data-cvori]")].filter((box3) => box3.checked).map((box3) => box3.dataset.cvori ?? ""),
+      por_defecto: checked5("cvdefault"),
+      activo: field10("cvactive") ? checked5("cvactive") : true
+    };
+  }
+  var errorText5 = (error) => error && ERRORS5.includes(error) ? t(`salesChannels.errors.${error}`) : t("salesChannels.errors.other");
+  async function saveChannel(channel) {
+    const fields = readChannel(channel);
+    if (!fields.nombre) {
+      notices.toast(t("salesChannels.errors.nombre"), true);
+      return null;
+    }
+    const { data, error } = await callRpc("guardar_canal_venta", { p: fields });
+    if (error || !data?.ok) {
+      notices.toast(errorText5(data?.error), true);
+      return null;
+    }
+    notices.toast(t(channel ? "salesChannels.editor.saved" : "salesChannels.editor.added"));
+    return data.clave ?? channel?.clave ?? "";
+  }
+  function bindChannelEditor(channel, saved3) {
+    const ok = document.getElementById("cvok");
+    if (!ok) return;
+    const save26 = async () => {
+      ok.disabled = true;
+      const key = await saveChannel(channel);
+      ok.disabled = false;
+      if (key !== null) await saved3(key);
+    };
+    ok.onclick = () => {
+      void save26();
+    };
+    const name = field10("cvname");
+    if (name) {
+      name.focus({ preventScroll: true });
+      name.onkeydown = (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          void save26();
+        }
+      };
+    }
+  }
+
+  // src/app/screens/settings/rules/channels.ts
+  var PANEL = "cvpanel";
+  var SEPARATOR2 = " · ";
+  function originsText(origins) {
+    const names = origins.map((origin) => t(`salesChannels.origins.${origin}`));
+    return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")}${t("salesChannels.origins.and")}${names[names.length - 1] ?? ""}`;
+  }
+  var ATTRIBUTION = {
+    referencia: "salesChannels.summary.toReference",
+    compradora: "salesChannels.summary.toBuyer",
+    ninguna: "salesChannels.summary.toNobody"
+  };
+  function summaryText3(channel) {
+    const parts = [
+      t(channel.compra === "cuenta" ? "salesChannels.summary.buysAccount" : "salesChannels.summary.buysCustomer"),
+      t(ATTRIBUTION[channel.atribucion] ?? "salesChannels.summary.toNobody")
+    ];
+    if (channel.en_portal) parts.push(t("salesChannels.summary.inPortal"));
+    if (channel.descuento) parts.push(t("salesChannels.summary.discount", { discount: formatNumber(channel.descuento) }));
+    if (channel.origenes.length) parts.push(t("salesChannels.summary.receives", { origins: originsText(channel.origenes) }));
+    return parts.join(SEPARATOR2);
+  }
+  function rowHtml20(channel) {
+    const name = escapeHtml(channel.nombre);
+    const pills = `${channel.por_defecto ? `<span class="pill p-est">${t("salesChannels.list.isDefault")}</span>` : ""}${channel.activo ? "" : `<span class="pill p-anu">${t("salesChannels.list.inactive")}</span>`}`;
+    return `<div class="item vrow ${channel.activo ? "" : "off"}" data-cvcanal="${escapeHtml(channel.clave)}" role="button" tabindex="0" aria-label="${t("salesChannels.list.openOf", { name })}">
+        <span class="tx"><b>${name}</b><span class="sm">${escapeHtml(summaryText3(channel))}</span></span>${pills}<span class="vchev" aria-hidden="true">${t("salesChannels.list.open")}</span>
+      </div>`;
+  }
+  function listHtml2() {
+    const channels = salesChannels2(), title2 = t("salesChannels.list.title");
+    return `<h2>${title2}</h2>
+    <p class="sm">${t("salesChannels.list.intro")} ${infoButton(t("salesChannels.list.infoTitle"), t("salesChannels.list.info"))}</p>
+    <div class="lista vlist">${channels.map(rowHtml20).join("") || `<div class="vacio">${t("salesChannels.list.none")}</div>`}</div>
+    <div class="acts u-end"><button type="button" class="btn" id="cvnuevo">${t("salesChannels.list.newChannel")}</button></div>`;
+  }
+  async function reloadChannels() {
+    const { data } = await callRpc("ajustes_lista");
+    const list = data?.[SETTING_CHANNELS];
+    if (Array.isArray(list)) cycleLegacy.setSetting(SETTING_CHANNELS, list);
+  }
+  function openEditor2(channel) {
+    const body3 = document.getElementById("dbody"), box3 = document.getElementById("dlg");
+    if (!body3 || !box3) return;
+    body3.innerHTML = channelEditorHtml(channel);
+    bindChannelEditor(channel, async (key) => {
+      delete box3.dataset.sucio;
+      box3.close();
+      await reloadChannels();
+      showChannels(key);
+    });
+    if (!box3.open) box3.showModal();
+  }
+  function bindList(panel) {
+    const open2 = (key) => {
+      const channel = salesChannels2().find((item) => item.clave === key);
+      if (channel) openEditor2(channel);
+    };
+    panel.querySelectorAll("[data-cvcanal]").forEach((row3) => {
+      row3.onclick = () => {
+        open2(row3.dataset.cvcanal);
+      };
+      row3.onkeydown = (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open2(row3.dataset.cvcanal);
+        }
+      };
+    });
+    const add = document.getElementById("cvnuevo");
+    if (add) add.onclick = () => {
+      openEditor2(null);
+    };
+  }
+  function showChannels(focus) {
+    const panel = document.getElementById(PANEL);
+    if (!panel) return;
+    panel.innerHTML = listHtml2();
+    bindList(panel);
+    const row3 = focus ? panel.querySelector(`[data-cvcanal="${focus}"]`) : null;
+    if (row3) {
+      row3.scrollIntoView({ block: "nearest" });
+      row3.focus({ preventScroll: true });
+    }
+  }
+  async function paintChannelsSettings() {
+    if (!document.getElementById("cfgcuerpo")) return;
+    await reloadChannels();
+    const box3 = document.getElementById("cfgcuerpo");
+    if (!box3) return;
+    box3.innerHTML = `<div class="card cfgpanel" id="${PANEL}"></div>`;
+    showChannels();
+  }
 
   // src/app/core/layers/settings-tree.ts
   var entry = (fields) => Object.fromEntries(Object.entries(fields).filter(([, value10]) => value10 !== void 0));
@@ -34024,9 +36046,9 @@
   var noPaint = () => void 0;
   function joinStates(tree) {
     const data = tree.find((group) => group[0] === t("legacyD.tree.data"));
-    const catalogs2 = data?.[1].find((item) => item.k === "cat"), states = data?.[1].find((item) => item.k === "estados");
-    if (data && catalogs2 && states && !catalogs2.hijos) {
-      data[1] = data[1].filter((item) => item !== states).map((item) => item === catalogs2 ? { ...catalogs2, hijos: [{ k: "cat", t: t("legacyD.tree.valueLists"), r: catalogs2.r ?? noPaint }, { k: "estados", t: states.t, r: states.r ?? noPaint }] } : item);
+    const catalogs2 = data?.[1].find((item) => item.k === "cat"), states2 = data?.[1].find((item) => item.k === "estados");
+    if (data && catalogs2 && states2 && !catalogs2.hijos) {
+      data[1] = data[1].filter((item) => item !== states2).map((item) => item === catalogs2 ? { ...catalogs2, hijos: [{ k: "cat", t: t("legacyD.tree.valueLists"), r: catalogs2.r ?? noPaint }, { k: "estados", t: states2.t, r: states2.r ?? noPaint }] } : item);
     }
   }
   function joinFiscal(tree) {
@@ -34042,6 +36064,7 @@
   }
   function salesEntries() {
     const sales = treeLegacy.canUseModule("ventas"), items = [];
+    if (sales && knowsChannels()) items.push({ k: "canales", t: t("salesChannels.entry"), ic: "shopping-cart", d: t("salesChannels.entryHint"), r: () => paintChannelsSettings() });
     if (treeLegacy.canUseModule("agenda") && planIncludesSection("cirugias")) items.push({ k: "servicios", t: t("settingsRules.servicesEntry"), ic: "package", d: t("settingsRules.servicesHint"), r: () => paintServicesSettings() });
     if (sales && planIncludesSection("concursos")) items.push({ k: "contratos", t: t("settingsRules.contractsEntry"), ic: "file-text", d: t("settingsRules.contractsHint"), r: () => paintContractsSettings() });
     if (sales) items.push({ k: "distribuidores", t: t("legacyD.tree.distributors"), ic: "package", d: t("legacyD.tree.distributorsHint"), r: () => treeLegacy.paintDistributors() });
@@ -34077,6 +36100,7 @@
       tpv: t("legacyD.tree.cardPaymentWords"),
       "o.pruebas": t("legacyD.tree.testEnvironmentWords"),
       impuestos: t("settingsRules.taxesWords"),
+      canales: t("salesChannels.entryWords"),
       servicios: t("settingsRules.servicesWords"),
       contratos: t("settingsRules.contractsWords"),
       "stock.consigna": t("settingsRules.consignmentWords"),
@@ -34310,10 +36334,10 @@
     }
   }
   function markUnsaved() {
-    const count = shellLegacy.unsavedCount();
+    const count4 = shellLegacy.unsavedCount();
     ["cfuguardar", "cfudescartar"].forEach((id) => {
       const button3 = document.getElementById(id);
-      if (button3) button3.disabled = !count;
+      if (button3) button3.disabled = !count4;
     });
   }
   function markOrderSection() {
@@ -34491,14 +36515,17 @@
   var PLAN_KEY = "o.plan";
   var byId21 = (id) => document.getElementById(id);
   var leavesOf2 = (tree) => tree.flatMap(([group, items]) => items.map((item) => ({ gr: group, ...item })));
-  function chosenLeaf(leaves, asked2) {
-    return leaves.find((leaf) => leaf.k === asked2) ?? leaves.find((leaf) => leaf.hijos?.some((part) => part.k === asked2)) ?? leaves.find((leaf) => asked2.startsWith(`${leaf.k}.`)) ?? leaves.find((leaf) => leaf.k === DEFAULT_KEY) ?? leaves[0];
+  function chosenLeaf(leaves, asked3) {
+    return leaves.find((leaf) => leaf.k === asked3) ?? leaves.find((leaf) => leaf.hijos?.some((part) => part.k === asked3)) ?? leaves.find((leaf) => asked3.startsWith(`${leaf.k}.`)) ?? leaves.find((leaf) => leaf.k === DEFAULT_KEY) ?? leaves[0];
   }
   function planPill(item) {
     if (!item.mod || shellLegacy.planIncludes(item.mod)) return "";
     return `<span class="pill p-plan">${escapeHtml(shellLegacy.planMinimum(item.mod)?.nombre ?? t("settingsShell.plan"))}</span>`;
   }
-  function indexHtml(tree) {
+  var blockedEntry = (item) => settingsBlockedOnPhone(item.k) && !(item.hijos ?? []).some((part) => !settingsBlockedOnPhone(part.k));
+  var shownTree = (tree) => isPhone2() ? tree.map(([group, items]) => [group, items.filter((item) => !blockedEntry(item))]).filter(([, items]) => items.length) : tree;
+  function indexHtml(fullTree) {
+    const tree = shownTree(fullTree);
     const index = tree.map(([group, items]) => `<h4>${escapeHtml(group)}</h4>${items.map((item) => `<button type="button" data-ck="${item.k}">${shellLegacy.iconOf(item.ic)}<span>${escapeHtml(item.t)}</span>${planPill(item)}</button>`).join("")}`).join("");
     return `<div class="saludo"><div><h1>${t("settingsShell.title")}</h1><div class="fecha">${t(tree.length > 1 ? "settingsShell.subtitleAll" : "settingsShell.subtitleOwn")}</div></div></div>
       <div class="cfu">
@@ -34589,9 +36616,16 @@
       shellLegacy.reload();
     };
   }
+  function paintSettingsNotice(key) {
+    const box3 = byId21("cfgcuerpo");
+    if (!box3) return;
+    paintDesktopNotice(box3, { place: key, back: () => {
+      byId21("cfuvolver")?.click();
+    } });
+  }
   function paintIndexIfChanged(view, tree, leaves) {
-    const mobile = isMobile();
-    const signature = `${leaves.map((leaf) => leaf.k + (leaf.hijos ? `(${leaf.hijos.map((part) => part.k).join(",")})` : "")).join("|")}|${String(mobile)}`;
+    const mobile2 = isMobile();
+    const signature = `${leaves.map((leaf) => leaf.k + (leaf.hijos ? `(${leaf.hijos.map((part) => part.k).join(",")})` : "")).join("|")}|${String(mobile2)}`;
     if (view.dataset.cfgfirma === signature && byId21("cfulista") && view.querySelector(".cfupag")) return;
     view.innerHTML = indexHtml(tree);
     view.dataset.cfgfirma = signature;
@@ -34623,6 +36657,13 @@
     paintIndexIfChanged(view, tree, leaves);
     paintHeader(view, leaf);
     showPending(view);
+    paintBody(leaf, part);
+  }
+  function paintBody(leaf, part) {
+    if (blockedEntry(leaf)) {
+      paintSettingsNotice(part ? part.k : leaf.k);
+      return;
+    }
     if (leaf.mod && !shellLegacy.planIncludes(leaf.mod)) {
       showPlanNeeded(leaf);
       return;
@@ -35007,6 +37048,17 @@
       section.classList.remove("cargando-pend");
     }
   };
+  var desktopOnlyOnPhone = {
+    name: "v2.473 · on the phone a «Solo ordenador» screen is not loaded: its section shows the notice (the last rule before switching)",
+    before: (nav) => {
+      if (!blockedOnPhone(nav.target)) return;
+      nav.blocked = true;
+      const screen3 = nav.target;
+      switchToNotice(screen3, (section) => {
+        paintScreenNotice(section, screen3);
+      });
+    }
+  };
 
   // src/app/core/navigation/index.ts
   var NAVIGATION_STEPS = [
@@ -35036,7 +37088,8 @@
     loadingIndicatorAfterDelay,
     markNavigationInProgress,
     legacyConfigPages,
-    noFlashOnFastLoad
+    noFlashOnFastLoad,
+    desktopOnlyOnPhone
   ];
   function navigate(target, ...args) {
     runNavigation(NAVIGATION_STEPS, (screen3) => {
@@ -35061,7 +37114,7 @@
   function addCompany() {
     const plan2 = document.querySelector('[data-u="plan"]');
     if (!plan2 || document.querySelector('[data-u="empresa"]')) return;
-    plan2.insertAdjacentHTML("beforebegin", `<button data-u="empresa" class="hide">${svgIco(ICON_NOM.building ?? "")} ${t("legacyC.userMenu.company")}</button>`);
+    plan2.insertAdjacentHTML("beforebegin", `<button data-u="empresa" class="hide" data-desktop-only>${svgIco(ICON_NOM.building ?? "")} ${t("legacyC.userMenu.company")}</button>`);
   }
   function addReportProblem() {
     const signOut = document.querySelector('[data-u="salir"]');
@@ -35179,11 +37232,11 @@
   }
   function pendingSince(since2) {
     const limit = performance.now() - (Date.now() - since2) - STALE_MS;
-    let count = 0;
+    let count4 = 0;
     RED_EN_CURSO.forEach((started) => {
-      if (started >= limit) count++;
+      if (started >= limit) count4++;
     });
-    return count;
+    return count4;
   }
   function runQueriesOnce() {
     let prototype = Object.getPrototypeOf(client().from("perfiles").select("id"));
@@ -35484,8 +37537,8 @@
       if (ordered.some((button3, index) => button3 !== buttons[index])) ordered.forEach((button3) => actions.appendChild(button3));
       const tools = actions.querySelector(":scope > #dirtools"), gap = actions.querySelector(":scope > .ai-hueco");
       if (tools && gap && gap.nextElementSibling !== tools) actions.insertBefore(gap, tools);
-      actions.querySelectorAll(":scope > .ai-dir").forEach((help4) => {
-        help4.remove();
+      actions.querySelectorAll(":scope > .ai-dir").forEach((help5) => {
+        help5.remove();
       });
     });
   }
@@ -35533,8 +37586,8 @@
   }
   function keepOneTitleHelp() {
     observe(document.querySelector("main"), () => {
-      document.querySelector("#dircab h1")?.querySelectorAll(".ai").forEach((help4, index) => {
-        if (index) help4.remove();
+      document.querySelector("#dircab h1")?.querySelectorAll(".ai").forEach((help5, index) => {
+        if (index) help5.remove();
       });
     }, { childList: true, subtree: true });
   }
@@ -35821,7 +37874,7 @@
   var MAX_ITEMS = 3;
   var FIRST_SENTENCE_CHARS = 200;
   var MANUAL_SEARCH_DELAY_MS = 350;
-  var FOCUS_DELAY_MS2 = 50;
+  var FOCUS_DELAY_MS3 = 50;
   function freezeOnTabChange() {
     document.addEventListener("click", (event) => {
       const button3 = closestTo(event.target, 'main .subnav button, main [data-pedsec], main [data-psec], main [data-fsec], main [data-ansec], main [data-avista], main [data-ag="equipo"]');
@@ -35898,7 +37951,7 @@
         setTimeout(() => {
           const password = byId("lp");
           if (password && document.activeElement !== email) password.focus();
-        }, FOCUS_DELAY_MS2);
+        }, FOCUS_DELAY_MS3);
       }
     } catch {
     }
@@ -36068,10 +38121,10 @@
   });
 
   // src/app/screens/platform/model.ts
-  var model_exports10 = {};
-  __export(model_exports10, {
+  var model_exports11 = {};
+  __export(model_exports11, {
     downloadJson: () => downloadJson,
-    errorMessage: () => errorMessage2,
+    errorMessage: () => errorMessage3,
     extraName: () => extraName,
     panelBox: () => panelBox,
     planOf: () => planOf2,
@@ -36111,7 +38164,7 @@
     if (data.estado === "impago") return `<span class="pill p-urg">${t("platform.orgs.unpaidSince", { date: formatShortDate(data.impago_desde ?? "") })}</span> `;
     return blockedPill(organization, data) + (data.stripe_suscripcion ? '<span class="pill p-est">Stripe</span> ' : "");
   }
-  var errorMessage2 = (error) => error?.message ?? "";
+  var errorMessage3 = (error) => error?.message ?? "";
   var shortDateTime2 = (value10) => new Date(value10).toLocaleString(t("dates.locale"), { dateStyle: "short", timeStyle: "short" });
   function downloadJson(data, fileName, keepUrlMs = 0) {
     const link = document.createElement("a");
@@ -36190,8 +38243,14 @@
     paintCycleTeam: () => paintCycleTeam
   });
 
+  // src/app/api/client.ts
+  function rpc(name, ...params) {
+    const [values2] = params;
+    return legacyDb().rpc(name, values2);
+  }
+
   // src/app/screens/cycle/model.ts
-  var CLASSES = ["A", "B", "C"];
+  var CLASSES3 = ["A", "B", "C"];
   var cycleState = { owner: "", classFilter: "", classifyFilter: "sin", query: "" };
   var CYCLE_NAMES = /* @__PURE__ */ new Map([
     [1, "cycle.cycleNames.month"],
@@ -36202,7 +38261,7 @@
     [12, "cycle.cycleNames.year"]
   ]);
   var cycleName = (months) => t(CYCLE_NAMES.get(months) ?? "cycle.cycleNames.other");
-  var visitsText = (count) => `${count} ${term("visita", { number: count === 1 ? "s" : "p" })}`;
+  var visitsText = (count4) => `${count4} ${term("visita", { number: count4 === 1 ? "s" : "p" })}`;
   var words11 = () => ({
     visit: term("visita"),
     visits: term("visita", { number: "p" }),
@@ -36212,7 +38271,7 @@
     speciality: term("especialidad")
   });
   var classPill = (value10) => value10 ? `<span class="cicl c${value10}">${value10}</span>` : '<span class="cicl csin">—</span>';
-  var classButtons = (id, value10) => `<span class="segs cicsegs" role="group" aria-label="${t("cycle.classLabel")}">${CLASSES.map((letter) => `<button type="button" data-ccl="${id}|${letter}" class="${letter === value10 ? "on" : ""}" aria-pressed="${String(letter === value10)}">${letter}</button>`).join("")}</span>`;
+  var classButtons = (id, value10) => `<span class="segs cicsegs" role="group" aria-label="${t("cycle.classLabel")}">${CLASSES3.map((letter) => `<button type="button" data-ccl="${id}|${letter}" class="${letter === value10 ? "on" : ""}" aria-pressed="${String(letter === value10)}">${letter}</button>`).join("")}</span>`;
   var ownerParam = () => permissions.seesEverything() ? cycleState.owner || null : salesTeam.currentUserId();
   var goToTab = (tab) => {
     cycleLegacy.openTab(tab);
@@ -36248,7 +38307,7 @@
   var visits = (value10) => Math.min(MAX_VISITS, Math.max(0, Math.floor(Number(value10) || 0)));
   function editorHtml12(current) {
     const months = LENGTHS.map(([value10, key]) => `<option value="${value10}" ${Number(current.meses) === value10 ? "selected" : ""}>${t(key)}</option>`).join("");
-    const goals = CLASSES.map((letter) => `<label>${classPill(letter)}<span>${t("cycle.editor.perCycle", words11())}</span><input type="number" min="0" max="${MAX_VISITS}" step="1" data-cobj="${letter}" value="${Math.max(0, Number(current[letter]) || 0)}" aria-label="${t("cycle.editor.ofClass", { ...words11(), class: letter })}"></label>`).join("");
+    const goals = CLASSES3.map((letter) => `<label>${classPill(letter)}<span>${t("cycle.editor.perCycle", words11())}</span><input type="number" min="0" max="${MAX_VISITS}" step="1" data-cobj="${letter}" value="${Math.max(0, Number(current[letter]) || 0)}" aria-label="${t("cycle.editor.ofClass", { ...words11(), class: letter })}"></label>`).join("");
     return `<div class="fh"><div><h2>${t("cycle.editor.title", words11())}</h2>
       <div class="sm">${t("cycle.editor.subtitle", words11())}</div></div>
       <button class="x" data-cerrar aria-label="${t("common.close")}">✕</button></div>
@@ -36307,27 +38366,27 @@
     const left = data.quedan_dias === 1 ? t("cycle.current.oneDayLeft") : t("cycle.current.daysLeft", { count: formatNumber(data.quedan_dias) });
     return `<div class="ciccab"><div><b>${escapeHtml(rangeText(data))}</b>
       <span class="sm">${left} · ${t("cycle.current.allCount", words11())}</span></div>
-      <span class="cicacc">${selector}${cardSectionsLegacy.can("administrar") ? `<button type="button" class="btn sec" id="cicajustar">${t("cycle.current.adjust")}</button>` : ""}</span></div>`;
+      <span class="cicacc">${selector}${cardSectionsLegacy.can("administrar") ? `<button type="button" class="btn sec" id="cicajustar" data-desktop-only>${t("cycle.current.adjust")}</button>` : ""}</span></div>`;
   }
-  function unclassifiedHtml(count) {
-    if (!count) return "";
-    const text2 = count === 1 ? t("cycle.current.oneUnclassified", words11()) : t("cycle.current.unclassified", { ...words11(), count: formatNumber(count) });
+  function unclassifiedHtml(count4) {
+    if (!count4) return "";
+    const text2 = count4 === 1 ? t("cycle.current.oneUnclassified", words11()) : t("cycle.current.unclassified", { ...words11(), count: formatNumber(count4) });
     return `<div class="banda-aviso cicsin">${text2}${t("cycle.current.unclassifiedTail")}
-      <button type="button" class="btn sec" id="cicirclas">${t("cycle.classify")}</button></div>`;
+      <button type="button" class="btn sec" id="cicirclas" data-desktop-only>${t("cycle.classify")}</button></div>`;
   }
   function missingHtml(data) {
     const filter = cycleState.classFilter, pending = (data.pendientes ?? []).filter((item) => !filter || item.clase === filter), cycle2 = cycleName(data.meses);
-    const buttons = [["", t("cycle.current.all")], ...CLASSES.map((letter) => [letter, letter])].map(([value10 = "", label = ""]) => `<button type="button" data-cf="${value10}" class="${value10 === filter ? "on" : ""}" aria-pressed="${String(value10 === filter)}">${label}</button>`).join("");
+    const buttons = [["", t("cycle.current.all")], ...CLASSES3.map((letter) => [letter, letter])].map(([value10 = "", label = ""]) => `<button type="button" data-cf="${value10}" class="${value10 === filter ? "on" : ""}" aria-pressed="${String(value10 === filter)}">${label}</button>`).join("");
     const empty2 = filter ? t("cycle.current.noneMissingIn", { ...words11(), class: filter }) : t("cycle.current.allUpToDate", { cycle: cycle2 });
     return `<section class="card cicbloque"><div class="cicbcab"><h2>${t("cycle.current.missingTitle", { ...words11(), cycle: cycle2 })}</h2>
         <span class="segs" id="cicfil" role="group" aria-label="${t("cycle.classLabel")}">${buttons}</span></div>
       ${pending.length ? `<div class="lista">${pending.map(pendingRow2).join("")}</div>` : `<div class="vacio vlinea">${empty2}</div>`}</section>`;
   }
-  function pageHtml8(data, selector) {
+  function pageHtml9(data, selector) {
     const classified = sum((data.resumen ?? []).map((item) => item.cuentas));
     return `<div class="cicpag">${headerHtml7(data, selector)}
     ${unclassifiedHtml(data.sin_clase ?? 0)}
-    ${classified ? `<div class="cicres">${CLASSES.map((letter) => classCard(letter, data)).join("")}</div>
+    ${classified ? `<div class="cicres">${CLASSES3.map((letter) => classCard(letter, data)).join("")}</div>
     ${missingHtml(data)}` : `<div class="vacio">${t("cycle.current.nobodyClassified", words11())}</div>`}</div>`;
   }
   function bindAccounts(box3) {
@@ -36374,30 +38433,30 @@
       box3.innerHTML = `<div class="vacio">${t("cycle.current.couldNotLoad")}</div>`;
       return;
     }
-    box3.innerHTML = pageHtml8(data, selector);
+    box3.innerHTML = pageHtml9(data, selector);
     bind19(box3);
   }
 
   // src/app/screens/cycle/classify.ts
   var SHOWN6 = 300;
   var SEARCH_WAIT_MS10 = 350;
-  function rowHtml19(item) {
+  function rowHtml21(item) {
     return `<div class="item cicrow" data-cfila="${item.id}">
         <span class="tx"><button type="button" class="lnk" data-cfi="${item.id}"><b>${escapeHtml(item.nombre)}</b></button>
           <span class="sm">${escapeHtml([item.especialidad, item.municipio, item.estado_comercial].filter(Boolean).join(" · "))}</span></span>
         <span class="cicfal"><b>${formatNumber(item.actividades_12m)}</b><span class="sm">${t("cycle.classifyPage.in12Months")}</span></span>
         ${classButtons(item.id, item.clase)}</div>`;
   }
-  function listHtml2(rows2) {
+  function listHtml3(rows2) {
     if (!rows2.length) return `<div class="vacio vlinea">${t(cycleState.classifyFilter === "sin" && !cycleState.query ? "cycle.classifyPage.allClassified" : "cycle.classifyPage.noneWithFilter")}</div>`;
-    return `<section class="card cicbloque"><div class="lista">${rows2.map(rowHtml19).join("")}</div></section>${rows2.length >= SHOWN6 ? `<p class="sm">${t("cycle.classifyPage.firstOnly")}</p>` : ""}`;
+    return `<section class="card cicbloque"><div class="lista">${rows2.map(rowHtml21).join("")}</div></section>${rows2.length >= SHOWN6 ? `<p class="sm">${t("cycle.classifyPage.firstOnly")}</p>` : ""}`;
   }
-  function pageHtml9(rows2, selector) {
-    const filters3 = [["sin", t("cycle.classifyPage.unclassified")], ...CLASSES.map((letter) => [letter, letter]), ["todas", t("cycle.classifyPage.all")]].map(([value10 = "", label = ""]) => `<button type="button" data-cl="${value10}" class="${value10 === cycleState.classifyFilter ? "on" : ""}" aria-pressed="${String(value10 === cycleState.classifyFilter)}">${label}</button>`).join("");
+  function pageHtml10(rows2, selector) {
+    const filters3 = [["sin", t("cycle.classifyPage.unclassified")], ...CLASSES3.map((letter) => [letter, letter]), ["todas", t("cycle.classifyPage.all")]].map(([value10 = "", label = ""]) => `<button type="button" data-cl="${value10}" class="${value10 === cycleState.classifyFilter ? "on" : ""}" aria-pressed="${String(value10 === cycleState.classifyFilter)}">${label}</button>`).join("");
     return `<div class="cicpag"><div class="ciccab"><span class="segs" id="cicclf" role="group" aria-label="${t("cycle.classifyPage.show")}">${filters3}</span>
       <span class="cicacc"><input id="cicq" type="search" placeholder="${t("cycle.classifyPage.search", words11())}" value="${escapeHtml(cycleState.query)}" aria-label="${t("cycle.classifyPage.searchLabel")}">${selector}</span></div>
     <p class="sm">${t("cycle.classifyPage.hint", words11())}</p>
-    ${listHtml2(rows2)}</div>`;
+    ${listHtml3(rows2)}</div>`;
   }
   var searchTimer7;
   function bind20(box3, wasSearching) {
@@ -36438,10 +38497,10 @@
       return;
     }
     const search5 = document.getElementById("cicq"), wasSearching = Boolean(search5) && document.activeElement === search5;
-    box3.innerHTML = pageHtml9(rows2 ?? [], selector);
+    box3.innerHTML = pageHtml10(rows2 ?? [], selector);
     bind20(box3, wasSearching);
   }
-  async function classify(button3, onCard) {
+  async function classify2(button3, onCard) {
     const [id = "", letter = ""] = (button3.dataset.ccl ?? "").split("|"), group = button3.closest(".cicsegs");
     if (!group) return;
     const chosen4 = button3.classList.contains("on") ? null : letter, buttons = [...group.querySelectorAll("button")];
@@ -36468,7 +38527,7 @@
     document.addEventListener("click", (event) => {
       const button3 = event.target?.closest("[data-ccl]");
       if (!button3 || button3.disabled) return;
-      void classify(button3, onCard);
+      void classify2(button3, onCard);
     }, true);
   }
 
@@ -36482,15 +38541,15 @@
   function missingHtml2(product, notHeard, cycle2) {
     const missing2 = product.faltan ?? [];
     if (!missing2.length) return `<div class="banda-ok cobok">${t("cycle.coverage.allHeard", { cycle: cycle2 })}</div>`;
-    const count = notHeard > missing2.length ? t("cycle.coverage.firstOf", { shown: missing2.length, total: formatNumber(notHeard) }) : t("cycle.coverage.count", { count: formatNumber(missing2.length) });
-    return `<details class="cobfal"><summary>${t("cycle.coverage.whoIsMissing")}${count}</summary>
+    const count4 = notHeard > missing2.length ? t("cycle.coverage.firstOf", { shown: missing2.length, total: formatNumber(notHeard) }) : t("cycle.coverage.count", { count: formatNumber(missing2.length) });
+    return `<details class="cobfal"><summary>${t("cycle.coverage.whoIsMissing")}${count4}</summary>
             <div class="lista">${missing2.map(missingRow).join("")}</div></details>`;
   }
   function productCard(product, cycle2) {
-    const classes = product.clases ?? [], accounts2 = sum(classes.map((item) => item.cuentas)), heard = sum(classes.map((item) => item.presentado));
-    return `<section class="card cobcard"><div class="cobcab"><h2>${escapeHtml(product.nombre)}</h2><span class="cobtot">${percentOf(heard, accounts2)}%</span></div>
+    const classes = product.clases ?? [], accounts3 = sum(classes.map((item) => item.cuentas)), heard = sum(classes.map((item) => item.presentado));
+    return `<section class="card cobcard"><div class="cobcab"><h2>${escapeHtml(product.nombre)}</h2><span class="cobtot">${percentOf(heard, accounts3)}%</span></div>
           ${classes.map(classRow).join("")}
-          ${missingHtml2(product, accounts2 - heard, cycle2)}</section>`;
+          ${missingHtml2(product, accounts3 - heard, cycle2)}</section>`;
   }
   function bodyHtml(data) {
     const products3 = data.productos ?? [];
@@ -36538,7 +38597,7 @@
 
   // src/app/screens/cycle/team.ts
   var ofText = (done, goal) => t("cycle.current.progress", { done: formatNumber(done), goal: formatNumber(goal) });
-  function rowHtml20(member) {
+  function rowHtml22(member) {
     const classified = member.a + member.b + member.c, percent3 = member.objetivo ? percentOf(member.hechas, member.objetivo) : null;
     const progress = percent3 === null ? "—" : `<span class="cicbarc">${progressBar(percent3)}${ofText(member.hechas, member.objetivo)} · ${percent3}%</span>`;
     return `<tr><td><button type="button" class="lnk" data-cde="${member.id}"><b>${escapeHtml(member.nombre)}</b></button><span class="sm"> · ${escapeHtml(member.rol)}</span></td><td>${formatNumber(member.cartera)}</td><td>${formatNumber(member.a)}</td><td>${formatNumber(member.b)}</td><td>${formatNumber(member.c)}</td>
@@ -36549,7 +38608,7 @@
     if (!members2.length) return `<div class="vacio">${t("cycle.team.nobody")}</div>`;
     const head = [t("cycle.team.person"), t("cycle.team.portfolio"), "A", "B", "C", t("cycle.team.noClass"), t("cycle.team.upToDate"), t("cycle.team.cycleVisits", words11())];
     return `<div class="card cicbloque"><div class="dgrid-wrap"><table class="trtabla cictab"><thead><tr>${head.map((title2) => `<th>${title2}</th>`).join("")}</tr></thead>
-      <tbody>${members2.map(rowHtml20).join("")}</tbody></table></div></div>
+      <tbody>${members2.map(rowHtml22).join("")}</tbody></table></div></div>
       <p class="sm">${t("cycle.team.countHint", words11())}</p>`;
   }
   async function paintCycleTeam() {
@@ -36571,12 +38630,12 @@
   }
 
   // src/app/core/legacy-c/pages.ts
-  var pages3 = () => PAGINAS;
+  var pages4 = () => PAGINAS;
   var groups = () => MENU_GRUPOS;
   var navIcons = () => ICO_NAV;
   var moduleIcons = () => ICO_MOD;
   function wrapTabs(name, change) {
-    const page = pages3()[name];
+    const page = pages4()[name];
     if (!page) return;
     const descriptor = Object.getOwnPropertyDescriptor(page, "tabs");
     const previous = () => descriptor?.get ? descriptor.get.call(page) : descriptor?.value ?? [];
@@ -36611,16 +38670,16 @@
         ];
       }
     };
-    pages3().organizacion = page;
+    pages4().organizacion = page;
   }
   function defineUsersAndPanel() {
-    pages3().usuarios = {
+    pages4().usuarios = {
       t: t("legacyC.pages.users.title"),
       d: t("legacyC.pages.users.description"),
       admin: true,
       tabs: [["usuarios", t("legacyC.pages.users.users"), () => paintUsers()], ["roles", t("legacyC.pages.users.roles"), () => paintRoles()]]
     };
-    pages3().delcos = {
+    pages4().delcos = {
       t: t("legacyC.pages.panel.title"),
       d: t("legacyC.pages.panel.description"),
       permiso: () => permissions_exports.can("gestionar_plataforma"),
@@ -36651,18 +38710,18 @@
     });
   }
   function addErrorsTab() {
-    const panel = pages3().delcos;
+    const panel = pages4().delcos;
     if (panel && !panel.tabs.some((tab) => tab[0] === "errores")) panel.tabs.push(["errores", t("legacyC.pages.panel.errors"), () => paintPlatformErrors()]);
   }
   var hideReadOnlyBillingTabs = () => {
     wrapTabs("organizacion", (tabs) => readOnlyBilling() ? tabs.filter((tab) => !["fiscal", "series", "vf", "pdf"].includes(tab[0])) : tabs);
   };
   function addRequestsTab() {
-    const panel = pages3().delcos;
+    const panel = pages4().delcos;
     if (panel && !panel.tabs.some((tab) => tab[0] === "solicitudes")) panel.tabs.splice(1, 0, ["solicitudes", t("legacyC.pages.panel.requests"), () => paintRequests()]);
   }
   function addPlatformTabs() {
-    const panel = pages3().delcos;
+    const panel = pages4().delcos;
     if (!panel) return;
     const base = panel.tabs;
     Object.defineProperty(panel, "tabs", { configurable: true, get: () => navigationStore.platformMode ? [...base, ["equipo", t("legacyC.pages.panel.team"), () => paintUsers()], ["plantilla", t("legacyC.pages.panel.template"), () => paintTemplate(void 0)]] : base });
@@ -36706,7 +38765,7 @@
     PLAN_SECCIONES.eventos = ["comercial", "empresa", "medida"];
     addToGroup("cartera", "eventos", "directorio");
     const page = { t: t("legacyC.pages.events.title"), permiso: () => !ES_MEDICO() && permissions_exports.canUseModule("directorio") && plans_exports.planIncludesSection("eventos"), tabs: [] };
-    pages3().eventos = page;
+    pages4().eventos = page;
     Object.defineProperty(page, "d", { get: () => t("legacyC.pages.events.description") });
     Object.defineProperty(page, "tabs", { get: () => [["lista", t("legacyC.pages.events.list"), () => paintEvents()]].concat(verTransparencia() ? [["transparencia", t("legacyC.pages.events.expenses"), () => paintExpenseReport(void 0)]] : []) });
   }
@@ -36715,7 +38774,7 @@
     moduleIcons().ciclo = svgIco(ICON_NOM.target ?? "");
     addToGroup("dia", "ciclo");
     const page = { permiso: () => !ES_MEDICO() && permissions_exports.canUseModule("agenda"), tabs: [] };
-    pages3().ciclo = page;
+    pages4().ciclo = page;
     Object.defineProperty(page, "t", { get: () => t("legacyC.pages.cycle.title", { visits: term("visita", { number: "p" }) }) });
     Object.defineProperty(page, "d", { get: () => t("legacyC.pages.cycle.description", { professionals: term("medico", { number: "p", capital: "C" }), visits: term("visita", { number: "p" }) }) });
     Object.defineProperty(page, "tabs", { get: () => [["ciclo", t("legacyC.pages.cycle.current"), () => paintCycle()]].concat(plans_exports.planIncludesSection("cobertura") ? [["cobertura", t("legacyC.pages.cycle.coverage"), () => paintCoverage()]] : [], [["clasificar", t("legacyC.pages.cycle.classify"), () => paintClassify()]]).concat(permissions_exports.seesEverything() ? [["equipo", t("legacyC.pages.cycle.team"), () => paintCycleTeam()]] : []) });
@@ -36728,7 +38787,7 @@
     moduleIcons().cirugias = svgIco(ICON_NOM.scissors ?? "");
     addToGroup("dia", "cirugias");
     const page = { t: t("legacyC.pages.surgeries.title"), permiso: () => !ES_MEDICO() && permissions_exports.canUseModule("agenda") && modules_in_use_exports.moduleInUse("cirugias"), tabs: [["lista", t("legacyC.pages.surgeries.title"), () => paintSurgeries()]] };
-    pages3().cirugias = page;
+    pages4().cirugias = page;
     Object.defineProperty(page, "d", { get: () => t("legacyC.pages.surgeries.description") });
   }
 
@@ -36901,11 +38960,11 @@
   var EMPTY_BAR = 6;
   var dayOf = (entry2) => String(entry2.fecha ?? "").slice(0, 10);
   function bars(list, today2) {
-    const count = {};
+    const count4 = {};
     list.forEach((entry2) => {
-      count[dayOf(entry2)] = (count[dayOf(entry2)] ?? 0) + 1;
+      count4[dayOf(entry2)] = (count4[dayOf(entry2)] ?? 0) + 1;
     });
-    return [...Array(DAYS).keys()].map((index) => count[calendar_exports.plusDays(today2, index - (DAYS - 1))] ?? 0);
+    return [...Array(DAYS).keys()].map((index) => count4[calendar_exports.plusDays(today2, index - (DAYS - 1))] ?? 0);
   }
   var oldestDays = (list, today2) => list.length ? Math.max(0, ...list.map((entry2) => Math.round((new Date(today2).getTime() - new Date(dayOf(entry2)).getTime()) / DAY_MS7))) : 0;
   function ago2(days) {
@@ -36924,8 +38983,8 @@
     return `<button type="button" class="pkt ${urgent ? "alta" : ""}" data-pk="${filter}" aria-pressed="false" ${list.length ? "" : "data-cero"}>
           <span class="pkfil">${t("legacyC.orderAlerts.filtering")}</span><span class="pktt">${svgIco(ICON_NOM[icon3] ?? ICON_NOM.info ?? "")} ${title2}</span>
           <span class="pkn" data-v="${list.length}">${money_exports.number(list.length)}</span><span class="pks">${sentence(key, list, context.today)}</span>
-          <span class="pkbars" aria-hidden="true">${dayBars.map((count, index) => `<i class="${index === DAYS - 1 ? "u" : isDayOff(day(index)) ? "fin" : ""}" style="height:${count ? Math.max(MIN_BAR2, 100 * count / top) : EMPTY_BAR}%"></i>`).join("")}</span>
-          <span class="pkdias">${dayBars.map((count, index) => dayHtml(day(index), count, index === DAYS - 1)).join("")}</span>
+          <span class="pkbars" aria-hidden="true">${dayBars.map((count4, index) => `<i class="${index === DAYS - 1 ? "u" : isDayOff(day(index)) ? "fin" : ""}" style="height:${count4 ? Math.max(MIN_BAR2, 100 * count4 / top) : EMPTY_BAR}%"></i>`).join("")}</span>
+          <span class="pkdias">${dayBars.map((count4, index) => dayHtml(day(index), count4, index === DAYS - 1)).join("")}</span>
           <span class="pklg">${t("legacyC.orderAlerts.lastDays")}</span></button>`;
   }
   function alertsBox() {
@@ -36973,7 +39032,7 @@
     const profile6 = sessionStore.profile;
     const mandatory = settings2?.valor?.obligatorios?.[profile6.rol] ?? [], preferences = profile6.preferencias?.avisos_pedidos ?? {};
     const shown3 = PK_TARJ.filter(([key]) => mandatory.includes(key) || preferences[key] !== false);
-    const gear = `<button type="button" class="pkcfg" id="opcfg" aria-label="${t("legacyC.orderAlerts.choose")}" title="${t("legacyC.orderAlerts.choose")}">${svgIco(ICON_NOM.settings ?? "")}</button>`;
+    const gear = `<button type="button" class="pkcfg" id="opcfg" data-desktop-only aria-label="${t("legacyC.orderAlerts.choose")}" title="${t("legacyC.orderAlerts.choose")}">${svgIco(ICON_NOM.settings ?? "")}</button>`;
     const context = { today: calendar_exports.today(), entries: data ?? {} };
     box3.innerHTML = !shown3.length ? `<div class="pkvacio">${t("legacyC.orderAlerts.hidden")} ${gear}</div>` : `<div class="pk">${shown3.map((card3) => cardHtml6(card3, context)).join("")}${gear}</div>`;
     bindCards(box3, mandatory, shown3.length);
@@ -37530,9 +39589,9 @@
   }
   function fieldNames() {
     const names = {};
-    FIELDS6.forEach((field10) => {
-      if (field10 === "especialidad") Object.defineProperty(names, field10, { enumerable: true, configurable: true, get: () => term("especialidad", { capital: "C" }) });
-      else names[field10] = field10 === "cuenta_id" ? term("medico", { capital: "C" }) : t(`legacyC.fieldNames.${field10}`);
+    FIELDS6.forEach((field11) => {
+      if (field11 === "especialidad") Object.defineProperty(names, field11, { enumerable: true, configurable: true, get: () => term("especialidad", { capital: "C" }) });
+      else names[field11] = field11 === "cuenta_id" ? term("medico", { capital: "C" }) : t(`legacyC.fieldNames.${field11}`);
     });
     return names;
   }
@@ -37723,62 +39782,371 @@
     surgeriesMenu();
   }
 
-  // src/app/legacy/components-bridge.ts
-  var componentsLegacy = {
-    popup: () => navigationStore.pickerPopup,
-    setPopup: (popup) => {
-      navigationStore.pickerPopup = popup;
-    },
-    showValue: (input6) => {
-      visibleValue(input6);
-    },
-    placePopup: (popup, anchor) => {
-      placePicker(anchor);
-    },
-    emitChange: (input6) => {
-      emitir(input6);
-    },
-    pending: () => navigationStore.pendingEnhancements,
-    flushScheduled: () => Boolean(navigationStore.enhanceFrame),
-    setFlushScheduled: (scheduled) => {
-      navigationStore.enhanceFrame = scheduled ? 1 : 0;
-    },
-    isVatField: (input6) => Boolean(money_exports.isVatField(input6)),
-    vatSelector: (input6) => {
-      vatSelector(input6);
-    },
-    touchScreen: () => PANTALLA_TACTIL,
-    weekdayLetter: (isoDate) => calendar_exports.dayLetter(isoDate),
-    readOnlyCompany: () => Boolean(ordersStore.paymentState?.solo_lectura),
-    hasStartPoint: () => Boolean(activePreferences().salida),
-    helpAnchors: () => ANCLAS_AYUDA,
-    manualAnchors: () => MANUAL_ANCLA,
-    euros: (value10) => money_exports.eurosRounded(value10),
-    customFields: (scope) => CAMPOS[scope] ?? [],
-    sortedFields: (scope) => sortedFields(scope),
-    canEditCatalogs: () => Boolean(permissions_exports.canManageLists()),
-    sidePanelOpen: () => sideOpen(),
-    customerFilters: () => PAC.campos = PAC.campos ?? {},
-    reloadCustomers: () => {
-      PAC.pagina = 0;
-      void listCustomers();
-    },
-    orderFilters: () => ordersStore.filters,
-    reloadOrders: () => {
-      ordersStore.page = 0;
-      void paintOrderList();
-    },
-    productFilters: () => productsStore.filters,
-    reloadProducts: () => {
-      void paintProducts();
-    },
-    productsSection: () => productsStore.section
+  // src/app/legacy/organisation-bridge.ts
+  var organisationLegacy = {
+    setting: (key) => settingsStore.settings[key],
+    name: () => appName(),
+    hasPortal: () => hasExtra("portal")
   };
 
+  // src/app/core/sales-channels.ts
+  var SETTING_CHANNELS = "canales_venta";
+  var ORIGINS2 = ["importacion", "portal", "servicios", "consigna"];
+  var PATIENT = "paciente";
+  var CENTRE5 = "centro";
+  function fixedChannels() {
+    return [
+      {
+        clave: PATIENT,
+        nombre: t("core.terms.saleTo", { customer: term("paciente", { article: "al" }) }),
+        compra: "cliente",
+        atribucion: "referencia",
+        une_cliente: true,
+        en_portal: true,
+        descuento: null,
+        origenes: ["importacion"],
+        por_defecto: true,
+        orden: 1,
+        activo: true
+      },
+      {
+        clave: CENTRE5,
+        nombre: t("core.terms.saleToCentre"),
+        compra: "cuenta",
+        atribucion: "compradora",
+        une_cliente: false,
+        en_portal: false,
+        descuento: null,
+        origenes: ["portal", "servicios", "consigna"],
+        por_defecto: false,
+        orden: 2,
+        activo: true
+      }
+    ];
+  }
+  var isChannel = (value10) => Boolean(value10) && typeof value10 === "object" && typeof value10.clave === "string" && typeof value10.nombre === "string";
+  function stored3() {
+    const value10 = organisationLegacy.setting(SETTING_CHANNELS);
+    if (!Array.isArray(value10)) return null;
+    const list = value10.filter(isChannel);
+    return list.length ? list : null;
+  }
+  var knowsChannels = () => stored3() !== null;
+  function salesChannels2() {
+    const list = stored3() ?? fixedChannels();
+    return [...list].sort((one, other) => one.orden - other.orden || one.clave.localeCompare(other.clave));
+  }
+  var activeChannels = () => salesChannels2().filter((channel) => channel.activo);
+  var channelOf = (key) => salesChannels2().find((channel) => channel.clave === key);
+  function defaultChannel() {
+    const active2 = activeChannels(), [first] = salesChannels2();
+    return active2.find((channel) => channel.por_defecto) ?? active2[0] ?? first ?? fixedChannels()[0];
+  }
+  function channelName(key) {
+    const channel = channelOf(key);
+    if (channel) return channel.nombre;
+    return key === CENTRE5 ? t("core.terms.saleToCentre") : defaultChannel().nombre;
+  }
+  var choosesChannel = () => activeChannels().length > 1;
+  var buysAsAccount = (key) => channelOf(key)?.compra === "cuenta";
+  var channelDiscount = (key) => Number(channelOf(key)?.descuento ?? 0) || 0;
+  var lowerFirst = (text2) => text2.charAt(0).toLocaleLowerCase("es") + text2.slice(1);
+  function channelFilterOptions(allText, chosen4 = "") {
+    const option3 = (value10, text2) => `<option value="${escapeHtml(value10)}" ${value10 === chosen4 ? "selected" : ""}>${escapeHtml(text2)}</option>`;
+    return option3("", allText) + salesChannels2().map((channel) => option3(channel.clave, channel.activo ? channel.nombre : t("salesChannels.inactiveOption", { name: channel.nombre }))).join("");
+  }
+
+  // src/app/core/vocabulary.ts
+  var DEFAULT_TERMS = {
+    medico: { s: t("core.terms.professional"), p: t("core.terms.professionals"), g: "m" },
+    paciente: { s: t("core.terms.customer"), p: t("core.terms.customers"), g: "m" },
+    visita: { s: t("core.terms.visit"), p: t("core.terms.visits"), g: "f" },
+    pauta: { s: t("core.terms.request"), p: t("core.terms.requests"), g: "f" },
+    consulta: { s: t("core.terms.location"), p: t("core.terms.locations"), g: "f" },
+    especialidad: { s: t("core.terms.segment"), p: t("core.terms.segments"), g: "m" }
+  };
+  var EXTRA_TERMS = {
+    intervencion: { s: t("core.terms.surgery"), p: t("core.terms.surgeries"), g: "f" },
+    deposito: { s: t("core.terms.deposit"), p: t("core.terms.deposits"), g: "m" }
+  };
+  var DETERMINERS = {
+    el: ["el", "los", "la", "las"],
+    un: ["un", "unos", "una", "unas"],
+    del: ["del", "de los", "de la", "de las"],
+    al: ["al", "a los", "a la", "a las"],
+    este: ["este", "estos", "esta", "estas"],
+    ningun: ["ningún", "ningunos", "ninguna", "ningunas"],
+    otro: ["otro", "otros", "otra", "otras"],
+    nuevo: ["nuevo", "nuevos", "nueva", "nuevas"],
+    primer: ["primer", "primeros", "primera", "primeras"],
+    ultimo: ["último", "últimos", "última", "últimas"],
+    proximo: ["próximo", "próximos", "próxima", "próximas"]
+  };
+  var TERMS_KEY = "dlc-terminos";
+  var TITLE = /^(dr|dra|d|dña|dª|sr|sra|srta|prof|profa|lic|ldo|lda)\.?$/i;
+  function ownTerms() {
+    try {
+      return coreLegacy.terms();
+    } catch {
+      return {};
+    }
+  }
+  function termOf(key) {
+    const fallback = DEFAULT_TERMS[key] ?? EXTRA_TERMS[key] ?? { s: key, p: `${key}s`, g: "m" }, own = ownTerms()[key] ?? {};
+    return { s: String(own.s ?? "").trim() || fallback.s, p: String(own.p ?? "").trim() || fallback.p, g: own.g === "f" || own.g === "m" ? own.g : fallback.g };
+  }
+  var withCase = (text2, mode) => mode === "U" ? text2.toUpperCase() : mode === "C" ? text2.charAt(0).toUpperCase() + text2.slice(1) : text2;
+  function wordFor(key, number2, form = {}) {
+    const { determiner, determinerCase, nounCase, adjective } = form;
+    const term2 = termOf(key), plural2 = number2 === "p", noun = withCase(plural2 ? term2.p : term2.s, nounCase);
+    const agreed = adjective ? ` ${term2.g === "f" ? adjective.replace(/o$/, "a") : adjective}${plural2 ? "s" : ""}` : "";
+    const forms = determiner ? DETERMINERS[determiner] : void 0;
+    if (!forms) return noun + agreed;
+    return `${withCase(forms[(term2.g === "f" ? 2 : 0) + (plural2 ? 1 : 0)] ?? "", determinerCase)} ${noun}${agreed}`;
+  }
+  var allOf = (key) => `${t(termOf(key).g === "f" ? "core.terms.allFeminine" : "core.terms.allMasculine")} ${wordFor(key, "p", { determiner: "el" })}`;
+  var contactsLabel = () => (coreLegacy.brandLabel() ?? "") || wordFor("medico", "p", { nounCase: "C" });
+  var channelLabel = (order, total) => {
+    if (coreLegacy.isFree(order, total)) return t("core.terms.freeDelivery");
+    return channelName(order.canal);
+  };
+  var nameParts = (name) => {
+    const parts = String(name ?? "").trim().split(/\s+/);
+    while (parts.length > 1 && TITLE.test(parts[0] ?? "")) parts.shift();
+    return parts;
+  };
+  var firstName = (name) => nameParts(name)[0] ?? "";
+  var initials = (name) => nameParts(name).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
+  var ending = (key, plural2) => `${termOf(key).g === "f" ? "a" : "o"}${plural2 ? "s" : ""}`;
+  var SURGERY_WORDS = /* @__PURE__ */ new Map([
+    ["surgery", () => wordFor("intervencion", "s")],
+    ["surgeries", () => wordFor("intervencion", "p")],
+    ["Surgery", () => wordFor("intervencion", "s", { nounCase: "C" })],
+    ["Surgeries", () => wordFor("intervencion", "p", { nounCase: "C" })],
+    ["surgeryThe", () => termOf("intervencion").g === "f" ? "la" : "el"],
+    ["SurgeryThe", () => termOf("intervencion").g === "f" ? "La" : "El"],
+    ["surgeryOfThe", () => termOf("intervencion").g === "f" ? "de la" : "del"],
+    ["surgeriesThe", () => termOf("intervencion").g === "f" ? "las" : "los"],
+    ["surgeryOne", () => termOf("intervencion").g === "f" ? "una" : "un"],
+    ["SurgeryOne", () => termOf("intervencion").g === "f" ? "Una" : "Un"],
+    ["surgeryThis", () => termOf("intervencion").g === "f" ? "esta" : "este"],
+    ["surgeryEnd", () => ending("intervencion", false)],
+    ["surgeryEnds", () => ending("intervencion", true)]
+  ]);
+  var DEPOSIT_WORDS = /* @__PURE__ */ new Map([
+    ["deposit", () => wordFor("deposito", "s")],
+    ["Deposit", () => wordFor("deposito", "s", { nounCase: "C" })],
+    ["depositThe", () => termOf("deposito").g === "f" ? "la" : "el"],
+    ["DepositThe", () => termOf("deposito").g === "f" ? "La" : "El"],
+    ["depositOne", () => termOf("deposito").g === "f" ? "una" : "un"],
+    ["depositEnd", () => ending("deposito", false)],
+    ["deposits", () => wordFor("deposito", "p")],
+    ["Deposits", () => wordFor("deposito", "p", { nounCase: "C" })],
+    ["depositsThe", () => termOf("deposito").g === "f" ? "las" : "los"]
+  ]);
+  setVocabularyResolver((name) => (SURGERY_WORDS.get(name) ?? DEPOSIT_WORDS.get(name))?.());
+
+  // src/app/core/session.ts
+  var ACCESS_CHECK_MS2 = 3e3;
+  var SESSION_ERRORS = [];
+  var impersonating = () => {
+    try {
+      return JSON.parse(localStorage.getItem(coreLegacy.impersonationKey()) ?? "null");
+    } catch {
+      return null;
+    }
+  };
+  var isGuest = (user) => Boolean(user) && (coreLegacy.roleCan(user?.rol ?? "", "portal_prescriptor") || coreLegacy.roleCan(user?.rol ?? "", "portal_centro"));
+  var guestSees = (user) => coreLegacy.roleCan(user.rol, "portal_centro") ? t("core.session.centreGuestSees") : t("core.session.professionalGuestSees", { requests: wordFor("pauta", "p"), customers: wordFor("paciente", "p") });
+  var ERROR_KEYS = {
+    administrador: "core.session.errors.administrator",
+    permiso: "core.session.errors.permission",
+    inactivo: "core.session.errors.inactive",
+    propio: "core.session.errors.own",
+    otra: "core.session.errors.otherCompany",
+    no_encontrado: "core.session.errors.notFound",
+    plan: "core.session.errors.plan",
+    sesion: "core.session.errors.session"
+  };
+  var IMPERSONATION_ERRORS = Object.fromEntries(Object.entries(ERROR_KEYS).map(([code, key]) => [code, t(key)]));
+  var outOfPlan = (button3) => Boolean(button3) && Boolean(button3?.classList.contains("bloq"));
+  function clearLocalData() {
+    try {
+      Object.keys(localStorage).filter((key) => /^dlc-(rc-|perfil|jornada-)/.test(key)).forEach((key) => {
+        localStorage.removeItem(key);
+      });
+    } catch {
+    }
+  }
+  var emptyModules = (except) => {
+    ["v-pacientes", "v-productos", "v-ventas"].forEach((id) => {
+      const section = document.getElementById(id);
+      if (id !== except && section) section.innerHTML = "";
+    });
+  };
+  function prepareOrganizationChange(target) {
+    try {
+      sessionStorage.setItem("dlc-cambio-org", target ?? "");
+      sessionStorage.removeItem("dlc-f5");
+      localStorage.removeItem("app-marca");
+    } catch {
+    }
+  }
+  function paintImpersonationBar() {
+    const saved3 = impersonating();
+    let bar = document.getElementById("barrasup");
+    if (!saved3) {
+      bar?.remove();
+      return;
+    }
+    if (!bar) {
+      document.body.insertAdjacentHTML("afterbegin", '<div id="barrasup"></div>');
+      bar = document.getElementById("barrasup");
+    }
+    if (!bar) return;
+    const profile6 = coreLegacy.profile();
+    bar.innerHTML = `<span>👤 <b>${t("core.session.impersonating", { name: escapeHtml(profile6 ? profile6.nombre : saved3.como) })}</b>${profile6 ? ` · ${escapeHtml(profile6.rol)}` : ""} · ${t("core.session.underTheirName")}</span>
+    <button class="btn chico" id="supvolver">${t("core.session.stop", { name: escapeHtml(firstName(saved3.nombre)) })}</button>`;
+    const back = document.getElementById("supvolver");
+    if (back) back.onclick = () => {
+      void coreLegacy.backToMySession();
+    };
+  }
+  function canCheck(force) {
+    const id = coreLegacy.profile()?.id;
+    if (coreLegacy.accessLost() || !id || document.body.classList.contains("sin-sesion") || !navigator.onLine) return null;
+    return force || Date.now() - coreLegacy.accessCheckedAt() >= ACCESS_CHECK_MS2 ? id : null;
+  }
+  async function sendOut() {
+    coreLegacy.setAccessLost();
+    try {
+      sessionStorage.setItem("delcos-fuera", "1");
+    } catch {
+    }
+    try {
+      localStorage.removeItem(coreLegacy.profileKey());
+      localStorage.removeItem("dlc-os-sesion");
+    } catch {
+    }
+    clearLocalData();
+    try {
+      await coreLegacy.db().auth.signOut();
+    } catch {
+    }
+    location.reload();
+  }
+  async function checkAccess(force) {
+    const id = canCheck(force);
+    if (!id) return;
+    coreLegacy.setAccessCheckedAt(Date.now());
+    const { data, error } = await coreLegacy.db().from("perfiles").select("id, activo").eq("id", id).maybeSingle();
+    if (error || data?.activo) return;
+    await sendOut();
+  }
+  async function askServer(id) {
+    const answer = await coreLegacy.db().functions.invoke("impersonar", { body: { usuario_id: id } });
+    const { error } = answer, data = answer.data;
+    if (error && !data && typeof error.context?.json === "function") {
+      try {
+        return { data: await error.context.json(), error };
+      } catch {
+      }
+    }
+    return { data, error };
+  }
+  var logFailure = (reason, error, detail) => {
+    coreLegacy.registerError("api", `Impersonalizar: ${reason || "sin respuesta"}`, { estado: error?.context?.status, detalle: detail });
+  };
+  function failed4(answer, error) {
+    const code = answer?.error ?? "", known = IMPERSONATION_ERRORS[code], message = error?.message ?? "", detail = answer?.detalle;
+    const reason = [detail, message, code].find(Boolean) ?? t("core.session.noAnswer");
+    coreLegacy.toast(known ?? t("core.session.couldNotEnter", { reason }), true);
+    if (!known || code === "sesion") logFailure(code || message, error, detail);
+    coreLegacy.hideLoading();
+  }
+  async function markImpersonatedSession() {
+    try {
+      await rpc("suplantar_marcar_sesion");
+    } catch {
+    }
+  }
+  async function impersonate(id) {
+    const user = coreLegacy.users().find((item) => item.id === id) ?? { id, nombre: t("core.session.thisPerson"), rol: "" };
+    const text2 = t(isGuest(user) ? "core.session.confirmGuest" : "core.session.confirmUser", { name: user.nombre });
+    if (!await coreLegacy.confirm(text2, { titulo: t("core.session.confirmTitle", { name: user.nombre }), ok: t("core.session.confirmOk") })) return;
+    coreLegacy.showLoading(t("core.session.loading", { name: user.nombre }));
+    const { data: { session: session2 } } = await coreLegacy.db().auth.getSession();
+    if (!session2) {
+      coreLegacy.hideLoading();
+      coreLegacy.toast(IMPERSONATION_ERRORS.sesion ?? "", true);
+      return;
+    }
+    const { data, error } = await askServer(id);
+    if (!data?.ok) {
+      failed4(data, error);
+      return;
+    }
+    const profile6 = coreLegacy.profile();
+    localStorage.setItem(coreLegacy.impersonationKey(), JSON.stringify({
+      access_token: session2.access_token,
+      refresh_token: session2.refresh_token,
+      nombre: profile6?.nombre,
+      id: profile6?.id,
+      como: data.nombre,
+      rol: data.rol,
+      desde: Date.now()
+    }));
+    const { error: opening } = await coreLegacy.db().auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
+    if (opening) {
+      localStorage.removeItem(coreLegacy.impersonationKey());
+      await coreLegacy.db().auth.setSession({ access_token: session2.access_token, refresh_token: session2.refresh_token });
+      coreLegacy.registerError("api", "Impersonalizar: no se abre la sesión", { mensaje: opening.message });
+      coreLegacy.toast(t("core.session.couldNotOpen", { error: opening.message ?? "" }), true);
+      coreLegacy.hideLoading();
+      return;
+    }
+    await markImpersonatedSession();
+    clearLocalData();
+    location.reload();
+  }
+
+  // src/app/core/errors.ts
+  var MAX_MESSAGE = 500;
+  var KEPT_ERRORS = 20;
+  var NETWORK = /failed to fetch|load failed|networkerror|network request failed|aborterror|fetch is aborted|internet connection|err_internet|err_network/i;
+  var TIMEOUT = /ha tardado demasiado|tiempo agotado|timeout|timed out/i;
+  var READ_ONLY_REFUSAL = /row-level security|violates row-level/i;
+  var sent = /* @__PURE__ */ new Set();
+  var textOf2 = (error) => {
+    if (error && typeof error === "object" && "message" in error) return String(error.message ?? "") || String(error);
+    return String(error ?? "");
+  };
+  var isNetworkError = (error) => NETWORK.test(textOf2(error)) || TIMEOUT.test(textOf2(error));
+  function registerError(type, message, detail) {
+    if (coreLegacy.paymentState()?.solo_lectura && READ_ONLY_REFUSAL.test(String(message))) return;
+    if (type === "api" && isNetworkError(message)) return;
+    try {
+      const text2 = String(message ?? "").slice(0, MAX_MESSAGE), screen3 = coreLegacy.currentScreen();
+      SESSION_ERRORS.push({ t: (/* @__PURE__ */ new Date()).toISOString(), tipo: type, m: text2, pantalla: screen3 });
+      if (SESSION_ERRORS.length > KEPT_ERRORS) SESSION_ERRORS.shift();
+      const key = `${type}|${text2}`;
+      if (sent.has(key) || !coreLegacy.profile()) return;
+      sent.add(key);
+      Promise.resolve(coreLegacy.rpc("registrar_error", { p: { tipo: type, mensaje: text2, detalle: detail ?? null, pantalla: screen3, version: coreLegacy.appVersion(), navegador: navigator.userAgent } })).then(() => void 0, () => void 0);
+    } catch {
+    }
+  }
+
+  // src/app/components/charts/month-bars.ts
+  var month_bars_exports = {};
+  __export(month_bars_exports, {
+    monthBars: () => monthBars
+  });
+
   // src/app/components/charts/labels.ts
-  var shortMonths = () => t("dates.monthsShort").split(",");
-  var monthLabel = (month) => `${shortMonths()[Number(month.slice(5, 7)) - 1] ?? ""} ${month.slice(2, 4)}`;
-  var shortMonthOf = (month) => shortMonths()[Number(month.slice(5, 7)) - 1] ?? "";
+  var shortMonths2 = () => t("dates.monthsShort").split(",");
+  var monthLabel = (month) => `${shortMonths2()[Number(month.slice(5, 7)) - 1] ?? ""} ${month.slice(2, 4)}`;
+  var shortMonthOf = (month) => shortMonths2()[Number(month.slice(5, 7)) - 1] ?? "";
   function periodLabel(month) {
     const [year = "", number2 = ""] = month.split("-");
     return `${t("dates.monthsLong").split(",")[Number(number2) - 1] ?? ""} ${year}`;
@@ -37822,8 +40190,8 @@
     </svg>`;
   }
   function monthBars(months, first, second, labels) {
-    const box3 = document.getElementById("angraf"), count = months.length || 1;
-    const frame = { width: Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, nonZeroOr(box3?.clientWidth, DEFAULT_WIDTH) - BOX_MARGIN)), count, months, skip: isMobile() && count > MANY_MONTHS };
+    const box3 = document.getElementById("angraf"), count4 = months.length || 1;
+    const frame = { width: Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, nonZeroOr(box3?.clientWidth, DEFAULT_WIDTH) - BOX_MARGIN)), count: count4, months, skip: isMobile() && count4 > MANY_MONTHS };
     const [firstLabel = "", secondLabel = ""] = labels;
     if (!second) return bars2(frame, first, firstLabel, { height: SINGLE_HEIGHT, withMonths: true });
     return `<div class="grafdos">
@@ -37872,7 +40240,7 @@
   }
   function unitsSparkline(units, series) {
     const bars3 = barsOf(units, series), max = Math.max(1, ...bars3.map((bar) => bar[0]));
-    return bars3.map(([count, title2, label], index) => `<i class="${count ? "" : "cero"}${index === bars3.length - 1 ? " actual" : ""}" style="height:${Math.round(count / max * 100)}%" title="${escapeHtml(title2)}: ${formatNumber(count)}"${index === 0 ? ` data-ini="${escapeHtml(label)}"` : ""}${index === bars3.length - 1 ? ` data-fin="${escapeHtml(label)}"` : ""}></i>`).join("");
+    return bars3.map(([count4, title2, label], index) => `<i class="${count4 ? "" : "cero"}${index === bars3.length - 1 ? " actual" : ""}" style="height:${Math.round(count4 / max * 100)}%" title="${escapeHtml(title2)}: ${formatNumber(count4)}"${index === 0 ? ` data-ini="${escapeHtml(label)}"` : ""}${index === bars3.length - 1 ? ` data-fin="${escapeHtml(label)}"` : ""}></i>`).join("");
   }
   function sixMonthLine(values2, months) {
     const max = Math.max(...values2), min = Math.min(...values2, 0), spread = max - min || 1;
@@ -37998,7 +40366,7 @@
     provincia: ["settingsRules.complete.province", "settingsRules.complete.provinceHelp"],
     obligatorios: ["settingsRules.complete.required", "settingsRules.complete.requiredHelp"]
   };
-  var completeFieldName = (field10) => t(FIELD_TEXTS[field10][0], words13()).toLowerCase();
+  var completeFieldName = (field11) => t(FIELD_TEXTS[field11][0], words13()).toLowerCase();
   function completeHtml() {
     const chosen4 = completeFields();
     return ruleCardHtml({
@@ -38006,11 +40374,11 @@
       title: t("settingsRules.complete.title"),
       info: t("settingsRules.complete.info", words13()),
       intro: t("settingsRules.complete.intro"),
-      rows: COMPLETE_FIELDS.map((field10) => switchRowHtml({ id: `${COMPLETE}${field10}`, label: t(FIELD_TEXTS[field10][0], words13()), help: t(FIELD_TEXTS[field10][1], words13()), checked: chosen4.includes(field10) }))
+      rows: COMPLETE_FIELDS.map((field11) => switchRowHtml({ id: `${COMPLETE}${field11}`, label: t(FIELD_TEXTS[field11][0], words13()), help: t(FIELD_TEXTS[field11][1], words13()), checked: chosen4.includes(field11) }))
     });
   }
   async function saveComplete() {
-    const campos = COMPLETE_FIELDS.filter((field10) => isChecked(`${COMPLETE}${field10}`));
+    const campos = COMPLETE_FIELDS.filter((field11) => isChecked(`${COMPLETE}${field11}`));
     if (!campos.length) {
       notices.toast(t("settingsRules.complete.noneChosen"), true);
       return;
@@ -38161,8 +40529,8 @@
   }
   function fillAddress(box3, index, address) {
     if (!address) return;
-    const set = (field10, value10) => {
-      const input6 = box3.querySelector(`[data-cf="${index}|${field10}"]`);
+    const set = (field11, value10) => {
+      const input6 = box3.querySelector(`[data-cf="${index}|${field11}"]`);
       if (input6 && value10 && !input6.value.trim()) input6.value = value10;
     };
     set("direccion", [address.road, address.house_number].filter(Boolean).join(", "));
@@ -38264,12 +40632,15 @@
     "components/filters/memory": memory_exports,
     "components/index": components_exports,
     "components/list-bar/index": list_bar_exports,
+    "components/list/row": row_exports,
     "components/loading": loading_exports,
     "core/catalog-roles": catalog_roles_exports,
+    "core/mobile/gate": gate_exports,
     "core/navigation/current": current_exports,
     "core/no-reports": no_reports_exports,
     "core/organisation": organisation_exports,
     "core/rules": rules_exports,
+    "core/sales-channels": sales_channels_exports,
     "core/vocabulary": vocabulary_exports,
     "i18n/index": i18n_exports,
     "legacy/accounts2-bridge": accounts2_bridge_exports,
@@ -38301,9 +40672,10 @@
     "screens/agenda/same-centre": same_centre_exports,
     "screens/agenda/traffic-times": traffic_times_exports,
     "screens/agenda/your-day/compact": compact_exports,
+    "screens/billing/model": model_exports6,
     "screens/customers/picker": picker_exports,
     "screens/cycle/card": card_exports,
-    "screens/equipment/model": model_exports8,
+    "screens/equipment/model": model_exports9,
     "screens/events/model": model_exports3,
     "screens/home/index": home_exports,
     "screens/home/store": store_exports,
@@ -38314,13 +40686,13 @@
     "screens/orders/model": model_exports5,
     "screens/orders/payment-email": payment_email_exports,
     "screens/orders/subscription/payments": payments_exports,
-    "screens/platform/model": model_exports10,
-    "screens/portal/model": model_exports6,
+    "screens/platform/model": model_exports11,
+    "screens/portal/model": model_exports7,
     "screens/privacy/person-data": person_data_exports,
     "screens/purchases/index": purchases_exports,
     "screens/routes/day-bar": day_bar_exports,
     "screens/routes/index": routes_exports,
-    "screens/routes/model": model_exports9,
+    "screens/routes/model": model_exports10,
     "screens/routes/planner/settings": settings_exports3,
     "screens/routes/planner/visits": visits_exports,
     "screens/routes/title-case": title_case_exports,
@@ -38333,7 +40705,7 @@
     "screens/settings/rules/portfolio": portfolio_exports,
     "screens/settings/users/model": model_exports2,
     "screens/surgeries/model": model_exports4,
-    "screens/tenders/model": model_exports7,
+    "screens/tenders/model": model_exports8,
     "screens/visit/card-block": card_block_exports,
     "screens/visit/edit": edit_exports,
     "services/calendar": calendar_exports,
@@ -38403,7 +40775,7 @@
   function lazyChunk(name) {
     return (key) => {
       const run = (module, args) => module[key](...args);
-      const call2 = async (...args) => {
+      const call3 = async (...args) => {
         if (ready.has(name)) return run(ready.get(name), args);
         let module;
         try {
@@ -38414,7 +40786,7 @@
         }
         return run(module, args);
       };
-      return call2;
+      return call3;
     };
   }
   var ignoreFailure = () => {
@@ -38641,9 +41013,9 @@
         localStorage.setItem(CATALOGS_KEY, JSON.stringify(catalogs2));
         return;
       }
-      const stored3 = JSON.parse(localStorage.getItem(CATALOGS_KEY) ?? "null");
-      if (stored3) Object.keys(catalogs2).forEach((key) => {
-        const list = stored3[key];
+      const stored4 = JSON.parse(localStorage.getItem(CATALOGS_KEY) ?? "null");
+      if (stored4) Object.keys(catalogs2).forEach((key) => {
+        const list = stored4[key];
         if (list?.length) catalogs2[key] = list;
       });
     } catch {
@@ -38747,14 +41119,14 @@
   }
   async function loadRoles() {
     const db2 = legacyDb();
-    const [{ data, error }, { data: states, error: statesError }, words16] = await Promise.all([
+    const [{ data, error }, { data: states2, error: statesError }, words16] = await Promise.all([
       db2.from("roles").select("nombre,orden,color,plantilla,por_defecto,roles_capacidades(capacidad)").order("orden").order("nombre"),
       db2.rpc("catalogo_papel", { p_papel: "estado_comercial" }),
       db2.from("ajustes").select("valor").eq("clave", "terminos").maybeSingle()
     ]);
     if (!words16.error && reloadForNewWords(words16.data?.valor)) return false;
-    if (!statesError && Array.isArray(states)) {
-      const list2 = states.map((state2) => ({ valor: state2.valor, papel: state2.papel ?? "" }));
+    if (!statesError && Array.isArray(states2)) {
+      const list2 = states2.map((state2) => ({ valor: state2.valor, papel: state2.papel ?? "" }));
       settingsCoreLegacy.setCommercialStates(list2);
       remember(STATES_KEY, JSON.stringify(list2));
     }
@@ -38811,28 +41183,28 @@
   var MAX_MONTHS = 240;
   var words14 = () => ({ professional: term("medico"), aVisit: term("visita", { article: "un" }), visits: term("visita", { number: "p" }) });
   function cardHtml7() {
-    const rule = deliveryRule(), field10 = (key) => t(`settingsRules.deliveries.${key}`, words14());
-    return ruleCardHtml({ id: CARD, title: field10("title"), info: field10("info"), intro: field10("intro"), rows: [
-      switchRowHtml({ id: `${CARD}a`, label: field10("active"), help: field10("activeHelp"), checked: rule.active }),
-      textRowHtml({ id: `${CARD}n`, label: field10("name"), help: field10("nameHelp"), value: rule.name ?? t("visit.samples.title") }),
-      numberRowHtml({ id: `${CARD}t`, label: field10("cap"), help: field10("capHelp"), value: rule.cap, min: 1, max: MAX_CAP }),
+    const rule = deliveryRule(), field11 = (key) => t(`settingsRules.deliveries.${key}`, words14());
+    return ruleCardHtml({ id: CARD, title: field11("title"), info: field11("info"), intro: field11("intro"), rows: [
+      switchRowHtml({ id: `${CARD}a`, label: field11("active"), help: field11("activeHelp"), checked: rule.active }),
+      textRowHtml({ id: `${CARD}n`, label: field11("name"), help: field11("nameHelp"), value: rule.name ?? t("visit.samples.title") }),
+      numberRowHtml({ id: `${CARD}t`, label: field11("cap"), help: field11("capHelp"), value: rule.cap, min: 1, max: MAX_CAP }),
       selectRowHtml({
         id: `${CARD}p`,
-        label: field10("period"),
-        help: field10("periodHelp"),
+        label: field11("period"),
+        help: field11("periodHelp"),
         value: rule.period,
-        options: [{ value: "anio", text: field10("year") }, { value: "trimestre", text: field10("quarter") }, { value: "mes", text: field10("month") }]
+        options: [{ value: "anio", text: field11("year") }, { value: "trimestre", text: field11("quarter") }, { value: "mes", text: field11("month") }]
       }),
-      numberRowHtml({ id: `${CARD}m`, label: field10("months"), help: field10("monthsHelp"), value: rule.months, min: 0, max: MAX_MONTHS }),
-      switchRowHtml({ id: `${CARD}f`, label: field10("signature"), help: field10("signatureHelp"), checked: rule.signature }),
+      numberRowHtml({ id: `${CARD}m`, label: field11("months"), help: field11("monthsHelp"), value: rule.months, min: 0, max: MAX_MONTHS }),
+      switchRowHtml({ id: `${CARD}f`, label: field11("signature"), help: field11("signatureHelp"), checked: rule.signature }),
       selectRowHtml({
         id: `${CARD}r`,
-        label: field10("recipients"),
-        help: field10("recipientsHelp"),
+        label: field11("recipients"),
+        help: field11("recipientsHelp"),
         value: rule.recipients,
-        options: [{ value: "personas", text: field10("people") }, { value: "todas", text: field10("everyone") }]
+        options: [{ value: "personas", text: field11("people") }, { value: "todas", text: field11("everyone") }]
       }),
-      areaRowHtml({ id: `${CARD}l`, label: field10("legal"), help: field10("legalHelp"), value: rule.legal ?? t("productsMore.samples.law"), rows: 3 })
+      areaRowHtml({ id: `${CARD}l`, label: field11("legal"), help: field11("legalHelp"), value: rule.legal ?? t("productsMore.samples.law"), rows: 3 })
     ] });
   }
   async function save25() {
@@ -39054,8 +41426,8 @@
     openNotifications: (list) => {
       void showNotifications(list);
     },
-    setUnreadNotifications: (count) => {
-      settingsStore.notificationCount = count;
+    setUnreadNotifications: (count4) => {
+      settingsStore.notificationCount = count4;
     },
     liveChannel: () => sessionStore.live,
     setLiveChannel: (channel) => {
@@ -39320,7 +41692,7 @@
     }
     return out;
   }
-  function longDate(date) {
+  function longDate2(date) {
     const language = coreLegacy.language();
     return language === "es" ? date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }) : new Date(date).toLocaleDateString(LOCALES[language], { weekday: "long", day: "numeric", month: "long" });
   }
@@ -39576,8 +41948,8 @@
   }
   function somethingHalfDone() {
     if (document.querySelector("dialog[open]")) return true;
-    const active = document.activeElement;
-    return Boolean(active?.matches('input:not([type=search]), textarea, select, [contenteditable="true"]'));
+    const active2 = document.activeElement;
+    return Boolean(active2?.matches('input:not([type=search]), textarea, select, [contenteditable="true"]'));
   }
   async function checkVersion() {
     if (Date.now() - coreLegacy.versionSeenAt() < VERSION_CHECK_MS || !coreLegacy.appVersion() || document.hidden) return;
@@ -39729,7 +42101,7 @@
     if (NETWORK_MESSAGE.test(String(error.message ?? ""))) return keepOffline(name, payload10, label, t("core.queue.savedHere"));
     return { error };
   }
-  async function call(write2) {
+  async function call2(write2) {
     try {
       return await coreLegacy.db().rpc(write2.fn, write2.payload);
     } catch (error) {
@@ -39752,7 +42124,7 @@
     return "refused";
   }
   async function sendOne(write2) {
-    const { data, error } = await call(write2), result = data;
+    const { data, error } = await call2(write2), result = data;
     const outcome = await failure3(write2, error, result);
     if (outcome) return outcome;
     const operation = write2.payload?.p?.op_id;
@@ -40102,9 +42474,9 @@
     },
     /** Someone asked to open Agenda straight on «Repartir la semana». */
     takeWeekPlanRequest: () => {
-      const asked2 = agendaStore.openWeekPlan;
+      const asked3 = agendaStore.openWeekPlan;
       agendaStore.openWeekPlan = false;
-      return asked2;
+      return asked3;
     },
     viewed: () => agendaStore.viewedUser
   };
@@ -40303,7 +42675,7 @@
       goTo("pacientes");
     },
     visitDetails: (visit2) => visitDetails(visit2),
-    fieldName: (field10) => campoTxt(field10),
+    fieldName: (field11) => campoTxt(field11),
     valueText: (value10) => valueText(value10),
     detailSummary: (detail) => detailSummary(detail),
     undo: (id, then) => {
@@ -40352,7 +42724,7 @@
   };
   var accountColumnsLegacy = {
     customFields: () => CAMPOS.medico ?? [],
-    fieldText: (field10, value10) => fieldText(field10, value10),
+    fieldText: (field11, value10) => fieldText(field11, value10),
     firstName: (name) => vocabulary_exports.firstName(name),
     /** Platform access by account (loaded once; null until it arrives). */
     accessOf: () => accountsStore.portalAccess,
@@ -40527,7 +42899,7 @@
   };
 
   // src/app/components/charts/channel.ts
-  var CENTRE5 = 80;
+  var CENTRE6 = 80;
   var RADIUS = 60;
   var COLOURS2 = 4;
   function slices(rows2, total) {
@@ -40535,7 +42907,7 @@
     return rows2.map((row3, index) => {
       const share = (Number(row3.total) || 0) / (total || 1), from = angle, to = angle + share * 2 * Math.PI;
       angle = to;
-      const point = (at) => [CENTRE5 + RADIUS * Math.sin(at), CENTRE5 - RADIUS * Math.cos(at)];
+      const point = (at) => [CENTRE6 + RADIUS * Math.sin(at), CENTRE6 - RADIUS * Math.cos(at)];
       const [x0, y0] = point(from), [x1, y1] = point(to - 1e-4);
       return `<path d="M80 80 L${x0} ${y0} A60 60 0 ${to - from > Math.PI ? 1 : 0} 1 ${x1} ${y1} Z" fill="${CHART_COLOURS[index % COLOURS2] ?? ""}"/>`;
     }).join("");
@@ -40547,9 +42919,9 @@
   }
   async function channelChart() {
     const funnel = [...document.querySelectorAll("#v-analitica .ancard")].find((card3) => (card3.querySelector("h2")?.textContent ?? "").includes("Embudo comercial"));
-    if (!funnel || document.getElementById("ancanal")) return;
+    if (!funnel || document.getElementById("ancanal") || !choosesChannel()) return;
     funnel.insertAdjacentHTML("afterend", `<div class="card ancard" id="ancanal"><h2>${t("components.charts.channelTitle")}</h2><div class="cargandolocal" style="min-height:160px"></div>
-    <p class="leer"><b>${t("components.charts.howToRead")}</b> ${t("components.charts.channelHint", { aProfessional: term("medico", { article: "un" }) })}</p></div>`);
+    <p class="leer"><b>${t("components.charts.howToRead")}</b> ${t("components.charts.channelHint")}</p></div>`);
     const { data } = await callRpc("analitica_tabla", { p_dim: "canal", p_medida: "unidades" });
     const rows2 = data?.filas ?? [], total = sum(rows2.map((row3) => Number(row3.total) || 0));
     const place3 = document.getElementById("ancanal")?.querySelector(".cargandolocal");
@@ -40576,427 +42948,6 @@
     if (!text2) return [];
     const windows = String(text2).split(/[;,/]| y /i).map(windowOf).filter((window2) => window2 !== null);
     return windows.length ? windows.sort((first, second) => first[0] - second[0]) : [WHOLE_DAY];
-  }
-
-  // src/app/components/date-picker/shared.ts
-  var twoDigits = (value10) => String(value10).padStart(2, "0");
-  var kindOf2 = (input6) => {
-    if (input6.type === "month") return "mes";
-    if (input6.type === "datetime-local") return "fechahora";
-    return input6.type === "time" ? "hora" : "fecha";
-  };
-  var longMonths = () => t("dates.monthsLong").split(",");
-  var shortMonths2 = () => t("dates.monthsShort").split(",");
-  function longDate2(isoDate) {
-    const date = /* @__PURE__ */ new Date(`${isoDate}T12:00:00`), weekdays = t("components.datePicker.weekdays").split(",");
-    return t("components.datePicker.longDate", { weekday: weekdays[date.getDay()] ?? "", day: date.getDate(), month: longMonths()[date.getMonth()] ?? "", year: date.getFullYear() });
-  }
-  function mediumDate(isoDate) {
-    const date = /* @__PURE__ */ new Date(`${isoDate}T12:00:00`);
-    return isNaN(date.getTime()) ? isoDate : date.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-  }
-  function closePicker() {
-    componentsLegacy.popup()?.remove();
-    componentsLegacy.setPopup(null);
-    const dialog7 = document.getElementById("seldlg");
-    if (dialog7?.open) dialog7.close();
-  }
-  function closePickers(except) {
-    document.querySelectorAll(".picker .gsug").forEach((list) => {
-      if (!except?.contains(list)) list.classList.add("hide");
-    });
-  }
-  var layerOf = (input6) => input6.closest("dialog[open]") ?? [...document.querySelectorAll("dialog[open]")].pop() ?? document.body;
-  function newPopup(className, label, same) {
-    if (same && componentsLegacy.popup()) {
-      componentsLegacy.popup()?.remove();
-      componentsLegacy.setPopup(null);
-    } else closePicker();
-    const popup = document.createElement("div");
-    popup.className = className;
-    popup.__t = Date.now();
-    popup.setAttribute("role", "dialog");
-    popup.setAttribute("aria-label", label);
-    componentsLegacy.setPopup(popup);
-    popup.addEventListener("pointerdown", () => {
-      popup.__t = Date.now();
-    });
-    return popup;
-  }
-  function attachPopup(popup, input6) {
-    (document.getElementById("seldlg") ?? layerOf(input6)).appendChild(popup);
-  }
-  var placePopup = (popup, input6) => {
-    componentsLegacy.placePopup(popup, input6.closest(".selw") ?? input6);
-  };
-  function setValue2(input6, value10, focus = false) {
-    input6.value = value10;
-    componentsLegacy.emitChange(input6);
-    closePicker();
-    if (focus) input6.focus({ preventScroll: true });
-  }
-
-  // src/app/components/date-picker/pickers.ts
-  var YEARS_SHOWN = 12;
-  var YEARS_BEFORE = 5;
-  var KEY_STEPS = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
-  var optional = (calendar) => calendar.input.required ? "" : `<button type="button" data-cq="borrar">${t("components.datePicker.clear")}</button>`;
-  var outside = (value10, min, max) => min !== null && value10 < min || max !== null && value10 > max;
-  function dayButton(calendar, isoDate, day) {
-    const today2 = todayIso(), focused = isoDate === calendar.focused;
-    return `<button type="button" data-cd="${isoDate}" class="${isoDate === calendar.chosen ? "sel" : ""} ${isoDate === today2 ? "hoy" : ""}" tabindex="${focused ? 0 : -1}" ${focused ? "autofocus" : ""}
-          aria-label="${longDate2(isoDate)}" aria-pressed="${String(isoDate === calendar.chosen)}" ${outside(isoDate, calendar.min, calendar.max) ? "disabled" : ""}>${day}</button>`;
-  }
-  function daysView(calendar) {
-    const year = calendar.shown.getFullYear(), month = calendar.shown.getMonth();
-    const gap = (new Date(year, month, 1).getDay() + 6) % 7, days = new Date(year, month + 1, 0).getDate();
-    const cells = "<span></span>".repeat(gap) + range(days).map((index) => dayButton(calendar, `${year}-${twoDigits(month + 1)}-${twoDigits(index + 1)}`, index + 1)).join("");
-    return {
-      head: `<button type="button" data-cm="-1" aria-label="${t("components.datePicker.previousMonth")}">‹</button><button type="button" class="caltit" data-cv="meses" aria-label="${t("components.datePicker.chooseMonthYear")}">${longMonths()[month] ?? ""} ${year}</button><button type="button" data-cm="1" aria-label="${t("components.datePicker.nextMonth")}">›</button>`,
-      body: `<div class="calg">${t("dates.weekdayLetters").split(",").map((letter) => `<i>${letter}</i>`).join("")}${cells}</div>`,
-      foot: `<button type="button" data-cq="hoy">${t("components.datePicker.today")}</button><button type="button" data-cq="manana">${t("components.datePicker.tomorrow")}</button>${optional(calendar)}`
-    };
-  }
-  function monthsView(calendar) {
-    const year = calendar.shown.getFullYear(), short = shortMonths2(), min = calendar.min?.slice(0, 7) ?? null, max = calendar.max?.slice(0, 7) ?? null;
-    const months = longMonths().map((name, index) => {
-      const key = `${year}-${twoDigits(index + 1)}`;
-      return `<button type="button" data-cmes="${index}" class="${key === calendar.chosen.slice(0, 7) ? "sel" : ""} ${key === calendar.thisMonth ? "hoy" : ""}" aria-label="${t("components.datePicker.monthOf", { month: name, year })}" ${outside(key, min, max) ? "disabled" : ""}>${short[index] ?? ""}</button>`;
-    }).join("");
-    return {
-      head: `<button type="button" data-cy="-1" aria-label="${t("components.datePicker.previousYear")}">‹</button><button type="button" class="caltit" data-cv="anios" aria-label="${t("components.datePicker.chooseYear")}">${year}</button><button type="button" data-cy="1" aria-label="${t("components.datePicker.nextYear")}">›</button>`,
-      body: `<div class="calm">${months}</div>`,
-      foot: calendar.kind === "mes" ? `<button type="button" data-cq="estemes">${t("components.datePicker.thisMonth")}</button>${optional(calendar)}` : ""
-    };
-  }
-  function yearsView(calendar) {
-    const first = calendar.shown.getFullYear() - YEARS_BEFORE;
-    const years = range(YEARS_SHOWN).map((index) => first + index).map((year) => `<button type="button" data-canio="${year}" class="${String(year) === calendar.chosen.slice(0, 4) ? "sel" : ""} ${String(year) === calendar.thisMonth.slice(0, 4) ? "hoy" : ""}">${year}</button>`).join("");
-    return {
-      head: `<button type="button" data-cy="-12" aria-label="${t("components.datePicker.previousYears")}">‹</button><b>${first} – ${first + YEARS_SHOWN - 1}</b><button type="button" data-cy="12" aria-label="${t("components.datePicker.nextYears")}">›</button>`,
-      body: `<div class="calm">${years}</div>`,
-      foot: ""
-    };
-  }
-  function paint9(calendar) {
-    const parts = calendar.view === "dias" ? daysView(calendar) : calendar.view === "meses" ? monthsView(calendar) : yearsView(calendar);
-    calendar.popup.innerHTML = `<div class="calh">${parts.head}</div>${parts.body}${parts.foot ? `<div class="calp">${parts.foot}</div>` : ""}`;
-    placePopup(calendar.popup, calendar.input);
-    if (isMobile() || calendar.view !== "dias") return;
-    const button3 = calendar.popup.querySelector(`[data-cd="${calendar.focused}"]`);
-    if (button3 && calendar.popup.contains(document.activeElement) || calendar.options.teclado) button3?.focus({ preventScroll: true });
-  }
-  function pick(calendar, isoDate) {
-    if (calendar.kind === "fechahora") {
-      openClock(calendar.input, { fecha: isoDate, desdeCal: true, mismo: true });
-      return;
-    }
-    setValue2(calendar.input, isoDate, true);
-  }
-  function quick(calendar, action) {
-    if (action === "hoy") pick(calendar, todayIso());
-    else if (action === "manana") pick(calendar, addDays(todayIso(), 1));
-    else if (action === "estemes") setValue2(calendar.input, calendar.thisMonth);
-    else if (action === "borrar") setValue2(calendar.input, "");
-  }
-  function move3(calendar, data) {
-    const { shown: shown3 } = calendar;
-    if (data.cm) calendar.shown = new Date(shown3.getFullYear(), shown3.getMonth() + Number(data.cm), 1);
-    else if (data.cy) calendar.shown = new Date(shown3.getFullYear() + Number(data.cy), shown3.getMonth(), 1);
-    else if (data.cv) calendar.view = data.cv;
-    else if (data.canio) {
-      calendar.shown = new Date(Number(data.canio), shown3.getMonth(), 1);
-      calendar.view = "meses";
-    } else return false;
-    paint9(calendar);
-    return true;
-  }
-  function onClick5(calendar, event) {
-    event.stopPropagation();
-    const button3 = event.target.closest("button");
-    if (!button3 || button3.disabled) return;
-    const data = button3.dataset;
-    if (data.cd) {
-      pick(calendar, data.cd);
-      return;
-    }
-    if (move3(calendar, data)) return;
-    if (data.cmes !== void 0) {
-      const shown3 = calendar.shown;
-      if (calendar.kind === "mes") {
-        setValue2(calendar.input, `${shown3.getFullYear()}-${twoDigits(Number(data.cmes) + 1)}`);
-        return;
-      }
-      calendar.shown = new Date(shown3.getFullYear(), Number(data.cmes), 1);
-      calendar.view = "dias";
-      paint9(calendar);
-      return;
-    }
-    quick(calendar, data.cq);
-  }
-  function onKey3(calendar, event) {
-    if (calendar.view !== "dias") return;
-    const step = KEY_STEPS[event.key], date = /* @__PURE__ */ new Date(`${calendar.focused}T12:00:00`);
-    if (step) date.setDate(date.getDate() + step);
-    else if (event.key === "PageUp" || event.key === "PageDown") date.setMonth(date.getMonth() + (event.key === "PageUp" ? -1 : 1));
-    else if (event.key === "Home") date.setDate(date.getDate() - (date.getDay() + 6) % 7);
-    else if (event.key === "End") date.setDate(date.getDate() + (6 - (date.getDay() + 6) % 7));
-    else return;
-    event.preventDefault();
-    calendar.focused = toIsoDate(date);
-    calendar.shown = new Date(date.getFullYear(), date.getMonth(), 1);
-    calendar.options.teclado = true;
-    paint9(calendar);
-  }
-  function startOf(input6, kind, options3) {
-    const value10 = input6.value || "";
-    if (options3.fecha) return options3.fecha;
-    if (kind === "mes") return value10 ? `${value10}-01` : "";
-    return value10.slice(0, 10);
-  }
-  function openCalendar(input6, options3 = {}) {
-    const kind = kindOf2(input6), value10 = input6.value || "", start3 = startOf(input6, kind, options3), size = kind === "mes" ? 7 : 10;
-    const popup = newPopup("selpop cal", t(kind === "mes" ? "components.datePicker.chooseMonth" : "components.datePicker.chooseDate"), options3.mismo);
-    const calendar = {
-      input: input6,
-      options: options3,
-      popup,
-      kind,
-      shown: /* @__PURE__ */ new Date(`${start3 || todayIso()}T12:00:00`),
-      focused: start3 || todayIso(),
-      view: kind === "mes" ? "meses" : "dias",
-      min: input6.min.slice(0, size) || null,
-      max: input6.max.slice(0, size) || null,
-      chosen: kind === "mes" ? value10.slice(0, 7) : value10.slice(0, 10),
-      thisMonth: todayIso().slice(0, 7)
-    };
-    popup.addEventListener("click", (event) => {
-      onClick5(calendar, event);
-    });
-    popup.addEventListener("keydown", (event) => {
-      onKey3(calendar, event);
-    });
-    attachPopup(popup, input6);
-    paint9(calendar);
-  }
-  var DEFAULT_STEP = 5;
-  var MAX_STEP = 30;
-  var HOURS = 24;
-  var MINUTES_PER_HOUR = 60;
-  var SECONDS_PER_MINUTE = 60;
-  var DEFAULT_HOUR = 9;
-  function stepOf(input6) {
-    const seconds = Number(input6.step), minutes2 = seconds >= SECONDS_PER_MINUTE ? Math.round(seconds / SECONDS_PER_MINUTE) : DEFAULT_STEP;
-    return [1, 2, 3, 4].includes(minutes2) || minutes2 > MAX_STEP ? DEFAULT_STEP : minutes2;
-  }
-  function paintClock(clock) {
-    const { hour, minute, input: input6, options: options3 } = clock, minutes2 = range(Math.ceil(MINUTES_PER_HOUR / clock.step)).map((index) => index * clock.step);
-    clock.popup.innerHTML = `${options3.fecha ? `<div class="rjfecha"><span>${mediumDate(options3.fecha)}</span><button type="button" data-rq="dia">${t("components.datePicker.changeDay")}</button></div>` : ""}
-      <div class="rjh"><b>${twoDigits(hour)}:${twoDigits(minute)}</b></div>
-      <div class="rjt">${t("components.datePicker.hour")}</div><div class="rjg">${range(HOURS).map((index) => `<button type="button" data-rh="${index}" class="${index === hour ? "sel" : ""}" aria-pressed="${String(index === hour)}">${twoDigits(index)}</button>`).join("")}</div>
-      <div class="rjt">${t("components.datePicker.minutes")}</div><div class="rjg m">${minutes2.map((index) => `<button type="button" data-rm="${index}" class="${index === minute ? "sel" : ""}" aria-pressed="${String(index === minute)}">${twoDigits(index)}</button>`).join("")}</div>
-      <div class="calp"><button type="button" data-rq="ahora">${t("components.datePicker.now")}</button>${input6.required ? "" : `<button type="button" data-rq="borrar">${t("components.datePicker.clear")}</button>`}<button type="button" data-rq="ok" class="okb">${t("components.datePicker.accept")}</button></div>`;
-    placePopup(clock.popup, input6);
-  }
-  function finishClock(clock, action) {
-    const { input: input6, options: options3 } = clock;
-    if (action === "dia") {
-      openCalendar(input6, { fecha: options3.fecha, mismo: true });
-      return;
-    }
-    if (action === "ahora") {
-      const now = /* @__PURE__ */ new Date();
-      clock.hour = now.getHours();
-      clock.minute = Math.min(MINUTES_PER_HOUR - clock.step, Math.round(now.getMinutes() / clock.step) * clock.step);
-      paintClock(clock);
-      return;
-    }
-    const time = `${twoDigits(clock.hour)}:${twoDigits(clock.minute)}`;
-    const day = orFallback(options3.fecha, (input6.value || todayIso()).slice(0, 10));
-    setValue2(input6, action === "borrar" ? "" : clock.kind === "fechahora" ? `${day}T${time}` : time, true);
-  }
-  function onClockClick(clock, event) {
-    event.stopPropagation();
-    const target = event.target;
-    const hour = target.closest("[data-rh]"), minute = target.closest("[data-rm]"), action = target.closest("[data-rq]");
-    if (hour) {
-      clock.hour = Number(hour.dataset.rh);
-      paintClock(clock);
-    }
-    if (minute) {
-      clock.minute = Number(minute.dataset.rm);
-      paintClock(clock);
-    }
-    if (action) finishClock(clock, action.dataset.rq ?? "");
-  }
-  function initialTime(input6, kind) {
-    const current = kind === "fechahora" ? input6.value.slice(11, 16) : input6.value;
-    const [hour = NaN, minute = NaN] = (current || "09:00").split(":").map(Number);
-    return [isNaN(hour) ? DEFAULT_HOUR : hour, isNaN(minute) ? 0 : minute];
-  }
-  function openClock(input6, options3 = {}) {
-    const kind = kindOf2(input6);
-    if (!options3.desdeCal && (kind === "mes" || kind === "fechahora")) {
-      openCalendar(input6);
-      return;
-    }
-    const [hour, minute] = initialTime(input6, kind);
-    const popup = newPopup("selpop reloj", t("components.datePicker.chooseTime"), options3.mismo);
-    const clock = { input: input6, options: options3, popup, kind, step: stepOf(input6), hour, minute };
-    popup.addEventListener("click", (event) => {
-      onClockClick(clock, event);
-    });
-    attachPopup(popup, input6);
-    paintClock(clock);
-  }
-
-  // src/app/components/dialogs.ts
-  var FOCUS_DELAY_MS3 = 30;
-  var SAVE_BUTTON = /^(guardar|validar|crear|añadir|enviar|aplicar|aceptar|confirmar|registrar|emitir|dar de alta)/i;
-  var SAVING_TEXT = /^(\+\s*)?(guardar|crear|añadir|enviar|validar|aplicar|confirmar|emitir|cobrar|registrar|marcar|asignar|unificar|cambiar|borrar|eliminar|quitar|anular|rectificar|liquidar|pedir|actualizar)\b/i;
-  var mini2 = () => document.getElementById("mini");
-  var fieldValue6 = () => document.getElementById("mcampo")?.value ?? "";
-  function fieldHtml2(field10) {
-    if (!field10) return "";
-    return `<input id="mcampo" type="${field10.tipo ?? "text"}" value="${escapeHtml(field10.valor ?? "")}"
-                   placeholder="${escapeHtml(field10.placeholder ?? "")}" ${field10.min ? `min="${field10.min}"` : ""}>`;
-  }
-  function dialogHtml(options3) {
-    const { titulo, msg, ok, cancel: cancel3, campo, opciones, peligro } = options3;
-    return `<div class="fbox">
-      <div class="fh"><h2>${escapeHtml(titulo ?? t("components.dialogs.confirm"))}</h2></div>
-      ${msg ? `<p style="margin:0 0 10px;white-space:pre-line">${escapeHtml(msg)}</p>` : ""}
-      ${fieldHtml2(campo)}
-      ${opciones?.length ? `<div class="chips u-p-10-0-0">${opciones.map((option3) => `<button type="button" class="chip" data-mop="${escapeHtml(option3)}">${escapeHtml(option3)}</button>`).join("")}</div>` : ""}
-      <div class="acts u-end">
-        ${cancel3 === false ? "" : `<button class="btn sec" id="mno">${escapeHtml(cancel3 ?? t("components.dialogs.cancel"))}</button>`}
-        <button class="btn ${peligro ? "dang" : ""}" id="mok">${escapeHtml(ok ?? t("components.dialogs.accept"))}</button></div></div>`;
-  }
-  function bindDialog(dialog7, hasField, finish2) {
-    const ok = document.getElementById("mok"), no = document.getElementById("mno");
-    if (ok) ok.onclick = () => {
-      finish2(hasField ? fieldValue6() : true);
-    };
-    if (no) no.onclick = () => {
-      finish2(hasField ? null : false);
-    };
-    dialog7.querySelectorAll("[data-mop]").forEach((button3) => {
-      button3.onclick = () => {
-        const input6 = document.getElementById("mcampo");
-        if (input6) input6.value = button3.dataset.mop ?? "";
-      };
-    });
-    dialog7.onclick = (event) => {
-      if (event.target === dialog7) finish2(hasField ? null : false);
-    };
-    dialog7.oncancel = (event) => {
-      event.preventDefault();
-      finish2(hasField ? null : false);
-    };
-  }
-  function focusField(finish2) {
-    setTimeout(() => {
-      const input6 = document.getElementById("mcampo");
-      if (!input6) {
-        document.getElementById("mok")?.focus();
-        return;
-      }
-      input6.focus();
-      input6.onkeydown = (event) => {
-        if (event.key === "Enter") finish2(input6.value);
-      };
-    }, FOCUS_DELAY_MS3);
-  }
-  function openDialog(options3) {
-    return new Promise((resolve) => {
-      const dialog7 = mini2();
-      dialog7.innerHTML = dialogHtml(options3);
-      const finish2 = (value10) => {
-        dialog7.close();
-        resolve(value10);
-      };
-      bindDialog(dialog7, Boolean(options3.campo), finish2);
-      dialog7.showModal();
-      focusField(finish2);
-    });
-  }
-  function showDialog(options3) {
-    const answer = openDialog(options3);
-    if (options3.campo?.tipo === "area") setTimeout(() => {
-      const input6 = document.getElementById("mcampo");
-      if (!input6) return;
-      const area = document.createElement("textarea");
-      area.id = "mcampo";
-      area.rows = 6;
-      area.value = input6.value;
-      area.placeholder = input6.placeholder;
-      input6.replaceWith(area);
-      mini2().classList.add("ancha");
-      area.focus();
-    }, 0);
-    return answer;
-  }
-  var confirmAction = (message, options3 = {}) => showDialog({ msg: message, titulo: options3.titulo, ok: options3.ok, peligro: options3.peligro });
-  var askText = (message, value10, options3 = {}) => showDialog({ msg: message, titulo: options3.titulo, ok: options3.ok ?? t("components.dialogs.save"), campo: { valor: value10, placeholder: options3.placeholder, tipo: options3.tipo }, opciones: options3.opciones });
-  function chooseOption(title2, message, buttons) {
-    return new Promise((resolve) => {
-      const dialog7 = mini2();
-      dialog7.innerHTML = `<div class="fbox"><div class="fh"><h2>${escapeHtml(title2)}</h2></div>
-      <p style="margin:0 0 10px;white-space:pre-line">${escapeHtml(message)}</p>
-      <div class="acts u-end u-wrap">${buttons.map((button3) => `<button class="btn ${button3.cls ?? ""}" data-op="${button3.k}">${escapeHtml(button3.t)}</button>`).join("")}</div></div>`;
-      const finish2 = (value10) => {
-        dialog7.close();
-        resolve(value10);
-      };
-      dialog7.querySelectorAll("[data-op]").forEach((button3) => {
-        button3.onclick = () => {
-          finish2(button3.dataset.op === "no" ? null : button3.dataset.op ?? null);
-        };
-      });
-      dialog7.oncancel = (event) => {
-        event.preventDefault();
-        finish2(null);
-      };
-      dialog7.onclick = (event) => {
-        if (event.target === dialog7) finish2(null);
-      };
-      dialog7.showModal();
-    });
-  }
-  function askField(title2, type, value10, label) {
-    return new Promise((resolve) => {
-      const dialog7 = mini2();
-      dialog7.innerHTML = `<div class="fbox"><div class="fh"><h2>${escapeHtml(title2)}</h2></div><label for="rnpc">${escapeHtml(label)}</label><input id="rnpc" type="${type}" value="${escapeHtml(value10 ?? "")}" min="${todayIso()}">
-      <div class="acts u-end"><button class="btn sec" data-op="no">${t("components.dialogs.cancel")}</button><button class="btn" data-op="si">${t("components.dialogs.accept")}</button></div></div>`;
-      const finish2 = (answer) => {
-        dialog7.close();
-        resolve(answer);
-      };
-      dialog7.querySelectorAll("[data-op]").forEach((button3) => {
-        button3.onclick = () => {
-          finish2(button3.dataset.op === "si" ? document.getElementById("rnpc").value : null);
-        };
-      });
-      dialog7.oncancel = (event) => {
-        event.preventDefault();
-        finish2(null);
-      };
-      enhanceFields(dialog7);
-      dialog7.showModal();
-    });
-  }
-  var hasSaveButton = (dialog7) => [...dialog7.querySelectorAll("button, .btn")].some((button3) => button3.offsetParent && !button3.disabled && !button3.classList.contains("sec") && SAVE_BUTTON.test((button3.textContent ?? "").trim()));
-  function isSaveButton(button3) {
-    if (!button3 || button3.matches(".sec, .x, .kmv, .plic, [data-cerrar], [data-cerrar2], .vueltabtn, .guardando")) return false;
-    if (!button3.closest("dialog[open], #v-config")) return false;
-    return /ok$|guardar|enviar/i.test(button3.id || "") || SAVING_TEXT.test((button3.textContent ?? "").trim());
-  }
-  async function tryClose(dialog7) {
-    if (dialog7.dataset.sucio && hasSaveButton(dialog7) && !await confirmAction(
-      t("components.dialogs.leaveText"),
-      { titulo: t("components.dialogs.leaveTitle"), ok: t("components.dialogs.leaveOk"), peligro: true }
-    )) return;
-    dialog7.close();
   }
 
   // src/app/components/help.ts
@@ -41608,7 +43559,7 @@
       void paintAccountsHeader2();
       const visible3 = settings2.filter((item) => item.on);
       document.querySelectorAll("#lista .trow").forEach((row3) => {
-        [...row3.children].forEach((cellElement, index) => {
+        dataCells(row3).forEach((cellElement, index) => {
           const column = visible3[index];
           if (column && cellElement instanceof HTMLElement) {
             cellElement.style.width = `${column.w}px`;
@@ -41736,6 +43687,7 @@
     }
   };
   listenToPolicyViolations();
+  reopenOnWidthChange();
   listenToSameCentre();
   listenToDuplicates();
   listenToDayPickers();
