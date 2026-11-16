@@ -11728,14 +11728,14 @@
   }
 
   // src/app/screens/orders/model.ts
-  var model_exports5 = {};
-  __export(model_exports5, {
+  var model_exports6 = {};
+  __export(model_exports6, {
     OPERATIONS: () => OPERATIONS,
     ORDER_STEPS: () => ORDER_STEPS,
     STATES: () => STATES2,
     TRANSFER_ISSUE: () => TRANSFER_ISSUE,
     TRANSFER_STATES: () => TRANSFER_STATES,
-    euros: () => euros2,
+    euros: () => euros3,
     isBankTransfer: () => isBankTransfer,
     isFree: () => isFree,
     isStepCode: () => isStepCode,
@@ -11743,7 +11743,7 @@
     operationDone: () => operationDone,
     orderStep: () => orderStep,
     orderTotals: () => orderTotals,
-    paymentPill: () => paymentPill,
+    paymentPill: () => paymentPill2,
     round2: () => round2,
     statePill: () => statePill2,
     stepCode: () => stepCode,
@@ -13030,6 +13030,36 @@
     await paintDesigner(completeDesign(template?.cfg ?? billing2Legacy.settings().factura_pdf));
   }
 
+  // src/app/screens/billing/model.ts
+  var model_exports5 = {};
+  __export(model_exports5, {
+    PAYMENT: () => PAYMENT,
+    errorMessage: () => errorMessage,
+    euros: () => euros2,
+    paymentPill: () => paymentPill,
+    vatBreakdown: () => vatBreakdown
+  });
+  var PAYMENT = { paid: "Cobrada", overdue: "Vencida", pending: "Pendiente" };
+  var euros2 = (value10) => formatCurrency(round2(value10));
+  function paymentPill(state2) {
+    const kind = state2 === PAYMENT.paid ? "p-est" : state2 === PAYMENT.overdue ? "p-anu" : "p-bor";
+    return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
+  }
+  var errorMessage = (error) => error?.message ?? "";
+  function vatBreakdown(detail) {
+    const amount2 = (value10) => Number(value10) || 0, order = detail.pedido, byRate = /* @__PURE__ */ new Map();
+    const gross = amount2(detail.totales?.bruto), share = gross ? amount2(detail.totales?.base_productos) / gross : 1;
+    const add = (rate, base) => {
+      byRate.set(rate, (byRate.get(rate) ?? 0) + base);
+    };
+    (detail.lineas ?? []).forEach((line2) => {
+      add(amount2(line2.iva), amount2(line2.importe) * (1 - amount2(line2.descuento) / 100) * share);
+    });
+    if (order.envio) add(amount2(order.envio_iva), amount2(order.envio_base));
+    const desglose = [...byRate.keys()].sort((first, second) => first - second).map((rate) => ({ iva: rate, base: round2(byRate.get(rate) ?? 0), cuota: round2((byRate.get(rate) ?? 0) * rate / 100) }));
+    return { desglose, base: round2(desglose.reduce((all, item) => all + item.base, 0)), total: round2(desglose.reduce((all, item) => all + item.base + item.cuota, 0)) };
+  }
+
   // src/app/screens/billing/issue/preview.ts
   var PREVIEW_HASH2 = "#toolbar=0&navpanes=0&view=FitH";
   var numberOf = (value10) => Number(value10) || 0;
@@ -13056,12 +13086,7 @@
     }];
   }
   function invoiceOfOrder(detail) {
-    const lines2 = linesOf(detail), byRate = /* @__PURE__ */ new Map(), contact = detail.contacto ?? {};
-    lines2.forEach((line2) => {
-      byRate.set(numberOf(line2.iva), (byRate.get(numberOf(line2.iva)) ?? 0) + numberOf(line2.base));
-    });
-    const vat = [...byRate.keys()].sort((first, second) => first - second).map((rate) => ({ iva: rate, base: round2(byRate.get(rate) ?? 0), cuota: round2((byRate.get(rate) ?? 0) * rate / 100) }));
-    const base = round2(vat.reduce((total2, item) => total2 + item.base, 0)), total = round2(vat.reduce((all, item) => all + item.base + item.cuota, 0));
+    const lines2 = linesOf(detail), { desglose: vat, base, total } = vatBreakdown(detail), contact = detail.contacto ?? {};
     return {
       numero: t("billingMore.preview.number"),
       fecha: todayIso(),
@@ -14269,7 +14294,7 @@
   var PAID2 = "Cobrado";
   var FREE2 = "Sin cargo";
   var PENDING_PAYMENT = "Pendiente de cobro";
-  var euros2 = (value10) => formatCurrency(round2(value10));
+  var euros3 = (value10) => formatCurrency(round2(value10));
   function lineBreakdown(line2) {
     const gross = Number(line2.importe) || 0, base = gross * (1 - (Number(line2.descuento) || 0) / 100), vat = base * (Number(line2.iva) || 0) / 100;
     return { bruto: gross, base, iva: vat, total: base + vat };
@@ -14297,14 +14322,14 @@
     const rates = Object.keys(totals.porIva).sort((first, second) => Number(first) - Number(second));
     const service = totals.envio;
     return `${totalRow(t("orders.totals.units"), formatNumber(totals.unidades))}
-    ${totals.descuento > 4e-3 ? `${totalRow(t("orders.totals.linesSum"), euros2(totals.bruto))}
-      ${totalRow(t("orders.totals.generalDiscount"), `−${euros2(totals.descuento)}`)}` : ""}
-    ${service ? `${totalRow(t("orders.totals.productsWithoutVat"), euros2(totals.baseProd))}
-      ${totalRow(t("orders.totals.serviceWithoutVat", { name: escapeHtml(service.nombre) }), euros2(service.base))}` : ""}
-    ${totalRow(t("orders.totals.taxBase"), euros2(totals.base))}
-    ${rates.filter((rate) => (totals.porIva[rate] ?? 0) > 4e-3 || rates.length === 1).map((rate) => totalRow(t("orders.totals.vatRate", { rate }), euros2(totals.porIva[rate]))).join("")}
-    ${service ? `<div class="sm u-end"><span>${t("orders.totals.includesService", { name: escapeHtml(service.nombre.toLowerCase()), amount: euros2(service.con) })}</span></div>` : ""}
-    <div class="tot"><span>${t("orders.totals.total")}</span><b>${euros2(totals.total)}</b></div>`;
+    ${totals.descuento > 4e-3 ? `${totalRow(t("orders.totals.linesSum"), euros3(totals.bruto))}
+      ${totalRow(t("orders.totals.generalDiscount"), `−${euros3(totals.descuento)}`)}` : ""}
+    ${service ? `${totalRow(t("orders.totals.productsWithoutVat"), euros3(totals.baseProd))}
+      ${totalRow(t("orders.totals.serviceWithoutVat", { name: escapeHtml(service.nombre) }), euros3(service.base))}` : ""}
+    ${totalRow(t("orders.totals.taxBase"), euros3(totals.base))}
+    ${rates.filter((rate) => (totals.porIva[rate] ?? 0) > 4e-3 || rates.length === 1).map((rate) => totalRow(t("orders.totals.vatRate", { rate }), euros3(totals.porIva[rate]))).join("")}
+    ${service ? `<div class="sm u-end"><span>${t("orders.totals.includesService", { name: escapeHtml(service.nombre.toLowerCase()), amount: euros3(service.con) })}</span></div>` : ""}
+    <div class="tot"><span>${t("orders.totals.total")}</span><b>${euros3(totals.total)}</b></div>`;
   }
   function storedTotals(detail) {
     const order = detail.pedido, rate = Number(order.envio_iva) || 0;
@@ -14324,7 +14349,7 @@
     return order.unidades === null || order.unidades === void 0 || Number(order.unidades) > 0;
   }
   var paymentOf = (order) => ordersLegacy.paymentState(order);
-  function paymentPill(order) {
+  function paymentPill2(order) {
     if (order.estado !== STATES2.confirmed) return "";
     const payment = paymentOf(order);
     return ` <span class="pill ${payment === PAID2 ? "p-trfok" : payment === FREE2 ? "p-sr" : "p-bor"}">${payment}</span>`;
@@ -16885,7 +16910,7 @@
   // src/app/screens/products/model.ts
   var ORDER_MARGIN_DAYS = 14;
   var EXPIRY_SOON_DAYS = 90;
-  var euros3 = (value10) => formatCurrency(round2(value10));
+  var euros4 = (value10) => formatCurrency(round2(value10));
   function stockState(line2) {
     if (line2.stock <= 0) return [t("products.stock.outOfStock"), "p-anu"];
     if (line2.stock_minimo !== null && line2.stock_minimo !== void 0 && line2.stock < line2.stock_minimo) return [t("products.stock.belowMinimum"), "p-bor"];
@@ -16903,10 +16928,10 @@
     if (store4.tipo === "central") return t("products.stores.central");
     return store4.tipo === "deposito" ? t("products.stores.deposit") : t("products.stores.caseOf", { name: escapeHtml(orFallback(store4.usuario, "—")) });
   }
-  var errorMessage = (error) => error?.message ?? "";
+  var errorMessage2 = (error) => error?.message ?? "";
 
   // src/app/screens/products/catalog.ts
-  var money = (value10) => isPresent(value10) ? euros3(value10) : "—";
+  var money = (value10) => isPresent(value10) ? euros4(value10) : "—";
   var activePill = (active2) => `<span class="pill ${active2 ? "p-est" : "p-anu"}">${t(active2 ? "products.catalog.activeState" : "products.catalog.inactiveState")}</span>`;
   function countHtml(rows2) {
     const active2 = rows2.filter((row3) => row3.activo).length, inactive = rows2.length - active2;
@@ -16950,7 +16975,7 @@
 
   // src/app/screens/products/services.ts
   var PRICE_DECIMALS = 4;
-  var money2 = (value10) => isPresent(value10) ? euros3(value10) : "—";
+  var money2 = (value10) => isPresent(value10) ? euros4(value10) : "—";
   var field2 = (id) => document.getElementById(id);
   function rowHtml7(service) {
     const byDefault = service.por_defecto ? `<span class="pill p-est">${t("products.services.byDefault")}</span>` : '<span class="vac">—</span>';
@@ -17080,7 +17105,7 @@
     const body3 = document.getElementById("vcuerpo");
     if (!body3) return;
     if (error) {
-      body3.innerHTML = `<div class="vacio">${escapeHtml(errorMessage(error))}</div>`;
+      body3.innerHTML = `<div class="vacio">${escapeHtml(errorMessage2(error))}</div>`;
       return;
     }
     const list = (data ?? []).filter((line2) => Boolean(line2.activo) || Boolean(line2.stock));
@@ -17157,7 +17182,7 @@
     }
     const { data: result, error } = await legacyDb().rpc("movimiento_manual", { p: payload6(line2, kind, place3, units) });
     if (error || result?.ok === false) {
-      notices.toast(t("products.movement.failed", { error: orFallback(errorMessage(error), result?.error ?? "") }), true);
+      notices.toast(t("products.movement.failed", { error: orFallback(errorMessage2(error), result?.error ?? "") }), true);
       return;
     }
     for (const id of ["dlg2", "dlg"]) document.getElementById(id)?.close();
@@ -17417,7 +17442,7 @@
     return item.units ? `<span class="pill p-est">${t("products.deposits.upToDate")}</span>` : `<span class="pill p-anu">${t("products.deposits.emptyState")}</span>`;
   }
   function rowHtml9(item) {
-    const value10 = permissions.canSeeAmounts() ? euros3(item.value) : "—", pending = item.pending ? formatNumber(item.pending) : "—";
+    const value10 = permissions.canSeeAmounts() ? euros4(item.value) : "—", pending = item.pending ? formatNumber(item.pending) : "—";
     return `<button type="button" class="item conrow" data-dcen="${escapeHtml(item.accountId)}" data-dcen-material="${escapeHtml(materialText(item))}" data-dcen-value="${escapeHtml(value10)}" data-dcen-pending="${escapeHtml(pending)}">
       <span class="tx"><b>${escapeHtml(item.name)}</b><span class="sm">${escapeHtml(materialText(item))} · ${escapeHtml(value10)}</span></span>
       <span class="cirest">${statePill3(item)}</span></button>`;
@@ -17976,7 +18001,7 @@
       const regulated = Boolean(input3("prmreg")?.checked), cap = deliveryRule().cap, max = Math.min(cap, Math.max(1, Number(input3("prmmax")?.value) || cap));
       byId7("prmdat")?.classList.toggle("hide", !regulated);
       const { error } = await update(productId, { muestra_regulada: regulated, muestra_desde: orNull(input3("prmdesde")?.value), muestra_max: max });
-      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : t("productsMore.samples.saved"), Boolean(error));
+      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage2(error) }) : t("productsMore.samples.saved"), Boolean(error));
     };
     ["prmreg", "prmdesde", "prmmax"].forEach((id) => {
       byId7(id)?.addEventListener("change", () => {
@@ -17990,7 +18015,7 @@
     box3.onchange = async () => {
       const { error } = await update(productId, { promocionado: box3.checked });
       const done = box3.checked ? t("productsMore.promotion.on", { visits: term("visita", { number: "p" }) }) : t("productsMore.promotion.off");
-      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : done, Boolean(error));
+      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage2(error) }) : done, Boolean(error));
       if (!error) billing2Legacy.setPromoted(null);
     };
   }
@@ -18000,7 +18025,7 @@
       byId7("preqd")?.classList.toggle("hide", !equipment2);
       const months2 = Math.min(MAX_REVIEW_MONTHS, Math.max(0, Math.floor(Number(input3("preqr")?.value) || 0)));
       const { error } = await update(productId, { es_equipo: equipment2, revision_meses: months2 });
-      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage(error) }) : t("productsMore.equipment.saved"), Boolean(error));
+      notices.toast(error ? t("productsMore.editor.couldNotSave", { error: errorMessage2(error) }) : t("productsMore.equipment.saved"), Boolean(error));
     };
     const box3 = input3("preqc"), months = input3("preqr");
     if (box3) box3.onchange = () => {
@@ -18020,7 +18045,7 @@
     if (!await notices.confirm(t("productsMore.material.removeText", { name: item.nombre }), { titulo: t("productsMore.material.removeTitle"), ok: t("productsMore.material.remove"), peligro: true })) return;
     const { error } = await legacyDb().from("producto_materiales").delete().eq("id", item.id);
     if (error) {
-      notices.toast(t("productsMore.material.couldNotRemove", { error: errorMessage(error) }), true);
+      notices.toast(t("productsMore.material.couldNotRemove", { error: errorMessage2(error) }), true);
       return;
     }
     billing2Legacy.presentationFiles().delete(item.id);
@@ -18063,7 +18088,7 @@
       if (!upload) continue;
       const { error } = await legacyDb().from("producto_materiales").insert({ producto_id: product.id, nombre: upload.nombre, tipo: upload.tipo, tamano: upload.tamano, datos: upload.datos, orden: order++ });
       if (error) {
-        notices.toast(t("productsMore.material.couldNotUpload", { name: file.name, error: errorMessage(error) }), true);
+        notices.toast(t("productsMore.material.couldNotUpload", { name: file.name, error: errorMessage2(error) }), true);
         continue;
       }
       added++;
@@ -18132,7 +18157,7 @@
       const { error: failed5 } = await legacyDb().from("productos").update({ packs: list.length ? list.sort((first, second) => first.compra - second.compra) : null, pvp_recomendado: price }).eq("id", productId);
       ok.disabled = false;
       if (failed5) {
-        notices.toast(t("productsMore.packs.couldNotSave", { error: errorMessage(failed5) }), true);
+        notices.toast(t("productsMore.packs.couldNotSave", { error: errorMessage2(failed5) }), true);
         return;
       }
       packs = list;
@@ -18247,7 +18272,7 @@
     button3.disabled = false;
     button3.textContent = t(product.id ? "productsMore.editor.save" : "productsMore.editor.create");
     if (!error && result?.ok !== false) return result ?? {};
-    notices.toast(t("productsMore.editor.couldNotSave", { error: errorMessage(error) || (result?.error ?? "") }), true);
+    notices.toast(t("productsMore.editor.couldNotSave", { error: errorMessage2(error) || (result?.error ?? "") }), true);
     return null;
   }
   async function save10(body3, product, button3, after) {
@@ -20700,22 +20725,6 @@
       void paintOrderList();
     }
   });
-
-  // src/app/screens/billing/model.ts
-  var model_exports6 = {};
-  __export(model_exports6, {
-    PAYMENT: () => PAYMENT,
-    errorMessage: () => errorMessage2,
-    euros: () => euros4,
-    paymentPill: () => paymentPill2
-  });
-  var PAYMENT = { paid: "Cobrada", overdue: "Vencida", pending: "Pendiente" };
-  var euros4 = (value10) => formatCurrency(round2(value10));
-  function paymentPill2(state2) {
-    const kind = state2 === PAYMENT.paid ? "p-est" : state2 === PAYMENT.overdue ? "p-anu" : "p-bor";
-    return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
-  }
-  var errorMessage2 = (error) => error?.message ?? "";
 
   // src/app/screens/billing/bulk-actions.ts
   var CENT = 5e-3;
@@ -40739,7 +40748,7 @@ ${lines2.join("\n")}`;
     "screens/agenda/same-centre": same_centre_exports,
     "screens/agenda/traffic-times": traffic_times_exports,
     "screens/agenda/your-day/compact": compact_exports,
-    "screens/billing/model": model_exports6,
+    "screens/billing/model": model_exports5,
     "screens/customers/picker": picker_exports,
     "screens/cycle/card": card_exports,
     "screens/equipment/model": model_exports9,
@@ -40750,7 +40759,7 @@ ${lines2.join("\n")}`;
     "screens/import/matching": matching_exports,
     "screens/orders/cards": cards_exports,
     "screens/orders/index": orders_exports,
-    "screens/orders/model": model_exports5,
+    "screens/orders/model": model_exports6,
     "screens/orders/payment-email": payment_email_exports,
     "screens/orders/subscription/payments": payments_exports,
     "screens/platform/model": model_exports11,

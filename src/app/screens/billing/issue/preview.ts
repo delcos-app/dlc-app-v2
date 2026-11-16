@@ -15,6 +15,7 @@ import { orFallback } from '../../../services/values';
 import { companyForPdf, currentDesign, invoicePdf } from '../../../services/pdf';
 import type { PdfInvoice, PdfLine } from '../../../services/pdf/invoice-header';
 import { issueOrderInvoice } from './issue';
+import { vatBreakdown } from '../model';
 import { round2 } from '../../../services/money';
 
 interface OrderLine { producto?: string | null; unidades?: number | null; importe?: number | null; descuento?: number | null; iva?: number | null }
@@ -42,10 +43,7 @@ function linesOf(detail: OrderDetail): (PdfLine & { descuento?: number; servicio
 
 /** The invoice an order would give, without a number. */
 export function invoiceOfOrder(detail: OrderDetail): PdfInvoice {
-  const lines = linesOf(detail), byRate = new Map<number, number>(), contact = detail.contacto ?? {};
-  lines.forEach(line => { byRate.set(numberOf(line.iva), (byRate.get(numberOf(line.iva)) ?? 0) + numberOf(line.base)); });
-  const vat = [...byRate.keys()].sort((first, second) => first - second).map(rate => ({ iva: rate, base: round2(byRate.get(rate) ?? 0), cuota: round2((byRate.get(rate) ?? 0) * rate / 100) }));
-  const base = round2(vat.reduce((total, item) => total + item.base, 0)), total = round2(vat.reduce((all, item) => all + item.base + item.cuota, 0));
+  const lines = linesOf(detail), { desglose: vat, base, total } = vatBreakdown(detail), contact = detail.contacto ?? {};
   return {
     numero: t('billingMore.preview.number'), fecha: todayIso(), vencimiento: todayIso(), emisor: companyForPdf(), forma_pago: detail.pedido.forma_pago ?? '',
     cliente: contact.id ? { nombre: contact.nombre, nif: contact.nif, direccion: contact.direccion, cp: contact.cp, municipio: contact.municipio, provincia: contact.provincia, email: contact.email } : {},
