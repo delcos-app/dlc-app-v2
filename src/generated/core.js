@@ -9219,15 +9219,20 @@
   var money_exports = {};
   __export(money_exports, {
     AMOUNT_FIELD: () => AMOUNT_FIELD,
+    BASE_DECIMALS: () => BASE_DECIMALS,
     VAT_RATES: () => VAT_RATES,
+    baseFromGross: () => baseFromGross,
     duration: () => duration,
     euros: () => euros,
     eurosRounded: () => eurosRounded,
     eurosWeb: () => eurosWeb,
+    exactBase: () => exactBase,
     isVatField: () => isVatField,
+    lineTotal: () => lineTotal,
     number: () => number,
     percent: () => percent,
     round2: () => round2,
+    vatByRate: () => vatByRate,
     vatOf: () => vatOf,
     vatRateText: () => vatRateText
   });
@@ -9237,6 +9242,25 @@
   function round2(value10) {
     const amount2 = Number(value10) || 0, cents = Math.round(Number((Math.abs(amount2) * 100).toPrecision(12)));
     return (amount2 < 0 ? -cents : cents) / 100;
+  }
+  var BASE_DECIMALS = 6;
+  var exactBase = (value10) => Number((Number(value10) || 0).toFixed(BASE_DECIMALS));
+  var baseFromGross = (gross, rate) => exactBase((Number(gross) || 0) / (1 + (Number(rate) || 0) / 100));
+  function vatByRate(items) {
+    const exact = /* @__PURE__ */ new Map();
+    items.forEach((item) => {
+      const rate = Number(item.rate) || 0;
+      exact.set(rate, (exact.get(rate) ?? 0) + (Number(item.base) || 0));
+    });
+    const rows2 = [...exact.keys()].sort((first, second) => first - second).map((rate) => ({ iva: rate, base: round2(exact.get(rate)), cuota: round2((exact.get(rate) ?? 0) * rate / 100) }));
+    const base = round2(rows2.reduce((all, row3) => all + row3.base, 0)), vat = round2(rows2.reduce((all, row3) => all + row3.cuota, 0));
+    return { rows: rows2, base, vat, total: round2(base + vat) };
+  }
+  function lineTotal(line2) {
+    if (line2.total !== null && line2.total !== void 0) return round2(line2.total);
+    const rate = Number(line2.iva) || 0, base = Number(line2.base) || 0;
+    const exact = (Number(line2.precio) || 0) * (Number(line2.unidades) || 0) * (1 - (Number(line2.descuento) || 0) / 100);
+    return round2((Math.abs(exact - base) < 6e-3 ? exact : base) * (1 + rate / 100));
   }
   var eurosRounded = (value10) => euros(round2(value10));
   var percent = (part, whole3) => whole3 ? Math.round(part / whole3 * 100) : 0;
@@ -12625,7 +12649,8 @@
     ["unidades", t("billingMore.pdf.units"), (line2) => String(line2.unidades)],
     ["subtotal", t("billingMore.pdf.subtotal"), (line2) => pdfEuros(line2.base)],
     ["iva", t("billingMore.pdf.vat"), (line2) => `${Number(line2.iva) || 0}%`],
-    ["total", t("billingMore.pdf.total"), (line2) => pdfEuros((Number(line2.base) || 0) * (1 + (Number(line2.iva) || 0) / 100))]
+    ["total", t("billingMore.pdf.total"), (line2) => pdfEuros(lineTotal(line2))]
+    // v2.476.0: 7,00 and not 5,79 × 1,21 = 7,01
   ].filter((column) => drawing.design.cols[column[0]]);
   function tableHeader(drawing, columns, xs, y) {
     const { doc, font, accent } = drawing, photos = drawing.design.fotos;
@@ -13034,6 +13059,7 @@
   var model_exports5 = {};
   __export(model_exports5, {
     PAYMENT: () => PAYMENT,
+    discountFactor: () => discountFactor,
     errorMessage: () => errorMessage,
     euros: () => euros2,
     paymentPill: () => paymentPill,
@@ -13046,32 +13072,33 @@
     return `<span class="pill ${kind}">${escapeHtml(state2)}</span>`;
   }
   var errorMessage = (error) => error?.message ?? "";
+  function discountFactor(detail) {
+    const amount2 = (value10) => Number(value10) || 0, stored4 = detail.totales?.factor;
+    if (stored4 !== null && stored4 !== void 0) return amount2(stored4);
+    const gross = amount2(detail.totales?.bruto);
+    return gross ? amount2(detail.totales?.base_productos) / gross : 1;
+  }
   function vatBreakdown(detail) {
-    const amount2 = (value10) => Number(value10) || 0, order = detail.pedido, byRate = /* @__PURE__ */ new Map();
-    const gross = amount2(detail.totales?.bruto), share = gross ? amount2(detail.totales?.base_productos) / gross : 1;
-    const add = (rate, base) => {
-      byRate.set(rate, (byRate.get(rate) ?? 0) + base);
-    };
-    (detail.lineas ?? []).forEach((line2) => {
-      add(amount2(line2.iva), amount2(line2.importe) * (1 - amount2(line2.descuento) / 100) * share);
-    });
-    if (order.envio) add(amount2(order.envio_iva), amount2(order.envio_base));
-    const desglose = [...byRate.keys()].sort((first, second) => first - second).map((rate) => ({ iva: rate, base: round2(byRate.get(rate) ?? 0), cuota: round2((byRate.get(rate) ?? 0) * rate / 100) }));
-    return { desglose, base: round2(desglose.reduce((all, item) => all + item.base, 0)), total: round2(desglose.reduce((all, item) => all + item.base + item.cuota, 0)) };
+    const amount2 = (value10) => Number(value10) || 0, order = detail.pedido, share = discountFactor(detail);
+    const items = (detail.lineas ?? []).map((line2) => ({ base: amount2(line2.importe) * (1 - amount2(line2.descuento) / 100) * share, rate: amount2(line2.iva) }));
+    if (order.envio) items.push({ base: amount2(order.envio_base), rate: amount2(order.envio_iva) });
+    const vat = vatByRate(items);
+    return { desglose: vat.rows, base: vat.base, total: vat.total };
   }
 
   // src/app/screens/billing/issue/preview.ts
   var PREVIEW_HASH2 = "#toolbar=0&navpanes=0&view=FitH";
   var numberOf = (value10) => Number(value10) || 0;
   function linesOf(detail) {
-    const order = detail.pedido, gross = numberOf(detail.totales?.bruto), share = gross ? numberOf(detail.totales?.base_productos) / gross : 1;
+    const order = detail.pedido, share = discountFactor(detail);
     const lines2 = (detail.lineas ?? []).map((line2) => ({
       descripcion: orFallback(line2.producto, t("billingMore.preview.noProduct")),
       unidades: numberOf(line2.unidades),
       precio: numberOf(line2.unidades) ? numberOf(line2.importe) / numberOf(line2.unidades) : 0,
       descuento: numberOf(line2.descuento),
       iva: numberOf(line2.iva),
-      base: round2(numberOf(line2.importe) * (1 - numberOf(line2.descuento) / 100) * share)
+      base: round2(numberOf(line2.importe) * (1 - numberOf(line2.descuento) / 100) * share),
+      total: round2(numberOf(line2.importe) * (1 - numberOf(line2.descuento) / 100) * share * (1 + numberOf(line2.iva) / 100))
     }));
     if (!order.envio) return lines2;
     const service = billing2Legacy.services().find((item) => item.id === order.servicio_id);
@@ -13082,6 +13109,7 @@
       descuento: 0,
       iva: numberOf(order.envio_iva),
       base: round2(numberOf(order.envio_base)),
+      total: round2(numberOf(order.envio_base) * (1 + numberOf(order.envio_iva) / 100)),
       servicio: true
     }];
   }
@@ -14301,21 +14329,31 @@
   }
   function shippingTotals(shipping) {
     if (!shipping?.on) return null;
-    const withVat2 = round2(shipping.con), rate = Number(shipping.iva) || 0, base = (Number(shipping.con) || 0) / (1 + rate / 100);
-    return { con: withVat2, iva: rate, base, nombre: shipping.nombre ?? t("orders.totals.shipping"), ivaImp: withVat2 - base };
+    const rate = Number(shipping.iva) || 0;
+    const exact = shipping.base !== null && shipping.base !== void 0 ? Number(shipping.base) : baseFromGross(shipping.con, rate);
+    return { exact, totals: { con: round2(exact * (1 + rate / 100)), iva: rate, base: round2(exact), nombre: shipping.nombre ?? t("orders.totals.shipping"), ivaImp: round2(exact * rate / 100) } };
   }
   function orderTotals(lines2, discount, discountType, shipping) {
     const items = lines2.map((line2) => ({ base: (Number(line2.importe) || 0) * (1 - (Number(line2.descuento) || 0) / 100), rate: Number(line2.iva) || 0, units: Number(line2.unidades) || 0 }));
     const gross = sum(items.map((item) => item.base));
     const factor = !Number(discount) || !gross ? 1 : discountType === "importe" ? Math.max(0, 1 - discount / gross) : Math.max(0, 1 - discount / 100);
-    const byRate = {};
-    items.forEach((item) => {
-      byRate[item.rate] = (byRate[item.rate] ?? 0) + item.base * factor * item.rate / 100;
-    });
     const service = shippingTotals(shipping);
-    if (service) byRate[service.iva] = (byRate[service.iva] ?? 0) + service.ivaImp;
-    const base = gross * factor + (service ? service.base : 0), vat = sum(Object.values(byRate));
-    return { unidades: sum(items.map((item) => item.units)), bruto: gross, descuento: gross * (1 - factor), baseProd: gross * factor, porIva: byRate, envio: service, base, iva: vat, total: base + vat };
+    const vat = vatByRate([...items.map((item) => ({ base: item.base * factor, rate: item.rate })), ...service ? [{ base: service.exact, rate: service.totals.iva }] : []]);
+    const byRate = {};
+    vat.rows.forEach((row3) => {
+      byRate[row3.iva] = row3.cuota;
+    });
+    return {
+      unidades: sum(items.map((item) => item.units)),
+      bruto: round2(gross),
+      descuento: round2(gross * (1 - factor)),
+      baseProd: round2(vat.base - (service ? service.totals.base : 0)),
+      porIva: byRate,
+      envio: service ? service.totals : null,
+      base: vat.base,
+      iva: vat.vat,
+      total: vat.total
+    };
   }
   var totalRow = (label, value10) => `<div><span>${label}</span><b>${value10}</b></div>`;
   function totalsHtml(totals) {
@@ -14338,7 +14376,7 @@
       detail.lineas ?? [],
       Number(order.descuento) || 0,
       order.descuento_tipo,
-      { on: Boolean(order.envio), con: round2(Number(order.envio_base) * (1 + rate / 100)), iva: rate, nombre: service?.nombre ?? t("orders.totals.shipping") }
+      { on: Boolean(order.envio), con: round2(Number(order.envio_base) * (1 + rate / 100)), base: Number(order.envio_base) || 0, iva: rate, nombre: service?.nombre ?? t("orders.totals.shipping") }
     );
   }
   var statePill2 = (state2) => `<span class="pill ${state2 === STATES2.draft ? "p-bor" : state2 === STATES2.voided ? "p-anu" : "p-est"}">${escapeHtml(state2)}</span>`;
@@ -16974,7 +17012,7 @@
   }
 
   // src/app/screens/products/services.ts
-  var PRICE_DECIMALS = 4;
+  var PRICE_DECIMALS = BASE_DECIMALS;
   var money2 = (value10) => isPresent(value10) ? euros4(value10) : "—";
   var field2 = (id) => document.getElementById(id);
   function rowHtml7(service) {
@@ -17034,7 +17072,7 @@
       withVat2.value = without.value === "" ? "" : String(round2(Number(without.value) * (1 + rate())));
     };
     withVat2.oninput = () => {
-      without.value = withVat2.value === "" ? "" : String(Number((Number(withVat2.value) / (1 + rate())).toFixed(PRICE_DECIMALS)));
+      without.value = withVat2.value === "" ? "" : String(baseFromGross(withVat2.value, rate() * 100));
     };
     vat.oninput = () => {
       if (without.value !== "") withVat2.value = String(round2(Number(without.value) * (1 + rate())));
@@ -18209,7 +18247,7 @@
       gross.value = net.value === "" ? "" : String(round2(Number(net.value) * (1 + vat())));
     };
     if (net && gross) gross.oninput = () => {
-      net.value = gross.value === "" ? "" : String(Number((Number(gross.value) / (1 + vat())).toFixed(4)));
+      net.value = gross.value === "" ? "" : String(baseFromGross(gross.value, vat() * 100));
     };
     if (net && gross && rate) rate.oninput = () => {
       if (net.value !== "") gross.value = String(round2(Number(net.value) * (1 + vat())));
@@ -18309,7 +18347,7 @@
   }
   function pricesHtml(product, off) {
     const price = product.precio ?? null, vat = product.iva ?? defaultVat("productos");
-    const net = price === null ? "" : String(Number(Number(price).toFixed(4))), gross = price === null ? "" : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
+    const net = price === null ? "" : String(exactBase(price)), gross = price === null ? "" : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
     return `<div class="pvp">
       <div><label for="prpr">${t("productsMore.editor.priceWithoutVat")}</label><input id="prpr" type="number" step="0.01" min="0" value="${net}" ${off}></div>
       <div><label for="priva">${t("productsMore.editor.vat")}</label><input id="priva" type="number" step="1" min="0" max="${highestVat()}" value="${vat}" ${off}></div>

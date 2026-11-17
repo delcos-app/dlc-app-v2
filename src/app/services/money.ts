@@ -18,6 +18,43 @@ export function round2(value: unknown): number {
   return (amount < 0 ? -cents : cents) / 100;
 }
 
+/** Decimals of an amount without VAT (prices, lines, shipping). With 6, every price with 21 % or 10 % VAT splits into base + VAT to the
+ * cent (with 4, 1,70 € at 21 % gave 1,4050 → 1,41 + 0,30 = 1,71). Some prices at 4 % cannot split at all (0,13 €): no invoice can. */
+export const BASE_DECIMALS = 6;
+
+/** An amount without VAT as it is stored: 6 decimals. */
+export const exactBase = (value: unknown): number => Number((Number(value) || 0).toFixed(BASE_DECIMALS));
+
+/** The base of a price with VAT: 7,00 € at 21 % → 5,785124. */
+export const baseFromGross = (gross: unknown, rate: unknown): number => exactBase((Number(gross) || 0) / (1 + (Number(rate) || 0) / 100));
+
+export interface VatRow { iva: number; base: number; cuota: number }
+export interface VatTotals { rows: VatRow[]; base: number; vat: number; total: number }
+
+/**
+ * v2.476.0 (SQL 199, importes_pedido): the single rule for the amounts of an order and its invoice. By VAT rate, the exact bases
+ * (unrounded) are added; the base of the rate is rounded to cents and its VAT is the exact base by the rate, rounded. Base, VAT and
+ * total are the sums of the rates, so total = base + VAT to the cent. 41,8182 at 10 % and 5,7851 at 21 % give 41,82 + 4,18 and
+ * 5,79 + 1,21 = 53,00 (rounding the bases first gave 5,79 × 21 % = 1,22 and 53,01).
+ */
+export function vatByRate(items: readonly { base: number; rate: number }[]): VatTotals {
+  const exact = new Map<number, number>();
+  items.forEach(item => { const rate = Number(item.rate) || 0; exact.set(rate, (exact.get(rate) ?? 0) + (Number(item.base) || 0)); });
+  const rows = [...exact.keys()].sort((first, second) => first - second)
+    .map(rate => ({ iva: rate, base: round2(exact.get(rate)), cuota: round2((exact.get(rate) ?? 0) * rate / 100) }));
+  const base = round2(rows.reduce((all, row) => all + row.base, 0)), vat = round2(rows.reduce((all, row) => all + row.cuota, 0));
+  return { rows, base, vat, total: round2(base + vat) };
+}
+
+/** The total with VAT of an invoice line: the stored one (SQL 199) or, on older invoices, from its exact price when it matches the
+ * base (5,7851 × 1,21 = 7,00, not 5,79 × 1,21 = 7,01). */
+export function lineTotal(line: { precio?: number | null; unidades?: number | null; descuento?: number | null; iva?: number | null; base?: number | null; total?: number | null }): number {
+  if (line.total !== null && line.total !== undefined) return round2(line.total);
+  const rate = Number(line.iva) || 0, base = Number(line.base) || 0;
+  const exact = (Number(line.precio) || 0) * (Number(line.unidades) || 0) * (1 - (Number(line.descuento) || 0) / 100);
+  return round2((Math.abs(exact - base) < 0.006 ? exact : base) * (1 + rate / 100));
+}
+
 export const eurosRounded = (value: unknown): string => euros(round2(value));
 
 /** Percentage of `part` in `whole` (0 without whole). */

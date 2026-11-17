@@ -23,7 +23,7 @@ import { bindPacks } from './packs';
 import { addRemoveButton } from './remove';
 import { bindForm, type Product } from './form';
 import { paintProducts } from '../catalog';
-import { round2 } from '../../../services/money';
+import { exactBase, round2 } from '../../../services/money';
 
 const EXTRAS = 'muestra_regulada,muestra_desde,muestra_max,promocionado,es_equipo,revision_meses,packs,pvp_recomendado';
 
@@ -44,7 +44,7 @@ function headerHtml(product: Product, admin: boolean): string {
 /** Price without VAT (4 decimals), VAT (the company's default for products, v2.466.0 FAC-1) and price with VAT, kept in step by bindForm. */
 function pricesHtml(product: Product, off: string): string {
   const price = product.precio ?? null, vat = product.iva ?? defaultVat('productos');
-  const net = price === null ? '' : String(Number(Number(price).toFixed(4))), gross = price === null ? '' : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
+  const net = price === null ? '' : String(exactBase(price)), gross = price === null ? '' : String(round2(Number(price) * (1 + (Number(product.iva) || 0) / 100)));
   return `<div class="pvp">
       <div><label for="prpr">${t('productsMore.editor.priceWithoutVat')}</label><input id="prpr" type="number" step="0.01" min="0" value="${net}" ${off}></div>
       <div><label for="priva">${t('productsMore.editor.vat')}</label><input id="priva" type="number" step="1" min="0" max="${highestVat()}" value="${vat}" ${off}></div>

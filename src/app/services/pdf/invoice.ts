@@ -7,6 +7,7 @@ import { billing2Legacy } from '../../legacy/billing2-bridge';
 import { t } from '../../i18n';
 import { imageData, loadQr } from '../files';
 import { orFallback, range } from '../values';
+import { lineTotal } from '../money';
 import { hexToRgb } from '../../core/utilities';
 import { isBankTransfer } from '../../core/catalog-roles';
 import { currentDesign, designOfTemplate, templateList, type InvoiceDesign } from './design';
@@ -26,7 +27,7 @@ const columnsOf = (drawing: Drawing): Column[] => ([
   ['unidades', t('billingMore.pdf.units'), line => String(line.unidades)],
   ['subtotal', t('billingMore.pdf.subtotal'), line => pdfEuros(line.base)],
   ['iva', t('billingMore.pdf.vat'), line => `${Number(line.iva) || 0}%`],
-  ['total', t('billingMore.pdf.total'), line => pdfEuros((Number(line.base) || 0) * (1 + (Number(line.iva) || 0) / 100))],
+  ['total', t('billingMore.pdf.total'), line => pdfEuros(lineTotal(line))],   // v2.476.0: 7,00 and not 5,79 × 1,21 = 7,01
 ] as Column[]).filter(column => drawing.design.cols[column[0]]);
 
 function tableHeader(drawing: Drawing, columns: readonly Column[], xs: readonly number[], y: number): void {

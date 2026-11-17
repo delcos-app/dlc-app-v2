@@ -2262,6 +2262,11 @@ async function warnIfAmountChanged(id) {
     notices.toast(t("ordersMore.tpv.amountChanged", { sent: euros(Number(sent.importe)), now: euros(total) }), true);
 }
 
+// delcos-shared:src/app/services/money.ts
+var shared24 = globalThis["__delcosModules"]["services/money"];
+var pick24 = (name) => shared24[name];
+var exactBase = /* @__PURE__ */ pick24("exactBase");
+
 // src/app/screens/orders/editor/state.ts
 var WEB_ORIGINS = ["web", "portal"];
 var MANUAL = "manual";
@@ -2269,7 +2274,7 @@ var PERCENT = "porcentaje";
 var productOf = (id) => orderEditorLegacy.product(id);
 function autoAmount(line) {
   const product = productOf(line.producto_id);
-  if (!line.manual && product.precio !== null && product.precio !== void 0) line.importe = round2(product.precio * (Number(line.unidades) || 0));
+  if (!line.manual && product.precio !== null && product.precio !== void 0) line.importe = exactBase(product.precio * (Number(line.unidades) || 0));
   if (product.iva !== null && product.iva !== void 0) line.iva = Number(product.iva);
 }
 var newLine = () => ({ producto_id: orderEditorLegacy.defaultProduct(), unidades: 1, importe: null, descuento: 0, iva: null });
@@ -2723,9 +2728,9 @@ function editorHtml2(state) {
 }
 
 // delcos-shared:src/app/core/organisation.ts
-var shared24 = globalThis["__delcosModules"]["core/organisation"];
-var pick24 = (name) => shared24[name];
-var generalVat = /* @__PURE__ */ pick24("generalVat");
+var shared25 = globalThis["__delcosModules"]["core/organisation"];
+var pick25 = (name) => shared25[name];
+var generalVat = /* @__PURE__ */ pick25("generalVat");
 
 // src/app/screens/orders/editor/index.ts
 var FULL_DISCOUNT2 = 100;
@@ -2973,12 +2978,12 @@ async function editOrder(preset) {
 }
 
 // delcos-shared:src/app/screens/orders/subscription/payments.ts
-var shared25 = globalThis["__delcosModules"]["screens/orders/subscription/payments"];
-var pick25 = (name) => shared25[name];
-var callPayments = /* @__PURE__ */ pick25("callPayments");
-var loadPaymentState = /* @__PURE__ */ pick25("loadPaymentState");
-var repaintPlanScreen = /* @__PURE__ */ pick25("repaintPlanScreen");
-var waitUntilActive = /* @__PURE__ */ pick25("waitUntilActive");
+var shared26 = globalThis["__delcosModules"]["screens/orders/subscription/payments"];
+var pick26 = (name) => shared26[name];
+var callPayments = /* @__PURE__ */ pick26("callPayments");
+var loadPaymentState = /* @__PURE__ */ pick26("loadPaymentState");
+var repaintPlanScreen = /* @__PURE__ */ pick26("repaintPlanScreen");
+var waitUntilActive = /* @__PURE__ */ pick26("waitUntilActive");
 
 // src/app/screens/orders/subscription/choose-plan.ts
 var MIN_USERS = 3;

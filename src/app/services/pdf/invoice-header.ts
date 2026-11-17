@@ -11,7 +11,7 @@ import type { PdfDocument, Rgb } from './document';
 import { round2 } from '../money';
 
 export interface PdfParty { razon_social?: string | null | undefined; nombre?: string | null | undefined; nif?: string | null | undefined; direccion?: string | null | undefined; cp?: string | null | undefined; municipio?: string | null | undefined; provincia?: string | null | undefined; pais?: string | null | undefined; telefono?: string | null | undefined; email?: string | null | undefined; web?: string | null | undefined; iban?: string | null | undefined; pie?: string | null | undefined }
-export interface PdfLine { descripcion?: string | null; precio?: number | null; unidades?: number | null; base?: number | null; iva?: number | null }
+export interface PdfLine { descripcion?: string | null; precio?: number | null; unidades?: number | null; descuento?: number | null; base?: number | null; iva?: number | null; total?: number | null }
 export interface PdfInvoice {
   numero?: string | null; fecha?: string | null; vencimiento?: string | null; emisor?: PdfParty | null; cliente?: PdfParty | null; forma_pago?: string | null;
   lineas?: PdfLine[] | null; base?: number | null; desglose_iva?: { iva: number; cuota?: number | null }[] | null; total?: number | null;

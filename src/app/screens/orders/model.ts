@@ -29,7 +29,7 @@ export interface OrderContact { id: string; nombre: string; telefono?: string | 
 export interface OrderDetail { pedido: Order; lineas?: OrderLine[] | null; contacto?: OrderContact | null; medico?: { id: string; nombre: string; codigo?: string | null } | null; totales?: { total?: number | null } | null }
 
 /** Rounded to cents, like the legacy r2. */
-import { round2 } from '../../services/money';
+import { baseFromGross, round2, vatByRate } from '../../services/money';
 
 export { round2 };
 
@@ -43,15 +43,17 @@ export function lineBreakdown(line: OrderLine): LineBreakdown {
   return { bruto: gross, base, iva: vat, total: base + vat };
 }
 
-export interface Shipping { on: boolean; con: number; iva: number; nombre?: string }
+/** The shipping service: written with VAT («con»); «base» when it comes stored without VAT (exact, 4 decimals). */
+export interface Shipping { on: boolean; con: number; iva: number; nombre?: string; base?: number | null }
 interface ShippingTotals { con: number; iva: number; base: number; nombre: string; ivaImp: number }
 export interface OrderTotals { unidades: number; bruto: number; descuento: number; baseProd: number; porIva: Record<string, number>; envio: ShippingTotals | null; base: number; iva: number; total: number }
 
-/** The service is written with VAT: its base and VAT are separated here. */
-function shippingTotals(shipping: Shipping | null | undefined): ShippingTotals | null {
+/** The service is written with VAT: its exact base is kept with 6 decimals, as guardar_pedido stores it (7,00 € at 21 % → 5,785124). */
+function shippingTotals(shipping: Shipping | null | undefined): { totals: ShippingTotals; exact: number } | null {
   if (!shipping?.on) return null;
-  const withVat = round2(shipping.con), rate = Number(shipping.iva) || 0, base = (Number(shipping.con) || 0) / (1 + rate / 100);
-  return { con: withVat, iva: rate, base, nombre: shipping.nombre ?? t('orders.totals.shipping'), ivaImp: withVat - base };
+  const rate = Number(shipping.iva) || 0;
+  const exact = shipping.base !== null && shipping.base !== undefined ? Number(shipping.base) : baseFromGross(shipping.con, rate);
+  return { exact, totals: { con: round2(exact * (1 + rate / 100)), iva: rate, base: round2(exact), nombre: shipping.nombre ?? t('orders.totals.shipping'), ivaImp: round2(exact * rate / 100) } };
 }
 
 /** Totals of some lines with a general discount (percentage or amount) and an optional shipping service. */
@@ -59,12 +61,13 @@ export function orderTotals(lines: readonly OrderLine[], discount: number, disco
   const items = lines.map(line => ({ base: (Number(line.importe) || 0) * (1 - (Number(line.descuento) || 0) / 100), rate: Number(line.iva) || 0, units: Number(line.unidades) || 0 }));
   const gross = sum(items.map(item => item.base));
   const factor = !Number(discount) || !gross ? 1 : discountType === 'importe' ? Math.max(0, 1 - discount / gross) : Math.max(0, 1 - discount / 100);
-  const byRate: Record<string, number> = {};
-  items.forEach(item => { byRate[item.rate] = (byRate[item.rate] ?? 0) + item.base * factor * item.rate / 100; });
+  // v2.476.0 (SQL 199): the single rule (vatByRate), the same as the database and the invoice
   const service = shippingTotals(shipping);
-  if (service) byRate[service.iva] = (byRate[service.iva] ?? 0) + service.ivaImp;
-  const base = gross * factor + (service ? service.base : 0), vat = sum(Object.values(byRate));
-  return { unidades: sum(items.map(item => item.units)), bruto: gross, descuento: gross * (1 - factor), baseProd: gross * factor, porIva: byRate, envio: service, base, iva: vat, total: base + vat };
+  const vat = vatByRate([...items.map(item => ({ base: item.base * factor, rate: item.rate })), ...(service ? [{ base: service.exact, rate: service.totals.iva }] : [])]);
+  const byRate: Record<string, number> = {};
+  vat.rows.forEach(row => { byRate[row.iva] = row.cuota; });
+  return { unidades: sum(items.map(item => item.units)), bruto: round2(gross), descuento: round2(gross * (1 - factor)),
+    baseProd: round2(vat.base - (service ? service.totals.base : 0)), porIva: byRate, envio: service ? service.totals : null, base: vat.base, iva: vat.vat, total: vat.total };
 }
 
 const totalRow = (label: string, value: string): string => `<div><span>${label}</span><b>${value}</b></div>`;
@@ -89,7 +92,7 @@ export function storedTotals(detail: OrderDetail): OrderTotals {
   const order = detail.pedido, rate = Number(order.envio_iva) || 0;
   const service = ordersLegacy.services().find(item => item.id === order.servicio_id);
   return orderTotals(detail.lineas ?? [], Number(order.descuento) || 0, order.descuento_tipo,
-    { on: Boolean(order.envio), con: round2(Number(order.envio_base) * (1 + rate / 100)), iva: rate, nombre: service?.nombre ?? t('orders.totals.shipping') });
+    { on: Boolean(order.envio), con: round2(Number(order.envio_base) * (1 + rate / 100)), base: Number(order.envio_base) || 0, iva: rate, nombre: service?.nombre ?? t('orders.totals.shipping') });
 }
 
 export const statePill = (state: string): string =>

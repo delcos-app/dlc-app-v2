@@ -8,6 +8,7 @@ import { orderEditorLegacy, type EditorProduct, type EditorService, type OrderRe
 import { todayIso } from '../../../services/dates';
 import { nonZeroOr, orFallback } from '../../../services/values';
 import { round2, STATES, type Order } from '../model';
+import { exactBase } from '../../../services/money';
 import type { DistributorChoice } from './distributor';
 import { defaultVat } from '../../../core/rules';
 import { channelOf, defaultChannel } from '../../../core/sales-channels';
@@ -39,7 +40,7 @@ export const productOf = (id: string | null | undefined): EditorProduct => order
 /** The amount follows the product price × units unless written by hand; the VAT follows the product. */
 export function autoAmount(line: EditorLine): void {
   const product = productOf(line.producto_id);
-  if (!line.manual && product.precio !== null && product.precio !== undefined) line.importe = round2(product.precio * (Number(line.unidades) || 0));
+  if (!line.manual && product.precio !== null && product.precio !== undefined) line.importe = exactBase(product.precio * (Number(line.unidades) || 0));   // v2.476.0: 6 decimals (7,00 € with VAT stays 7,00)
   if (product.iva !== null && product.iva !== undefined) line.iva = Number(product.iva);
 }
 

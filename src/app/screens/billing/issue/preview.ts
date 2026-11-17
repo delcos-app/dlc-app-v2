@@ -15,30 +15,31 @@ import { orFallback } from '../../../services/values';
 import { companyForPdf, currentDesign, invoicePdf } from '../../../services/pdf';
 import type { PdfInvoice, PdfLine } from '../../../services/pdf/invoice-header';
 import { issueOrderInvoice } from './issue';
-import { vatBreakdown } from '../model';
+import { discountFactor, vatBreakdown } from '../model';
 import { round2 } from '../../../services/money';
 
 interface OrderLine { producto?: string | null; unidades?: number | null; importe?: number | null; descuento?: number | null; iva?: number | null }
 interface OrderContact { id?: string; nombre?: string; nif?: string | null; direccion?: string | null; cp?: string | null; municipio?: string | null; provincia?: string | null; email?: string | null }
 interface OrderDetail {
   pedido: { envio?: boolean | null; envio_base?: number | null; envio_iva?: number | null; servicio_id?: string | null; forma_pago?: string | null };
-  totales?: { bruto?: number | null; base_productos?: number | null } | null; contacto?: OrderContact | null; lineas?: OrderLine[] | null;
+  totales?: { bruto?: number | null; base_productos?: number | null; factor?: number | null } | null; contacto?: OrderContact | null; lineas?: OrderLine[] | null;
 }
 
 const PREVIEW_HASH = '#toolbar=0&navpanes=0&view=FitH';
 const numberOf = (value: unknown): number => Number(value) || 0;
 
 function linesOf(detail: OrderDetail): (PdfLine & { descuento?: number; servicio?: boolean })[] {
-  const order = detail.pedido, gross = numberOf(detail.totales?.bruto), share = gross ? numberOf(detail.totales?.base_productos) / gross : 1;
+  const order = detail.pedido, share = discountFactor(detail);
   const lines = (detail.lineas ?? []).map(line => ({
     descripcion: orFallback(line.producto, t('billingMore.preview.noProduct')), unidades: numberOf(line.unidades),
     precio: numberOf(line.unidades) ? numberOf(line.importe) / numberOf(line.unidades) : 0, descuento: numberOf(line.descuento), iva: numberOf(line.iva),
     base: round2(numberOf(line.importe) * (1 - numberOf(line.descuento) / 100) * share),
+    total: round2(numberOf(line.importe) * (1 - numberOf(line.descuento) / 100) * share * (1 + numberOf(line.iva) / 100)),
   }));
   if (!order.envio) return lines;
   const service = billing2Legacy.services().find(item => item.id === order.servicio_id);
   return [...lines, { descripcion: service?.nombre ?? t('billingMore.preview.shipping'), unidades: 1, precio: numberOf(order.envio_base), descuento: 0,
-    iva: numberOf(order.envio_iva), base: round2(numberOf(order.envio_base)), servicio: true }];
+    iva: numberOf(order.envio_iva), base: round2(numberOf(order.envio_base)), total: round2(numberOf(order.envio_base) * (1 + numberOf(order.envio_iva) / 100)), servicio: true }];
 }
 
 /** The invoice an order would give, without a number. */

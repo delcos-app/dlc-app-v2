@@ -7,7 +7,7 @@ import { billing2Legacy } from '../../../legacy/billing2-bridge';
 import { t } from '../../../i18n';
 import { readCustomFields, saveCustomFields } from '../../settings/custom-fields/form';
 import { errorMessage } from '../model';
-import { round2 } from '../../../services/money';
+import { baseFromGross, round2 } from '../../../services/money';
 
 export interface Product {
   id?: string; nombre?: string | null; presentacion?: string | null; precio?: number | null; iva?: number | null; referencia?: string | null;
@@ -22,7 +22,7 @@ const valueOf = (id: string): string => field(id)?.value ?? '';
 function bindPrices(): void {
   const vat = (): number => (Number(valueOf('priva')) || 0) / 100, net = field('prpr'), gross = field('prpvp'), rate = field('priva');
   if (net && gross) net.oninput = (): void => { gross.value = net.value === '' ? '' : String(round2(Number(net.value) * (1 + vat()))); };
-  if (net && gross) gross.oninput = (): void => { net.value = gross.value === '' ? '' : String(Number((Number(gross.value) / (1 + vat())).toFixed(4))); };
+  if (net && gross) gross.oninput = (): void => { net.value = gross.value === '' ? '' : String(baseFromGross(gross.value, vat() * 100)); };
   if (net && gross && rate) rate.oninput = (): void => { if (net.value !== '') gross.value = String(round2(Number(net.value) * (1 + vat()))); };
 }
 

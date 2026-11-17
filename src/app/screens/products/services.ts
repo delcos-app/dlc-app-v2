@@ -8,11 +8,12 @@ import { t } from '../../i18n';
 import { escapeHtml, formatNumber } from '../../services/format';
 import { isPresent } from '../../services/values';
 import { euros, round2 } from './model';
+import { BASE_DECIMALS, baseFromGross } from '../../services/money';
 import { defaultVat } from '../../core/rules';
 
 interface Service { id?: string; nombre?: string; tipo?: string | null; activo?: boolean; precio?: number | null; iva?: number | null; pvp?: number | null; por_defecto?: boolean }
 
-const PRICE_DECIMALS = 4;
+const PRICE_DECIMALS = BASE_DECIMALS;
 const money = (value: number | null | undefined): string => (isPresent(value) ? euros(value) : '—');
 const field = (id: string): HTMLInputElement | null => document.getElementById(id) as HTMLInputElement | null;
 
@@ -72,7 +73,7 @@ function bindPrices(): void {
   if (!without || !vat || !withVat) return;
   const rate = (): number => (Number(vat.value) || 0) / 100;
   without.oninput = (): void => { withVat.value = without.value === '' ? '' : String(round2(Number(without.value) * (1 + rate()))); };
-  withVat.oninput = (): void => { without.value = withVat.value === '' ? '' : String(Number((Number(withVat.value) / (1 + rate())).toFixed(PRICE_DECIMALS))); };
+  withVat.oninput = (): void => { without.value = withVat.value === '' ? '' : String(baseFromGross(withVat.value, rate() * 100)); };
   vat.oninput = (): void => { if (without.value !== '') withVat.value = String(round2(Number(without.value) * (1 + rate()))); };
 }
 
